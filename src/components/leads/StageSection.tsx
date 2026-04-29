@@ -10,7 +10,6 @@ interface StageSectionProps {
   stage: StageId;
   cards: PipelineCard[];
   onOpenCard: (c: PipelineCard) => void;
-  onOpenMaster: (masterId: string) => void;
   onOpenShipment: (shipmentId: string) => void;
   onSwipeForward: (c: PipelineCard) => void;
   onSwipeBack: (c: PipelineCard) => void;
@@ -25,7 +24,7 @@ function pipelineForStage(stage: StageId) {
 const COLLAPSED_BY_DEFAULT: StageId[] = ["archive"];
 
 export const StageSection = ({
-  title, stage, cards, onOpenCard, onOpenMaster, onOpenShipment,
+  title, stage, cards, onOpenCard,
   onSwipeForward, onSwipeBack, onOpenPicker, emptyHint,
 }: StageSectionProps) => {
   const collapsedDefault = COLLAPSED_BY_DEFAULT.includes(stage);
@@ -85,8 +84,6 @@ export const StageSection = ({
                   key={c.id}
                   card={c}
                   onOpen={() => onOpenCard(c)}
-                  onOpenMaster={() => onOpenMaster(c.master.id)}
-                  onOpenShipment={c.shipment ? () => onOpenShipment(c.shipment!.id) : undefined}
                   onSwipeForward={() => onSwipeForward(c)}
                   onSwipeBack={() => onSwipeBack(c)}
                   onOpenPicker={() => onOpenPicker(c)}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Sheet } from "./Sheet";
-import { SubProject, Shipment, ShippingMode, getMaster, getSupplier } from "@/data/pipelines";
+import { Project, Shipment, ShippingMode, getSupplier } from "@/data/pipelines";
 import { usePipelineStore, NewShipmentInput } from "@/hooks/usePipelineStore";
 import { Plus, ArrowRight, Plane, Ship } from "lucide-react";
 import { supplierColor } from "@/lib/brand";
@@ -9,7 +9,7 @@ import { SupplierChip } from "./StatusPill";
 interface Props {
   open: boolean;
   onClose: () => void;
-  intakeSubs: SubProject[];
+  intakeSubs: Project[];
   shipments: Shipment[];
   onAssigned?: () => void;
 }
@@ -17,7 +17,7 @@ interface Props {
 const SHIPPING_MODES: ShippingMode[] = ["Air", "Ocean LCL", "Ocean FCL"];
 
 export const AssignShipmentSheet = ({ open, onClose, intakeSubs, shipments }: Props) => {
-  const { assignSubToShipment, createShipment } = usePipelineStore();
+  const { assignToShipment, createShipment } = usePipelineStore();
   const [creatingFor, setCreatingFor] = useState<string | null>(null);
   const [draft, setDraft] = useState<NewShipmentInput>({
     mode: "Air",
@@ -31,30 +31,31 @@ export const AssignShipmentSheet = ({ open, onClose, intakeSubs, shipments }: Pr
   const activeShipments = shipments.filter((s) => s.status !== "Delivered");
 
   return (
-    <Sheet open={open} onClose={onClose} width="max-w-xl" eyebrow="Shipping" title="Assign sub-projects to shipments">
+    <Sheet open={open} onClose={onClose} width="max-w-xl" eyebrow="Shipping" title="Assign projects to shipments">
       <div className="space-y-5">
         <p className="text-sm text-muted-foreground">
           {intakeSubs.length === 0
             ? "Nothing waiting — everything has been assigned."
-            : `${intakeSubs.length} sub-project${intakeSubs.length === 1 ? "" : "s"} ready for shipment assignment.`}
+            : `${intakeSubs.length} project${intakeSubs.length === 1 ? "" : "s"} ready for shipment assignment.`}
         </p>
 
         {intakeSubs.map((sub) => {
-          const master = getMaster(sub.masterId);
           const supplier = getSupplier(sub.supplierId);
-          const matchingShipments = activeShipments.filter((s) => s.mode === sub.shippingMode || s.supplierId === sub.supplierId);
+          const matchingShipments = activeShipments.filter(
+            (s) => s.mode === sub.shippingMode || s.supplierId === sub.supplierId,
+          );
           return (
             <div key={sub.id} className="rounded-2xl border border-border/70 bg-card p-4 space-y-3">
               <div>
                 <div className="text-[11px] font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1.5 mb-1"
                   style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}>
-                  {master?.projectName} · {master?.customer}
+                  {sub.customer} · {sub.projectName}
                 </div>
-                <div className="font-semibold text-foreground">{sub.itemName}</div>
+                <div className="font-semibold text-foreground">{sub.detailSummary ?? sub.projectName}</div>
                 <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
-                  <SupplierChip color={supplierColor(sub.supplierId)} name={supplier?.name} />
+                  <SupplierChip color={supplierColor(sub.supplierId ?? "")} name={supplier?.name} />
                   <span>·</span>
-                  <span>Default {sub.shippingMode}</span>
+                  <span>Default {sub.shippingMode ?? "—"}</span>
                 </div>
               </div>
 
@@ -67,12 +68,14 @@ export const AssignShipmentSheet = ({ open, onClose, intakeSubs, shipments }: Pr
                   {matchingShipments.map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => assignSubToShipment(sub.id, s.id)}
+                      onClick={() => assignToShipment(sub.id, s.id)}
                       className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-border bg-card hover:bg-muted/40 transition-colors text-left"
                       style={{ minHeight: 48 }}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        {s.mode === "Air" ? <Plane className="h-4 w-4" style={{ color: "hsl(var(--brand-orange))" }} /> : <Ship className="h-4 w-4" style={{ color: "hsl(var(--brand-teal))" }} />}
+                        {s.mode === "Air"
+                          ? <Plane className="h-4 w-4" style={{ color: "hsl(var(--brand-orange))" }} />
+                          : <Ship className="h-4 w-4" style={{ color: "hsl(var(--brand-teal))" }} />}
                         <span className="font-semibold tracking-tight" style={{ color: "hsl(var(--brand-navy))" }}>{s.code}</span>
                         <span className="text-xs text-muted-foreground truncate">· {s.mode} · ETA {s.eta.getDate()}/{s.eta.getMonth() + 1}</span>
                       </div>
@@ -128,8 +131,8 @@ export const AssignShipmentSheet = ({ open, onClose, intakeSubs, shipments }: Pr
                     <button
                       onClick={() => {
                         if (!draft.code) return;
-                        const ship = createShipment({ ...draft, supplierId: sub.supplierId });
-                        assignSubToShipment(sub.id, ship.id);
+                        const ship = createShipment({ ...draft, supplierId: sub.supplierId ?? "" });
+                        assignToShipment(sub.id, ship.id);
                         setCreatingFor(null);
                         setDraft({ mode: "Air", code: "", etd: new Date(), eta: new Date(), supplierId: "" });
                       }}
@@ -137,7 +140,7 @@ export const AssignShipmentSheet = ({ open, onClose, intakeSubs, shipments }: Pr
                       className="flex-1 px-3 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-40"
                       style={{ backgroundColor: "hsl(var(--brand-teal))" }}
                     >
-                      Create & assign
+                      Create &amp; assign
                     </button>
                   </div>
                 </div>

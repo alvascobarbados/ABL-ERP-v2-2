@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { PIPELINES, PipelineId, PipelineCard, SubProject, Shipment, MasterProject, SUPPLIERS } from "@/data/pipelines";
+import { PIPELINES, PipelineId, PipelineCard, Project, Shipment } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { StageSection } from "./StageSection";
 import { ShippingPipelineView, ShippingFilter } from "./ShippingPipelineView";
@@ -8,26 +8,21 @@ import { cn } from "@/lib/utils";
 import { useFriendlyMode, FRIENDLY_PIPELINE_SUBTITLES } from "@/hooks/useFriendlyMode";
 
 interface Props {
-  masters: MasterProject[];
-  subs: SubProject[];
+  projects: Project[];
   shipments: Shipment[];
   cards: PipelineCard[]; // already globally filter-applied
   perPipelineCounts: Record<PipelineId, number>;
   hasActiveFilter: boolean;
-  // shipping
   shippingFilter: ShippingFilter;
   onShippingFilterChange: (f: ShippingFilter) => void;
   intakeCount: number;
   onOpenIntake: () => void;
   onOpenShipment: (shipmentId: string) => void;
-  // shared
   onOpenCard: (c: PipelineCard) => void;
-  onOpenMaster: (masterId: string) => void;
   onSwipeForward: (c: PipelineCard) => void;
   onSwipeBack: (c: PipelineCard) => void;
   onOpenPicker: (c: PipelineCard) => void;
-  // shipping subs (already filtered globally for non-shipping facets)
-  shippingSubs: SubProject[];
+  shippingSubs: Project[];
 }
 
 interface SectionProps {
@@ -43,7 +38,6 @@ interface SectionProps {
 const PipelineGroup = ({ pipelineId, forceOpen, defaultOpen, matchCount, totalCount, hasActiveFilter, children }: SectionProps) => {
   const [open, setOpen] = useState(defaultOpen);
   const { friendly } = useFriendlyMode();
-  // Auto-open when a filter is applied & there are matches; auto-collapse when no matches
   useEffect(() => {
     if (forceOpen) setOpen(true);
     else if (hasActiveFilter && matchCount === 0) setOpen(false);
@@ -55,7 +49,6 @@ const PipelineGroup = ({ pipelineId, forceOpen, defaultOpen, matchCount, totalCo
 
   return (
     <section className="rounded-2xl border border-border/60 bg-card/70 overflow-hidden shadow-[var(--shadow-card)]">
-      {/* Pipeline accent stripe */}
       <div className="h-[3px] w-full" style={{ backgroundColor: accent }} />
       <button
         onClick={() => setOpen((o) => !o)}
@@ -115,12 +108,11 @@ const PipelineGroup = ({ pipelineId, forceOpen, defaultOpen, matchCount, totalCo
 };
 
 export const AllPipelineView = ({
-  masters, subs, shipments, cards, perPipelineCounts, hasActiveFilter,
+  shipments, cards, perPipelineCounts, hasActiveFilter,
   shippingFilter, onShippingFilterChange, intakeCount, onOpenIntake, onOpenShipment,
-  onOpenCard, onOpenMaster, onSwipeForward, onSwipeBack, onOpenPicker,
+  onOpenCard, onSwipeForward, onSwipeBack, onOpenPicker,
   shippingSubs,
 }: Props) => {
-  // Match counts (under filter) per pipeline
   const matchCounts: Record<PipelineId, number> = {
     sales: cards.filter((c) => c.pipeline === "sales").length,
     operations: cards.filter((c) => c.pipeline === "operations").length,
@@ -134,7 +126,6 @@ export const AllPipelineView = ({
         const pid = p.id;
         const matched = matchCounts[pid];
         const total = perPipelineCounts[pid];
-        // Default collapsed; auto-expand on filter w/ matches
         const forceOpen = hasActiveFilter && matched > 0;
 
         return (
@@ -157,7 +148,6 @@ export const AllPipelineView = ({
                 onOpenIntake={onOpenIntake}
                 onOpenShipment={onOpenShipment}
                 onOpenCard={onOpenCard}
-                onOpenMaster={onOpenMaster}
                 onSwipeForward={onSwipeForward}
                 onSwipeBack={onSwipeBack}
                 onOpenPicker={onOpenPicker}
@@ -170,7 +160,6 @@ export const AllPipelineView = ({
                   stage={stage.id}
                   cards={cards.filter((c) => c.pipeline === pid && c.stage === stage.id)}
                   onOpenCard={onOpenCard}
-                  onOpenMaster={onOpenMaster}
                   onOpenShipment={onOpenShipment}
                   onSwipeForward={onSwipeForward}
                   onSwipeBack={onSwipeBack}
