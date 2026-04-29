@@ -1,4 +1,4 @@
-import { ArrowLeft, MoreVertical } from "lucide-react";
+import { ArrowLeft, MoreVertical, Factory } from "lucide-react";
 import { PipelineCard, PIPELINES, getShipment } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect } from "react";
