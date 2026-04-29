@@ -536,7 +536,7 @@ function pickItems(seed: string): LineItem[] {
 let _qSeq = 2040, _poSeq = 1080, _invSeq = 1040;
 const STAGE_ORDER: StageId[] = [
   "proposal", "quote", "confirming", "preproduction", "in_production",
-  "shipment_required", "shipment_assigned", "shipment_delivered",
+  "shipment_required", "shipment_assigned",
   "invoice_required", "invoiced", "paid", "archive",
 ];
 function reachedStage(p: Project, gate: StageId): boolean {
