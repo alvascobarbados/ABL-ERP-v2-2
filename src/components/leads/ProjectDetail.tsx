@@ -1,7 +1,7 @@
 import { ArrowLeft, MoreVertical, Factory, ChevronRight, Plus, Move, UserCog, Copy, Archive, Trash2 } from "lucide-react";
 import {
   PipelineCard, PIPELINES, PipelineId, StageId, ShippingMode, SalesShippingLabel,
-  SupplierLabelHint, formatShippingLabel,
+  SupplierLabelHint,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
