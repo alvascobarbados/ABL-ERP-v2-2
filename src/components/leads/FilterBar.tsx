@@ -152,7 +152,7 @@ interface FilterChipProps {
 const FilterChip = ({ label, selectedLabel, active, onOpen, onClear }: FilterChipProps) => (
   <div
     className={cn(
-      "inline-flex items-center text-xs font-medium rounded-full border transition-[var(--transition-smooth)] whitespace-nowrap overflow-hidden shrink-0",
+      "no-select inline-flex items-center text-xs font-medium rounded-full border transition-[var(--transition-smooth)] whitespace-nowrap overflow-hidden shrink-0",
       active
         ? "bg-foreground text-background border-foreground"
         : "bg-card/60 text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground",
