@@ -55,17 +55,17 @@ const Index = () => {
   const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
   const [assignOpen, setAssignOpen] = useState(false);
 
-  // Build cards from live store
+  // Build cards from live store. In "All" mode, include cards from every pipeline:
+  // sales as masters, others as subs.
   const cards = useMemo<PipelineCard[]>(() => {
-    if (activePipeline === "sales") {
-      return masters.filter((m) => m.pipeline === "sales").map((master) => ({
-        kind: "master", id: master.id, master,
-        pipeline: master.pipeline, stage: master.stage,
-        deadline: master.deadline, deadlineDate: master.deadlineDate,
-        shippingMode: master.shippingMode, orderType: master.orderType, priority: master.priority,
-      }));
-    }
-    return subs.filter((s) => s.pipeline === activePipeline).map((sub) => {
+    const masterCard = (master: MasterProject): PipelineCard => ({
+      kind: "master", id: master.id, master,
+      pipeline: master.pipeline, stage: master.stage,
+      deadline: master.deadline, deadlineDate: master.deadlineDate,
+      shippingMode: master.shippingMode, orderType: master.orderType, priority: master.priority,
+      tag: master.tag,
+    });
+    const subCard = (sub: typeof subs[number]): PipelineCard => {
       const master = masters.find((m) => m.id === sub.masterId)!;
       return {
         kind: "sub", id: sub.id, master, sub,
@@ -74,9 +74,19 @@ const Index = () => {
         pipeline: sub.pipeline, stage: sub.stage,
         deadline: sub.deadline, deadlineDate: sub.deadlineDate,
         shippingMode: sub.shippingMode, orderType: sub.orderType, priority: sub.priority,
+        tag: sub.tag,
       };
-    });
-  }, [activePipeline, masters, subs]);
+    };
+    if (isAll) {
+      const salesCards = masters.filter((m) => m.pipeline === "sales").map(masterCard);
+      const otherCards = subs.filter((s) => s.pipeline !== "sales").map(subCard);
+      return [...salesCards, ...otherCards];
+    }
+    if (activePipeline === "sales") {
+      return masters.filter((m) => m.pipeline === "sales").map(masterCard);
+    }
+    return subs.filter((s) => s.pipeline === activePipeline).map(subCard);
+  }, [activePipeline, isAll, masters, subs, shipments]);
 
   const counts = useMemo<Record<PipelineId, number>>(() => ({
     sales: masters.filter((m) => m.pipeline === "sales").length,
