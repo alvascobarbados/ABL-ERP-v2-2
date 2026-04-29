@@ -1,7 +1,11 @@
 import { useRef, useState, useEffect } from "react";
-import { CalendarDays, User2, Plane, Ship, Repeat, Sparkles, CornerDownRight, Container, MoreVertical } from "lucide-react";
-import { PipelineCard, STAGE_ACCENT } from "@/data/pipelines";
+import { CalendarDays, User2, CornerDownRight, Container, MoreVertical } from "lucide-react";
+import { PipelineCard } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
+import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
+import { StatusPill, SupplierChip } from "./StatusPill";
+import { ShippingIcon } from "./ShippingIcon";
+import { MiniJourneyBar } from "./MiniJourneyBar";
 import { cn } from "@/lib/utils";
 
 interface ProjectCardProps {
@@ -24,13 +28,6 @@ function getUrgency(date: Date) {
   return { label: `in ${diff}d`, tone: "neutral" as const };
 }
 
-const accentBgClass: Record<string, string> = {
-  indigo: "bg-stage-indigo", amber: "bg-stage-amber", emerald: "bg-stage-emerald",
-  rose: "bg-stage-rose", slate: "bg-stage-slate", violet: "bg-stage-violet",
-  orange: "bg-stage-orange", teal: "bg-stage-teal", sky: "bg-stage-sky",
-  cyan: "bg-stage-cyan", fuchsia: "bg-stage-fuchsia",
-};
-
 const COMMIT_THRESHOLD_PX = 110;
 const PULSE_THRESHOLD_PX = 180;
 const RESISTANCE = 0.85;
@@ -40,8 +37,7 @@ export const ProjectCard = ({
   onSwipeForward, onSwipeBack, onOpenPicker,
 }: ProjectCardProps) => {
   const u = getUrgency(card.deadlineDate);
-  const accent = STAGE_ACCENT[card.stage];
-  const ShipIcon = card.shippingMode === "Air" ? Plane : Ship;
+  const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   const isSub = card.kind === "sub";
   const titleLine = isSub ? `${card.sub!.itemName}` : card.master.customer;
@@ -49,7 +45,6 @@ export const ProjectCard = ({
 
   const next = getNextStage(card.pipeline, card.stage);
   const prev = getPrevStage(card.pipeline, card.stage);
-  // Sales: right-swipe must never push to Lost / Cold (already excluded by getNextStage)
   const canForward = !!next;
   const canBack = !!prev;
 
@@ -74,7 +69,6 @@ export const ProjectCard = ({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    // ignore right-clicks and clicks on interactive children
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-no-drag]")) return;
@@ -109,13 +103,13 @@ export const ProjectCard = ({
     moved.current = true;
     setDragging(true);
 
-    let next = rawDx * RESISTANCE;
-    if (next > 0 && !canForward) next = Math.min(next, 24);
-    if (next < 0 && !canBack) next = Math.max(next, -24);
+    let nx = rawDx * RESISTANCE;
+    if (nx > 0 && !canForward) nx = Math.min(nx, 24);
+    if (nx < 0 && !canBack) nx = Math.max(nx, -24);
 
-    setDx(next);
+    setDx(nx);
 
-    const past = Math.abs(next) >= COMMIT_THRESHOLD_PX;
+    const past = Math.abs(nx) >= COMMIT_THRESHOLD_PX;
     if (past && !passedThreshold.current) {
       passedThreshold.current = true;
       setPulse(true);
@@ -133,7 +127,6 @@ export const ProjectCard = ({
     setSnapTransition(true);
 
     if (Math.abs(distance) >= COMMIT_THRESHOLD_PX) {
-      // animate off
       const dir = distance > 0 ? 1 : -1;
       setDx(dir * PULSE_THRESHOLD_PX * 1.6);
       window.setTimeout(() => {
@@ -151,7 +144,6 @@ export const ProjectCard = ({
     isHorizontal.current = null;
   };
 
-  // Click handler suppresses if we dragged
   const handleOpen = () => { if (!moved.current) onOpen(); };
 
   const showForward = dx > 12 && canForward;
@@ -221,7 +213,8 @@ export const ProjectCard = ({
           }}
         />
 
-        <span className={cn("absolute left-0 top-0 bottom-0 w-1", accentBgClass[accent])} />
+        {/* Pipeline accent stripe (left edge) */}
+        <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: pipelineHex }} />
 
         {/* ⋮ Picker button */}
         <button
@@ -233,63 +226,63 @@ export const ProjectCard = ({
           <MoreVertical className="h-4 w-4" />
         </button>
 
-        {/* Master badge — only on sub cards */}
+        {/* Master badge — only on sub cards (faint navy tint) */}
         {isSub && (
           <button
             data-no-drag
             onClick={(e) => { e.stopPropagation(); onOpenMaster(); }}
-            className="w-full text-left pl-5 pr-10 pt-3 pb-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            className="ml-3 mt-2.5 mr-12 inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md transition-colors hover:opacity-80 max-w-[calc(100%-3.75rem)]"
+            style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}
           >
             <CornerDownRight className="h-3 w-3 opacity-70" />
-            <span className="font-medium tracking-tight truncate">{card.master.projectName}</span>
-            <span className="text-muted-foreground/60">·</span>
+            <span className="tracking-tight truncate">{card.master.projectName}</span>
+            <span className="opacity-60">·</span>
             <span className="truncate">{card.master.customer}</span>
           </button>
         )}
 
-        <button onClick={handleOpen} className="w-full text-left px-5 pt-2 pb-5">
+        <button onClick={handleOpen} className="w-full text-left px-5 pt-2 pb-4">
           <div className={cn("flex items-start justify-between gap-3 mb-1.5 pr-6", !isSub && "pt-3")}>
-            <h3 className="font-semibold text-foreground leading-tight tracking-tight">{titleLine}</h3>
-            {card.priority === "Rush" && (
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-urgent/10 text-urgent shrink-0 inline-flex items-center gap-1">
-                <Sparkles className="h-2.5 w-2.5" /> Rush
-              </span>
-            )}
+            <h3 className="font-semibold text-[15px] text-foreground leading-tight tracking-tight">
+              {titleLine}
+            </h3>
+            {card.priority === "Rush" && <StatusPill variant="rush" className="shrink-0" />}
           </div>
 
           {subline && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
-              <User2 className="h-3 w-3" />
-              <span>{subline}</span>
+              {isSub && card.supplier ? (
+                <SupplierChip color={supplierColor(card.supplier.id)} name={card.supplier.name} />
+              ) : (
+                <>
+                  <User2 className="h-3 w-3" />
+                  <span>{subline}</span>
+                </>
+              )}
             </div>
           )}
 
-          <p className="text-sm text-foreground/80 leading-snug mb-4">
+          <p className="text-sm text-foreground/80 leading-snug mb-4 font-normal">
             {isSub ? (
               <span className="text-muted-foreground">{card.sub!.summary}</span>
             ) : (
               <>
-                <span className="font-medium">{card.master.projectName}</span>
+                <span className="font-semibold">{card.master.projectName}</span>
                 <span className="text-muted-foreground"> — {card.master.summary}</span>
               </>
             )}
           </p>
 
-          <div className="flex flex-wrap items-center gap-1.5 mb-4">
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-              <ShipIcon className="h-2.5 w-2.5" /> {card.shippingMode}
-            </span>
-            {card.orderType === "Re-order" && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                <Repeat className="h-2.5 w-2.5" /> Re-order
-              </span>
-            )}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <ShippingIcon mode={card.shippingMode} />
+            {card.orderType === "Re-order" && <StatusPill variant="reorder" />}
             {card.shipment && (
               <span
                 data-no-drag
                 role="button"
                 onClick={(e) => { e.stopPropagation(); onOpenShipment?.(); }}
-                className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-foreground/90 text-background hover:bg-foreground transition-colors"
+                className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full text-white hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "hsl(var(--brand-navy))" }}
               >
                 <Container className="h-2.5 w-2.5" /> {card.shipment.code}
               </span>
@@ -297,20 +290,23 @@ export const ProjectCard = ({
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-border/60">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span className="font-medium text-foreground/80">{card.deadline}</span>
+            <MiniJourneyBar pipeline={card.pipeline} />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <CalendarDays className="h-3 w-3" />
+                <span className="font-medium text-foreground/70 tabular">{card.deadline}</span>
+              </div>
+              <span
+                className={cn(
+                  "text-xs font-semibold tabular px-2 py-0.5 rounded-full",
+                  u.tone === "urgent" && "bg-urgent/10 text-urgent",
+                  u.tone === "neutral" && "text-muted-foreground",
+                )}
+                style={u.tone === "soon" ? { backgroundColor: "hsl(var(--brand-orange) / 0.12)", color: "hsl(var(--brand-orange))" } : undefined}
+              >
+                {u.label}
+              </span>
             </div>
-            <span
-              className={cn(
-                "text-xs font-semibold tabular-nums px-2 py-0.5 rounded-full",
-                u.tone === "urgent" && "bg-urgent/10 text-urgent",
-                u.tone === "soon" && "bg-soon/10 text-soon",
-                u.tone === "neutral" && "text-muted-foreground",
-              )}
-            >
-              {u.label}
-            </span>
           </div>
         </button>
       </div>
