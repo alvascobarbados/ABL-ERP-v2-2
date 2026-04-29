@@ -62,7 +62,7 @@ const Index = () => {
       return {
         kind: "sub", id: sub.id, master, sub,
         supplier: SUPPLIERS.find((x) => x.id === sub.supplierId),
-        shipment: sub.shipmentId ? SHIPMENTS.find((x) => x.id === sub.shipmentId) : undefined,
+        shipment: sub.shipmentId ? shipments.find((x) => x.id === sub.shipmentId) : undefined,
         pipeline: sub.pipeline, stage: sub.stage,
         deadline: sub.deadline, deadlineDate: sub.deadlineDate,
         shippingMode: sub.shippingMode, orderType: sub.orderType, priority: sub.priority,
@@ -182,7 +182,7 @@ const Index = () => {
     setSelectedShipment(null);
   };
   const openShipmentById = (id: string) => {
-    setSelectedShipment(getShipment(id) ?? null);
+    setSelectedShipment(shipments.find((s) => s.id === id) ?? null);
     setSelectedCard(null);
     setSelectedMaster(null);
   };
@@ -216,7 +216,7 @@ const Index = () => {
       return {
         kind: "sub", id: sub.id, master, sub,
         supplier: SUPPLIERS.find((x) => x.id === sub.supplierId),
-        shipment: sub.shipmentId ? SHIPMENTS.find((x) => x.id === sub.shipmentId) : undefined,
+        shipment: sub.shipmentId ? shipments.find((x) => x.id === sub.shipmentId) : undefined,
         pipeline: sub.pipeline, stage: sub.stage,
         deadline: sub.deadline, deadlineDate: sub.deadlineDate,
         shippingMode: sub.shippingMode, orderType: sub.orderType, priority: sub.priority,
@@ -348,23 +348,6 @@ const Index = () => {
           />
         ))}
 
-        {activePipeline === "operations" && SHIPMENTS.length > 0 && (
-          <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 p-5">
-            <div className="text-base font-medium mb-3" style={{ color: "hsl(var(--brand-navy))" }}>Active shipments</div>
-            <div className="flex flex-wrap gap-2">
-              {SHIPMENTS.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => openShipmentById(s.id)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full text-white hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: "hsl(var(--brand-navy))" }}
-                >
-                  {s.code} · {s.mode} · {s.status}
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
           {friendly
