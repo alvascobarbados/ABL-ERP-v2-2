@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Container, Factory, CalendarDays, CornerDownRight, CheckCircle2 } from "lucide-react";
+import { Container, Factory, CalendarDays, CheckCircle2 } from "lucide-react";
 import { Sheet } from "./Sheet";
 import { Shipment, getSupplier, PIPELINES } from "@/data/pipelines";
 import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
