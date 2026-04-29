@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, AlertTriangle, Plane, Ship } from "lucide-react";
-import { Shipment, SubProject, getMaster, getSupplier } from "@/data/pipelines";
-import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
-import { ProjectCard } from "./ProjectCard";
+import { useState } from "react";
+import { ChevronDown, Plane, Ship, MoreVertical } from "lucide-react";
+import { Shipment, SubProject, getMaster } from "@/data/pipelines";
+import { PIPELINE_ACCENT } from "@/lib/brand";
 import { PipelineCard } from "@/data/pipelines";
-import { SupplierChip } from "./StatusPill";
 import { cn } from "@/lib/utils";
 
 export type ShippingFilter = "in_transit" | "delivered" | "delayed";
@@ -26,95 +24,103 @@ interface Props {
 
 const formatDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
 
-const subToCard = (sub: SubProject, shipments: Shipment[]): PipelineCard => {
-  const master = getMaster(sub.masterId)!;
-  const supplier = getSupplier(sub.supplierId);
-  const shipment = sub.shipmentId ? shipments.find((s) => s.id === sub.shipmentId) : undefined;
-  return {
-    kind: "sub", id: sub.id, master, sub, supplier, shipment,
-    pipeline: sub.pipeline, stage: sub.stage,
-    deadline: sub.deadline, deadlineDate: sub.deadlineDate,
-    shippingMode: sub.shippingMode, orderType: sub.orderType, priority: sub.priority,
-    tag: sub.tag,
-  };
-};
-
-interface ShipmentRowProps {
-  shipment: Shipment;
-  subs: SubProject[];
-  shipments: Shipment[];
-  onOpenShipment: (id: string) => void;
-  onOpenCard: (c: PipelineCard) => void;
-  onOpenMaster: (id: string) => void;
-  onSwipeForward: (c: PipelineCard) => void;
-  onSwipeBack: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
+// Build distinct project labels (Customer · Project) from a list of subs.
+function uniqueProjectLabels(subs: SubProject[]): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const s of subs) {
+    const m = getMaster(s.masterId);
+    if (!m) continue;
+    const key = m.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    labels.push(`${m.customer} · ${m.projectName}`);
+  }
+  return labels;
 }
 
-const ShipmentRow = ({ shipment, subs, shipments, onOpenShipment, onOpenCard, onOpenMaster, onSwipeForward, onSwipeBack, onOpenPicker }: ShipmentRowProps) => {
-  const [open, setOpen] = useState(false);
-  const dotColor =
-    shipment.status === "Delivered" ? "#3E6B4A"
-    : shipment.status === "Delayed" ? "#E97B2C"
-    : shipment.status === "Customs" ? "#E97B2C"
-    : "#3D7B86";
+interface ShipmentCardProps {
+  shipment: Shipment;
+  subs: SubProject[];
+  onOpenShipment: (id: string) => void;
+}
+
+const STATUS_TONE: Record<Shipment["status"], { bg: string; fg: string; label: string }> = {
+  "Booked":     { bg: "hsl(var(--brand-navy) / 0.08)", fg: "hsl(var(--brand-navy))",   label: "Booked" },
+  "In Transit": { bg: "hsl(var(--brand-teal) / 0.12)", fg: "hsl(var(--brand-teal))",   label: "In Transit" },
+  "Delayed":    { bg: "hsl(var(--brand-orange) / 0.12)", fg: "hsl(var(--brand-orange))", label: "Delayed" },
+  "Customs":    { bg: "hsl(var(--brand-orange) / 0.12)", fg: "hsl(var(--brand-orange))", label: "Customs" },
+  "Delivered":  { bg: "hsl(142 30% 35% / 0.12)",       fg: "hsl(142 30% 35%)",         label: "Delivered" },
+};
+
+const ShipmentCard = ({ shipment, subs, onOpenShipment }: ShipmentCardProps) => {
+  const tone = STATUS_TONE[shipment.status];
+  const projectLabels = uniqueProjectLabels(subs);
+  const visibleLabels = projectLabels.slice(0, 3);
+  const more = projectLabels.length - visibleLabels.length;
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden" style={{ borderColor: "hsl(var(--brand-navy) / 0.12)" }}>
-      <div className="flex items-stretch">
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="flex-1 flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
-          aria-expanded={open}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: dotColor }} title={shipment.status} />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-base sm:text-lg font-semibold tracking-tight" style={{ color: "hsl(var(--brand-navy))" }}>
-                  {shipment.code}
-                </span>
-                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: "hsl(var(--brand-navy) / 0.06)", color: "hsl(var(--brand-navy))" }}>
-                  {shipment.status}
-                </span>
-              </div>
-              <div className="text-xs text-muted-foreground mt-0.5">
-                ETD {formatDate(shipment.etd)} · ETA {formatDate(shipment.eta)} · {subs.length} sub-project{subs.length === 1 ? "" : "s"}
-              </div>
-            </div>
-          </div>
-          <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform shrink-0", open ? "rotate-0" : "-rotate-90")} />
-        </button>
-        <button
-          onClick={() => onOpenShipment(shipment.id)}
-          className="px-3 sm:px-4 text-xs font-medium border-l hover:bg-muted/40 transition-colors"
-          style={{ borderColor: "hsl(var(--brand-navy) / 0.1)", color: "hsl(var(--brand-navy))" }}
-        >
-          Open
-        </button>
-      </div>
+    <div className="relative">
+      <button
+        onClick={() => onOpenShipment(shipment.id)}
+        className={cn(
+          "w-full text-left rounded-2xl bg-card border border-border/70 overflow-hidden",
+          "shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)] hover:-translate-y-0.5",
+          "transition-all",
+        )}
+      >
+        {/* Quiet teal stripe */}
+        <span
+          className="absolute left-0 top-0 bottom-0 w-[3px]"
+          style={{ backgroundColor: PIPELINE_ACCENT.shipping.hex, opacity: 0.7 }}
+        />
 
-      <div className={cn("grid transition-[grid-template-rows] duration-200", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
-        <div className="overflow-hidden">
-          <div className="px-3 pb-3 pt-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-            {subs.map((s) => {
-              const card = subToCard(s, shipments);
-              return (
-                <ProjectCard
-                  key={s.id}
-                  card={card}
-                  onOpen={() => onOpenCard(card)}
-                  onOpenMaster={() => onOpenMaster(card.master.id)}
-                  onSwipeForward={() => onSwipeForward(card)}
-                  onSwipeBack={() => onSwipeBack(card)}
-                  onOpenPicker={() => onOpenPicker(card)}
-                />
-              );
-            })}
+        <div className="pl-5 pr-12 pt-5 pb-5">
+          {/* 1. Shipment code */}
+          <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight mb-2"
+            style={{ color: "hsl(var(--brand-navy))" }}>
+            {shipment.code}
+          </h3>
+
+          {/* 2. Project names list */}
+          <div className="text-[14px] text-muted-foreground leading-relaxed mb-5">
+            {projectLabels.length === 0 ? (
+              <span className="italic">No projects assigned</span>
+            ) : (
+              <>
+                {visibleLabels.map((l, i) => (
+                  <div key={i} className="truncate">{l}</div>
+                ))}
+                {more > 0 && (
+                  <div className="text-muted-foreground/70">+{more} more</div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* 3. ETD → ETA bottom-left, status pill bottom-right */}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[13px] text-muted-foreground/80 tabular">
+              {formatDate(shipment.etd)} → {formatDate(shipment.eta)}
+            </span>
+            <span
+              className="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full"
+              style={{ backgroundColor: tone.bg, color: tone.fg }}
+            >
+              {tone.label}
+            </span>
           </div>
         </div>
-      </div>
+      </button>
+
+      {/* Three-dots — opens shipment view */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onOpenShipment(shipment.id); }}
+        className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
+        aria-label="Shipment actions"
+      >
+        <MoreVertical className="h-5 w-5" />
+      </button>
     </div>
   );
 };
@@ -123,26 +129,22 @@ interface GroupProps {
   title: "Air" | "Ocean";
   shipments: Shipment[];
   subs: SubProject[];
-  shipmentsAll: Shipment[];
   onOpenShipment: (id: string) => void;
-  onOpenCard: (c: PipelineCard) => void;
-  onOpenMaster: (id: string) => void;
-  onSwipeForward: (c: PipelineCard) => void;
-  onSwipeBack: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
 }
 
-const Group = ({ title, shipments, subs, shipmentsAll, ...row }: GroupProps) => {
+const Group = ({ title, shipments, subs, onOpenShipment }: GroupProps) => {
   const [open, setOpen] = useState(true);
-  const totalSubs = subs.length;
   const Icon = title === "Air" ? Plane : Ship;
   const accent = PIPELINE_ACCENT.shipping.hex;
+  const totalProjects = uniqueProjectLabels(
+    subs.filter((s) => shipments.some((sh) => sh.id === s.shipmentId)),
+  ).length;
 
   return (
     <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-muted/40 transition-colors"
+        className="w-full flex items-center justify-between p-5 sm:p-6 hover:bg-muted/40 transition-colors"
         aria-expanded={open}
       >
         <div className="flex items-center gap-3">
@@ -154,23 +156,24 @@ const Group = ({ title, shipments, subs, shipmentsAll, ...row }: GroupProps) => 
             {title}
           </h2>
           <span className="text-xs text-muted-foreground">
-            {shipments.length} shipment{shipments.length === 1 ? "" : "s"} · {totalSubs} sub-project{totalSubs === 1 ? "" : "s"}
+            {shipments.length} shipment{shipments.length === 1 ? "" : "s"} · {totalProjects} project{totalProjects === 1 ? "" : "s"}
           </span>
         </div>
         <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", open ? "rotate-0" : "-rotate-90")} />
       </button>
       <div className={cn("grid transition-[grid-template-rows] duration-300", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
         <div className="overflow-hidden">
-          <div className="px-4 sm:px-5 pb-5 space-y-2.5">
+          <div className="px-5 sm:px-6 pb-6 sm:pb-7 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
             {shipments.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic px-2 py-3">No {title.toLowerCase()} shipments here.</p>
+              <p className="text-sm text-muted-foreground italic px-2 py-3 col-span-full">
+                No {title.toLowerCase()} shipments here.
+              </p>
             ) : shipments.map((s) => (
-              <ShipmentRow
+              <ShipmentCard
                 key={s.id}
                 shipment={s}
                 subs={subs.filter((x) => x.shipmentId === s.id)}
-                shipments={shipmentsAll}
-                {...row}
+                onOpenShipment={onOpenShipment}
               />
             ))}
           </div>
@@ -180,100 +183,78 @@ const Group = ({ title, shipments, subs, shipmentsAll, ...row }: GroupProps) => 
   );
 };
 
-export const ShippingPipelineView = ({
-  subs, shipments, filter, onFilterChange,
-  intakeCount, onOpenIntake, onOpenShipment,
-  onOpenCard, onOpenMaster, onSwipeForward, onSwipeBack, onOpenPicker,
-}: Props) => {
-  // Filter shipments by status filter
-  const visibleShipments = shipments.filter((s) => {
-    if (filter === "in_transit") return s.status !== "Delivered";
-    if (filter === "delivered") return s.status === "Delivered";
-    if (filter === "delayed") return s.status === "Delayed" || s.status === "Customs";
-    return true;
-  });
+// Calm collapsible "Awaiting shipment assignment"
+interface IntakeProps {
+  count: number;
+  intakeSubs: SubProject[];
+  onOpenIntake: () => void;
+}
 
-  // Subs only in shipping pipeline assigned to a shipment that's visible
-  const assignedSubs = subs.filter((s) => s.stage === "shipment_assigned" || s.stage === "shipment_delivered");
+const IntakeCollapsible = ({ count, intakeSubs, onOpenIntake }: IntakeProps) => {
+  const [open, setOpen] = useState(false);
+  if (count === 0) return null;
+  const labels = uniqueProjectLabels(intakeSubs);
+
+  return (
+    <section className="bg-card/60 rounded-2xl border border-border/60 overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-muted/40 transition-colors"
+        aria-expanded={open}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <h3 className="text-[15px] font-medium text-foreground/90">
+            Awaiting shipment assignment
+          </h3>
+          <span className="text-[11px] tabular font-medium rounded-full inline-flex items-center justify-center min-w-[22px] h-[22px] px-2 bg-muted text-muted-foreground">
+            {count}
+          </span>
+        </div>
+        <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform shrink-0", open ? "rotate-0" : "-rotate-90")} />
+      </button>
+      <div className={cn("grid transition-[grid-template-rows] duration-300", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+        <div className="overflow-hidden">
+          <div className="px-4 sm:px-5 pb-5 space-y-2">
+            {labels.map((l, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/50 px-4 py-3"
+              >
+                <span className="text-sm text-foreground/90 truncate">{l}</span>
+                <button
+                  onClick={onOpenIntake}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full border hover:bg-muted/40 transition-colors shrink-0"
+                  style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))" }}
+                >
+                  Assign
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export const ShippingPipelineView = ({
+  subs, shipments,
+  intakeCount, onOpenIntake, onOpenShipment,
+}: Props) => {
+  // Hide delivered shipments from default view; intake handled separately.
+  const visibleShipments = shipments.filter((s) => s.status !== "Delivered");
+  const assignedSubs = subs.filter((s) => s.stage === "shipment_assigned");
+  const intakeSubs = subs.filter((s) => s.stage === "shipment_required");
 
   const air = visibleShipments.filter((s) => s.mode === "Air");
   const ocean = visibleShipments.filter((s) => s.mode !== "Air");
 
   return (
-    <div className="space-y-4 sm:space-y-5">
-      {/* Status filter pills */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-        {([
-          { id: "in_transit", label: "In transit" },
-          { id: "delivered", label: "Delivered" },
-          { id: "delayed", label: "Delayed" },
-        ] as const).map((p) => (
-          <button
-            key={p.id}
-            onClick={() => onFilterChange(p.id)}
-            className={cn(
-              "text-xs font-medium px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors",
-              filter === p.id
-                ? "bg-foreground text-background border-foreground"
-                : "bg-card/60 text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground",
-            )}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-5 sm:space-y-6">
+      <IntakeCollapsible count={intakeCount} intakeSubs={intakeSubs} onOpenIntake={onOpenIntake} />
 
-      {/* Intake banner */}
-      {intakeCount > 0 && (
-        <button
-          onClick={onOpenIntake}
-          className="w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 sm:py-4 text-left hover:opacity-95 transition-opacity"
-          style={{
-            backgroundColor: "hsl(var(--brand-orange) / 0.08)",
-            borderColor: "hsl(var(--brand-orange) / 0.4)",
-          }}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <AlertTriangle className="h-5 w-5 shrink-0" style={{ color: "hsl(var(--brand-orange))" }} />
-            <div className="min-w-0">
-              <div className="font-semibold text-sm sm:text-base" style={{ color: "hsl(var(--brand-navy))" }}>
-                {intakeCount} sub-project{intakeCount === 1 ? "" : "s"} awaiting shipment assignment
-              </div>
-              <div className="text-xs text-muted-foreground mt-0.5">Tap to assign to an existing shipment or create a new one.</div>
-            </div>
-          </div>
-          <span className="text-xs font-semibold px-3 py-1.5 rounded-full text-white shrink-0"
-            style={{ backgroundColor: "hsl(var(--brand-orange))" }}>
-            Assign
-          </span>
-        </button>
-      )}
-
-      <Group
-        title="Air"
-        shipments={air}
-        subs={assignedSubs}
-        shipmentsAll={shipments}
-        onOpenShipment={onOpenShipment}
-        onOpenCard={onOpenCard}
-        onOpenMaster={onOpenMaster}
-        onSwipeForward={onSwipeForward}
-        onSwipeBack={onSwipeBack}
-        onOpenPicker={onOpenPicker}
-      />
-
-      <Group
-        title="Ocean"
-        shipments={ocean}
-        subs={assignedSubs}
-        shipmentsAll={shipments}
-        onOpenShipment={onOpenShipment}
-        onOpenCard={onOpenCard}
-        onOpenMaster={onOpenMaster}
-        onSwipeForward={onSwipeForward}
-        onSwipeBack={onSwipeBack}
-        onOpenPicker={onOpenPicker}
-      />
+      <Group title="Air" shipments={air} subs={assignedSubs} onOpenShipment={onOpenShipment} />
+      <Group title="Ocean" shipments={ocean} subs={assignedSubs} onOpenShipment={onOpenShipment} />
     </div>
   );
 };
