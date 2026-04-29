@@ -334,13 +334,6 @@ const Index = () => {
         card={selectedCard}
         onClose={() => setSelectedCard(null)}
         onOpenShipment={openShipmentById}
-        onAdvance={(c) => {
-          const next = nextStage(c);
-          if (!next) return;
-          setSelectedCard(null);
-          performMove(c, next);
-        }}
-        onOpenPicker={(c) => { setSelectedCard(null); setPickerCard(c); }}
       />
       <ShipmentView
         shipment={selectedShipment}
