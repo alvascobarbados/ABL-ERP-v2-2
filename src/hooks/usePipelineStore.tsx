@@ -84,7 +84,7 @@ export function validateMove(project: Project, target: { pipeline: PipelineId; s
   const STAGE_GATE_ORDER: StageId[] = [
     "proposal", "quote", "confirming",
     "preproduction", "in_production",
-    "shipment_required", "shipment_assigned", "shipment_delivered",
+    "shipment_required", "shipment_assigned",
     "invoice_required", "invoiced", "paid",
   ];
   const targetIdx = STAGE_GATE_ORDER.indexOf(target.stage);
