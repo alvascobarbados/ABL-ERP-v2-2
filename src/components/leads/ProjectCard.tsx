@@ -2,7 +2,9 @@ import { useRef, useState, useEffect } from "react";
 import { MoreVertical, Factory } from "lucide-react";
 import { PipelineCard, formatShippingLabel, getShipment } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
+import { useJiggle } from "@/hooks/useJiggle";
 import { PIPELINE_ACCENT } from "@/lib/brand";
+import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 interface ProjectCardProps {
@@ -38,6 +40,9 @@ const urgencyHex = (tone: "urgent" | "soon" | "neutral") =>
 export const ProjectCard = ({
   card, onOpen, onSwipeForward, onSwipeBack, onOpenPicker,
 }: ProjectCardProps) => {
+  const jiggle = useJiggle();
+  const jiggleActive = jiggle.activeId === card.id;
+  const jiggleDimmed = jiggle.activeId !== null && !jiggleActive;
   const proj = card.project;
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
@@ -56,8 +61,17 @@ export const ProjectCard = ({
   const longPressTimer = useRef<number | null>(null);
   const moved = useRef(false);
   const passedThreshold = useRef(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => { if (longPressTimer.current) window.clearTimeout(longPressTimer.current); }, []);
+
+  // Cancel any pending long-press if the user starts scrolling.
+  useEffect(() => {
+    const onScroll = () => cancelLongPress();
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", onScroll, true as unknown as EventListenerOptions);
+  }, []);
 
   const cancelLongPress = () => {
     if (longPressTimer.current) {
@@ -68,6 +82,7 @@ export const ProjectCard = ({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    if (jiggleDimmed || jiggleActive) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-no-drag]")) return;
 
@@ -81,8 +96,12 @@ export const ProjectCard = ({
 
     longPressTimer.current = window.setTimeout(() => {
       cancelLongPress();
-      onOpenPicker();
-    }, 550);
+      // Prefer the new jiggle interaction; fall back to the picker sheet
+      // when the JiggleProvider isn't mounted (rare — Index always mounts it).
+      const rect = (innerRef.current ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
+      haptics.pickup();
+      jiggle.activate(card, rect);
+    }, 400);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -111,6 +130,7 @@ export const ProjectCard = ({
     if (past && !passedThreshold.current) {
       passedThreshold.current = true;
       setPulse(true);
+      haptics.threshold();
       window.setTimeout(() => setPulse(false), 180);
     } else if (!past && passedThreshold.current) {
       passedThreshold.current = false;
@@ -126,6 +146,9 @@ export const ProjectCard = ({
 
     if (Math.abs(distance) >= COMMIT_THRESHOLD_PX) {
       const dir = distance > 0 ? 1 : -1;
+      const willCommit = (dir > 0 && canForward) || (dir < 0 && canBack);
+      if (willCommit) haptics.commit();
+      else haptics.nope();
       setDx(dir * PULSE_THRESHOLD_PX * 1.6);
       window.setTimeout(() => {
         if (dir > 0 && canForward) onSwipeForward();
@@ -334,7 +357,14 @@ export const ProjectCard = ({
   }
 
   return (
-    <div className="relative">
+    <div
+      ref={rootRef}
+      className={cn(
+        "relative transition-opacity duration-200",
+        jiggleDimmed && "opacity-40 pointer-events-none",
+        jiggleActive && "opacity-0 pointer-events-none",
+      )}
+    >
       {/* Swipe action labels underneath */}
       <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none select-none">
         <span
@@ -363,6 +393,7 @@ export const ProjectCard = ({
       </div>
 
       <div
+        ref={innerRef}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

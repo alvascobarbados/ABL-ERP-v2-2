@@ -21,6 +21,8 @@ import { AllPipelineView } from "@/components/leads/AllPipelineView";
 import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import type { TabId } from "@/components/leads/PipelineTabs";
 import { useFriendlyMode } from "@/hooks/useFriendlyMode";
+import { JiggleProvider } from "@/hooks/useJiggle";
+import { haptics } from "@/lib/haptics";
 import { Factory } from "lucide-react";
 
 const Index = () => {
@@ -89,6 +91,7 @@ const Index = () => {
       const labels = v.missing.map((m) =>
         m === "detailSummary" ? "detail summary" : m === "supplier" ? "supplier" : "shipping mode",
       );
+      haptics.nope();
       setMissingFields({ card, target, missing: labels });
       return;
     }
@@ -177,6 +180,7 @@ const Index = () => {
   const allTotal = counts.sales + counts.operations + counts.shipping + counts.finance;
 
   return (
+    <JiggleProvider onPick={(card, target) => performMove(card, target)}>
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 pt-5 pb-3">
@@ -399,6 +403,7 @@ const Index = () => {
 
       <Walkthrough />
     </div>
+    </JiggleProvider>
   );
 };
 
