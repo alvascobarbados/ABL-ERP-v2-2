@@ -444,20 +444,29 @@ export const ProjectCard = ({
                     style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
                   />
                   <span
-                    className="text-[13px] font-medium truncate"
-                    style={{ color: "hsl(var(--brand-navy))" }}
+                    className={cn(
+                      "text-[13px] truncate",
+                      supplierIsHint
+                        ? "italic font-normal text-muted-foreground/65"
+                        : "font-medium",
+                    )}
+                    style={
+                      supplierIsHint ? undefined : { color: "hsl(var(--brand-navy))" }
+                    }
                   >
-                    {supplierName ?? "Unassigned"}
+                    {supplierName ?? supplierHint ?? "Unassigned"}
                   </span>
                 </span>
-                <span
-                  className={cn(
-                    "text-[12px] tabular leading-none mt-1",
-                    poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
-                  )}
-                >
-                  {poText ?? "PO-"}
-                </span>
+                {showPoLine && (
+                  <span
+                    className={cn(
+                      "text-[12px] tabular leading-none mt-1",
+                      poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
+                    )}
+                  >
+                    {poText ?? "PO-"}
+                  </span>
+                )}
               </div>
             )}
           </div>
