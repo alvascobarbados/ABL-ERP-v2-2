@@ -99,6 +99,9 @@ export const ProjectCard = ({
       // Prefer the new jiggle interaction; fall back to the picker sheet
       // when the JiggleProvider isn't mounted (rare — Index always mounts it).
       const rect = (innerRef.current ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
+      // Haptic + visual activation must fire on the same tick. JiggleOverlay
+      // also fires its own haptic in the same rAF as the visual lift to keep
+      // the buzz and the lift perfectly in sync on devices that support it.
       haptics.pickup();
       jiggle.activate(card, rect);
     }, 400);
