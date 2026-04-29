@@ -96,10 +96,9 @@ export const ProjectCard = ({
 
     longPressTimer.current = window.setTimeout(() => {
       cancelLongPress();
-      // Prefer the new jiggle interaction; fall back to the picker sheet
-      // when the JiggleProvider isn't mounted (rare — Index always mounts it).
+      // JiggleOverlay fires haptics.pickup() in the same rAF as the visual
+      // lift, so buzz + animation are perceptually simultaneous.
       const rect = (innerRef.current ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
-      haptics.pickup();
       jiggle.activate(card, rect);
     }, 400);
   };
@@ -360,7 +359,7 @@ export const ProjectCard = ({
     <div
       ref={rootRef}
       className={cn(
-        "relative transition-opacity duration-200",
+        "no-select relative transition-opacity duration-200",
         jiggleDimmed && "opacity-40 pointer-events-none",
         jiggleActive && "opacity-0 pointer-events-none",
       )}

@@ -141,6 +141,17 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+  /* Disable text selection + iOS long-press copy/look-up callout.
+     Apply to lists, cards, chips, headers, pills — anywhere the long-press
+     gesture must own the interaction. Detail/read views stay selectable. */
+  .no-select,
+  .no-select * {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   /* Sonner toast — branded look */
   [data-sonner-toaster][data-theme] [data-sonner-toast] {
     background: hsl(var(--card)) !important;

@@ -39,8 +39,14 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
       setMounted(false);
       return;
     }
-    // next frame → trigger enter animation
-    const id = requestAnimationFrame(() => setMounted(true));
+    // Fire the visual lift + haptic together on the next frame so the
+    // browser has painted the un-lifted clone first (otherwise the CSS
+    // transition has nothing to interpolate from). Both fire in the same
+    // rAF callback to keep buzz and lift perceptually simultaneous.
+    const id = requestAnimationFrame(() => {
+      haptics.pickup();
+      setMounted(true);
+    });
     return () => cancelAnimationFrame(id);
   }, [anchor]);
 
@@ -141,7 +147,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
       <div
         ref={cardRef}
         className={cn(
-          "absolute rounded-2xl bg-card border border-border/70 overflow-hidden",
+          "no-select absolute rounded-2xl bg-card border border-border/70 overflow-hidden",
           mounted && !shaking && "animate-jiggle",
           shaking && "animate-nope-shake",
         )}
@@ -189,7 +195,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
       {/* ── Stage chip strip ── */}
       <div
         id="jiggle-strip"
-        className="absolute"
+        className="no-select absolute"
         style={{
           left: Math.max(8, liftedLeft - 8),
           width: Math.min(cardWidth + 16, (typeof window !== "undefined" ? window.innerWidth : 1024) - 16),
