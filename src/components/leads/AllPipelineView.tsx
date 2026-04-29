@@ -116,7 +116,7 @@ export const AllPipelineView = ({
   const matchCounts: Record<PipelineId, number> = {
     sales: cards.filter((c) => c.pipeline === "sales").length,
     operations: cards.filter((c) => c.pipeline === "operations").length,
-    shipping: shippingSubs.filter((s) => s.stage !== "shipment_delivered").length,
+    shipping: shippingSubs.length,
     finance: cards.filter((c) => c.pipeline === "finance").length,
   };
 

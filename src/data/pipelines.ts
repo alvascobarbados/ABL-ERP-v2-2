@@ -10,8 +10,14 @@ export type StageId =
   | "proposal" | "quote" | "confirming" | "archive"
   // operations (production)
   | "preproduction" | "in_production"
-  // shipping (virtual stage used for routing only — UI groups by Air/Ocean + shipment code)
-  | "shipment_required" | "shipment_assigned" | "shipment_delivered"
+  // shipping — NOT real stages anymore. The Shipping pipeline groups by
+  // mode (Air / Ocean) + assignment status. The two values below are
+  // routing hints only:
+  //   shipment_required → no shipment assigned yet (Awaiting Shipment)
+  //   shipment_assigned → on a shipment (rendered under Air or Ocean)
+  // "Delivered" no longer exists in Shipping — delivered projects move
+  // out of Shipping entirely into Finance · Invoice Required.
+  | "shipment_required" | "shipment_assigned"
   // finance
   | "invoice_required" | "invoiced" | "paid";
 
@@ -48,10 +54,13 @@ export const PIPELINES: PipelineConfig[] = [
   {
     id: "shipping",
     title: "Shipping",
+    // The Shipping pipeline UI does NOT render by stage — it groups by
+    // mode (Air / Ocean) and assignment (Awaiting Shipment). These two
+    // entries exist purely so cross-pipeline navigation (next/prev,
+    // jiggle picker, friendly labels) still has something to point at.
     stages: [
-      { id: "shipment_required", title: "Shipment Required" },
-      { id: "shipment_assigned", title: "In Transit" },
-      { id: "shipment_delivered", title: "Delivered" },
+      { id: "shipment_required", title: "Awaiting Shipment" },
+      { id: "shipment_assigned", title: "On Shipment" },
     ],
   },
   {
@@ -68,7 +77,7 @@ export const PIPELINES: PipelineConfig[] = [
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
   preproduction: "violet", in_production: "orange",
-  shipment_required: "amber", shipment_assigned: "sky", shipment_delivered: "emerald",
+  shipment_required: "amber", shipment_assigned: "sky",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
 };
 
@@ -527,7 +536,7 @@ function pickItems(seed: string): LineItem[] {
 let _qSeq = 2040, _poSeq = 1080, _invSeq = 1040;
 const STAGE_ORDER: StageId[] = [
   "proposal", "quote", "confirming", "preproduction", "in_production",
-  "shipment_required", "shipment_assigned", "shipment_delivered",
+  "shipment_required", "shipment_assigned",
   "invoice_required", "invoiced", "paid", "archive",
 ];
 function reachedStage(p: Project, gate: StageId): boolean {

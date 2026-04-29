@@ -57,7 +57,6 @@ export function getPrevStage(pipeline: PipelineId, stage: StageId): { pipeline: 
     if (stage === "shipment_assigned" || stage === "shipment_required") {
       return { pipeline: "operations", stage: "in_production" };
     }
-    if (stage === "shipment_delivered") return { pipeline: "shipping", stage: "shipment_assigned" };
     return null;
   }
   const stages = forwardStages(pipeline);
@@ -85,7 +84,7 @@ export function validateMove(project: Project, target: { pipeline: PipelineId; s
   const STAGE_GATE_ORDER: StageId[] = [
     "proposal", "quote", "confirming",
     "preproduction", "in_production",
-    "shipment_required", "shipment_assigned", "shipment_delivered",
+    "shipment_required", "shipment_assigned",
     "invoice_required", "invoiced", "paid",
   ];
   const targetIdx = STAGE_GATE_ORDER.indexOf(target.stage);
@@ -142,7 +141,19 @@ interface PipelineStoreCtx {
 const Ctx = createContext<PipelineStoreCtx | null>(null);
 
 export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => {
-  const [projects, setProjects] = useState<Project[]>(() => SEED_PROJECTS.map((p) => ({ ...p })));
+  const [projects, setProjects] = useState<Project[]>(() =>
+    // Defensive migration: any project lingering on the retired
+    // "shipment_delivered" stage (or any other unknown shipping stage)
+    // moves to Finance · Invoice Required. Shipping no longer has stages.
+    SEED_PROJECTS.map((p) => {
+      const s = p.stage as string;
+      if (p.pipeline === "shipping" &&
+          s !== "shipment_required" && s !== "shipment_assigned") {
+        return { ...p, pipeline: "finance" as const, stage: "invoice_required" as const };
+      }
+      return { ...p };
+    }),
+  );
   const [shipments, setShipments] = useState<Shipment[]>(() => SEED_SHIPMENTS.map((s) => ({ ...s })));
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => SUPPLIERS.map((s) => ({ ...s })));
   const [pulsePipeline, setPulsePipeline] = useState<PipelineId | null>(null);
