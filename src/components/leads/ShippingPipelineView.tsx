@@ -65,7 +65,7 @@ const Group = ({ title, shipments, subs, onOpenCard, onSwipeForward, onSwipeBack
   const totalProjects = uniqueProjectLabels(allSubs).length;
 
   return (
-    <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">
+    <section className="no-select bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between p-5 sm:p-6 hover:bg-muted/40 transition-[var(--transition-smooth)]"
