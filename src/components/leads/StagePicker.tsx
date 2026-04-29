@@ -1,0 +1,81 @@
+import { Sheet } from "./Sheet";
+import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
+import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
+import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
+
+interface StagePickerProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle: string;
+  current: { pipeline: PipelineId; stage: StageId } | null;
+  onPick: (target: { pipeline: PipelineId; stage: StageId }) => void;
+}
+
+export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }: StagePickerProps) => {
+  const next = current ? getNextStage(current.pipeline, current.stage) : null;
+  const prev = current ? getPrevStage(current.pipeline, current.stage) : null;
+  const isAdjacent = (p: PipelineId, s: StageId) =>
+    (next && next.pipeline === p && next.stage === s) || (prev && prev.pipeline === p && prev.stage === s);
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Move project">
+      <div className="space-y-1 pb-3 border-b border-border/60">
+        <p className="font-serif-display text-xl font-semibold text-foreground tracking-tight">{title}</p>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
+      </div>
+
+      <div className="space-y-5 mt-4">
+        {PIPELINES.map((p) => (
+          <div key={p.id}>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mb-2">
+              {p.title}
+            </p>
+            <div className="grid grid-cols-1 gap-1.5">
+              {p.stages.map((s) => {
+                const isCurrent = current?.pipeline === p.id && current?.stage === s.id;
+                const adj = isAdjacent(p.id, s.id);
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => !isCurrent && onPick({ pipeline: p.id, stage: s.id })}
+                    disabled={isCurrent}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-left transition-[var(--transition-smooth)]",
+                      isCurrent
+                        ? "bg-foreground/5 border-foreground/40 ring-1 ring-foreground/20 cursor-default"
+                        : adj
+                          ? "bg-card border-foreground/30 hover:border-foreground/60 hover:bg-muted/40 font-medium"
+                          : "bg-card/60 border-border/60 hover:bg-muted/40 hover:border-foreground/30",
+                    )}
+                  >
+                    <span className="text-sm text-foreground">{s.title}</span>
+                    {isCurrent ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <Check className="h-3 w-3" /> Current
+                      </span>
+                    ) : adj ? (
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {next?.pipeline === p.id && next?.stage === s.id ? "Next" : "Prev"}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="pt-4 mt-4 border-t border-border/60">
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/70 text-foreground text-sm font-medium transition-[var(--transition-smooth)]"
+        >
+          Close
+        </button>
+      </div>
+    </Sheet>
+  );
+};
