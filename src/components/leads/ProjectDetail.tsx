@@ -74,15 +74,21 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onAdvance, onOpen
 
         {/* Header section */}
         <header className="px-6 sm:px-8 pt-6 pb-7 border-b border-border/60">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-2">
             {proj.pointPerson}
           </div>
           <h1
-            className="font-display text-3xl sm:text-4xl tracking-tight leading-tight mb-2"
+            className="font-display text-3xl sm:text-4xl tracking-tight leading-tight mb-1.5"
             style={{ color: "hsl(var(--brand-navy))", letterSpacing: "-0.01em" }}
           >
-            {proj.projectName}
+            {proj.customer}
           </h1>
+          <p
+            className="text-[18px] sm:text-[19px] font-medium leading-snug mb-1.5"
+            style={{ color: "hsl(var(--brand-navy))" }}
+          >
+            {proj.projectName}
+          </p>
           {proj.detailSummary && (
             <p className="text-[15px] text-muted-foreground leading-relaxed mb-5">
               {proj.detailSummary}
@@ -90,7 +96,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onAdvance, onOpen
           )}
 
           {/* Reference row */}
-          <dl className="space-y-1.5 text-[13px]">
+          <dl className="space-y-1.5 text-[13px] mt-4">
             <Row label="Deadline">
               <span className="font-medium text-foreground tabular">
                 {proj.deadline}
@@ -98,8 +104,16 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onAdvance, onOpen
                 <span className="font-semibold" style={{ color: u.color }}>{u.label}</span>
               </span>
             </Row>
-            {proj.quoteNumber && <Row label="Quote"><span className="tabular">{proj.quoteNumber}</span></Row>}
-            {proj.poNumber && <Row label="PO"><span className="tabular">{proj.poNumber}</span></Row>}
+            <Row label="Quote">
+              <span className={cn("tabular", !proj.quoteNumber && "text-muted-foreground/50 italic")}>
+                {proj.quoteNumber ?? "Q-"}
+              </span>
+            </Row>
+            <Row label="PO">
+              <span className={cn("tabular", !proj.poNumber && "text-muted-foreground/50 italic")}>
+                {proj.poNumber ?? "PO-"}
+              </span>
+            </Row>
             {proj.invoiceNumber && <Row label="Invoice"><span className="tabular">{proj.invoiceNumber}</span></Row>}
             <Row label="Stage">
               <span className="inline-flex items-center gap-1.5">
