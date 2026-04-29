@@ -11,6 +11,9 @@ interface StageSectionProps {
   onOpenCard: (c: PipelineCard) => void;
   onOpenMaster: (masterId: string) => void;
   onOpenShipment: (shipmentId: string) => void;
+  onSwipeForward: (c: PipelineCard) => void;
+  onSwipeBack: (c: PipelineCard) => void;
+  onOpenPicker: (c: PipelineCard) => void;
 }
 
 const accentBgClass: Record<string, string> = {
@@ -20,7 +23,7 @@ const accentBgClass: Record<string, string> = {
   cyan: "bg-stage-cyan", fuchsia: "bg-stage-fuchsia",
 };
 
-export const StageSection = ({ title, stage, cards, onOpenCard, onOpenMaster, onOpenShipment }: StageSectionProps) => {
+export const StageSection = ({ title, stage, cards, onOpenCard, onOpenMaster, onOpenShipment, onSwipeForward, onSwipeBack, onOpenPicker }: StageSectionProps) => {
   const [open, setOpen] = useState(true);
   const accent = STAGE_ACCENT[stage];
 
@@ -59,6 +62,9 @@ export const StageSection = ({ title, stage, cards, onOpenCard, onOpenMaster, on
                   onOpen={() => onOpenCard(c)}
                   onOpenMaster={() => onOpenMaster(c.master.id)}
                   onOpenShipment={c.shipment ? () => onOpenShipment(c.shipment!.id) : undefined}
+                  onSwipeForward={() => onSwipeForward(c)}
+                  onSwipeBack={() => onSwipeBack(c)}
+                  onOpenPicker={() => onOpenPicker(c)}
                 />
               ))
             )}
