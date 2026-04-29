@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { PipelineCard, StageId, PIPELINES } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
@@ -24,11 +24,18 @@ function pipelineForStage(stage: StageId) {
   return PIPELINES.find((p) => p.stages.some((s) => s.id === stage))!.id;
 }
 
+// Stages that render collapsed by default and reset to collapsed each time the
+// user enters this pipeline (e.g. Archive in Sales).
+const COLLAPSED_BY_DEFAULT: StageId[] = ["archive"];
+
 export const StageSection = ({
   title, stage, cards, onOpenCard, onOpenMaster, onOpenShipment,
   onSwipeForward, onSwipeBack, onOpenPicker, emptyHint,
 }: StageSectionProps) => {
-  const [open, setOpen] = useState(true);
+  const collapsedDefault = COLLAPSED_BY_DEFAULT.includes(stage);
+  const [open, setOpen] = useState(!collapsedDefault);
+  // Reset to collapsed every time the section mounts (i.e. user re-enters pipeline).
+  useEffect(() => { if (collapsedDefault) setOpen(false); }, [collapsedDefault]);
   const pipelineId = pipelineForStage(stage);
   const accentHex = PIPELINE_ACCENT[pipelineId].hex;
   const { friendly } = useFriendlyMode();
