@@ -54,10 +54,13 @@ export const PIPELINES: PipelineConfig[] = [
   {
     id: "shipping",
     title: "Shipping",
+    // The Shipping pipeline UI does NOT render by stage — it groups by
+    // mode (Air / Ocean) and assignment (Awaiting Shipment). These two
+    // entries exist purely so cross-pipeline navigation (next/prev,
+    // jiggle picker, friendly labels) still has something to point at.
     stages: [
-      { id: "shipment_required", title: "Shipment Required" },
-      { id: "shipment_assigned", title: "In Transit" },
-      { id: "shipment_delivered", title: "Delivered" },
+      { id: "shipment_required", title: "Awaiting Shipment" },
+      { id: "shipment_assigned", title: "On Shipment" },
     ],
   },
   {
