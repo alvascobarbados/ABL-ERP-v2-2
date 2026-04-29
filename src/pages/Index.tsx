@@ -187,7 +187,7 @@ const Index = () => {
     splitMasterToProduction(m.id, items);
     triggerPulse("operations");
     setSplitMaster(null);
-    toast(`${m.projectName} split into ${items.length} sub-project${items.length > 1 ? "s" : ""}, sent to Operations`, {
+    toast(`${m.projectName} split into ${items.length} sub-project${items.length > 1 ? "s" : ""}, sent to Production`, {
       duration: 5000,
     });
   };
@@ -351,7 +351,7 @@ const Index = () => {
               : activePipeline === "sales"
                 ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use Move Forward to advance it."
                 : activePipeline === "operations"
-                  ? "Operations covers Pre-Production and In Production. When the factory finishes, items move to Shipping for shipment assignment."
+                  ? "Production covers Pre-Production and In Production. When the factory finishes, items move to Shipping for shipment assignment."
                   : activePipeline === "shipping"
                     ? "Shipping is organised by shipment, not by stage. Air and Ocean groups hold every active shipment — tap a code to see what's inside, or open it to mark delivered."
                     : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
