@@ -96,14 +96,11 @@ export const ProjectCard = ({
 
     longPressTimer.current = window.setTimeout(() => {
       cancelLongPress();
-      // Prefer the new jiggle interaction; fall back to the picker sheet.
+      // Prefer the new jiggle interaction; fall back to the picker sheet
+      // when the JiggleProvider isn't mounted (rare — Index always mounts it).
       const rect = (innerRef.current ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
-      if (onLongPress) {
-        haptics.pickup();
-        onLongPress(rect);
-      } else {
-        onOpenPicker();
-      }
+      haptics.pickup();
+      jiggle.activate(card, rect);
     }, 400);
   };
 
