@@ -77,7 +77,7 @@ export const PIPELINES: PipelineConfig[] = [
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
   preproduction: "violet", in_production: "orange",
-  shipment_required: "amber", shipment_assigned: "sky", shipment_delivered: "emerald",
+  shipment_required: "amber", shipment_assigned: "sky",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
 };
 
