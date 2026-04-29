@@ -359,7 +359,7 @@ export const ProjectCard = ({
     <div
       ref={rootRef}
       className={cn(
-        "relative transition-opacity duration-200",
+        "no-select relative transition-opacity duration-200",
         jiggleDimmed && "opacity-40 pointer-events-none",
         jiggleActive && "opacity-0 pointer-events-none",
       )}
