@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { MoreVertical } from "lucide-react";
-import { PipelineCard } from "@/data/pipelines";
+import { PipelineCard, getQuoteNumber, getInvoiceNumber, getSupplier } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
@@ -244,12 +244,36 @@ export const ProjectCard = ({
           </h3>
 
           {/* 2. Project name + summary — middle, lighter */}
-          <p className="text-[14px] text-muted-foreground leading-snug font-normal mb-5 line-clamp-2">
+          <p className="text-[14px] text-muted-foreground leading-snug font-normal mb-2 line-clamp-2">
             {projectLine}
           </p>
 
+          {/* Reference numbers — small, secondary */}
+          {(() => {
+            const lines: string[] = [];
+            if (card.pipeline === "sales" && (card.stage === "quote" || card.stage === "confirming")) {
+              const q = getQuoteNumber(card.master.id);
+              if (q) lines.push(q);
+            }
+            if (card.pipeline === "operations" && card.kind === "sub" && card.sub) {
+              const sup = getSupplier(card.sub.supplierId);
+              if (sup) lines.push(sup.name);
+              if (card.sub.poNumber) lines.push(card.sub.poNumber);
+            }
+            if (card.pipeline === "finance") {
+              const inv = getInvoiceNumber(card.master.id);
+              if (inv) lines.push(inv);
+            }
+            if (lines.length === 0) return null;
+            return (
+              <p className="text-[12px] text-muted-foreground/75 leading-snug mb-3 tabular">
+                {lines.join("  ·  ")}
+              </p>
+            );
+          })()}
+
           {/* 3. Deadline + urgency — bottom right */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 mt-2">
             <span className="text-[13px] text-muted-foreground/80 tabular">
               {card.deadline}
             </span>

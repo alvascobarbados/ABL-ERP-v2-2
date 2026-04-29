@@ -171,6 +171,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       value: Math.round(master.value / items.length),
       priority: master.priority,
       orderType: master.orderType,
+      poNumber: `PO-${1200 + Math.floor(Math.random() * 800) + i}`,
+      lineItems: [{ qty: 100, description: it.itemName || `Item ${i + 1}` }],
     }));
     setSubs((prev) => [...prev, ...newSubs]);
   }, [masters]);
