@@ -96,9 +96,12 @@ export const ProjectCard = ({
 
     longPressTimer.current = window.setTimeout(() => {
       cancelLongPress();
-      // JiggleOverlay fires haptics.pickup() in the same rAF as the visual
-      // lift, so buzz + animation are perceptually simultaneous.
+      // Fire haptic + activate jiggle in the same synchronous tick so the
+      // buzz lands the moment the visual lift starts. Vibration must be
+      // called from within a user-gesture-derived handler — the long-press
+      // setTimeout still qualifies because the pointer is still down.
       const rect = (innerRef.current ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
+      haptics.pickup();
       jiggle.activate(card, rect);
     }, 400);
   };
