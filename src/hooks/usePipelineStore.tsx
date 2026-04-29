@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from "react";
 import {
-  PIPELINES, PipelineId, StageId, Project, Shipment, Supplier,
+  PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
   PROJECTS as SEED_PROJECTS, SHIPMENTS as SEED_SHIPMENTS, SUPPLIERS, ShippingMode,
 } from "@/data/pipelines";
 
@@ -121,6 +121,17 @@ interface PipelineStoreCtx {
   suppliers: Supplier[];
   moveCard: (cardId: string, target: { pipeline: PipelineId; stage: StageId }) => MoveResult;
   updateProject: (id: string, patch: Partial<Project>) => void;
+  renameProject: (currentName: string, newName: string) => { count: number };
+  addNote: (projectId: string, text: string, author?: string) => void;
+  addLineItem: (projectId: string, item: LineItem) => void;
+  updateLineItem: (projectId: string, index: number, item: LineItem) => void;
+  removeLineItem: (projectId: string, index: number) => void;
+  duplicateProject: (projectId: string) => Project | null;
+  deleteProject: (projectId: string) => void;
+  addSupplier: (input: { name: string; country: string; defaultShippingMode: ShippingMode }) => Supplier;
+  isQuoteNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
+  isPONumberDuplicate: (number: string, exceptProjectId: string) => boolean;
+  isInvoiceNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
   assignToShipment: (projectId: string, shipmentId: string) => void;
   createShipment: (input: NewShipmentInput) => Shipment;
   markShipmentDelivered: (shipmentId: string) => { count: number };
@@ -133,6 +144,7 @@ const Ctx = createContext<PipelineStoreCtx | null>(null);
 export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(() => SEED_PROJECTS.map((p) => ({ ...p })));
   const [shipments, setShipments] = useState<Shipment[]>(() => SEED_SHIPMENTS.map((s) => ({ ...s })));
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => SUPPLIERS.map((s) => ({ ...s })));
   const [pulsePipeline, setPulsePipeline] = useState<PipelineId | null>(null);
   const pulseTimer = useRef<number | null>(null);
 
@@ -175,6 +187,86 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }, []);
 
+  const renameProject = useCallback((currentName: string, newName: string) => {
+    let count = 0;
+    setProjects((prev) => prev.map((p) => {
+      if (p.projectName === currentName) { count += 1; return { ...p, projectName: newName }; }
+      return p;
+    }));
+    return { count };
+  }, []);
+
+  const addNote = useCallback((projectId: string, text: string, author = "Av") => {
+    const note: ProjectNote = { id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, ts: new Date(), author, text };
+    setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, notes: [...(p.notes ?? []), note] } : p));
+  }, []);
+
+  const addLineItem = useCallback((projectId: string, item: LineItem) => {
+    setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, lineItems: [...(p.lineItems ?? []), item] } : p));
+  }, []);
+
+  const updateLineItem = useCallback((projectId: string, index: number, item: LineItem) => {
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const items = [...(p.lineItems ?? [])];
+      if (index < 0 || index >= items.length) return p;
+      items[index] = item;
+      return { ...p, lineItems: items };
+    }));
+  }, []);
+
+  const removeLineItem = useCallback((projectId: string, index: number) => {
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const items = [...(p.lineItems ?? [])];
+      if (index < 0 || index >= items.length) return p;
+      items.splice(index, 1);
+      return { ...p, lineItems: items };
+    }));
+  }, []);
+
+  const duplicateProject = useCallback((projectId: string): Project | null => {
+    const orig = projects.find((p) => p.id === projectId);
+    if (!orig) return null;
+    const copy: Project = {
+      ...orig,
+      id: `prj-dup-${Date.now()}`,
+      quoteNumber: undefined,
+      poNumber: undefined,
+      invoiceNumber: undefined,
+      shipmentId: undefined,
+      notes: undefined,
+      lineItems: undefined,
+      pipeline: "sales",
+      stage: "proposal",
+    };
+    setProjects((prev) => [copy, ...prev]);
+    return copy;
+  }, [projects]);
+
+  const deleteProject = useCallback((projectId: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+  }, []);
+
+  const addSupplier = useCallback((input: { name: string; country: string; defaultShippingMode: ShippingMode }): Supplier => {
+    const sup: Supplier = {
+      id: `sup-${Date.now()}`,
+      name: input.name,
+      country: input.country,
+      defaultShippingMode: input.defaultShippingMode,
+      contact: "—",
+    };
+    setSuppliers((prev) => [...prev, sup]);
+    return sup;
+  }, []);
+
+  const isQuoteNumberDuplicate = useCallback((n: string, exceptId: string) =>
+    projects.some((p) => p.id !== exceptId && p.quoteNumber === n), [projects]);
+  const isPONumberDuplicate = useCallback((n: string, exceptId: string) =>
+    projects.some((p) => p.id !== exceptId && p.poNumber === n), [projects]);
+  const isInvoiceNumberDuplicate = useCallback((n: string, exceptId: string) =>
+    projects.some((p) => p.id !== exceptId && p.invoiceNumber === n), [projects]);
+
   const assignToShipment = useCallback((projectId: string, shipmentId: string) => {
     const ship = shipments.find((s) => s.id === shipmentId);
     if (!ship) return;
@@ -214,10 +306,14 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   const value = useMemo<PipelineStoreCtx>(() => ({
-    projects, shipments, suppliers: SUPPLIERS,
-    moveCard, updateProject, assignToShipment, createShipment, markShipmentDelivered,
+    projects, shipments, suppliers,
+    moveCard, updateProject, renameProject, addNote,
+    addLineItem, updateLineItem, removeLineItem,
+    duplicateProject, deleteProject, addSupplier,
+    isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
+    assignToShipment, createShipment, markShipmentDelivered,
     pulsePipeline, triggerPulse,
-  }), [projects, shipments, moveCard, updateProject, assignToShipment, createShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+  }), [projects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };

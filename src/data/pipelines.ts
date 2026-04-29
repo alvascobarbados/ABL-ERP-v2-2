@@ -88,6 +88,24 @@ export const SUPPLIERS: Supplier[] = [
   { id: "sup-yiwu", name: "Yiwu Star", country: "China", defaultShippingMode: "Ocean LCL", contact: "Mei Chen", notes: "Variety merchandise; budget-friendly." },
   { id: "sup-shenzhen", name: "Shenzhen Print Co", country: "China", defaultShippingMode: "Ocean LCL", contact: "David Park", notes: "Print specialist; signage & POS." },
   { id: "sup-ningbo", name: "Ningbo Textile", country: "China", defaultShippingMode: "Ocean FCL", contact: "Sara Wu", notes: "Textile orders, uniforms, totes." },
+  { id: "sup-lp", name: "LP Outdoor", country: "China", defaultShippingMode: "Ocean FCL", contact: "—" },
+  { id: "sup-hxin", name: "HXIN", country: "China", defaultShippingMode: "Ocean LCL", contact: "—" },
+  { id: "sup-seebox", name: "Seebox", country: "China", defaultShippingMode: "Ocean LCL", contact: "—" },
+  { id: "sup-caremax", name: "Caremax", country: "China", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-logomark", name: "Logomark", country: "USA", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-casla", name: "Casla", country: "China", defaultShippingMode: "Ocean LCL", contact: "—" },
+  { id: "sup-pcna", name: "PCNA", country: "USA", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-aakron", name: "Aakron Line", country: "USA", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-other-china", name: "Other - China", country: "China", defaultShippingMode: "Ocean LCL", contact: "—" },
+  { id: "sup-other-bb", name: "Other - Barbados", country: "Barbados", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-other-usa", name: "Other - USA", country: "USA", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-alvasco", name: "Alvasco (Stock)", country: "Barbados", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-supreme", name: "Supreme Signs", country: "Barbados", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-hit", name: "Hit Promo", country: "USA", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-evans", name: "Evans", country: "USA", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-kingmore", name: "Kingmore", country: "China", defaultShippingMode: "Ocean LCL", contact: "—" },
+  { id: "sup-dechno", name: "Dechno", country: "China", defaultShippingMode: "Air", contact: "—" },
+  { id: "sup-chili", name: "Chili Concept", country: "China", defaultShippingMode: "Ocean LCL", contact: "—" },
 ];
 
 // ─────────── Project (the only entity now) ───────────
@@ -103,12 +121,21 @@ export interface LineItem {
  */
 export type SupplierLabelHint = "TBD" | "Various";
 export type SalesShippingLabel =
-  | "Ocean FCL" | "Ocean LCL" | "DHL" | "FedEx" | "Courier" | "Mixed";
+  | "Ocean FCL" | "Ocean LCL" | "DHL" | "FedEx" | "Courier" | "Mixed" | "Local";
+
+export interface ProjectNote {
+  id: string;
+  ts: Date;
+  author: string;
+  text: string;
+  auto?: boolean;
+}
 
 export interface Project {
   id: string;
   customer: string;
-  pointPerson: string;
+  contactPerson?: string;       // person at the customer side
+  pointPerson: string;          // internal Alvasco owner
   projectName: string;
   detailSummary?: string;       // optional in Sales/Proposal; required from Confirming on
   supplierId?: string;          // required from Confirming on
@@ -116,6 +143,7 @@ export interface Project {
   shippingMode?: ShippingMode;  // required from Confirming on
   salesShippingLabel?: SalesShippingLabel; // Sales-only display string
   shipmentId?: string;          // assigned in Shipping
+  trackingRef?: string;         // free-form / FCL- / LCL- / carrier digits
   pipeline: PipelineId;
   stage: StageId;
   deadline: string;
@@ -128,6 +156,7 @@ export interface Project {
   poNumber?: string;
   invoiceNumber?: string;
   lineItems?: LineItem[];
+  notes?: ProjectNote[];
 }
 
 export type AirCarrier = "DHL" | "FedEx";
@@ -564,6 +593,10 @@ export const getProjectsForShipment = (shipmentId: string) => PROJECTS.filter((p
 // All distinct project names (used by the Project filter)
 export const distinctProjectNames = (): string[] =>
   Array.from(new Set(PROJECTS.map((p) => p.projectName))).sort();
+
+// Master customer list — derived from existing projects (real app would be its own module)
+export const distinctCustomers = (): string[] =>
+  Array.from(new Set(PROJECTS.map((p) => p.customer))).sort();
 
 export function buildCard(project: Project): PipelineCard {
   return {
