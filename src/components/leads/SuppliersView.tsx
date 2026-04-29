@@ -1,7 +1,8 @@
 import { Factory, MapPin, User2, CornerDownRight } from "lucide-react";
 import { Sheet } from "./Sheet";
-import { SUPPLIERS, getSubsForSupplier, getMaster, STAGE_ACCENT, PIPELINES } from "@/data/pipelines";
-import { cn } from "@/lib/utils";
+import { SUPPLIERS, getSubsForSupplier, getMaster, PIPELINES } from "@/data/pipelines";
+import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
+import { SupplierChip } from "./StatusPill";
 
 interface Props {
   open: boolean;
@@ -9,13 +10,6 @@ interface Props {
   onOpenSub: (subId: string) => void;
   onOpenMaster: (masterId: string) => void;
 }
-
-const accentBgClass: Record<string, string> = {
-  indigo: "bg-stage-indigo", amber: "bg-stage-amber", emerald: "bg-stage-emerald",
-  rose: "bg-stage-rose", slate: "bg-stage-slate", violet: "bg-stage-violet",
-  orange: "bg-stage-orange", teal: "bg-stage-teal", sky: "bg-stage-sky",
-  cyan: "bg-stage-cyan", fuchsia: "bg-stage-fuchsia",
-};
 
 export const SuppliersView = ({ open, onClose, onOpenSub, onOpenMaster }: Props) => {
   if (!open) return null;
@@ -35,7 +29,8 @@ export const SuppliersView = ({ open, onClose, onOpenSub, onOpenMaster }: Props)
             <section key={sup.id}>
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
-                  <div className="font-serif-display text-lg font-semibold flex items-center gap-2">
+                  <div className="text-base font-semibold flex items-center gap-2" style={{ color: "hsl(var(--brand-navy))" }}>
+                    <SupplierChip color={supplierColor(sup.id)} />
                     <Factory className="h-4 w-4 text-muted-foreground" />
                     {sup.name}
                   </div>
@@ -45,7 +40,10 @@ export const SuppliersView = ({ open, onClose, onOpenSub, onOpenMaster }: Props)
                     <span>· Default {sup.defaultShippingMode}</span>
                   </div>
                 </div>
-                <span className="text-xs tabular-nums px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+                <span
+                  className="text-xs tabular px-2 py-0.5 rounded-full text-white shrink-0 font-semibold"
+                  style={{ backgroundColor: active.length > 0 ? "hsl(var(--brand-orange))" : "hsl(var(--muted))", color: active.length > 0 ? "#fff" : "hsl(var(--muted-foreground))" }}
+                >
                   {active.length} active
                 </span>
               </div>
@@ -58,17 +56,17 @@ export const SuppliersView = ({ open, onClose, onOpenSub, onOpenMaster }: Props)
                 <div className="space-y-2">
                   {active.map((s) => {
                     const master = getMaster(s.masterId)!;
-                    const accent = STAGE_ACCENT[s.stage];
-                    const stageInfo = PIPELINES.flatMap((p) => p.stages.map((st) => ({ ...st, pipeline: p.title }))).find((x) => x.id === s.stage);
+                    const stageInfo = PIPELINES.flatMap((p) => p.stages.map((st) => ({ ...st, pipelineTitle: p.title }))).find((x) => x.id === s.stage);
                     return (
                       <div key={s.id} className="rounded-xl border border-border bg-card p-3">
                         <button
                           onClick={() => onOpenMaster(master.id)}
-                          className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-1"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md mb-1 transition-colors hover:opacity-80"
+                          style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}
                         >
                           <CornerDownRight className="h-3 w-3 opacity-70" />
-                          <span className="font-medium">{master.projectName}</span>
-                          <span className="text-muted-foreground/60">·</span>
+                          <span>{master.projectName}</span>
+                          <span className="opacity-60">·</span>
                           <span>{master.customer}</span>
                         </button>
                         <button onClick={() => onOpenSub(s.id)} className="w-full text-left flex items-start justify-between gap-3">
@@ -77,9 +75,9 @@ export const SuppliersView = ({ open, onClose, onOpenSub, onOpenMaster }: Props)
                             <div className="text-xs text-muted-foreground mt-0.5">Due {s.deadline} · {s.shippingMode}</div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className={cn("w-1.5 h-1.5 rounded-full", accentBgClass[accent])} />
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PIPELINE_ACCENT[s.pipeline].hex }} />
                             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                              {stageInfo?.pipeline} · {stageInfo?.title}
+                              {stageInfo?.pipelineTitle} · {stageInfo?.title}
                             </span>
                           </div>
                         </button>
