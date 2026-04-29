@@ -64,8 +64,17 @@ export const ProjectCard = ({
   const longPressTimer = useRef<number | null>(null);
   const moved = useRef(false);
   const passedThreshold = useRef(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => { if (longPressTimer.current) window.clearTimeout(longPressTimer.current); }, []);
+
+  // Cancel any pending long-press if the user starts scrolling.
+  useEffect(() => {
+    const onScroll = () => cancelLongPress();
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", onScroll, true as unknown as EventListenerOptions);
+  }, []);
 
   const cancelLongPress = () => {
     if (longPressTimer.current) {
@@ -76,6 +85,7 @@ export const ProjectCard = ({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    if (jiggleDimmed || jiggleActive) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-no-drag]")) return;
 
@@ -89,8 +99,15 @@ export const ProjectCard = ({
 
     longPressTimer.current = window.setTimeout(() => {
       cancelLongPress();
-      onOpenPicker();
-    }, 550);
+      // Prefer the new jiggle interaction; fall back to the picker sheet.
+      const rect = (innerRef.current ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
+      if (onLongPress) {
+        haptics.pickup();
+        onLongPress(rect);
+      } else {
+        onOpenPicker();
+      }
+    }, 400);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -119,6 +136,7 @@ export const ProjectCard = ({
     if (past && !passedThreshold.current) {
       passedThreshold.current = true;
       setPulse(true);
+      haptics.threshold();
       window.setTimeout(() => setPulse(false), 180);
     } else if (!past && passedThreshold.current) {
       passedThreshold.current = false;
@@ -134,6 +152,9 @@ export const ProjectCard = ({
 
     if (Math.abs(distance) >= COMMIT_THRESHOLD_PX) {
       const dir = distance > 0 ? 1 : -1;
+      const willCommit = (dir > 0 && canForward) || (dir < 0 && canBack);
+      if (willCommit) haptics.commit();
+      else haptics.nope();
       setDx(dir * PULSE_THRESHOLD_PX * 1.6);
       window.setTimeout(() => {
         if (dir > 0 && canForward) onSwipeForward();
