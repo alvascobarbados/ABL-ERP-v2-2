@@ -39,12 +39,11 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
       setMounted(false);
       return;
     }
-    // Fire the visual lift + haptic together on the next frame so the
-    // browser has painted the un-lifted clone first (otherwise the CSS
-    // transition has nothing to interpolate from). Both fire in the same
-    // rAF callback to keep buzz and lift perceptually simultaneous.
+    // Trigger the enter animation on the next frame so the CSS transition
+    // has a previous "scale(1)" frame to interpolate from. Haptic is fired
+    // by the caller (ProjectCard) inside the long-press handler so it stays
+    // inside the user-activation context required by Chrome/Android.
     const id = requestAnimationFrame(() => {
-      haptics.pickup();
       setMounted(true);
     });
     return () => cancelAnimationFrame(id);
