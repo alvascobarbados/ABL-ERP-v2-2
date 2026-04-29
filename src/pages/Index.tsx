@@ -26,6 +26,11 @@ const Index = () => {
 
   const cards = useMemo(() => buildCards(activePipeline), [activePipeline]);
 
+  const customerOptions = useMemo(
+    () => Array.from(new Set(MASTERS.map((m) => m.customer))).sort(),
+    [],
+  );
+
   const visible = useMemo(() => {
     return cards.filter((c) => {
       if (filters.shippingMode && c.shippingMode !== filters.shippingMode) return false;
