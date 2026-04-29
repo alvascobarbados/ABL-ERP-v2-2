@@ -40,7 +40,7 @@ export const SplitToProductionSheet = ({ master, suppliers, open, onClose, onCon
     <Sheet open={open} onClose={handleClose} title="Split to Production">
       <div className="space-y-1 pb-4 border-b border-border/60">
         <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">Master Project</p>
-        <p className="font-serif-display text-xl font-semibold text-foreground tracking-tight">{master.projectName}</p>
+        <p className="text-xl font-semibold tracking-tight" style={{ color: "hsl(var(--brand-navy))" }}>{master.projectName}</p>
         <p className="text-sm text-muted-foreground">{master.customer} · {master.summary}</p>
       </div>
 

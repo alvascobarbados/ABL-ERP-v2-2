@@ -22,7 +22,7 @@ export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }:
   return (
     <Sheet open={open} onClose={onClose} title="Move project">
       <div className="space-y-1 pb-3 border-b border-border/60">
-        <p className="font-serif-display text-xl font-semibold text-foreground tracking-tight">{title}</p>
+        <p className="text-xl font-semibold tracking-tight" style={{ color: "hsl(var(--brand-navy))" }}>{title}</p>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
 
@@ -44,11 +44,18 @@ export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }:
                     className={cn(
                       "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-left transition-[var(--transition-smooth)]",
                       isCurrent
-                        ? "bg-foreground/5 border-foreground/40 ring-1 ring-foreground/20 cursor-default"
+                        ? "cursor-default"
                         : adj
-                          ? "bg-card border-foreground/30 hover:border-foreground/60 hover:bg-muted/40 font-medium"
-                          : "bg-card/60 border-border/60 hover:bg-muted/40 hover:border-foreground/30",
+                          ? "bg-card hover:bg-muted/40 font-medium"
+                          : "bg-card/60 border-border/60 hover:bg-muted/40",
                     )}
+                    style={
+                      isCurrent
+                        ? { backgroundColor: "hsl(var(--brand-navy) / 0.06)", borderColor: "hsl(var(--brand-navy) / 0.4)", boxShadow: "0 0 0 1px hsl(var(--brand-navy) / 0.25)" }
+                        : adj
+                          ? { borderColor: "hsl(var(--brand-navy) / 0.35)" }
+                          : undefined
+                    }
                   >
                     <span className="text-sm text-foreground">{s.title}</span>
                     {isCurrent ? (
