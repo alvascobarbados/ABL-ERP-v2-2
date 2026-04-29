@@ -71,8 +71,7 @@ const Index = () => {
 
   const counts = useMemo<Record<PipelineId, number>>(() => ({
     sales: masters.filter((m) => m.pipeline === "sales").length,
-    production: subs.filter((s) => s.pipeline === "production").length,
-    shipping: subs.filter((s) => s.pipeline === "shipping").length,
+    operations: subs.filter((s) => s.pipeline === "operations").length,
     finance: subs.filter((s) => s.pipeline === "finance").length,
   }), [masters, subs]);
 
@@ -100,8 +99,8 @@ const Index = () => {
 
   // ─── Move logic ───
   const performMove = (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
-    // Friendly Mode safety net for "Lost"
-    if (friendly && target.stage === "lost" && card.stage !== "lost") {
+    // Friendly Mode safety net for "Archive" (closed-but-not-deleted)
+    if (friendly && target.stage === "archive" && card.stage !== "archive") {
       setConfirmLost({ card, target });
       return;
     }
@@ -166,9 +165,9 @@ const Index = () => {
     if (!splitMaster) return;
     const m = splitMaster;
     splitMasterToProduction(m.id, items);
-    triggerPulse("production");
+    triggerPulse("operations");
     setSplitMaster(null);
-    toast(`${m.projectName} split into ${items.length} sub-project${items.length > 1 ? "s" : ""}, sent to Production`, {
+    toast(`${m.projectName} split into ${items.length} sub-project${items.length > 1 ? "s" : ""}, sent to Operations`, {
       duration: 5000,
     });
   };
@@ -319,12 +318,10 @@ const Index = () => {
           id={`pipeline-${activePipeline}`}
           text={
             activePipeline === "sales"
-              ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use the Move Forward button to advance it."
-              : activePipeline === "production"
-                ? "Production tracks each item being made by a supplier. One sales lead can become several sub-projects here — one per item per supplier."
-                : activePipeline === "shipping"
-                  ? "Shipping tracks items on their way to the customer. Tap a shipment code to see everything in that container."
-                  : "Finance tracks invoicing and payment. Move forward when paid in full."
+              ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use Move Forward to advance it."
+              : activePipeline === "operations"
+                ? "Operations covers Pre-Production, In Production and Shipping — everything between a confirmed sale and goods reaching the customer. One sales lead can become several sub-projects here, one per item per supplier."
+                : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
           }
         />
 
@@ -342,13 +339,14 @@ const Index = () => {
             onOpenPicker={onOpenPicker}
             emptyHint={
               stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
-              : stage.id === "lost" ? "No lost projects. Keep it that way."
+              : stage.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
+              : stage.id === "invoice_required" ? "No projects awaiting an invoice."
               : undefined
             }
           />
         ))}
 
-        {activePipeline === "shipping" && SHIPMENTS.length > 0 && (
+        {activePipeline === "operations" && SHIPMENTS.length > 0 && (
           <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 p-5">
             <div className="text-base font-medium mb-3" style={{ color: "hsl(var(--brand-navy))" }}>Active shipments</div>
             <div className="flex flex-wrap gap-2">
