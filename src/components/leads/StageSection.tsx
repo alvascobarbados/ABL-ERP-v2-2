@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Project, StageId, STAGE_ACCENT } from "@/data/pipelines";
+import { PipelineCard, StageId, STAGE_ACCENT } from "@/data/pipelines";
 import { ProjectCard } from "./ProjectCard";
 import { cn } from "@/lib/utils";
 
 interface StageSectionProps {
   title: string;
   stage: StageId;
-  projects: Project[];
-  onProjectClick: (p: Project) => void;
+  cards: PipelineCard[];
+  onOpenCard: (c: PipelineCard) => void;
+  onOpenMaster: (masterId: string) => void;
+  onOpenShipment: (shipmentId: string) => void;
 }
 
 const accentBgClass: Record<string, string> = {
@@ -18,7 +20,7 @@ const accentBgClass: Record<string, string> = {
   cyan: "bg-stage-cyan", fuchsia: "bg-stage-fuchsia",
 };
 
-export const StageSection = ({ title, stage, projects, onProjectClick }: StageSectionProps) => {
+export const StageSection = ({ title, stage, cards, onOpenCard, onOpenMaster, onOpenShipment }: StageSectionProps) => {
   const [open, setOpen] = useState(true);
   const accent = STAGE_ACCENT[stage];
 
@@ -33,7 +35,7 @@ export const StageSection = ({ title, stage, projects, onProjectClick }: StageSe
           <span className={cn("w-2 h-2 rounded-full", accentBgClass[accent])} />
           <h2 className="font-serif-display text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
           <span className="text-xs text-muted-foreground font-medium tabular-nums px-2 py-0.5 rounded-full bg-muted">
-            {projects.length}
+            {cards.length}
           </span>
         </div>
         <ChevronDown
@@ -47,11 +49,17 @@ export const StageSection = ({ title, stage, projects, onProjectClick }: StageSe
       <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
         <div className="overflow-hidden">
           <div className="px-4 pb-4 sm:px-5 sm:pb-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-            {projects.length === 0 ? (
+            {cards.length === 0 ? (
               <p className="text-sm text-muted-foreground italic col-span-full py-2">No projects.</p>
             ) : (
-              projects.map((p) => (
-                <ProjectCard key={p.id} project={p} onClick={() => onProjectClick(p)} />
+              cards.map((c) => (
+                <ProjectCard
+                  key={c.id}
+                  card={c}
+                  onOpen={() => onOpenCard(c)}
+                  onOpenMaster={() => onOpenMaster(c.master.id)}
+                  onOpenShipment={c.shipment ? () => onOpenShipment(c.shipment!.id) : undefined}
+                />
               ))
             )}
           </div>
