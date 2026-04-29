@@ -88,7 +88,6 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
   in_production: "In Production — being made at the factory",
   shipment_required: "Awaiting shipment assignment",
   shipment_assigned: "On the way (in transit)",
-  shipment_delivered: "Delivered",
   invoice_required: "Invoice Required — needs invoicing",
   invoiced: "Invoiced — waiting for payment",
   paid: "Paid — complete",
