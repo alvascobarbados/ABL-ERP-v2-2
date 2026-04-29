@@ -58,25 +58,33 @@ const SearchableDropdown = ({ label, active, selectedLabel, options, selectedId,
 
   return (
     <div className="relative shrink-0" ref={ref}>
-      <button
-        onClick={() => setOpen((o) => !o)}
+      <div
         className={cn(
-          "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-[var(--transition-smooth)] whitespace-nowrap",
+          "inline-flex items-center text-xs font-medium rounded-full border transition-[var(--transition-smooth)] whitespace-nowrap overflow-hidden",
           active
             ? "bg-foreground text-background border-foreground"
             : "bg-card/60 text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground",
         )}
       >
-        <span>{active && selectedLabel ? selectedLabel : label}</span>
-        {active ? (
-          <X
-            className="h-3 w-3"
-            onClick={(e) => { e.stopPropagation(); onSelect(null); }}
-          />
-        ) : (
-          <ChevronDown className="h-3 w-3" />
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5"
+        >
+          <span>{active && selectedLabel ? selectedLabel : label}</span>
+          {!active && <ChevronDown className="h-3 w-3" />}
+        </button>
+        {active && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onSelect(null); setQuery(""); }}
+            className="pl-1 pr-2.5 py-1.5 hover:opacity-80"
+            aria-label={`Clear ${label}`}
+          >
+            <X className="h-3 w-3" />
+          </button>
         )}
-      </button>
+      </div>
 
       {open && (
         <div className="absolute top-full left-0 mt-1.5 w-64 bg-popover border border-border rounded-xl shadow-[var(--shadow-section)] z-30 overflow-hidden animate-fade-in">
@@ -87,7 +95,7 @@ const SearchableDropdown = ({ label, active, selectedLabel, options, selectedId,
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${label.toLowerCase()}…`}
-              className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground text-foreground"
             />
           </div>
           <div className="max-h-64 overflow-y-auto py-1">
@@ -97,10 +105,17 @@ const SearchableDropdown = ({ label, active, selectedLabel, options, selectedId,
               filtered.map((o) => (
                 <button
                   key={o.id}
-                  onClick={() => { onSelect(o.id); setOpen(false); setQuery(""); }}
+                  type="button"
+                  onMouseDown={(e) => {
+                    // fire before the document mousedown closes the panel
+                    e.preventDefault();
+                    onSelect(o.id);
+                    setOpen(false);
+                    setQuery("");
+                  }}
                   className={cn(
                     "w-full text-left text-xs px-3 py-1.5 hover:bg-muted flex items-center justify-between gap-2",
-                    selectedId === o.id && "bg-muted/60 font-medium",
+                    selectedId === o.id && "bg-muted/60 font-medium text-foreground",
                   )}
                 >
                   <span className="truncate">{o.label}</span>
