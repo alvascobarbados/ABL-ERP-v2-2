@@ -91,6 +91,7 @@ const Index = () => {
       const labels = v.missing.map((m) =>
         m === "detailSummary" ? "detail summary" : m === "supplier" ? "supplier" : "shipping mode",
       );
+      haptics.nope();
       setMissingFields({ card, target, missing: labels });
       return;
     }
