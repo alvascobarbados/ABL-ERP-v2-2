@@ -358,6 +358,95 @@ export const SUBS: SubProject[] = [
   sp("sub-f8a", "m-f8", "Rum Gift Boxes", "Premium gift boxes x 600", "sup-ningbo", "finance", "paid", "Ocean FCL", 26000, d(5, 1), { orderType: "Re-order" }),
 ];
 
+// ─────────── Reference numbers + line items (deterministic enrichment) ───────────
+// Quote numbers: every master that has reached "quote" or beyond gets one.
+// Invoice numbers: every master in finance gets one.
+// PO numbers: every sub gets one.
+// Line items: each sub gets a realistic 4–6 item breakdown.
+
+const ITEM_POOL: { description: string; qtyMin: number; qtyMax: number }[] = [
+  { description: "Branded Pens",            qtyMin: 500,  qtyMax: 5000 },
+  { description: "Polo Shirts (embroidered)", qtyMin: 100, qtyMax: 800 },
+  { description: "T-Shirts (printed)",      qtyMin: 200,  qtyMax: 2000 },
+  { description: "Water Bottles 750ml",     qtyMin: 100,  qtyMax: 1500 },
+  { description: "Cotton Tote Bags",        qtyMin: 200,  qtyMax: 3000 },
+  { description: "USB Drives 16GB",         qtyMin: 100,  qtyMax: 1000 },
+  { description: "Notebooks A5",            qtyMin: 200,  qtyMax: 2500 },
+  { description: "Lanyards",                qtyMin: 200,  qtyMax: 3000 },
+  { description: "Vinyl Banners 3x1m",      qtyMin: 10,   qtyMax: 80 },
+  { description: "Feather Flags 2m",        qtyMin: 10,   qtyMax: 60 },
+  { description: "Branded Coolers 60L",     qtyMin: 50,   qtyMax: 300 },
+  { description: "Beach Umbrellas",         qtyMin: 30,   qtyMax: 200 },
+  { description: "Stainless Tumblers",      qtyMin: 200,  qtyMax: 2000 },
+  { description: "Baseball Caps",           qtyMin: 200,  qtyMax: 2000 },
+  { description: "Drawstring Bags",         qtyMin: 300,  qtyMax: 3000 },
+  { description: "Pop-Up Tents 3x3m",       qtyMin: 5,    qtyMax: 50 },
+  { description: "Table Covers (printed)",  qtyMin: 20,   qtyMax: 150 },
+  { description: "Pull-up Banners",         qtyMin: 4,    qtyMax: 30 },
+  { description: "Backdrop Walls 3x2m",     qtyMin: 1,    qtyMax: 10 },
+  { description: "Branded Stage Skirt",     qtyMin: 1,    qtyMax: 8 },
+  { description: "Keychains (metal)",       qtyMin: 300,  qtyMax: 3000 },
+  { description: "Sticker Sheets A4",       qtyMin: 500,  qtyMax: 5000 },
+];
+
+function hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h >>> 0;
+}
+function pickItems(seed: string): LineItem[] {
+  const h = hashStr(seed);
+  const count = 4 + (h % 3); // 4, 5, or 6
+  const items: LineItem[] = [];
+  const used = new Set<number>();
+  for (let i = 0; i < count; i++) {
+    let idx = (h + i * 2654435761) % ITEM_POOL.length;
+    while (used.has(idx)) idx = (idx + 1) % ITEM_POOL.length;
+    used.add(idx);
+    const tmpl = ITEM_POOL[idx];
+    const qSeed = hashStr(seed + ":" + i);
+    const range = tmpl.qtyMax - tmpl.qtyMin;
+    const step = tmpl.qtyMin >= 100 ? 50 : 5;
+    const raw = tmpl.qtyMin + (qSeed % (range + 1));
+    const qty = Math.max(tmpl.qtyMin, Math.round(raw / step) * step);
+    items.push({ qty, description: tmpl.description });
+  }
+  return items;
+}
+
+// Assign quote numbers to every master that has reached the "quote" stage or later.
+const STAGES_BEFORE_QUOTE: StageId[] = ["proposal"];
+let quoteSeq = 2040;
+const masterQuoteNumber = new Map<string, string>();
+const masterInvoiceNumber = new Map<string, string>();
+let invoiceSeq = 1040;
+for (const m of MASTERS) {
+  // every master that ever progressed past Proposal gets a Quote number.
+  // For Sales archived without quoting we still skip if stage === proposal or it was archived as Cold/Lost from proposal.
+  const skipQuote =
+    (m.pipeline === "sales" && m.stage === "proposal") ||
+    (m.pipeline === "sales" && m.stage === "archive" && (m.tag === "Lost" || m.tag === "Other"));
+  if (!skipQuote) {
+    masterQuoteNumber.set(m.id, `Q-${quoteSeq++}`);
+  }
+  if (m.pipeline === "finance") {
+    masterInvoiceNumber.set(m.id, `INV-${invoiceSeq++}`);
+  }
+}
+
+let poSeq = 1080;
+for (const s of SUBS) {
+  s.poNumber = `PO-${poSeq++}`;
+  s.lineItems = pickItems(s.id);
+}
+
+export function getQuoteNumber(masterId: string): string | undefined {
+  return masterQuoteNumber.get(masterId);
+}
+export function getInvoiceNumber(masterId: string): string | undefined {
+  return masterInvoiceNumber.get(masterId);
+}
+
 // ─────────── Lookups ───────────
 export const getMaster = (id: string) => MASTERS.find((x) => x.id === id);
 export const getSupplier = (id: string) => SUPPLIERS.find((x) => x.id === id);
@@ -365,6 +454,7 @@ export const getShipment = (id?: string) => (id ? SHIPMENTS.find((x) => x.id ===
 export const getSubsForMaster = (masterId: string) => SUBS.filter((s) => s.masterId === masterId);
 export const getSubsForSupplier = (supplierId: string) => SUBS.filter((s) => s.supplierId === supplierId);
 export const getSubsForShipment = (shipmentId: string) => SUBS.filter((s) => s.shipmentId === shipmentId);
+
 
 // Build pipeline cards: in Sales we use masters; otherwise we use subs.
 export function buildCards(pipeline: PipelineId): PipelineCard[] {
