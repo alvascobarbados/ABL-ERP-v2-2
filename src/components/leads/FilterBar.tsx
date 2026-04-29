@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { Filter, ChevronDown, Check, Search, X, Users, Factory } from "lucide-react";
+import { Filter, ChevronDown, Check, Search, X, Users, Factory, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface FilterState {
-  shippingMode: string | null;
-  orderType: string | null;
-  priority: string | null;
   customer: string | null;
+  projectName: string | null;
   supplierId: string | null;
 }
 
@@ -14,6 +12,7 @@ interface Props {
   value: FilterState;
   onChange: (next: FilterState) => void;
   customers: string[];
+  projectNames: string[];
   suppliers: { id: string; name: string }[];
 }
 
@@ -172,10 +171,10 @@ const FilterChip = ({ label, selectedLabel, active, onOpen, onClear }: FilterChi
   </div>
 );
 
-export const FilterBar = ({ value, onChange, customers, suppliers }: Props) => {
-  const [open, setOpen] = useState<null | "customer" | "supplier">(null);
+export const FilterBar = ({ value, onChange, customers, projectNames, suppliers }: Props) => {
+  const [open, setOpen] = useState<null | "customer" | "project" | "supplier">(null);
 
-  const hasFilters = !!(value.customer || value.supplierId);
+  const hasFilters = !!(value.customer || value.projectName || value.supplierId);
   const supplierName = suppliers.find((s) => s.id === value.supplierId)?.name;
 
   return (
@@ -193,6 +192,13 @@ export const FilterBar = ({ value, onChange, customers, suppliers }: Props) => {
           onClear={() => onChange({ ...value, customer: null })}
         />
         <FilterChip
+          label="Project"
+          selectedLabel={value.projectName ?? undefined}
+          active={!!value.projectName}
+          onOpen={() => setOpen("project")}
+          onClear={() => onChange({ ...value, projectName: null })}
+        />
+        <FilterChip
           label="Supplier"
           selectedLabel={supplierName}
           active={!!value.supplierId}
@@ -202,7 +208,7 @@ export const FilterBar = ({ value, onChange, customers, suppliers }: Props) => {
 
         {hasFilters && (
           <button
-            onClick={() => onChange({ shippingMode: null, orderType: null, priority: null, customer: null, supplierId: null })}
+            onClick={() => onChange({ customer: null, projectName: null, supplierId: null })}
             className="text-xs text-muted-foreground underline underline-offset-4 ml-1 shrink-0"
           >
             Clear
@@ -218,6 +224,15 @@ export const FilterBar = ({ value, onChange, customers, suppliers }: Props) => {
         options={customers.map((c) => ({ id: c, label: c }))}
         selectedId={value.customer}
         onSelect={(id) => onChange({ ...value, customer: id })}
+      />
+      <PickerSheet
+        open={open === "project"}
+        onClose={() => setOpen(null)}
+        title="Filter by project"
+        icon={<Briefcase className="h-4 w-4" />}
+        options={projectNames.map((n) => ({ id: n, label: n }))}
+        selectedId={value.projectName}
+        onSelect={(id) => onChange({ ...value, projectName: id })}
       />
       <PickerSheet
         open={open === "supplier"}
