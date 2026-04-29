@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { ChevronDown, Plane, Ship, MoreVertical } from "lucide-react";
-import { Shipment, Project, getProject, PipelineCard } from "@/data/pipelines";
+import { Shipment, Project, PipelineCard } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 export type ShippingFilter = "in_transit" | "delivered" | "delayed";
 
 interface Props {
-  subs: Project[];          // already filtered by FilterBar
+  subs: Project[];
   shipments: Shipment[];
   filter: ShippingFilter;
   onFilterChange: (f: ShippingFilter) => void;
@@ -22,7 +22,6 @@ interface Props {
 
 const formatDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
 
-// Build distinct project labels from a list of projects.
 function uniqueProjectLabels(projs: Project[]): string[] {
   const seen = new Set<string>();
   const labels: string[] = [];
@@ -36,83 +35,132 @@ function uniqueProjectLabels(projs: Project[]): string[] {
   return labels;
 }
 
+const STATUS_TONE: Record<Shipment["status"], { bg: string; fg: string; label: string }> = {
+  "Booked":     { bg: "hsl(var(--brand-navy) / 0.08)",  fg: "hsl(var(--brand-navy))",   label: "Booked" },
+  "In Transit": { bg: "hsl(var(--brand-teal) / 0.12)",  fg: "hsl(var(--brand-teal))",   label: "In Transit" },
+  "Delayed":    { bg: "hsl(var(--brand-orange) / 0.12)",fg: "hsl(var(--brand-orange))", label: "Delayed" },
+  "Customs":    { bg: "hsl(var(--brand-orange) / 0.12)",fg: "hsl(var(--brand-orange))", label: "Customs" },
+  "Delivered":  { bg: "hsl(142 30% 35% / 0.12)",        fg: "hsl(142 30% 35%)",         label: "Delivered" },
+};
+
 interface ShipmentCardProps {
   shipment: Shipment;
   subs: Project[];
   onOpenShipment: (id: string) => void;
 }
 
-const STATUS_TONE: Record<Shipment["status"], { bg: string; fg: string; label: string }> = {
-  "Booked":     { bg: "hsl(var(--brand-navy) / 0.08)", fg: "hsl(var(--brand-navy))",   label: "Booked" },
-  "In Transit": { bg: "hsl(var(--brand-teal) / 0.12)", fg: "hsl(var(--brand-teal))",   label: "In Transit" },
-  "Delayed":    { bg: "hsl(var(--brand-orange) / 0.12)", fg: "hsl(var(--brand-orange))", label: "Delayed" },
-  "Customs":    { bg: "hsl(var(--brand-orange) / 0.12)", fg: "hsl(var(--brand-orange))", label: "Customs" },
-  "Delivered":  { bg: "hsl(142 30% 35% / 0.12)",       fg: "hsl(142 30% 35%)",         label: "Delivered" },
-};
-
+/**
+ * Shipment card that follows the universal ProjectCard skeleton:
+ *   identity block (left) + optional right block (mode icon)
+ *   ⋮ top-right
+ *   divider
+ *   bottom-left metadata + bottom-right deadline/status
+ */
 const ShipmentCard = ({ shipment, subs, onOpenShipment }: ShipmentCardProps) => {
   const tone = STATUS_TONE[shipment.status];
   const projectLabels = uniqueProjectLabels(subs);
   const visibleLabels = projectLabels.slice(0, 3);
   const more = projectLabels.length - visibleLabels.length;
+  const pipelineHex = PIPELINE_ACCENT.shipping.hex;
+  const ModeIcon = shipment.mode === "Air" ? Plane : Ship;
 
   return (
     <div className="relative">
-      <button
-        onClick={() => onOpenShipment(shipment.id)}
+      <div
         className={cn(
-          "w-full text-left rounded-2xl bg-card border border-border/70 overflow-hidden",
+          "group w-full text-left relative overflow-hidden rounded-2xl bg-card border border-border/70",
           "shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)] hover:-translate-y-0.5",
           "transition-all",
         )}
       >
+        {/* Pipeline accent stripe */}
         <span
           className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ backgroundColor: PIPELINE_ACCENT.shipping.hex, opacity: 0.7 }}
+          style={{ backgroundColor: pipelineHex, opacity: 0.7 }}
         />
 
-        <div className="pl-5 pr-12 pt-5 pb-5">
-          <h3 className="text-[17px] font-semibold tracking-tight leading-tight mb-2"
-            style={{ color: "hsl(var(--brand-navy))" }}>
-            {shipment.code}
-          </h3>
+        {/* ⋮ top-right */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onOpenShipment(shipment.id); }}
+          className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
+          aria-label="Shipment actions"
+        >
+          <MoreVertical className="h-5 w-5" />
+        </button>
 
-          <div className="text-[14px] text-muted-foreground leading-relaxed mb-5">
-            {projectLabels.length === 0 ? (
-              <span className="italic">No projects assigned</span>
-            ) : (
-              <>
-                {visibleLabels.map((l, i) => (
-                  <div key={i} className="truncate">{l}</div>
-                ))}
-                {more > 0 && (
-                  <div className="text-muted-foreground/70">+{more} more</div>
+        <button
+          onClick={() => onOpenShipment(shipment.id)}
+          className="w-full text-left pl-5 pr-5 pt-5 pb-5"
+        >
+          {/* TOP: identity (left) + mode icon (right) */}
+          <div className="flex items-start gap-3">
+            <div className="flex-1 min-w-0 pr-9">
+              <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight">
+                {shipment.code}
+              </h3>
+              <div className="mt-1 space-y-0.5">
+                {projectLabels.length === 0 ? (
+                  <p
+                    className="text-[14px] leading-snug italic text-muted-foreground/70"
+                  >
+                    No projects assigned
+                  </p>
+                ) : (
+                  <>
+                    {visibleLabels.map((l, i) => (
+                      <p
+                        key={i}
+                        className="text-[14px] leading-snug truncate"
+                        style={{ color: "hsl(var(--brand-navy))" }}
+                      >
+                        {l}
+                      </p>
+                    ))}
+                    {more > 0 && (
+                      <p className="text-[13px] text-muted-foreground/70 leading-snug">
+                        +{more} more
+                      </p>
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </div>
+            </div>
+
+            {/* Right block: mode icon */}
+            <div className="shrink-0 mt-0.5 mr-7 inline-flex items-center gap-1.5">
+              <ModeIcon
+                className="h-3.5 w-3.5 shrink-0"
+                style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
+              />
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: "hsl(var(--brand-navy))" }}
+              >
+                {shipment.mode}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[13px] text-muted-foreground/80 tabular">
+          {/* DIVIDER */}
+          <div
+            className="mt-4 mb-3 h-px w-full"
+            style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)" }}
+          />
+
+          {/* BOTTOM: ETD→ETA (left) + status pill (right) */}
+          <div className="flex items-center justify-between gap-3 min-h-[18px]">
+            <span className="text-[12px] text-muted-foreground/85 tabular leading-none">
               {formatDate(shipment.etd)} → {formatDate(shipment.eta)}
             </span>
             <span
-              className="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full"
+              className="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full leading-none"
               style={{ backgroundColor: tone.bg, color: tone.fg }}
             >
               {tone.label}
             </span>
           </div>
-        </div>
-      </button>
-
-      <button
-        onClick={(e) => { e.stopPropagation(); onOpenShipment(shipment.id); }}
-        className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
-        aria-label="Shipment actions"
-      >
-        <MoreVertical className="h-5 w-5" />
-      </button>
+        </button>
+      </div>
     </div>
   );
 };
@@ -136,28 +184,44 @@ const Group = ({ title, shipments, subs, onOpenShipment }: GroupProps) => {
     <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 sm:p-6 hover:bg-muted/40 transition-colors"
+        className="w-full flex items-center justify-between p-5 sm:p-6 hover:bg-muted/40 transition-[var(--transition-smooth)]"
         aria-expanded={open}
       >
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center justify-center rounded-full"
-            style={{ width: 28, height: 28, backgroundColor: `${accent}1A`, color: accent }}>
-            <Icon className="h-4 w-4" />
-          </span>
-          <h2 className="text-lg sm:text-xl font-semibold tracking-tight" style={{ color: "hsl(var(--brand-navy))" }}>
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Match StageSection: small accent dot, then icon inline with title */}
+          <span
+            className="rounded-full shrink-0"
+            style={{ backgroundColor: accent, opacity: 0.7, width: 8, height: 8 }}
+          />
+          <Icon className="h-4 w-4 shrink-0" style={{ color: accent }} />
+          <h2
+            className="font-semibold tracking-tight truncate text-lg sm:text-xl"
+            style={{ color: "hsl(var(--brand-navy))" }}
+          >
             {title}
           </h2>
-          <span className="text-xs text-muted-foreground">
-            {shipments.length} shipment{shipments.length === 1 ? "" : "s"} · {totalProjects} project{totalProjects === 1 ? "" : "s"}
+          <span
+            className="text-[11px] tabular font-semibold rounded-full inline-flex items-center justify-center min-w-[22px] h-[22px] px-2"
+            style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}
+          >
+            {shipments.length}
+          </span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            · {totalProjects} project{totalProjects === 1 ? "" : "s"}
           </span>
         </div>
-        <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", open ? "rotate-0" : "-rotate-90")} />
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 text-muted-foreground transition-transform duration-300 shrink-0",
+            open ? "rotate-0" : "-rotate-90",
+          )}
+        />
       </button>
-      <div className={cn("grid transition-[grid-template-rows] duration-300", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+      <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
         <div className="overflow-hidden">
-          <div className="px-5 sm:px-6 pb-6 sm:pb-7 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 px-5 pb-6 sm:px-6 sm:pb-7 gap-5 sm:gap-6">
             {shipments.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic px-2 py-3 col-span-full">
+              <p className="text-sm text-muted-foreground italic col-span-full py-3">
                 No {title.toLowerCase()} shipments here.
               </p>
             ) : shipments.map((s) => (
@@ -185,37 +249,53 @@ const IntakeCollapsible = ({ count, intakeSubs, onOpenIntake }: IntakeProps) => 
   const [open, setOpen] = useState(false);
   if (count === 0) return null;
   const labels = uniqueProjectLabels(intakeSubs);
+  const accent = "hsl(var(--brand-orange))";
 
   return (
-    <section className="bg-card/60 rounded-2xl border border-border/60 overflow-hidden">
+    <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-muted/40 transition-colors"
+        className="w-full flex items-center justify-between p-5 sm:p-6 hover:bg-muted/40 transition-[var(--transition-smooth)]"
         aria-expanded={open}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <h3 className="text-[15px] font-medium text-foreground/90">
-            Awaiting shipment assignment
-          </h3>
-          <span className="text-[11px] tabular font-medium rounded-full inline-flex items-center justify-center min-w-[22px] h-[22px] px-2 bg-muted text-muted-foreground">
+          <span
+            className="rounded-full shrink-0"
+            style={{ backgroundColor: accent, opacity: 0.85, width: 8, height: 8 }}
+          />
+          <h2
+            className="font-semibold tracking-tight truncate text-lg sm:text-xl"
+            style={{ color: "hsl(var(--brand-navy))" }}
+          >
+            Awaiting shipment
+          </h2>
+          <span
+            className="text-[11px] tabular font-semibold rounded-full inline-flex items-center justify-center min-w-[22px] h-[22px] px-2"
+            style={{ backgroundColor: "hsl(var(--brand-orange) / 0.12)", color: "hsl(var(--brand-orange))" }}
+          >
             {count}
           </span>
         </div>
-        <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform shrink-0", open ? "rotate-0" : "-rotate-90")} />
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 text-muted-foreground transition-transform duration-300 shrink-0",
+            open ? "rotate-0" : "-rotate-90",
+          )}
+        />
       </button>
-      <div className={cn("grid transition-[grid-template-rows] duration-300", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+      <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
         <div className="overflow-hidden">
-          <div className="px-4 sm:px-5 pb-5 space-y-2">
+          <div className="px-5 pb-6 sm:px-6 sm:pb-7 space-y-3">
             {labels.map((l, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/50 px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-[var(--shadow-card)]"
               >
-                <span className="text-sm text-foreground/90 truncate">{l}</span>
+                <span className="text-sm truncate" style={{ color: "hsl(var(--brand-navy))" }}>{l}</span>
                 <button
                   onClick={onOpenIntake}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full border hover:bg-muted/40 transition-colors shrink-0"
-                  style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))" }}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full text-white shrink-0"
+                  style={{ backgroundColor: "hsl(var(--brand-navy))" }}
                 >
                   Assign
                 </button>
@@ -242,7 +322,6 @@ export const ShippingPipelineView = ({
   return (
     <div className="space-y-5 sm:space-y-6">
       <IntakeCollapsible count={intakeCount} intakeSubs={intakeSubs} onOpenIntake={onOpenIntake} />
-
       <Group title="Air" shipments={air} subs={assignedSubs} onOpenShipment={onOpenShipment} />
       <Group title="Ocean" shipments={ocean} subs={assignedSubs} onOpenShipment={onOpenShipment} />
     </div>
