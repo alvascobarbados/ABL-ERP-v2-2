@@ -342,48 +342,81 @@ const Index = () => {
         <div className="h-[3px] w-full transition-colors duration-300" style={{ backgroundColor: accentHex }} />
       </header>
 
-      <main key={activePipeline} className="max-w-6xl mx-auto px-5 sm:px-8 py-5 sm:py-7 space-y-4 sm:space-y-5 animate-fade-in">
+      <main key={activeTab} className="max-w-6xl mx-auto px-5 sm:px-8 py-5 sm:py-7 space-y-4 sm:space-y-5 animate-fade-in">
         <WelcomeTip
-          id={`pipeline-${activePipeline}`}
+          id={`pipeline-${activeTab}`}
           text={
-            activePipeline === "sales"
-              ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use Move Forward to advance it."
-              : activePipeline === "operations"
-                ? "Operations covers Pre-Production and In Production. When the factory finishes, items move to Shipping for shipment assignment."
-                : activePipeline === "shipping"
-                  ? "Shipping is organised by shipment, not by stage. Air and Ocean groups hold every active shipment — tap a code to see what's inside, or open it to mark delivered."
-                  : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
+            isAll
+              ? "All view shows every pipeline stacked together. Pipelines start collapsed — tap a header to expand. Apply a filter (Customer, Supplier, Rush) to see one thing across the whole business at once."
+              : activePipeline === "sales"
+                ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use Move Forward to advance it."
+                : activePipeline === "operations"
+                  ? "Operations covers Pre-Production and In Production. When the factory finishes, items move to Shipping for shipment assignment."
+                  : activePipeline === "shipping"
+                    ? "Shipping is organised by shipment, not by stage. Air and Ocean groups hold every active shipment — tap a code to see what's inside, or open it to mark delivered."
+                    : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
           }
         />
 
-        {activePipeline === "shipping" ? (
-          <ShippingPipelineView
-            subs={subs.filter((s) => {
-              if (s.pipeline !== "shipping") return false;
-              if (filters.shippingMode && s.shippingMode !== filters.shippingMode) return false;
-              if (filters.priority && s.priority !== filters.priority) return false;
-              if (filters.orderType && s.orderType !== filters.orderType) return false;
-              if (filters.supplierId && s.supplierId !== filters.supplierId) return false;
-              if (filters.customer) {
-                const m = masters.find((x) => x.id === s.masterId);
-                if (m?.customer !== filters.customer) return false;
-              }
-              return true;
-            })}
-            shipments={shipments}
-            filter={shippingFilter}
-            onFilterChange={setShippingFilter}
-            intakeCount={subs.filter((s) => s.pipeline === "shipping" && s.stage === "shipment_required").length}
-            onOpenIntake={() => setAssignOpen(true)}
-            onOpenShipment={openShipmentById}
-            onOpenCard={setSelectedCard}
-            onOpenMaster={openMasterById}
-            onSwipeForward={onSwipeForward}
-            onSwipeBack={onSwipeBack}
-            onOpenPicker={onOpenPicker}
-          />
-        ) : (
-          pipeline.stages.map((stage) => (
+        {(() => {
+          const shippingSubsFiltered = subs.filter((s) => {
+            if (s.pipeline !== "shipping") return false;
+            if (filters.shippingMode && s.shippingMode !== filters.shippingMode) return false;
+            if (filters.priority && s.priority !== filters.priority) return false;
+            if (filters.orderType && s.orderType !== filters.orderType) return false;
+            if (filters.supplierId && s.supplierId !== filters.supplierId) return false;
+            if (filters.customer) {
+              const mm = masters.find((x) => x.id === s.masterId);
+              if (mm?.customer !== filters.customer) return false;
+            }
+            return true;
+          });
+          const intakeCount = subs.filter((s) => s.pipeline === "shipping" && s.stage === "shipment_required").length;
+
+          if (isAll) {
+            return (
+              <AllPipelineView
+                masters={masters}
+                subs={subs}
+                shipments={shipments}
+                cards={visible}
+                perPipelineCounts={counts}
+                hasActiveFilter={hasActiveFilter}
+                shippingFilter={shippingFilter}
+                onShippingFilterChange={setShippingFilter}
+                intakeCount={intakeCount}
+                onOpenIntake={() => setAssignOpen(true)}
+                onOpenShipment={openShipmentById}
+                onOpenCard={setSelectedCard}
+                onOpenMaster={openMasterById}
+                onSwipeForward={onSwipeForward}
+                onSwipeBack={onSwipeBack}
+                onOpenPicker={onOpenPicker}
+                shippingSubs={shippingSubsFiltered}
+              />
+            );
+          }
+
+          if (activePipeline === "shipping") {
+            return (
+              <ShippingPipelineView
+                subs={shippingSubsFiltered}
+                shipments={shipments}
+                filter={shippingFilter}
+                onFilterChange={setShippingFilter}
+                intakeCount={intakeCount}
+                onOpenIntake={() => setAssignOpen(true)}
+                onOpenShipment={openShipmentById}
+                onOpenCard={setSelectedCard}
+                onOpenMaster={openMasterById}
+                onSwipeForward={onSwipeForward}
+                onSwipeBack={onSwipeBack}
+                onOpenPicker={onOpenPicker}
+              />
+            );
+          }
+
+          return pipeline.stages.map((stage) => (
             <StageSection
               key={stage.id}
               title={stage.title}
@@ -402,8 +435,8 @@ const Index = () => {
                 : undefined
               }
             />
-          ))
-        )}
+          ));
+        })()}
 
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
