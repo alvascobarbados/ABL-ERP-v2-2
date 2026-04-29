@@ -47,6 +47,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        stage: {
+          proposal: "hsl(var(--stage-proposal))",
+          quotation: "hsl(var(--stage-quotation))",
+          pending: "hsl(var(--stage-pending))",
+        },
+        urgent: "hsl(var(--urgent))",
+        soon: "hsl(var(--soon))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
