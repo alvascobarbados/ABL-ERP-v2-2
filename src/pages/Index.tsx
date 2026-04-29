@@ -21,6 +21,8 @@ import { AllPipelineView } from "@/components/leads/AllPipelineView";
 import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import type { TabId } from "@/components/leads/PipelineTabs";
 import { useFriendlyMode } from "@/hooks/useFriendlyMode";
+import { JiggleProvider } from "@/hooks/useJiggle";
+import { haptics } from "@/lib/haptics";
 import { Factory } from "lucide-react";
 
 const Index = () => {
