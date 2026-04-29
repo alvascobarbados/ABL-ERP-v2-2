@@ -150,8 +150,15 @@ export const ProjectCard = ({
   const intensity = Math.min(1, Math.abs(dx) / COMMIT_THRESHOLD_PX);
 
   // ─── Pipeline-specific content for the right block & bottom row ───
-  const showRightBlock = card.pipeline !== "sales";
+  // Right block visibility: shown for non-sales pipelines AND for Sales whenever
+  // a supplier signal exists (real id, TBD, or Various). Proposal stays bare.
+  const salesSupplierKnown = !!card.supplier || !!proj.supplierLabel;
+  const showRightBlock = card.pipeline !== "sales" || salesSupplierKnown;
   const supplierName = card.supplier?.name;
+  const supplierHint = proj.supplierLabel; // "TBD" | "Various" | undefined
+  const supplierIsHint = !supplierName && !!supplierHint;
+  // Sales hides PO line entirely when supplier is only TBD/Various (no PO without supplier)
+  const showPoLine = card.pipeline !== "sales" || !!card.supplier;
   const poText = proj.poNumber;
 
   // Shipping line (used on Production / Shipping / Finance bottom row)
