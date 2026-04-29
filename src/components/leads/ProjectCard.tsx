@@ -283,6 +283,25 @@ export const ProjectCard = ({
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <ShippingIcon mode={card.shippingMode} />
             {card.orderType === "Re-order" && <StatusPill variant="reorder" />}
+            {card.tag && (
+              <span
+                className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: card.tag === "Lost"
+                    ? "hsl(var(--urgent) / 0.12)"
+                    : card.tag === "Customs Pending"
+                      ? "hsl(var(--brand-orange) / 0.12)"
+                      : "hsl(var(--brand-navy) / 0.08)",
+                  color: card.tag === "Lost"
+                    ? "hsl(var(--urgent))"
+                    : card.tag === "Customs Pending"
+                      ? "hsl(var(--brand-orange))"
+                      : "hsl(var(--brand-navy))",
+                }}
+              >
+                {card.tag}
+              </span>
+            )}
             {card.shipment && (
               <span
                 data-no-drag
