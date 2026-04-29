@@ -16,12 +16,18 @@ import { ShipmentView } from "@/components/leads/ShipmentView";
 import { SuppliersView } from "@/components/leads/SuppliersView";
 import { StagePicker } from "@/components/leads/StagePicker";
 import { SplitToProductionSheet } from "@/components/leads/SplitToProductionSheet";
+import { SettingsMenu } from "@/components/leads/SettingsMenu";
+import { Walkthrough } from "@/components/leads/Walkthrough";
+import { WelcomeTip } from "@/components/leads/WelcomeTip";
+import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { useFriendlyMode, FRIENDLY_PIPELINE_SUBTITLES } from "@/hooks/useFriendlyMode";
 import { Factory } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Index = () => {
   const store = usePipelineStore();
   const { masters, subs, moveCard, splitMasterToProduction, pulsePipeline, triggerPulse } = store;
+  const { friendly } = useFriendlyMode();
 
   const [activePipeline, setActivePipeline] = useState<PipelineId>("sales");
   const [filters, setFilters] = useState<FilterState>({ shippingMode: null, orderType: null, priority: null, customer: null, supplierId: null });
@@ -36,6 +42,9 @@ const Index = () => {
 
   // Split sheet state
   const [splitMaster, setSplitMaster] = useState<MasterProject | null>(null);
+
+  // Pending "Lost" confirmation
+  const [confirmLost, setConfirmLost] = useState<{ card: PipelineCard; target: { pipeline: PipelineId; stage: StageId } } | null>(null);
 
   // Build cards from live store
   const cards = useMemo<PipelineCard[]>(() => {
@@ -91,6 +100,15 @@ const Index = () => {
 
   // ─── Move logic ───
   const performMove = (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
+    // Friendly Mode safety net for "Lost"
+    if (friendly && target.stage === "lost" && card.stage !== "lost") {
+      setConfirmLost({ card, target });
+      return;
+    }
+    doMove(card, target);
+  };
+
+  const doMove = (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
     const fromPipeline = card.pipeline;
     const fromStage = card.stage;
     const label = card.kind === "master" ? card.master.projectName : `${card.master.customer} · ${card.sub!.itemName}`;
@@ -107,9 +125,14 @@ const Index = () => {
 
     if (target.pipeline !== fromPipeline) triggerPulse(target.pipeline);
 
-    toast(`${label} moved to ${getStageTitle(target.pipeline, target.stage)}`, {
-      description: `From ${getStageTitle(fromPipeline, fromStage)}`,
-      duration: 5000,
+    const successFn = friendly ? toast.success : toast;
+    const message = friendly
+      ? `Done — ${label} moved to ${getStageTitle(target.pipeline, target.stage)}`
+      : `${label} moved to ${getStageTitle(target.pipeline, target.stage)}`;
+
+    successFn(message, {
+      description: `From ${getStageTitle(fromPipeline, fromStage)}. Tap Undo to reverse.`,
+      duration: friendly ? 7000 : 5000,
       action: {
         label: "Undo",
         onClick: () => {
@@ -232,10 +255,15 @@ const Index = () => {
               <h1
                 key={pipeline.id}
                 className="font-display text-4xl sm:text-5xl tracking-tight animate-fade-in"
-                style={{ color: "hsl(var(--brand-navy))", fontWeight: 300, letterSpacing: "-0.01em" }}
+                style={{ color: "hsl(var(--brand-navy))", letterSpacing: "-0.01em" }}
               >
                 {pipeline.title}
               </h1>
+              {friendly && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {FRIENDLY_PIPELINE_SUBTITLES[activePipeline]}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -246,6 +274,7 @@ const Index = () => {
               >
                 <Factory className="h-3.5 w-3.5" /> Suppliers
               </button>
+              <SettingsMenu />
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">In pipeline</p>
                 <p className="text-2xl font-semibold tabular" style={{ color: "hsl(var(--brand-navy))" }}>{visible.length}</p>
@@ -286,6 +315,19 @@ const Index = () => {
       </header>
 
       <main key={activePipeline} className="max-w-6xl mx-auto px-5 sm:px-8 py-5 sm:py-7 space-y-4 sm:space-y-5 animate-fade-in">
+        <WelcomeTip
+          id={`pipeline-${activePipeline}`}
+          text={
+            activePipeline === "sales"
+              ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use the Move Forward button to advance it."
+              : activePipeline === "production"
+                ? "Production tracks each item being made by a supplier. One sales lead can become several sub-projects here — one per item per supplier."
+                : activePipeline === "shipping"
+                  ? "Shipping tracks items on their way to the customer. Tap a shipment code to see everything in that container."
+                  : "Finance tracks invoicing and payment. Move forward when paid in full."
+          }
+        />
+
         {pipeline.stages.map((stage) => (
           <StageSection
             key={stage.id}
@@ -298,6 +340,11 @@ const Index = () => {
             onSwipeForward={onSwipeForward}
             onSwipeBack={onSwipeBack}
             onOpenPicker={onOpenPicker}
+            emptyHint={
+              stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
+              : stage.id === "lost" ? "No lost projects. Keep it that way."
+              : undefined
+            }
           />
         ))}
 
@@ -320,7 +367,9 @@ const Index = () => {
         )}
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
-          Swipe cards → to advance, ← to send back. Long-press for any stage.
+          {friendly
+            ? "Tap Move Forward / Back on any card. Power users can swipe."
+            : "Swipe cards → to advance, ← to send back. Long-press for any stage."}
         </p>
         <p className="text-center text-[10px] uppercase tracking-[0.3em] pb-2" style={{ color: "hsl(var(--brand-navy))", fontWeight: 500 }}>
           Alvasco
@@ -368,6 +417,24 @@ const Index = () => {
         onClose={() => setSplitMaster(null)}
         onConfirm={handleSplitConfirm}
       />
+
+      <ConfirmDialog
+        open={!!confirmLost}
+        title={confirmLost ? `Mark ${confirmLost.card.kind === "master" ? confirmLost.card.master.projectName : confirmLost.card.master.customer} as Lost?` : ""}
+        description="This means the customer didn't go ahead. You can move it back later if needed."
+        confirmLabel="Yes, mark as Lost"
+        cancelLabel="Cancel"
+        destructive
+        onCancel={() => setConfirmLost(null)}
+        onConfirm={() => {
+          if (!confirmLost) return;
+          const { card, target } = confirmLost;
+          setConfirmLost(null);
+          doMove(card, target);
+        }}
+      />
+
+      <Walkthrough />
     </div>
   );
 };
