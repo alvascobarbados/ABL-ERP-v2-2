@@ -281,15 +281,11 @@ const Index = () => {
               >
                 {isAll ? "All" : pipeline.title}
               </h1>
-              {isAll ? (
+              {isAll && (
                 <p className="text-sm text-muted-foreground mt-1">
                   {hasActiveFilter
                     ? `Showing ${visible.length} project${visible.length === 1 ? "" : "s"} across all pipelines`
                     : `${allTotal} active project${allTotal === 1 ? "" : "s"} across 4 pipelines`}
-                </p>
-              ) : friendly && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {FRIENDLY_PIPELINE_SUBTITLES[activePipeline]}
                 </p>
               )}
             </div>
