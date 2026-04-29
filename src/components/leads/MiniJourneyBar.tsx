@@ -7,13 +7,11 @@ interface Props {
   className?: string;
 }
 
-const ORDER: PipelineId[] = ["sales", "production", "shipping", "finance"];
+const ORDER: PipelineId[] = ["sales", "operations", "finance"];
 
 /**
- * Tiny 4-segment bar showing where in the whole business journey a project sits.
- * Completed pipelines = filled stone grey.
- * Current pipeline = filled in its accent colour.
- * Future pipelines = outlined.
+ * Tiny 3-segment bar showing where in the whole business journey a project sits.
+ * Sales → Operations → Finance.
  */
 export const MiniJourneyBar = ({ pipeline, className }: Props) => {
   const idx = ORDER.indexOf(pipeline);
@@ -28,7 +26,7 @@ export const MiniJourneyBar = ({ pipeline, className }: Props) => {
             key={p}
             title={title}
             className={cn(
-              "h-1 w-5 rounded-full transition-colors",
+              "h-1 w-6 rounded-full transition-colors",
               state === "done" && "bg-muted-foreground/40",
               state === "future" && "border border-muted-foreground/30 bg-transparent",
             )}
