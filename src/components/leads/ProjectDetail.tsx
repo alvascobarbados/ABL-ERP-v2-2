@@ -131,10 +131,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onAdvance, onOpen
           </h2>
           {card.supplier ? (
             <div className="rounded-2xl border border-border/60 bg-muted/30 p-5 sm:p-6">
-              <div className="text-[16px] font-semibold tracking-tight text-foreground mb-1">
-                {card.supplier.name}
+              <div className="flex items-center gap-2 mb-1">
+                <Factory className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.6)" }} />
+                <div className="text-[16px] font-semibold tracking-tight text-foreground">
+                  {card.supplier.name}
+                </div>
               </div>
-              <div className="text-[13px] text-muted-foreground/85 mb-1.5">
+              <div className="text-[13px] text-muted-foreground/85 mb-1.5 ml-6">
                 {ship ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenShipment(ship.id); }}
@@ -146,9 +149,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onAdvance, onOpen
                   <span>{shipmentLine}</span>
                 )}
               </div>
-              {proj.poNumber && (
-                <div className="text-[13px] text-muted-foreground/75 tabular">{proj.poNumber}</div>
-              )}
+              <div className={cn("text-[13px] tabular ml-6", proj.poNumber ? "text-muted-foreground/75" : "text-muted-foreground/45 italic")}>
+                {proj.poNumber ?? "PO-"}
+              </div>
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground italic">
