@@ -2,8 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   PIPELINES, PipelineId, PipelineCard, MasterProject, Shipment, StageId,
-  buildCards as buildCardsFromData, pipelineCounts as pipelineCountsFromData,
-  SHIPMENTS, SUPPLIERS, getMaster, getShipment,
+  SUPPLIERS, getMaster,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, SplitDraftItem } from "@/hooks/usePipelineStore";
@@ -20,13 +19,15 @@ import { SettingsMenu } from "@/components/leads/SettingsMenu";
 import { Walkthrough } from "@/components/leads/Walkthrough";
 import { WelcomeTip } from "@/components/leads/WelcomeTip";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { ShippingPipelineView, ShippingFilter } from "@/components/leads/ShippingPipelineView";
+import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import { useFriendlyMode, FRIENDLY_PIPELINE_SUBTITLES } from "@/hooks/useFriendlyMode";
 import { Factory } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Index = () => {
   const store = usePipelineStore();
-  const { masters, subs, moveCard, splitMasterToProduction, pulsePipeline, triggerPulse } = store;
+  const { masters, subs, shipments, moveCard, splitMasterToProduction, pulsePipeline, triggerPulse } = store;
   const { friendly } = useFriendlyMode();
 
   const [activePipeline, setActivePipeline] = useState<PipelineId>("sales");
@@ -46,6 +47,10 @@ const Index = () => {
   // Pending "Lost" confirmation
   const [confirmLost, setConfirmLost] = useState<{ card: PipelineCard; target: { pipeline: PipelineId; stage: StageId } } | null>(null);
 
+  // Shipping pipeline state
+  const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
+  const [assignOpen, setAssignOpen] = useState(false);
+
   // Build cards from live store
   const cards = useMemo<PipelineCard[]>(() => {
     if (activePipeline === "sales") {
@@ -61,7 +66,7 @@ const Index = () => {
       return {
         kind: "sub", id: sub.id, master, sub,
         supplier: SUPPLIERS.find((x) => x.id === sub.supplierId),
-        shipment: sub.shipmentId ? SHIPMENTS.find((x) => x.id === sub.shipmentId) : undefined,
+        shipment: sub.shipmentId ? shipments.find((x) => x.id === sub.shipmentId) : undefined,
         pipeline: sub.pipeline, stage: sub.stage,
         deadline: sub.deadline, deadlineDate: sub.deadlineDate,
         shippingMode: sub.shippingMode, orderType: sub.orderType, priority: sub.priority,
@@ -72,6 +77,7 @@ const Index = () => {
   const counts = useMemo<Record<PipelineId, number>>(() => ({
     sales: masters.filter((m) => m.pipeline === "sales").length,
     operations: subs.filter((s) => s.pipeline === "operations").length,
+    shipping: subs.filter((s) => s.pipeline === "shipping" && s.stage !== "shipment_delivered").length,
     finance: subs.filter((s) => s.pipeline === "finance").length,
   }), [masters, subs]);
 
@@ -180,7 +186,7 @@ const Index = () => {
     setSelectedShipment(null);
   };
   const openShipmentById = (id: string) => {
-    setSelectedShipment(getShipment(id) ?? null);
+    setSelectedShipment(shipments.find((s) => s.id === id) ?? null);
     setSelectedCard(null);
     setSelectedMaster(null);
   };
@@ -214,7 +220,7 @@ const Index = () => {
       return {
         kind: "sub", id: sub.id, master, sub,
         supplier: SUPPLIERS.find((x) => x.id === sub.supplierId),
-        shipment: sub.shipmentId ? SHIPMENTS.find((x) => x.id === sub.shipmentId) : undefined,
+        shipment: sub.shipmentId ? shipments.find((x) => x.id === sub.shipmentId) : undefined,
         pipeline: sub.pipeline, stage: sub.stage,
         deadline: sub.deadline, deadlineDate: sub.deadlineDate,
         shippingMode: sub.shippingMode, orderType: sub.orderType, priority: sub.priority,
@@ -320,49 +326,62 @@ const Index = () => {
             activePipeline === "sales"
               ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use Move Forward to advance it."
               : activePipeline === "operations"
-                ? "Operations covers Pre-Production, In Production and Shipping — everything between a confirmed sale and goods reaching the customer. One sales lead can become several sub-projects here, one per item per supplier."
-                : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
+                ? "Operations covers Pre-Production and In Production. When the factory finishes, items move to Shipping for shipment assignment."
+                : activePipeline === "shipping"
+                  ? "Shipping is organised by shipment, not by stage. Air and Ocean groups hold every active shipment — tap a code to see what's inside, or open it to mark delivered."
+                  : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
           }
         />
 
-        {pipeline.stages.map((stage) => (
-          <StageSection
-            key={stage.id}
-            title={stage.title}
-            stage={stage.id}
-            cards={visible.filter((c) => c.stage === stage.id)}
+        {activePipeline === "shipping" ? (
+          <ShippingPipelineView
+            subs={subs.filter((s) => {
+              if (s.pipeline !== "shipping") return false;
+              if (filters.shippingMode && s.shippingMode !== filters.shippingMode) return false;
+              if (filters.priority && s.priority !== filters.priority) return false;
+              if (filters.orderType && s.orderType !== filters.orderType) return false;
+              if (filters.supplierId && s.supplierId !== filters.supplierId) return false;
+              if (filters.customer) {
+                const m = masters.find((x) => x.id === s.masterId);
+                if (m?.customer !== filters.customer) return false;
+              }
+              return true;
+            })}
+            shipments={shipments}
+            filter={shippingFilter}
+            onFilterChange={setShippingFilter}
+            intakeCount={subs.filter((s) => s.pipeline === "shipping" && s.stage === "shipment_required").length}
+            onOpenIntake={() => setAssignOpen(true)}
+            onOpenShipment={openShipmentById}
             onOpenCard={setSelectedCard}
             onOpenMaster={openMasterById}
-            onOpenShipment={openShipmentById}
             onSwipeForward={onSwipeForward}
             onSwipeBack={onSwipeBack}
             onOpenPicker={onOpenPicker}
-            emptyHint={
-              stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
-              : stage.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
-              : stage.id === "invoice_required" ? "No projects awaiting an invoice."
-              : undefined
-            }
           />
-        ))}
-
-        {activePipeline === "operations" && SHIPMENTS.length > 0 && (
-          <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 p-5">
-            <div className="text-base font-medium mb-3" style={{ color: "hsl(var(--brand-navy))" }}>Active shipments</div>
-            <div className="flex flex-wrap gap-2">
-              {SHIPMENTS.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => openShipmentById(s.id)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full text-white hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: "hsl(var(--brand-navy))" }}
-                >
-                  {s.code} · {s.mode} · {s.status}
-                </button>
-              ))}
-            </div>
-          </section>
+        ) : (
+          pipeline.stages.map((stage) => (
+            <StageSection
+              key={stage.id}
+              title={stage.title}
+              stage={stage.id}
+              cards={visible.filter((c) => c.stage === stage.id)}
+              onOpenCard={setSelectedCard}
+              onOpenMaster={openMasterById}
+              onOpenShipment={openShipmentById}
+              onSwipeForward={onSwipeForward}
+              onSwipeBack={onSwipeBack}
+              onOpenPicker={onOpenPicker}
+              emptyHint={
+                stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
+                : stage.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
+                : stage.id === "invoice_required" ? "No projects awaiting an invoice."
+                : undefined
+              }
+            />
+          ))
         )}
+
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
           {friendly
@@ -430,6 +449,13 @@ const Index = () => {
           setConfirmLost(null);
           doMove(card, target);
         }}
+      />
+
+      <AssignShipmentSheet
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        intakeSubs={subs.filter((s) => s.pipeline === "shipping" && s.stage === "shipment_required")}
+        shipments={shipments}
       />
 
       <Walkthrough />

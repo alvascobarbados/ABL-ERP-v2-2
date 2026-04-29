@@ -4,7 +4,8 @@ import { PipelineId } from "@/data/pipelines";
 
 export const PIPELINE_ACCENT: Record<PipelineId, { hex: string; name: string }> = {
   sales:      { hex: "#E97B2C", name: "orange" },   // Alvasco Orange — getting new business
-  operations: { hex: "#1B2A4E", name: "navy" },     // Alvasco Navy — making and shipping
+  operations: { hex: "#1B2A4E", name: "navy" },     // Alvasco Navy — making
+  shipping:   { hex: "#3D7B86", name: "teal" },     // Soft navy / teal — moving the goods
   finance:    { hex: "#B8884D", name: "gold" },     // muted gold — getting paid
 };
 

@@ -10,8 +10,8 @@ const STEPS = [
   },
   {
     icon: Layers,
-    title: "Three pipelines",
-    body: "Sales, Operations, Finance. Tap the tabs at the top, or swipe left and right, to move between them.",
+    title: "Four pipelines",
+    body: "Sales, Operations, Shipping, Finance. Tap the tabs at the top, or swipe left and right, to move between them.",
   },
   {
     icon: MousePointer2,

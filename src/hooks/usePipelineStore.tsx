@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from "react";
 import {
   PIPELINES, PipelineId, StageId, MasterProject, SubProject, Shipment, Supplier,
-  MASTERS as SEED_MASTERS, SUBS as SEED_SUBS, SHIPMENTS, SUPPLIERS, ShippingMode,
+  MASTERS as SEED_MASTERS, SUBS as SEED_SUBS, SHIPMENTS as SEED_SHIPMENTS, SUPPLIERS, ShippingMode,
 } from "@/data/pipelines";
 
 // ─────────── Stage helpers ───────────
@@ -25,40 +25,56 @@ export function getStageTitle(pipeline: PipelineId, stage: StageId): string {
   return PIPELINES.find((p) => p.id === pipeline)?.stages.find((s) => s.id === stage)?.title ?? stage;
 }
 
-// Compute the next stage in flow: within the pipeline, then jump to first stage of next pipeline.
-// In Sales we skip "archive" — that stage is picker-only (not part of the forward flow).
-export function getNextStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
+// Forward flow stages — Sales skips archive; Shipping treats shipment_required as the only forward target from Operations,
+// and only shipment_assigned advances forward to Finance.
+function forwardStages(pipeline: PipelineId): StageId[] {
   const p = PIPELINES.find((x) => x.id === pipeline)!;
-  const stages = pipeline === "sales"
-    ? p.stages.filter((s) => s.id !== "archive")
-    : p.stages;
-  const idx = stages.findIndex((s) => s.id === stage);
+  if (pipeline === "sales") return p.stages.filter((s) => s.id !== "archive").map((s) => s.id);
+  if (pipeline === "shipping") return ["shipment_assigned"]; // single forward step lives in Shipping
+  return p.stages.map((s) => s.id);
+}
+
+export function getNextStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
+  // Within Shipping, "Mark Delivered" is the only forward action — and it's manual via the Shipment view.
+  // For card-level swipe, advancing from shipment_assigned sends to Finance (the per-shipment bulk path is preferred).
+  if (pipeline === "shipping") {
+    if (stage === "shipment_required") return { pipeline: "shipping", stage: "shipment_assigned" };
+    if (stage === "shipment_assigned") return { pipeline: "finance", stage: "invoice_required" };
+    return null;
+  }
+  const stages = forwardStages(pipeline);
+  const idx = stages.indexOf(stage);
   if (idx >= 0 && idx < stages.length - 1) {
-    return { pipeline, stage: stages[idx + 1].id };
+    return { pipeline, stage: stages[idx + 1] };
   }
   // jump to next pipeline's first stage
   const pi = PIPELINES.findIndex((x) => x.id === pipeline);
   if (pi < PIPELINES.length - 1) {
     const next = PIPELINES[pi + 1];
+    // Operations → Shipping enters at shipment_required (intake)
+    if (next.id === "shipping") return { pipeline: "shipping", stage: "shipment_required" };
     return { pipeline: next.id, stage: next.stages[0].id };
   }
   return null;
 }
 
 export function getPrevStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
-  const p = PIPELINES.find((x) => x.id === pipeline)!;
-  const stages = pipeline === "sales"
-    ? p.stages.filter((s) => s.id !== "archive")
-    : p.stages;
-  const idx = stages.findIndex((s) => s.id === stage);
-  if (idx > 0) return { pipeline, stage: stages[idx - 1].id };
+  if (pipeline === "shipping") {
+    if (stage === "shipment_assigned" || stage === "shipment_required") {
+      return { pipeline: "operations", stage: "in_production" };
+    }
+    if (stage === "shipment_delivered") return { pipeline: "shipping", stage: "shipment_assigned" };
+    return null;
+  }
+  const stages = forwardStages(pipeline);
+  const idx = stages.indexOf(stage);
+  if (idx > 0) return { pipeline, stage: stages[idx - 1] };
   const pi = PIPELINES.findIndex((x) => x.id === pipeline);
   if (pi > 0) {
     const prev = PIPELINES[pi - 1];
-    const prevStages = prev.id === "sales"
-      ? prev.stages.filter((s) => s.id !== "archive")
-      : prev.stages;
-    return { pipeline: prev.id, stage: prevStages[prevStages.length - 1].id };
+    if (prev.id === "shipping") return { pipeline: "shipping", stage: "shipment_assigned" };
+    const prevStages = forwardStages(prev.id);
+    return { pipeline: prev.id, stage: prevStages[prevStages.length - 1] };
   }
   return null;
 }
@@ -76,6 +92,14 @@ interface MoveResult {
   ok?: boolean;
 }
 
+export interface NewShipmentInput {
+  mode: ShippingMode;
+  code: string;
+  etd: Date;
+  eta: Date;
+  supplierId: string;
+}
+
 interface PipelineStoreCtx {
   masters: MasterProject[];
   subs: SubProject[];
@@ -84,6 +108,10 @@ interface PipelineStoreCtx {
   // mutations
   moveCard: (cardId: string, kind: "master" | "sub", target: { pipeline: PipelineId; stage: StageId }) => MoveResult;
   splitMasterToProduction: (masterId: string, items: SplitDraftItem[]) => void;
+  // shipping ops
+  assignSubToShipment: (subId: string, shipmentId: string) => void;
+  createShipment: (input: NewShipmentInput) => Shipment;
+  markShipmentDelivered: (shipmentId: string) => { count: number };
   // pulse helper for cross-pipeline indicator
   pulsePipeline: PipelineId | null;
   triggerPulse: (id: PipelineId) => void;
@@ -91,14 +119,10 @@ interface PipelineStoreCtx {
 
 const Ctx = createContext<PipelineStoreCtx | null>(null);
 
-interface Snapshot {
-  masters: MasterProject[];
-  subs: SubProject[];
-}
-
 export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => {
   const [masters, setMasters] = useState<MasterProject[]>(() => SEED_MASTERS.map((m) => ({ ...m })));
   const [subs, setSubs] = useState<SubProject[]>(() => SEED_SUBS.map((s) => ({ ...s })));
+  const [shipments, setShipments] = useState<Shipment[]>(() => SEED_SHIPMENTS.map((s) => ({ ...s })));
   const [pulsePipeline, setPulsePipeline] = useState<PipelineId | null>(null);
   const pulseTimer = useRef<number | null>(null);
 
@@ -112,24 +136,27 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     if (kind === "master") {
       const master = masters.find((m) => m.id === cardId);
       if (!master) return { blocked: "Not found" };
-      // Special: Sales/confirming → Operations must split into sub-projects
       if (master.pipeline === "sales" && target.pipeline === "operations") {
         return { needsSplit: { masterId: master.id } };
       }
       setMasters((prev) => prev.map((m) => m.id === cardId ? { ...m, pipeline: target.pipeline, stage: target.stage } : m));
       return { ok: true };
     }
-    // sub
-    setSubs((prev) => prev.map((s) => s.id === cardId ? { ...s, pipeline: target.pipeline, stage: target.stage } : s));
+    setSubs((prev) => prev.map((s) => {
+      if (s.id !== cardId) return s;
+      // When entering shipment_required, drop any prior shipmentId.
+      if (target.pipeline === "shipping" && target.stage === "shipment_required") {
+        return { ...s, pipeline: target.pipeline, stage: target.stage, shipmentId: undefined };
+      }
+      return { ...s, pipeline: target.pipeline, stage: target.stage };
+    }));
     return { ok: true };
   }, [masters]);
 
   const splitMasterToProduction = useCallback((masterId: string, items: SplitDraftItem[]) => {
     const master = masters.find((m) => m.id === masterId);
     if (!master) return;
-    // Move master into operations / pre-production
     setMasters((prev) => prev.map((m) => m.id === masterId ? { ...m, pipeline: "operations", stage: "preproduction" } : m));
-    // Create subs
     const newSubs: SubProject[] = items.map((it, i) => ({
       id: `sub-${masterId}-${Date.now()}-${i}`,
       masterId,
@@ -148,10 +175,47 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     setSubs((prev) => [...prev, ...newSubs]);
   }, [masters]);
 
+  const assignSubToShipment = useCallback((subId: string, shipmentId: string) => {
+    const ship = shipments.find((s) => s.id === shipmentId);
+    if (!ship) return;
+    setSubs((prev) => prev.map((s) => s.id === subId
+      ? { ...s, shipmentId, pipeline: "shipping", stage: "shipment_assigned", shippingMode: ship.mode }
+      : s));
+  }, [shipments]);
+
+  const createShipment = useCallback((input: NewShipmentInput): Shipment => {
+    const newShip: Shipment = {
+      id: `ship-${Date.now()}`,
+      code: input.code,
+      mode: input.mode,
+      supplierId: input.supplierId,
+      etd: input.etd,
+      eta: input.eta,
+      status: "Booked",
+    };
+    setShipments((prev) => [...prev, newShip]);
+    return newShip;
+  }, []);
+
+  const markShipmentDelivered = useCallback((shipmentId: string) => {
+    let count = 0;
+    setSubs((prev) => prev.map((s) => {
+      if (s.shipmentId === shipmentId && s.pipeline === "shipping") {
+        count += 1;
+        return { ...s, pipeline: "finance", stage: "invoice_required" };
+      }
+      return s;
+    }));
+    setShipments((prev) => prev.map((s) => s.id === shipmentId ? { ...s, status: "Delivered" } : s));
+    return { count };
+  }, []);
+
   const value = useMemo<PipelineStoreCtx>(() => ({
-    masters, subs, shipments: SHIPMENTS, suppliers: SUPPLIERS,
-    moveCard, splitMasterToProduction, pulsePipeline, triggerPulse,
-  }), [masters, subs, moveCard, splitMasterToProduction, pulsePipeline, triggerPulse]);
+    masters, subs, shipments, suppliers: SUPPLIERS,
+    moveCard, splitMasterToProduction,
+    assignSubToShipment, createShipment, markShipmentDelivered,
+    pulsePipeline, triggerPulse,
+  }), [masters, subs, shipments, moveCard, splitMasterToProduction, assignSubToShipment, createShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };

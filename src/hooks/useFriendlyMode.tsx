@@ -86,7 +86,9 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
   archive: "Archive — closed or paused",
   preproduction: "Pre-Production — getting ready to make",
   in_production: "In Production — being made at the factory",
-  shipping: "Shipping — on the way to the customer",
+  shipment_required: "Awaiting shipment assignment",
+  shipment_assigned: "On the way (in transit)",
+  shipment_delivered: "Delivered",
   invoice_required: "Invoice Required — needs invoicing",
   invoiced: "Invoiced — waiting for payment",
   paid: "Paid — complete",
@@ -94,7 +96,8 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
 
 export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
   sales: "Getting new business",
-  operations: "Making and shipping the goods",
+  operations: "Making the goods",
+  shipping: "Moving the goods",
   finance: "Invoicing and getting paid",
 };
 
@@ -104,8 +107,10 @@ export const FRIENDLY_STAGE_HELP: Record<StageId, string> = {
   confirming: "Quote sent. Waiting for the customer to say yes. When they confirm, the project splits into items and moves into Operations.",
   archive: "Closed or paused projects — cold leads, lost deals, or anything not actively progressing. Tags inside (Cold / Lost / Other) keep the distinction.",
   preproduction: "Order is being prepared internally before the factory starts making it — artwork, sign-offs, factory PO, deposit. Move forward when the factory begins producing.",
-  in_production: "The factory has the order and is making it. Move forward when production is finished and goods are ready to ship.",
-  shipping: "Goods are in motion between factory and customer (air or ocean). When the goods are delivered, the project moves to Finance · Invoice Required.",
+  in_production: "The factory has the order and is making it. When production finishes, the item moves to Shipping for shipment assignment.",
+  shipment_required: "Production is done — the item is waiting to be assigned to a shipment (Air or Ocean). Tap the banner to assign.",
+  shipment_assigned: "On a shipment and in transit. When the whole shipment is delivered, every item on it moves to Finance · Invoice Required.",
+  shipment_delivered: "Shipment has arrived. Items are also showing in Finance · Invoice Required.",
   invoice_required: "Goods delivered — finance team needs to issue the invoice. Move forward once the invoice has been sent.",
   invoiced: "Invoice has been sent. Move forward when the customer pays.",
   paid: "Project is complete and paid. 🎉",

@@ -7,7 +7,7 @@ interface Props {
   className?: string;
 }
 
-const ORDER: PipelineId[] = ["sales", "operations", "finance"];
+const ORDER: PipelineId[] = ["sales", "operations", "shipping", "finance"];
 
 /**
  * Tiny 3-segment bar showing where in the whole business journey a project sits.
