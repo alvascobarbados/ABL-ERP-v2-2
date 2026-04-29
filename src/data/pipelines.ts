@@ -96,6 +96,15 @@ export interface LineItem {
   description: string;
 }
 
+/**
+ * Sales-only display hints. Once a project moves into Production, these are
+ * dropped in favour of the canonical `supplierId` + `shippingMode` fields,
+ * which downstream pipelines use for everything (PO, shipment grouping, etc.).
+ */
+export type SupplierLabelHint = "TBD" | "Various";
+export type SalesShippingLabel =
+  | "Ocean FCL" | "Ocean LCL" | "DHL" | "FedEx" | "Courier" | "Mixed";
+
 export interface Project {
   id: string;
   customer: string;
@@ -103,7 +112,9 @@ export interface Project {
   projectName: string;
   detailSummary?: string;       // optional in Sales/Proposal; required from Confirming on
   supplierId?: string;          // required from Confirming on
+  supplierLabel?: SupplierLabelHint; // Sales-only: shown when supplierId not yet locked
   shippingMode?: ShippingMode;  // required from Confirming on
+  salesShippingLabel?: SalesShippingLabel; // Sales-only display string
   shipmentId?: string;          // assigned in Shipping
   pipeline: PipelineId;
   stage: StageId;
