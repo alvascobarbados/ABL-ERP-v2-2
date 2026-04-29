@@ -10,8 +10,14 @@ export type StageId =
   | "proposal" | "quote" | "confirming" | "archive"
   // operations (production)
   | "preproduction" | "in_production"
-  // shipping (virtual stage used for routing only — UI groups by Air/Ocean + shipment code)
-  | "shipment_required" | "shipment_assigned" | "shipment_delivered"
+  // shipping — NOT real stages anymore. The Shipping pipeline groups by
+  // mode (Air / Ocean) + assignment status. The two values below are
+  // routing hints only:
+  //   shipment_required → no shipment assigned yet (Awaiting Shipment)
+  //   shipment_assigned → on a shipment (rendered under Air or Ocean)
+  // "Delivered" no longer exists in Shipping — delivered projects move
+  // out of Shipping entirely into Finance · Invoice Required.
+  | "shipment_required" | "shipment_assigned"
   // finance
   | "invoice_required" | "invoiced" | "paid";
 
