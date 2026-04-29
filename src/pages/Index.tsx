@@ -5,6 +5,7 @@ import {
   buildCards as buildCardsFromData, pipelineCounts as pipelineCountsFromData,
   SHIPMENTS, SUPPLIERS, getMaster, getShipment,
 } from "@/data/pipelines";
+import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, SplitDraftItem } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
