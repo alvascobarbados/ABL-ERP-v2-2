@@ -31,7 +31,7 @@ export const Sheet = ({ open, onClose, title, eyebrow, children, width = "max-w-
                 {eyebrow}
               </div>
             )}
-            <div className="font-serif-display text-lg font-semibold tracking-tight truncate">{title}</div>
+            <div className="text-lg font-semibold tracking-tight truncate" style={{ color: "hsl(var(--brand-navy))" }}>{title}</div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0">
             <X className="h-4 w-4" />

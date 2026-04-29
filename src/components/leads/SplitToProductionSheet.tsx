@@ -112,7 +112,8 @@ export const SplitToProductionSheet = ({ master, suppliers, open, onClose, onCon
         <button
           onClick={() => { if (ready) { onConfirm(items); reset(); } }}
           disabled={!ready}
-          className="flex-1 px-4 py-2.5 rounded-xl bg-foreground text-background text-sm font-semibold transition-opacity disabled:opacity-40 hover:opacity-90"
+          className="flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-opacity disabled:opacity-40 hover:opacity-90"
+          style={{ backgroundColor: "hsl(var(--brand-navy))" }}
         >
           Confirm Handoff
         </button>
