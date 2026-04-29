@@ -1,11 +1,12 @@
 import { useRef, useState, useEffect } from "react";
-import { CalendarDays, User2, CornerDownRight, Container, MoreVertical } from "lucide-react";
+import { CalendarDays, User2, CornerDownRight, Container, MoreVertical, ArrowLeft, ArrowRight } from "lucide-react";
 import { PipelineCard } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
 import { StatusPill, SupplierChip } from "./StatusPill";
 import { ShippingIcon } from "./ShippingIcon";
 import { MiniJourneyBar } from "./MiniJourneyBar";
+import { useFriendlyMode } from "@/hooks/useFriendlyMode";
 import { cn } from "@/lib/utils";
 
 interface ProjectCardProps {
@@ -38,6 +39,7 @@ export const ProjectCard = ({
 }: ProjectCardProps) => {
   const u = getUrgency(card.deadlineDate);
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
+  const { friendly } = useFriendlyMode();
 
   const isSub = card.kind === "sub";
   const titleLine = isSub ? `${card.sub!.itemName}` : card.master.customer;
@@ -241,28 +243,33 @@ export const ProjectCard = ({
           </button>
         )}
 
-        <button onClick={handleOpen} className="w-full text-left px-5 pt-2 pb-4">
+        <button onClick={handleOpen} className={cn("w-full text-left", friendly ? "px-5 pt-2 pb-5" : "px-5 pt-2 pb-4")}>
           <div className={cn("flex items-start justify-between gap-3 mb-1.5 pr-6", !isSub && "pt-3")}>
-            <h3 className="font-semibold text-[15px] text-foreground leading-tight tracking-tight">
+            <h3
+              className={cn(
+                "text-foreground leading-tight tracking-tight",
+                friendly ? "text-base sm:text-[17px] font-semibold" : "font-semibold text-[15px]",
+              )}
+            >
               {titleLine}
             </h3>
             {card.priority === "Rush" && <StatusPill variant="rush" className="shrink-0" />}
           </div>
 
           {subline && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+            <div className={cn("flex items-center gap-1.5 text-muted-foreground mb-3", friendly ? "text-sm" : "text-xs")}>
               {isSub && card.supplier ? (
                 <SupplierChip color={supplierColor(card.supplier.id)} name={card.supplier.name} />
               ) : (
                 <>
-                  <User2 className="h-3 w-3" />
+                  <User2 className={friendly ? "h-3.5 w-3.5" : "h-3 w-3"} />
                   <span>{subline}</span>
                 </>
               )}
             </div>
           )}
 
-          <p className="text-sm text-foreground/80 leading-snug mb-4 font-normal">
+          <p className={cn("text-foreground/80 leading-snug font-normal mb-4", friendly ? "text-[15px]" : "text-sm")}>
             {isSub ? (
               <span className="text-muted-foreground">{card.sub!.summary}</span>
             ) : (
@@ -292,13 +299,14 @@ export const ProjectCard = ({
           <div className="flex items-center justify-between pt-3 border-t border-border/60">
             <MiniJourneyBar pipeline={card.pipeline} />
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <CalendarDays className="h-3 w-3" />
+              <div className={cn("flex items-center gap-1 text-muted-foreground", friendly ? "text-sm" : "text-xs")}>
+                <CalendarDays className={friendly ? "h-3.5 w-3.5" : "h-3 w-3"} />
                 <span className="font-medium text-foreground/70 tabular">{card.deadline}</span>
               </div>
               <span
                 className={cn(
-                  "text-xs font-semibold tabular px-2 py-0.5 rounded-full",
+                  "font-semibold tabular px-2 py-0.5 rounded-full",
+                  friendly ? "text-sm" : "text-xs",
                   u.tone === "urgent" && "bg-urgent/10 text-urgent",
                   u.tone === "neutral" && "text-muted-foreground",
                 )}
@@ -309,6 +317,67 @@ export const ProjectCard = ({
             </div>
           </div>
         </button>
+
+        {/* Friendly-mode action bar — visible buttons */}
+        {friendly && (
+          <div
+            data-no-drag
+            className="px-4 pb-4 pt-1 flex items-center gap-2 border-t border-border/60"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <button
+              data-no-drag
+              type="button"
+              disabled={!canBack}
+              onClick={(e) => { e.stopPropagation(); if (canBack) onSwipeBack(); }}
+              className={cn(
+                "flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border text-sm font-medium transition-colors",
+                canBack ? "hover:bg-muted/40" : "opacity-40 cursor-not-allowed",
+              )}
+              style={{
+                borderColor: "hsl(var(--brand-navy) / 0.35)",
+                color: "hsl(var(--brand-navy))",
+                minHeight: 56, padding: "10px 12px",
+              }}
+              title={prev ? `Move back to ${getStageTitle(prev.pipeline, prev.stage)}` : ""}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="truncate">{prev ? `Back · ${getStageTitle(prev.pipeline, prev.stage)}` : "Back"}</span>
+            </button>
+            <button
+              data-no-drag
+              type="button"
+              disabled={!canForward}
+              onClick={(e) => { e.stopPropagation(); if (canForward) onSwipeForward(); }}
+              className={cn(
+                "flex-[1.4] inline-flex items-center justify-center gap-1.5 rounded-xl text-sm font-semibold text-white transition-opacity",
+                canForward ? "hover:opacity-90" : "opacity-40 cursor-not-allowed",
+              )}
+              style={{
+                backgroundColor: "hsl(var(--brand-orange))",
+                minHeight: 56, padding: "10px 12px",
+              }}
+              title={next ? `Move forward to ${getStageTitle(next.pipeline, next.stage)}` : ""}
+            >
+              <span className="truncate">{next ? `Move forward · ${getStageTitle(next.pipeline, next.stage)}` : "At final stage"}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            <button
+              data-no-drag
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
+              className="inline-flex items-center justify-center rounded-xl border text-xs font-medium hover:bg-muted/40 transition-colors px-3"
+              style={{
+                borderColor: "hsl(var(--brand-navy) / 0.25)",
+                color: "hsl(var(--brand-navy))",
+                minHeight: 56,
+              }}
+              aria-label="More options"
+            >
+              More
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
