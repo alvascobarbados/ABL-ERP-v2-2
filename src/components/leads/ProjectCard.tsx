@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { MoreVertical, Factory } from "lucide-react";
 import { PipelineCard, formatShippingLabel, getShipment } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
+import { useJiggle } from "@/hooks/useJiggle";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
@@ -12,12 +13,6 @@ interface ProjectCardProps {
   onSwipeForward: () => void;
   onSwipeBack: () => void;
   onOpenPicker: () => void;
-  /** Optional: long-press lifts the card into "jiggle mode" with a chip strip. */
-  onLongPress?: (rect: DOMRect) => void;
-  /** When true, this card is the source of the active jiggle overlay — hide it. */
-  jiggleActive?: boolean;
-  /** When true, another card is in jiggle mode — dim and disable this one. */
-  jiggleDimmed?: boolean;
 }
 
 const TODAY = new Date(2026, 4, 8);
@@ -44,8 +39,10 @@ const urgencyHex = (tone: "urgent" | "soon" | "neutral") =>
 
 export const ProjectCard = ({
   card, onOpen, onSwipeForward, onSwipeBack, onOpenPicker,
-  onLongPress, jiggleActive, jiggleDimmed,
 }: ProjectCardProps) => {
+  const jiggle = useJiggle();
+  const jiggleActive = jiggle.activeId === card.id;
+  const jiggleDimmed = jiggle.activeId !== null && !jiggleActive;
   const proj = card.project;
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
