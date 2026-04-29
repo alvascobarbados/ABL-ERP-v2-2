@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { MoreVertical } from "lucide-react";
-import { PipelineCard } from "@/data/pipelines";
+import { PipelineCard, getQuoteNumber, getInvoiceNumber, getSupplier } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
