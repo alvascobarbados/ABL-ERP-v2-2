@@ -433,6 +433,13 @@ const Index = () => {
         onClose={() => setSelectedCard(null)}
         onOpenMaster={openMasterById}
         onOpenShipment={openShipmentById}
+        onAdvance={(c) => {
+          const next = nextStage(c);
+          if (!next) return;
+          setSelectedCard(null);
+          performMove(c, next);
+        }}
+        onOpenPicker={(c) => { setSelectedCard(null); setPickerCard(c); }}
       />
       <MasterProjectView
         master={selectedMaster}
