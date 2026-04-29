@@ -26,11 +26,11 @@ export function getStageTitle(pipeline: PipelineId, stage: StageId): string {
 }
 
 // Compute the next stage in flow: within the pipeline, then jump to first stage of next pipeline.
-// In Sales we skip "cold" and "lost" — those are picker-only.
+// In Sales we skip "archive" — that stage is picker-only (not part of the forward flow).
 export function getNextStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
   const p = PIPELINES.find((x) => x.id === pipeline)!;
   const stages = pipeline === "sales"
-    ? p.stages.filter((s) => s.id !== "cold" && s.id !== "lost")
+    ? p.stages.filter((s) => s.id !== "archive")
     : p.stages;
   const idx = stages.findIndex((s) => s.id === stage);
   if (idx >= 0 && idx < stages.length - 1) {
@@ -48,7 +48,7 @@ export function getNextStage(pipeline: PipelineId, stage: StageId): { pipeline: 
 export function getPrevStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
   const p = PIPELINES.find((x) => x.id === pipeline)!;
   const stages = pipeline === "sales"
-    ? p.stages.filter((s) => s.id !== "cold" && s.id !== "lost")
+    ? p.stages.filter((s) => s.id !== "archive")
     : p.stages;
   const idx = stages.findIndex((s) => s.id === stage);
   if (idx > 0) return { pipeline, stage: stages[idx - 1].id };
@@ -56,7 +56,7 @@ export function getPrevStage(pipeline: PipelineId, stage: StageId): { pipeline: 
   if (pi > 0) {
     const prev = PIPELINES[pi - 1];
     const prevStages = prev.id === "sales"
-      ? prev.stages.filter((s) => s.id !== "cold" && s.id !== "lost")
+      ? prev.stages.filter((s) => s.id !== "archive")
       : prev.stages;
     return { pipeline: prev.id, stage: prevStages[prevStages.length - 1].id };
   }
@@ -112,8 +112,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     if (kind === "master") {
       const master = masters.find((m) => m.id === cardId);
       if (!master) return { blocked: "Not found" };
-      // Special: Sales/confirming → Production must split
-      if (master.pipeline === "sales" && target.pipeline === "production") {
+      // Special: Sales/confirming → Operations must split into sub-projects
+      if (master.pipeline === "sales" && target.pipeline === "operations") {
         return { needsSplit: { masterId: master.id } };
       }
       setMasters((prev) => prev.map((m) => m.id === cardId ? { ...m, pipeline: target.pipeline, stage: target.stage } : m));
@@ -127,8 +127,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const splitMasterToProduction = useCallback((masterId: string, items: SplitDraftItem[]) => {
     const master = masters.find((m) => m.id === masterId);
     if (!master) return;
-    // Move master into production/artwork (so it stops appearing in Sales)
-    setMasters((prev) => prev.map((m) => m.id === masterId ? { ...m, pipeline: "production", stage: "artwork" } : m));
+    // Move master into operations / pre-production
+    setMasters((prev) => prev.map((m) => m.id === masterId ? { ...m, pipeline: "operations", stage: "preproduction" } : m));
     // Create subs
     const newSubs: SubProject[] = items.map((it, i) => ({
       id: `sub-${masterId}-${Date.now()}-${i}`,
@@ -137,8 +137,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       summary: it.itemName,
       supplierId: it.supplierId,
       shippingMode: it.shippingMode,
-      pipeline: "production",
-      stage: "artwork",
+      pipeline: "operations",
+      stage: "preproduction",
       deadline: master.deadline,
       deadlineDate: master.deadlineDate,
       value: Math.round(master.value / items.length),
