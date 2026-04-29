@@ -1,58 +1,66 @@
 import { cn } from "@/lib/utils";
 import { PIPELINES, PipelineId } from "@/data/pipelines";
-import { useFriendlyMode, FRIENDLY_PIPELINE_SUBTITLES } from "@/hooks/useFriendlyMode";
+import { useFriendlyMode } from "@/hooks/useFriendlyMode";
+
+export type TabId = PipelineId | "all";
 
 interface Props {
-  active: PipelineId;
-  onChange: (id: PipelineId) => void;
+  active: TabId;
+  onChange: (id: TabId) => void;
   counts: Record<PipelineId, number>;
   pulse?: PipelineId | null;
 }
 
 export const PipelineTabs = ({ active, onChange, counts, pulse }: Props) => {
   const { friendly } = useFriendlyMode();
+  const allCount = counts.sales + counts.operations + counts.shipping + counts.finance;
+
+  const tabs: { id: TabId; title: string; count: number; isAll?: boolean }[] = [
+    { id: "all", title: "All", count: allCount, isAll: true },
+    ...PIPELINES.map((p) => ({ id: p.id as TabId, title: p.title, count: counts[p.id] })),
+  ];
+
   return (
     <div
       className={cn(
-        "flex items-center p-1 rounded-full border w-fit",
+        "flex items-center p-1 rounded-full border w-fit overflow-x-auto no-scrollbar max-w-full",
         friendly ? "gap-2" : "gap-1.5",
       )}
       style={{ borderColor: "hsl(var(--brand-navy) / 0.15)", backgroundColor: "hsl(var(--brand-navy) / 0.04)" }}
     >
-      {PIPELINES.map((p) => {
+      {tabs.map((p) => {
         const isActive = p.id === active;
-        const isPulsing = pulse === p.id;
+        const isPulsing = !p.isAll && pulse === p.id;
+        const activeBg = p.isAll ? "hsl(var(--foreground))" : "hsl(var(--brand-navy))";
         return (
           <button
             key={p.id}
             onClick={() => onChange(p.id)}
             className={cn(
-              "relative font-medium rounded-full transition-[var(--transition-smooth)] flex items-center gap-1.5 border",
+              "relative font-medium rounded-full transition-[var(--transition-smooth)] flex items-center gap-1.5 border whitespace-nowrap",
               friendly ? "px-4 sm:px-5 py-2 text-sm" : "text-xs sm:text-sm px-3 sm:px-4 py-1.5",
               isActive
                 ? "text-white border-transparent"
                 : "text-foreground/70 border-transparent hover:text-foreground hover:bg-white/60",
             )}
             style={{
-              ...(isActive ? { backgroundColor: "hsl(var(--brand-navy))" } : {}),
+              ...(isActive ? { backgroundColor: activeBg } : {}),
               ...(isPulsing ? { boxShadow: "0 0 0 2px hsl(var(--brand-orange) / 0.7)" } : {}),
               ...(friendly ? { minHeight: 44 } : {}),
             }}
           >
             <span className="leading-tight">{p.title}</span>
             <span
-              className={cn(
-                "text-[10px] tabular font-semibold px-1.5 py-0.5 rounded-full",
-              )}
+              className="text-[10px] tabular font-semibold px-1.5 py-0.5 rounded-full"
               style={
                 isActive
                   ? { backgroundColor: "rgba(255,255,255,0.2)", color: "#fff" }
-                  : counts[p.id] > 0
-                    ? { backgroundColor: "hsl(var(--brand-orange))", color: "#fff" }
+                  : p.count > 0
+                    ? { backgroundColor: p.isAll ? "hsl(var(--foreground))" : "hsl(var(--brand-orange))", color: "#fff" }
                     : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
               }
             >
-              {counts[p.id]}
+              {p.count}
             </span>
           </button>
         );
