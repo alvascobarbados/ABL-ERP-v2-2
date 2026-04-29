@@ -275,13 +275,19 @@ const Index = () => {
                 Alvasco · Operations
               </p>
               <h1
-                key={pipeline.id}
+                key={isAll ? "all" : pipeline.id}
                 className="font-display text-4xl sm:text-5xl tracking-tight animate-fade-in"
                 style={{ color: "hsl(var(--brand-navy))", letterSpacing: "-0.01em" }}
               >
-                {pipeline.title}
+                {isAll ? "All" : pipeline.title}
               </h1>
-              {friendly && (
+              {isAll ? (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {hasActiveFilter
+                    ? `Showing ${visible.length} project${visible.length === 1 ? "" : "s"} across all pipelines`
+                    : `${allTotal} active project${allTotal === 1 ? "" : "s"} across 4 pipelines`}
+                </p>
+              ) : friendly && (
                 <p className="text-sm text-muted-foreground mt-1">
                   {FRIENDLY_PIPELINE_SUBTITLES[activePipeline]}
                 </p>
