@@ -109,7 +109,7 @@ export const FRIENDLY_STAGE_HELP: Record<StageId, string> = {
   in_production: "The factory has the order and is making it. When production finishes, the item moves to Shipping for shipment assignment.",
   shipment_required: "Production is done — the item is waiting to be assigned to a shipment (Air or Ocean). Tap the banner to assign.",
   shipment_assigned: "On a shipment and in transit. When the whole shipment is delivered, every item on it moves to Finance · Invoice Required.",
-  shipment_delivered: "Shipment has arrived. Items are also showing in Finance · Invoice Required.",
+  
   invoice_required: "Goods delivered — finance team needs to issue the invoice. Move forward once the invoice has been sent.",
   invoiced: "Invoice has been sent. Move forward when the customer pays.",
   paid: "Project is complete and paid. 🎉",
