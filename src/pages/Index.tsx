@@ -32,7 +32,9 @@ const Index = () => {
   const { masters, subs, shipments, moveCard, splitMasterToProduction, pulsePipeline, triggerPulse } = store;
   const { friendly } = useFriendlyMode();
 
-  const [activePipeline, setActivePipeline] = useState<PipelineId>("sales");
+  const [activeTab, setActiveTab] = useState<TabId>("sales");
+  const activePipeline: PipelineId = activeTab === "all" ? "sales" : activeTab;
+  const isAll = activeTab === "all";
   const [filters, setFilters] = useState<FilterState>({ shippingMode: null, orderType: null, priority: null, customer: null, supplierId: null });
 
   const [selectedCard, setSelectedCard] = useState<PipelineCard | null>(null);
