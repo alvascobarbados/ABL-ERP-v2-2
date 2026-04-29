@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Sheet } from "./Sheet";
-import { Project, Shipment, ShippingMode, getSupplier } from "@/data/pipelines";
+import { Project, Shipment, ShippingMode, getSupplier, formatShipmentTitle } from "@/data/pipelines";
 import { usePipelineStore, NewShipmentInput } from "@/hooks/usePipelineStore";
 import { Plus, ArrowRight, Plane, Ship } from "lucide-react";
 import { supplierColor } from "@/lib/brand";
@@ -76,8 +76,8 @@ export const AssignShipmentSheet = ({ open, onClose, intakeSubs, shipments }: Pr
                         {s.mode === "Air"
                           ? <Plane className="h-4 w-4" style={{ color: "hsl(var(--brand-orange))" }} />
                           : <Ship className="h-4 w-4" style={{ color: "hsl(var(--brand-teal))" }} />}
-                        <span className="font-semibold tracking-tight" style={{ color: "hsl(var(--brand-navy))" }}>{s.code}</span>
-                        <span className="text-xs text-muted-foreground truncate">· {s.mode} · ETA {s.eta.getDate()}/{s.eta.getMonth() + 1}</span>
+                        <span className="font-semibold tracking-tight" style={{ color: "hsl(var(--brand-navy))" }}>{formatShipmentTitle(s)}</span>
+                        <span className="text-xs text-muted-foreground truncate">· ETA {s.eta.getDate()}/{s.eta.getMonth() + 1}</span>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
