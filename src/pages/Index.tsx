@@ -343,21 +343,6 @@ const Index = () => {
       </header>
 
       <main key={activeTab} className="max-w-6xl mx-auto px-5 sm:px-8 py-5 sm:py-7 space-y-4 sm:space-y-5 animate-fade-in">
-        <WelcomeTip
-          id={`pipeline-${activeTab}`}
-          text={
-            isAll
-              ? "All view shows every pipeline stacked together. Pipelines start collapsed — tap a header to expand. Apply a filter (Customer, Supplier, Rush) to see one thing across the whole business at once."
-              : activePipeline === "sales"
-                ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use Move Forward to advance it."
-                : activePipeline === "operations"
-                  ? "Production covers Pre-Production and In Production. When the factory finishes, items move to Shipping for shipment assignment."
-                  : activePipeline === "shipping"
-                    ? "Shipping is organised by shipment, not by stage. Air and Ocean groups hold every active shipment — tap a code to see what's inside, or open it to mark delivered."
-                    : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
-          }
-        />
-
         {(() => {
           const shippingSubsFiltered = subs.filter((s) => {
             if (s.pipeline !== "shipping") return false;
@@ -440,9 +425,7 @@ const Index = () => {
 
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
-          {friendly
-            ? "Tap Move Forward / Back on any card. Power users can swipe."
-            : "Swipe cards → to advance, ← to send back. Long-press for any stage."}
+          Swipe cards → to advance, ← to send back. Long-press or tap ⋮ for more.
         </p>
         <p className="text-center text-[10px] uppercase tracking-[0.3em] pb-2" style={{ color: "hsl(var(--brand-navy))", fontWeight: 500 }}>
           Alvasco
