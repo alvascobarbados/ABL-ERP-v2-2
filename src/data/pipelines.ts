@@ -96,6 +96,15 @@ export interface LineItem {
   description: string;
 }
 
+/**
+ * Sales-only display hints. Once a project moves into Production, these are
+ * dropped in favour of the canonical `supplierId` + `shippingMode` fields,
+ * which downstream pipelines use for everything (PO, shipment grouping, etc.).
+ */
+export type SupplierLabelHint = "TBD" | "Various";
+export type SalesShippingLabel =
+  | "Ocean FCL" | "Ocean LCL" | "DHL" | "FedEx" | "Courier" | "Mixed";
+
 export interface Project {
   id: string;
   customer: string;
@@ -103,7 +112,9 @@ export interface Project {
   projectName: string;
   detailSummary?: string;       // optional in Sales/Proposal; required from Confirming on
   supplierId?: string;          // required from Confirming on
+  supplierLabel?: SupplierLabelHint; // Sales-only: shown when supplierId not yet locked
   shippingMode?: ShippingMode;  // required from Confirming on
+  salesShippingLabel?: SalesShippingLabel; // Sales-only display string
   shipmentId?: string;          // assigned in Shipping
   pipeline: PipelineId;
   stage: StageId;
@@ -195,7 +206,9 @@ const fmt = (date: Date) =>
 interface ProjOpts {
   detailSummary?: string;
   supplierId?: string;
+  supplierLabel?: SupplierLabelHint;
   shippingMode?: ShippingMode;
+  salesShippingLabel?: SalesShippingLabel;
   shipmentId?: string;
   orderType?: OrderType;
   priority?: Priority;
@@ -212,7 +225,9 @@ const p = (
   customer, pointPerson, projectName,
   detailSummary: opts.detailSummary,
   supplierId: opts.supplierId,
+  supplierLabel: opts.supplierLabel,
   shippingMode: opts.shippingMode,
+  salesShippingLabel: opts.salesShippingLabel,
   shipmentId: opts.shipmentId,
   pipeline, stage,
   deadline: fmt(date), deadlineDate: date,
@@ -224,26 +239,40 @@ const p = (
 
 // ─────────── Mock projects (flat) ───────────
 export const PROJECTS: Project[] = [
-  // ── SALES · Proposal (early — detail summary often blank) ──
-  p("BTMI", "Melissa McGeary", "Connect Barbados", d(5, 16), 18500, "sales", "proposal", { priority: "Rush" }),
-  p("Digicel", "Anya Sharma", "Summer Activation", d(5, 18), 24000, "sales", "proposal"),
-  p("Banks Beer", "Kenji Tanaka", "Crop Over 2026", d(5, 22), 41000, "sales", "proposal", { detailSummary: "Festival giveaways", orderType: "Re-order" }),
-  p("Sandals Resorts", "David Chen", "Guest Welcome", d(5, 10), 32000, "sales", "proposal", { detailSummary: "Eco-friendly amenity bags", priority: "Rush" }),
+  // ── SALES · Proposal (early — bare-bones; no right block, no shipping) ──
+  p("BTMI", "Melissa McGeary", "Connect Barbados", d(5, 16), 18500, "sales", "proposal",
+    { detailSummary: "Welcome party premiums", priority: "Rush" }),
   p("Republic Bank", "Sarah Kim", "AGM 2026", d(5, 12), 12500, "sales", "proposal"),
-  p("Massy Stores", "Mike Lee", "Loyalty Program", d(5, 27), 56000, "sales", "proposal", { detailSummary: "Reusable shopping totes", orderType: "Re-order" }),
-  p("Hilton Caribbean", "Renee Allen", "Resort Refresh", d(6, 1), 28000, "sales", "proposal"),
+  p("Hilton Caribbean", "Renee Allen", "Resort Refresh", d(6, 1), 28000, "sales", "proposal",
+    { detailSummary: "Lobby refresh — scoping" }),
 
-  // ── SALES · Quote (Q-numbers assigned) ──
-  p("Chefette", "Emily Rodriguez", "Drive-Thru Refresh", d(5, 9), 19000, "sales", "quote", { detailSummary: "Branded uniforms", orderType: "Re-order", priority: "Rush" }),
-  p("Sagicor", "Carlos Gomez", "Sales Conference", d(5, 24), 14500, "sales", "quote", { detailSummary: "Awards & trophies" }),
-  p("Coca-Cola Caribbean", "Priya Sharma", "Beach Tour", d(5, 13), 38000, "sales", "quote", { detailSummary: "Cooler bags & shades" }),
-  p("Goddard Enterprises", "Jenna Park", "Anniversary Gifts", d(5, 29), 9800, "sales", "quote", { detailSummary: "Custom desk awards" }),
-  p("ANSA McAL", "Rachel Green", "Shareholder Pack", d(5, 18), 17500, "sales", "quote", { detailSummary: "Annual report bundle" }),
-  p("GraceKennedy", "Kenji Tanaka", "Trade Show Kit", d(5, 16), 22000, "sales", "quote", { detailSummary: "Booth giveaways", priority: "Rush" }),
-  p("BTMI", "Melissa McGeary", "Connect Barbados", d(5, 30), 9500, "sales", "quote", { detailSummary: "Conference banners" }),
-  p("Caribbean Airlines", "Anna Petrova", "Inflight Refresh", d(5, 21), 62000, "sales", "quote", { detailSummary: "Branded amenity kits" }),
+  // ── SALES · Quote (mixed states: full info / Q- placeholder / TBD / Various / Mixed / Courier) ──
+  // Full info — Ocean FCL
+  p("Banks Beer", "Kenji Tanaka", "Crop Over 2026", d(5, 22), 41000, "sales", "quote",
+    { detailSummary: "Festival giveaways", supplierId: "sup-freedom", salesShippingLabel: "Ocean FCL", orderType: "Re-order" }),
+  // Full info — Ocean LCL
+  p("Sagicor", "Carlos Gomez", "Sales Conference", d(5, 24), 14500, "sales", "quote",
+    { detailSummary: "Awards & trophies", supplierId: "sup-yiwu", salesShippingLabel: "Ocean LCL" }),
+  // Full info — DHL
+  p("Coca-Cola Caribbean", "Priya Sharma", "Beach Tour", d(5, 13), 38000, "sales", "quote",
+    { detailSummary: "Cooler bags & shades", supplierId: "sup-admax", salesShippingLabel: "DHL" }),
+  // Full info — FedEx
+  p("Goddard Enterprises", "Jenna Park", "Anniversary Gifts", d(5, 29), 9800, "sales", "quote",
+    { detailSummary: "Custom desk awards", supplierId: "sup-admax", salesShippingLabel: "FedEx" }),
+  // Q- placeholder — quote being prepared, supplier known, Courier
+  p("Chefette", "Emily Rodriguez", "Drive-Thru Refresh", d(5, 9), 19000, "sales", "quote",
+    { detailSummary: "Branded uniforms", supplierId: "sup-ningbo", salesShippingLabel: "Courier", orderType: "Re-order", priority: "Rush" }),
+  // TBD supplier — no PO line
+  p("ANSA McAL", "Rachel Green", "Shareholder Pack", d(5, 18), 17500, "sales", "quote",
+    { detailSummary: "Annual report bundle", supplierLabel: "TBD", salesShippingLabel: "Ocean LCL" }),
+  // Various supplier — Mixed shipping
+  p("Caribbean Airlines", "Anna Petrova", "Inflight Refresh", d(5, 21), 62000, "sales", "quote",
+    { detailSummary: "Branded amenity kits", supplierLabel: "Various", salesShippingLabel: "Mixed" }),
+  // Q- placeholder + TBD supplier
+  p("GraceKennedy", "Kenji Tanaka", "Trade Show Kit", d(5, 16), 22000, "sales", "quote",
+    { detailSummary: "Booth giveaways", supplierLabel: "TBD", salesShippingLabel: "Ocean FCL", priority: "Rush" }),
 
-  // ── SALES · Confirming (supplier + shipping + detail required) ──
+  // ── SALES · Confirming (supplier + shipping locked; ready for Production handoff) ──
   p("FLOW Caribbean", "Maria Garcia", "Retail Launch", d(5, 20), 47000, "sales", "confirming",
     { detailSummary: "POS displays", supplierId: "sup-shenzhen", shippingMode: "Ocean FCL" }),
   p("NCB Jamaica", "Sam Jones", "Branch Refresh", d(5, 17), 28000, "sales", "confirming",
@@ -256,7 +285,8 @@ export const PROJECTS: Project[] = [
     { detailSummary: "Hi-vis branded gear", supplierId: "sup-ningbo", shippingMode: "Ocean FCL" }),
   p("BTMI", "Melissa McGeary", "Connect Barbados", d(5, 16), 18500, "sales", "confirming",
     { detailSummary: "Welcome party premiums", supplierId: "sup-freedom", shippingMode: "Ocean FCL", priority: "Rush" }),
-
+  p("Digicel", "Anya Sharma", "Summer Activation", d(5, 18), 24000, "sales", "confirming",
+    { detailSummary: "Branded merchandise kits", supplierId: "sup-admax", shippingMode: "Air" }),
   // ── SALES · Archive ──
   p("PriceSmart", "Omar Hassan", "Membership Drive", d(6, 8), 11000, "sales", "archive",
     { detailSummary: "Branded reusables", tag: "Cold" }),

@@ -150,8 +150,15 @@ export const ProjectCard = ({
   const intensity = Math.min(1, Math.abs(dx) / COMMIT_THRESHOLD_PX);
 
   // ─── Pipeline-specific content for the right block & bottom row ───
-  const showRightBlock = card.pipeline !== "sales";
+  // Right block visibility: shown for non-sales pipelines AND for Sales whenever
+  // a supplier signal exists (real id, TBD, or Various). Proposal stays bare.
+  const salesSupplierKnown = !!card.supplier || !!proj.supplierLabel;
+  const showRightBlock = card.pipeline !== "sales" || salesSupplierKnown;
   const supplierName = card.supplier?.name;
+  const supplierHint = proj.supplierLabel; // "TBD" | "Various" | undefined
+  const supplierIsHint = !supplierName && !!supplierHint;
+  // Sales hides PO line entirely when supplier is only TBD/Various (no PO without supplier)
+  const showPoLine = card.pipeline !== "sales" || !!card.supplier;
   const poText = proj.poNumber;
 
   // Shipping line (used on Production / Shipping / Finance bottom row)
@@ -170,10 +177,21 @@ export const ProjectCard = ({
   let bottomRight: React.ReactNode = null;       // right of last row
 
   if (card.pipeline === "sales") {
-    // Single-line bottom: Q-XXXX  ·  deadline + urgency
-    if (card.stage !== "proposal" && card.stage !== "archive") {
+    // Sales shipping label is a free-form display string set in mock/data
+    // ("Ocean FCL" / "Ocean LCL" / "DHL" / "FedEx" / "Courier" / "Mixed").
+    // For Confirming-stage projects with a real shippingMode, fall back to the
+    // canonical mode string (no shipment code yet — that comes in Shipping).
+    const salesShipText =
+      proj.salesShippingLabel ??
+      (proj.shippingMode === "Air" ? undefined : proj.shippingMode);
+    const showShipLine = !!salesShipText;
+    const showQLine =
+      card.stage !== "proposal" && card.stage !== "archive";
+
+    // Top reference line: Q-XXXX (or dim "Q-" placeholder)
+    if (showQLine) {
       const placeholder = !proj.quoteNumber;
-      bottomLeft = (
+      topRefLine = (
         <span
           className={cn(
             "text-[12px] tabular leading-none",
@@ -183,11 +201,20 @@ export const ProjectCard = ({
           {proj.quoteNumber ?? "Q-"}
         </span>
       );
-    } else {
-      bottomLeft = <span />;
     }
+
+    // Bottom-left: shipping mode (or empty if not yet known)
+    bottomLeft = showShipLine ? (
+      <span className="text-[12px] tabular leading-none truncate text-muted-foreground/85">
+        {salesShipText}
+      </span>
+    ) : (
+      <span />
+    );
+
+    // Bottom-right: deadline + urgency
     bottomRight = (
-      <span className="inline-flex items-center gap-2 leading-none">
+      <span className="inline-flex items-center gap-2 leading-none shrink-0">
         <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
         <span className="text-muted-foreground/35">·</span>
         <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
@@ -195,6 +222,9 @@ export const ProjectCard = ({
         </span>
       </span>
     );
+
+    // If neither Q-line nor a ship line exists (Proposal), collapse to single
+    // bottom row by leaving topRefLine null — handled by the JSX below.
   } else if (card.pipeline === "operations") {
     // Top: Q-XXXX (full width)
     // Bottom: shipping label · customer deadline + urgency
@@ -414,20 +444,29 @@ export const ProjectCard = ({
                     style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
                   />
                   <span
-                    className="text-[13px] font-medium truncate"
-                    style={{ color: "hsl(var(--brand-navy))" }}
+                    className={cn(
+                      "text-[13px] truncate",
+                      supplierIsHint
+                        ? "italic font-normal text-muted-foreground/65"
+                        : "font-medium",
+                    )}
+                    style={
+                      supplierIsHint ? undefined : { color: "hsl(var(--brand-navy))" }
+                    }
                   >
-                    {supplierName ?? "Unassigned"}
+                    {supplierName ?? supplierHint ?? "Unassigned"}
                   </span>
                 </span>
-                <span
-                  className={cn(
-                    "text-[12px] tabular leading-none mt-1",
-                    poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
-                  )}
-                >
-                  {poText ?? "PO-"}
-                </span>
+                {showPoLine && (
+                  <span
+                    className={cn(
+                      "text-[12px] tabular leading-none mt-1",
+                      poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
+                    )}
+                  >
+                    {poText ?? "PO-"}
+                  </span>
+                )}
               </div>
             )}
           </div>
