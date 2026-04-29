@@ -104,7 +104,7 @@ export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
 export const FRIENDLY_STAGE_HELP: Record<StageId, string> = {
   proposal: "New enquiries that need a written proposal. Once you've sent the proposal, move forward to Quote.",
   quote: "Projects that need pricing worked out and sent to the customer. Once you've sent the quote, move forward to Confirming.",
-  confirming: "Quote sent. Waiting for the customer to say yes. When they confirm, the project splits into items and moves into Operations.",
+  confirming: "Quote sent. Waiting for the customer to say yes. When they confirm, the project splits into items and moves into Production.",
   archive: "Closed or paused projects — cold leads, lost deals, or anything not actively progressing. Tags inside (Cold / Lost / Other) keep the distinction.",
   preproduction: "Order is being prepared internally before the factory starts making it — artwork, sign-offs, factory PO, deposit. Move forward when the factory begins producing.",
   in_production: "The factory has the order and is making it. When production finishes, the item moves to Shipping for shipment assignment.",
