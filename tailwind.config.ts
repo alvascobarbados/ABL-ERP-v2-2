@@ -65,6 +65,13 @@ export default {
         },
         urgent: "hsl(var(--urgent))",
         soon: "hsl(var(--soon))",
+        brand: {
+          navy: "hsl(var(--brand-navy))",
+          "navy-soft": "hsl(var(--brand-navy-soft))",
+          orange: "hsl(var(--brand-orange))",
+          "orange-soft": "hsl(var(--brand-orange-soft))",
+          gold: "hsl(var(--brand-gold))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -82,8 +89,8 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        serif: ["Fraunces", "ui-serif", "Georgia", "serif"],
-        sans: ["Geist", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["Raleway", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Raleway", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },

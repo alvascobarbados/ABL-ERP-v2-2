@@ -5,6 +5,7 @@ import {
   buildCards as buildCardsFromData, pipelineCounts as pipelineCountsFromData,
   SHIPMENTS, SUPPLIERS, getMaster, getShipment,
 } from "@/data/pipelines";
+import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, SplitDraftItem } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
@@ -217,30 +218,37 @@ const Index = () => {
     if (dx > 0 && idx > 0) setActivePipeline(PIPELINES[idx - 1].id);
   };
 
+  const accentHex = PIPELINE_ACCENT[activePipeline].hex;
+
   return (
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 pt-5 pb-3">
           <div className="flex items-end justify-between mb-3">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground font-medium mb-1">
-                Operations
+              <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground font-medium mb-1">
+                Alvasco · Operations
               </p>
-              <h1 key={pipeline.id} className="font-serif-display text-3xl sm:text-4xl font-semibold text-foreground tracking-tight animate-fade-in">
+              <h1
+                key={pipeline.id}
+                className="font-display text-4xl sm:text-5xl tracking-tight animate-fade-in"
+                style={{ color: "hsl(var(--brand-navy))", fontWeight: 300, letterSpacing: "-0.01em" }}
+              >
                 {pipeline.title}
               </h1>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSuppliersOpen(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border bg-card/60 hover:bg-card transition-colors"
+                style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", color: "hsl(var(--brand-navy))" }}
                 aria-label="Open suppliers"
               >
                 <Factory className="h-3.5 w-3.5" /> Suppliers
               </button>
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">In pipeline</p>
-                <p className="text-2xl font-semibold text-foreground tabular-nums">{visible.length}</p>
+                <p className="text-2xl font-semibold tabular" style={{ color: "hsl(var(--brand-navy))" }}>{visible.length}</p>
               </div>
             </div>
           </div>
@@ -253,10 +261,11 @@ const Index = () => {
                 return (
                   <span
                     key={p.id}
-                    className={cn(
-                      "h-1 rounded-full transition-all duration-300",
-                      i === idx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/30",
-                    )}
+                    className="h-1 rounded-full transition-all duration-300"
+                    style={{
+                      width: i === idx ? "1.5rem" : "0.375rem",
+                      backgroundColor: i === idx ? PIPELINE_ACCENT[p.id].hex : "hsl(var(--muted-foreground) / 0.3)",
+                    }}
                   />
                 );
               })}
@@ -272,6 +281,8 @@ const Index = () => {
             />
           </div>
         </div>
+        {/* Per-pipeline accent stripe */}
+        <div className="h-[3px] w-full transition-colors duration-300" style={{ backgroundColor: accentHex }} />
       </header>
 
       <main key={activePipeline} className="max-w-6xl mx-auto px-5 sm:px-8 py-5 sm:py-7 space-y-4 sm:space-y-5 animate-fade-in">
@@ -291,14 +302,15 @@ const Index = () => {
         ))}
 
         {activePipeline === "shipping" && SHIPMENTS.length > 0 && (
-          <section className="bg-card/70 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 p-5">
-            <div className="font-serif-display text-lg font-semibold mb-3">Active shipments</div>
+          <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 p-5">
+            <div className="text-base font-medium mb-3" style={{ color: "hsl(var(--brand-navy))" }}>Active shipments</div>
             <div className="flex flex-wrap gap-2">
               {SHIPMENTS.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => openShipmentById(s.id)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition-opacity"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full text-white hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: "hsl(var(--brand-navy))" }}
                 >
                   {s.code} · {s.mode} · {s.status}
                 </button>
@@ -307,8 +319,11 @@ const Index = () => {
           </section>
         )}
 
-        <p className="text-center text-xs text-muted-foreground pt-4 pb-2">
+        <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
           Swipe cards → to advance, ← to send back. Long-press for any stage.
+        </p>
+        <p className="text-center text-[10px] uppercase tracking-[0.3em] pb-2" style={{ color: "hsl(var(--brand-navy))", fontWeight: 500 }}>
+          Alvasco
         </p>
       </main>
 

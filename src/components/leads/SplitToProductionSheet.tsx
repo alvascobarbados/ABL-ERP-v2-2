@@ -40,7 +40,7 @@ export const SplitToProductionSheet = ({ master, suppliers, open, onClose, onCon
     <Sheet open={open} onClose={handleClose} title="Split to Production">
       <div className="space-y-1 pb-4 border-b border-border/60">
         <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">Master Project</p>
-        <p className="font-serif-display text-xl font-semibold text-foreground tracking-tight">{master.projectName}</p>
+        <p className="text-xl font-semibold tracking-tight" style={{ color: "hsl(var(--brand-navy))" }}>{master.projectName}</p>
         <p className="text-sm text-muted-foreground">{master.customer} · {master.summary}</p>
       </div>
 
@@ -112,7 +112,8 @@ export const SplitToProductionSheet = ({ master, suppliers, open, onClose, onCon
         <button
           onClick={() => { if (ready) { onConfirm(items); reset(); } }}
           disabled={!ready}
-          className="flex-1 px-4 py-2.5 rounded-xl bg-foreground text-background text-sm font-semibold transition-opacity disabled:opacity-40 hover:opacity-90"
+          className="flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-opacity disabled:opacity-40 hover:opacity-90"
+          style={{ backgroundColor: "hsl(var(--brand-navy))" }}
         >
           Confirm Handoff
         </button>

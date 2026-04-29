@@ -1,8 +1,10 @@
-import { CalendarDays, User2, Building2, Factory, Container, AlertTriangle } from "lucide-react";
+import { CalendarDays, User2, Building2, Factory, Container, AlertTriangle, Flag } from "lucide-react";
 import { Sheet } from "./Sheet";
 import {
-  MasterProject, PIPELINES, STAGE_ACCENT, getSubsForMaster, getSupplier, getShipment, SubProject,
+  MasterProject, PIPELINES, getSubsForMaster, getSupplier, getShipment, SubProject,
 } from "@/data/pipelines";
+import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
+import { SupplierChip } from "./StatusPill";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -14,39 +16,47 @@ interface Props {
 
 const TODAY = new Date(2026, 4, 8);
 
-const accentBgClass: Record<string, string> = {
-  indigo: "bg-stage-indigo", amber: "bg-stage-amber", emerald: "bg-stage-emerald",
-  rose: "bg-stage-rose", slate: "bg-stage-slate", violet: "bg-stage-violet",
-  orange: "bg-stage-orange", teal: "bg-stage-teal", sky: "bg-stage-sky",
-  cyan: "bg-stage-cyan", fuchsia: "bg-stage-fuchsia",
-};
-
-// Flatten all stages across pipelines (for mini-pipeline)
-const ALL_STAGES = PIPELINES.flatMap((p) => p.stages.map((s) => ({ ...s, pipeline: p.title })));
+const ALL_STAGES = PIPELINES.flatMap((p) => p.stages.map((s) => ({ ...s, pipeline: p.id, pipelineTitle: p.title })));
 
 function MiniPipeline({ currentStage }: { currentStage: string }) {
   const idx = ALL_STAGES.findIndex((s) => s.id === currentStage);
   return (
     <div className="flex items-center gap-1">
-      {ALL_STAGES.map((s, i) => (
-        <div key={s.id} className="flex items-center gap-1">
-          <span
-            className={cn(
-              "h-1.5 w-1.5 rounded-full",
-              i < idx ? "bg-foreground/60" : i === idx ? "bg-foreground" : "bg-muted-foreground/25",
+      {ALL_STAGES.map((s, i) => {
+        const accentHex = PIPELINE_ACCENT[s.pipeline].hex;
+        const state = i < idx ? "done" : i === idx ? "current" : "future";
+        return (
+          <div key={s.id} className="flex items-center gap-1">
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full border transition-colors",
+                state === "future" && "bg-transparent border-muted-foreground/30",
+              )}
+              style={
+                state === "done"
+                  ? { backgroundColor: accentHex, borderColor: accentHex, opacity: 0.55 }
+                  : state === "current"
+                    ? { backgroundColor: accentHex, borderColor: accentHex, boxShadow: `0 0 0 2px ${accentHex}33` }
+                    : undefined
+              }
+              title={`${s.pipelineTitle} · ${s.title}`}
+            />
+            {i < ALL_STAGES.length - 1 && (
+              <span
+                className="h-px w-2"
+                style={{
+                  backgroundColor: i < idx ? accentHex + "88" : "hsl(var(--muted-foreground) / 0.2)",
+                }}
+              />
             )}
-            title={`${s.pipeline} · ${s.title}`}
-          />
-          {i < ALL_STAGES.length - 1 && <span className={cn("h-px w-2", i < idx ? "bg-foreground/40" : "bg-muted-foreground/20")} />}
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function getDayDelta(d: Date) {
-  return Math.ceil((d.getTime() - TODAY.getTime()) / 86400000);
-}
+function getDayDelta(d: Date) { return Math.ceil((d.getTime() - TODAY.getTime()) / 86400000); }
 
 export const MasterProjectView = ({ master, onClose, onOpenSub, onOpenShipment }: Props) => {
   if (!master) return null;
@@ -79,9 +89,12 @@ export const MasterProjectView = ({ master, onClose, onOpenSub, onOpenShipment }
         <div className={cn(
           "flex items-center gap-2 rounded-xl px-4 py-3 text-sm border",
           health === "critical" && "bg-urgent/10 text-urgent border-urgent/30",
-          health === "warning" && "bg-soon/10 text-soon border-soon/30",
           health === "healthy" && "bg-muted text-muted-foreground border-border",
-        )}>
+        )}
+          style={health === "warning"
+            ? { backgroundColor: "hsl(var(--brand-orange) / 0.12)", color: "hsl(var(--brand-orange))", borderColor: "hsl(var(--brand-orange) / 0.3)" }
+            : undefined}
+        >
           <AlertTriangle className="h-4 w-4 shrink-0" />
           {health === "critical" && slowest && (
             <span><span className="font-semibold">{slowest.itemName}</span> is overdue by {Math.abs(slowestDelta)}d</span>
@@ -106,8 +119,8 @@ export const MasterProjectView = ({ master, onClose, onOpenSub, onOpenShipment }
               {subs.map((s) => {
                 const supplier = getSupplier(s.supplierId);
                 const shipment = getShipment(s.shipmentId);
-                const accent = STAGE_ACCENT[s.stage];
                 const stageInfo = ALL_STAGES.find((x) => x.id === s.stage);
+                const isSlowest = slowest?.id === s.id && health !== "healthy";
                 return (
                   <button
                     key={s.id}
@@ -116,18 +129,23 @@ export const MasterProjectView = ({ master, onClose, onOpenSub, onOpenShipment }
                   >
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="min-w-0">
-                        <div className="font-semibold text-foreground truncate">{s.itemName}</div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                          <Factory className="h-3 w-3" />
-                          <span>{supplier?.name}</span>
-                          <span className="text-muted-foreground/60">·</span>
+                        <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
+                          {isSlowest && <Flag className="h-3.5 w-3.5 shrink-0" style={{ color: "hsl(var(--brand-orange))" }} />}
+                          {s.itemName}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <SupplierChip color={supplierColor(s.supplierId)} name={supplier?.name} />
+                          <span className="text-muted-foreground/50">·</span>
                           <span>{s.shippingMode}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className={cn("w-1.5 h-1.5 rounded-full", accentBgClass[accent])} />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: PIPELINE_ACCENT[s.pipeline].hex }}
+                        />
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                          {stageInfo?.pipeline} · {stageInfo?.title}
+                          {stageInfo?.pipelineTitle} · {stageInfo?.title}
                         </span>
                       </div>
                     </div>
@@ -137,7 +155,8 @@ export const MasterProjectView = ({ master, onClose, onOpenSub, onOpenShipment }
                         <span
                           role="button"
                           onClick={(e) => { e.stopPropagation(); onOpenShipment(shipment.id); }}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-foreground text-background font-semibold"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-semibold"
+                          style={{ backgroundColor: "hsl(var(--brand-navy))" }}
                         >
                           <Container className="h-2.5 w-2.5" /> {shipment.code}
                         </span>

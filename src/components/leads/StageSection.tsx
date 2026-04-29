@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { PipelineCard, StageId, STAGE_ACCENT } from "@/data/pipelines";
+import { PipelineCard, StageId, PIPELINES } from "@/data/pipelines";
+import { PIPELINE_ACCENT } from "@/lib/brand";
 import { ProjectCard } from "./ProjectCard";
 import { cn } from "@/lib/utils";
 
@@ -16,30 +17,41 @@ interface StageSectionProps {
   onOpenPicker: (c: PipelineCard) => void;
 }
 
-const accentBgClass: Record<string, string> = {
-  indigo: "bg-stage-indigo", amber: "bg-stage-amber", emerald: "bg-stage-emerald",
-  rose: "bg-stage-rose", slate: "bg-stage-slate", violet: "bg-stage-violet",
-  orange: "bg-stage-orange", teal: "bg-stage-teal", sky: "bg-stage-sky",
-  cyan: "bg-stage-cyan", fuchsia: "bg-stage-fuchsia",
-};
+// Each stage now derives its dot colour from the parent pipeline's brand accent.
+function pipelineForStage(stage: StageId) {
+  return PIPELINES.find((p) => p.stages.some((s) => s.id === stage))!.id;
+}
 
-export const StageSection = ({ title, stage, cards, onOpenCard, onOpenMaster, onOpenShipment, onSwipeForward, onSwipeBack, onOpenPicker }: StageSectionProps) => {
+export const StageSection = ({
+  title, stage, cards, onOpenCard, onOpenMaster, onOpenShipment,
+  onSwipeForward, onSwipeBack, onOpenPicker,
+}: StageSectionProps) => {
   const [open, setOpen] = useState(true);
-  const accent = STAGE_ACCENT[stage];
+  const pipelineId = pipelineForStage(stage);
+  const accentHex = PIPELINE_ACCENT[pipelineId].hex;
 
   return (
-    <section className="bg-card/70 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">
+    <section className="bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-muted/40 transition-[var(--transition-smooth)]"
         aria-expanded={open}
       >
         <div className="flex items-center gap-3">
-          <span className={cn("w-2 h-2 rounded-full", accentBgClass[accent])} />
-          <h2 className="font-serif-display text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
-          <span className="text-xs text-muted-foreground font-medium tabular-nums px-2 py-0.5 rounded-full bg-muted">
-            {cards.length}
-          </span>
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accentHex }} />
+          <h2 className="text-base sm:text-lg font-medium text-foreground tracking-tight">{title}</h2>
+          {cards.length > 0 && (
+            <span
+              className="text-[11px] tabular font-semibold rounded-full text-white inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5"
+              style={{ backgroundColor: "hsl(var(--brand-orange))" }}
+              title={`${cards.length} in this stage`}
+            >
+              {cards.length}
+            </span>
+          )}
+          {cards.length === 0 && (
+            <span className="text-[11px] tabular text-muted-foreground/60 px-2 py-0.5 rounded-full bg-muted/60">0</span>
+          )}
         </div>
         <ChevronDown
           className={cn(
