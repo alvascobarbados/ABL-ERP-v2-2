@@ -147,7 +147,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
       <div
         ref={cardRef}
         className={cn(
-          "absolute rounded-2xl bg-card border border-border/70 overflow-hidden",
+          "no-select absolute rounded-2xl bg-card border border-border/70 overflow-hidden",
           mounted && !shaking && "animate-jiggle",
           shaking && "animate-nope-shake",
         )}
