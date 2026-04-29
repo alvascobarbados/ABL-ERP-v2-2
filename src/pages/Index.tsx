@@ -1,35 +1,68 @@
 import { useMemo, useRef, useState } from "react";
-import { allProjects, PIPELINES, PipelineId, Project } from "@/data/pipelines";
+import {
+  PIPELINES, PipelineId, PipelineCard, MasterProject, Shipment,
+  buildCards, pipelineCounts, MASTERS, SHIPMENTS, SUBS, getMaster, getShipment,
+} from "@/data/pipelines";
 import { StageSection } from "@/components/leads/StageSection";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
 import { FilterBar, FilterState } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
+import { MasterProjectView } from "@/components/leads/MasterProjectView";
+import { ShipmentView } from "@/components/leads/ShipmentView";
+import { SuppliersView } from "@/components/leads/SuppliersView";
+import { Factory } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Index = () => {
   const [activePipeline, setActivePipeline] = useState<PipelineId>("sales");
   const [filters, setFilters] = useState<FilterState>({ shippingMode: null, orderType: null, priority: null });
-  const [selected, setSelected] = useState<Project | null>(null);
 
-  const counts = useMemo(() => {
-    const c: Record<PipelineId, number> = { sales: 0, production: 0, shipping: 0, finance: 0 };
-    allProjects.forEach((p) => { c[p.pipeline]++; });
-    return c;
-  }, []);
+  const [selectedCard, setSelectedCard] = useState<PipelineCard | null>(null);
+  const [selectedMaster, setSelectedMaster] = useState<MasterProject | null>(null);
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const [suppliersOpen, setSuppliersOpen] = useState(false);
+
+  const counts = useMemo(pipelineCounts, []);
+
+  const cards = useMemo(() => buildCards(activePipeline), [activePipeline]);
 
   const visible = useMemo(() => {
-    return allProjects.filter((p) => {
-      if (p.pipeline !== activePipeline) return false;
-      if (filters.shippingMode && p.shippingMode !== filters.shippingMode) return false;
-      if (filters.orderType && p.orderType !== filters.orderType) return false;
-      if (filters.priority && p.priority !== filters.priority) return false;
+    return cards.filter((c) => {
+      if (filters.shippingMode && c.shippingMode !== filters.shippingMode) return false;
+      if (filters.orderType && c.orderType !== filters.orderType) return false;
+      if (filters.priority && c.priority !== filters.priority) return false;
       return true;
     });
-  }, [activePipeline, filters]);
+  }, [cards, filters]);
 
   const pipeline = PIPELINES.find((p) => p.id === activePipeline)!;
 
-  // ─── Swipe gesture (touch) ───
+  // Cross-view helpers
+  const openMasterById = (id: string) => {
+    const m = getMaster(id) ?? MASTERS.find((x) => x.id === id) ?? null;
+    setSelectedMaster(m);
+    setSelectedCard(null);
+    setSelectedShipment(null);
+  };
+  const openShipmentById = (id: string) => {
+    setSelectedShipment(getShipment(id) ?? null);
+    setSelectedCard(null);
+    setSelectedMaster(null);
+  };
+  const openSubById = (id: string) => {
+    const sub = SUBS.find((s) => s.id === id);
+    if (!sub) return;
+    const list = buildCards(sub.pipeline);
+    const card = list.find((c) => c.id === sub.id) ?? null;
+    if (card) {
+      setActivePipeline(sub.pipeline);
+      setSelectedCard(card);
+      setSelectedMaster(null);
+      setSelectedShipment(null);
+    }
+  };
+
+  // Swipe gesture
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -60,9 +93,18 @@ const Index = () => {
                 {pipeline.title}
               </h1>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">In pipeline</p>
-              <p className="text-2xl font-semibold text-foreground tabular-nums">{visible.length}</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSuppliersOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                aria-label="Open suppliers"
+              >
+                <Factory className="h-3.5 w-3.5" /> Suppliers
+              </button>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">In pipeline</p>
+                <p className="text-2xl font-semibold text-foreground tabular-nums">{visible.length}</p>
+              </div>
             </div>
           </div>
 
@@ -96,17 +138,59 @@ const Index = () => {
             key={stage.id}
             title={stage.title}
             stage={stage.id}
-            projects={visible.filter((p) => p.stage === stage.id)}
-            onProjectClick={setSelected}
+            cards={visible.filter((c) => c.stage === stage.id)}
+            onOpenCard={setSelectedCard}
+            onOpenMaster={openMasterById}
+            onOpenShipment={openShipmentById}
           />
         ))}
+
+        {activePipeline === "shipping" && SHIPMENTS.length > 0 && (
+          <section className="bg-card/70 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 p-5">
+            <div className="font-serif-display text-lg font-semibold mb-3">Active shipments</div>
+            <div className="flex flex-wrap gap-2">
+              {SHIPMENTS.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => openShipmentById(s.id)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition-opacity"
+                >
+                  {s.code} · {s.mode} · {s.status}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-2">
           Swipe ← → to move between pipelines
         </p>
       </main>
 
-      <ProjectDetail project={selected} onClose={() => setSelected(null)} />
+      <ProjectDetail
+        card={selectedCard}
+        onClose={() => setSelectedCard(null)}
+        onOpenMaster={openMasterById}
+        onOpenShipment={openShipmentById}
+      />
+      <MasterProjectView
+        master={selectedMaster}
+        onClose={() => setSelectedMaster(null)}
+        onOpenSub={openSubById}
+        onOpenShipment={openShipmentById}
+      />
+      <ShipmentView
+        shipment={selectedShipment}
+        onClose={() => setSelectedShipment(null)}
+        onOpenSub={openSubById}
+        onOpenMaster={openMasterById}
+      />
+      <SuppliersView
+        open={suppliersOpen}
+        onClose={() => setSuppliersOpen(false)}
+        onOpenSub={(id) => { setSuppliersOpen(false); openSubById(id); }}
+        onOpenMaster={(id) => { setSuppliersOpen(false); openMasterById(id); }}
+      />
     </div>
   );
 };

@@ -1,11 +1,13 @@
-import { X, CalendarDays, User2, Building2, Tag, Plane, Ship, Repeat, Sparkles } from "lucide-react";
-import { Project, PIPELINES, STAGE_ACCENT } from "@/data/pipelines";
+import { CalendarDays, User2, Building2, Plane, Ship, Repeat, Sparkles, Factory, Container } from "lucide-react";
+import { PipelineCard, PIPELINES, STAGE_ACCENT } from "@/data/pipelines";
+import { Sheet } from "./Sheet";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
 
 interface Props {
-  project: Project | null;
+  card: PipelineCard | null;
   onClose: () => void;
+  onOpenMaster: (id: string) => void;
+  onOpenShipment: (id: string) => void;
 }
 
 const accentBgClass: Record<string, string> = {
@@ -15,68 +17,82 @@ const accentBgClass: Record<string, string> = {
   cyan: "bg-stage-cyan", fuchsia: "bg-stage-fuchsia",
 };
 
-export const ProjectDetail = ({ project, onClose }: Props) => {
-  useEffect(() => {
-    if (!project) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [project, onClose]);
-
-  if (!project) return null;
-
-  const pipeline = PIPELINES.find((p) => p.id === project.pipeline)!;
-  const stage = pipeline.stages.find((s) => s.id === project.stage)!;
-  const accent = STAGE_ACCENT[project.stage];
-  const ShipIcon = project.shippingMode === "Air" ? Plane : Ship;
+export const ProjectDetail = ({ card, onClose, onOpenMaster, onOpenShipment }: Props) => {
+  if (!card) return null;
+  const pipeline = PIPELINES.find((p) => p.id === card.pipeline)!;
+  const stage = pipeline.stages.find((s) => s.id === card.stage)!;
+  const accent = STAGE_ACCENT[card.stage];
+  const ShipIcon = card.shippingMode === "Air" ? Plane : Ship;
+  const isSub = card.kind === "sub";
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-foreground/30 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <aside className="w-full max-w-md bg-background border-l border-border shadow-2xl overflow-y-auto animate-slide-in-right">
-        <div className="sticky top-0 bg-background/90 backdrop-blur-md border-b border-border px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className={cn("w-2 h-2 rounded-full", accentBgClass[accent])} />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-              {pipeline.title} · {stage.title}
-            </span>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
-            <X className="h-4 w-4" />
+    <Sheet
+      open
+      onClose={onClose}
+      eyebrow={
+        <span className="inline-flex items-center gap-1.5">
+          <span className={cn("w-1.5 h-1.5 rounded-full", accentBgClass[accent])} />
+          {pipeline.title} · {stage.title}
+        </span>
+      }
+      title={isSub ? card.sub!.itemName : card.master.customer}
+    >
+      <div className="space-y-6">
+        {isSub && (
+          <button
+            onClick={() => onOpenMaster(card.master.id)}
+            className="w-full text-left rounded-xl border border-border bg-muted/40 p-3 hover:bg-muted transition-colors"
+          >
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Belongs to master project</div>
+            <div className="font-medium text-foreground">↳ {card.master.projectName} · {card.master.customer}</div>
           </button>
+        )}
+
+        <div>
+          <p className="text-base text-foreground/80">
+            {isSub ? (
+              <span className="text-muted-foreground">{card.sub!.summary}</span>
+            ) : (
+              <>
+                <span className="font-medium">{card.master.projectName}</span>
+                <span className="text-muted-foreground"> — {card.master.summary}</span>
+              </>
+            )}
+          </p>
         </div>
 
-        <div className="p-6 space-y-6">
-          <div>
-            <h2 className="font-serif-display text-3xl font-semibold tracking-tight mb-1">
-              {project.customer}
-            </h2>
-            <p className="text-base text-foreground/80">
-              <span className="font-medium">{project.projectName}</span>
-              <span className="text-muted-foreground"> — {project.summary}</span>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <DetailRow icon={User2} label="Point person" value={project.pointPerson} />
-            <DetailRow icon={Building2} label="Customer" value={project.customer} />
-            <DetailRow icon={CalendarDays} label="Deadline" value={project.deadline} />
-            <DetailRow icon={ShipIcon} label="Shipping" value={project.shippingMode} />
-            <DetailRow icon={Repeat} label="Order type" value={project.orderType} />
-            <DetailRow icon={Sparkles} label="Priority" value={project.priority} />
-          </div>
-
-          <div className="pt-4 border-t border-border">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-3 flex items-center gap-1.5">
-              <Tag className="h-3 w-3" /> Notes
-            </p>
-            <p className="text-sm text-muted-foreground italic">
-              Project detail and timeline will appear here. Tap and hold a card to move it between stages.
-            </p>
-          </div>
+        <div className="grid grid-cols-2 gap-3">
+          <DetailRow icon={User2} label="Point person" value={card.master.pointPerson} />
+          <DetailRow icon={Building2} label="Customer" value={card.master.customer} />
+          <DetailRow icon={CalendarDays} label="Deadline" value={card.deadline} />
+          <DetailRow icon={ShipIcon} label="Shipping" value={card.shippingMode} />
+          {isSub && card.supplier && (
+            <DetailRow icon={Factory} label="Supplier" value={card.supplier.name} />
+          )}
+          {isSub && card.sub?.value !== undefined && (
+            <DetailRow icon={Sparkles} label="Value" value={`$${card.sub.value.toLocaleString()}`} />
+          )}
+          <DetailRow icon={Repeat} label="Order type" value={card.orderType} />
+          <DetailRow icon={Sparkles} label="Priority" value={card.priority} />
         </div>
-      </aside>
-    </div>
+
+        {isSub && card.shipment && (
+          <button
+            onClick={() => onOpenShipment(card.shipment!.id)}
+            className="w-full flex items-center justify-between rounded-xl border border-border bg-foreground text-background p-4 hover:opacity-90 transition-opacity"
+          >
+            <div className="flex items-center gap-2">
+              <Container className="h-4 w-4" />
+              <div className="text-left">
+                <div className="text-[10px] uppercase tracking-wider opacity-70">Shipment</div>
+                <div className="font-semibold">{card.shipment.code}</div>
+              </div>
+            </div>
+            <span className="text-xs opacity-80">{card.shipment.status}</span>
+          </button>
+        )}
+      </div>
+    </Sheet>
   );
 };
 
