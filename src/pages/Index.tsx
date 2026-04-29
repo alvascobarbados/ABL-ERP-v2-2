@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import {
   PIPELINES, PipelineId, PipelineCard, MasterProject, Shipment,
-  buildCards, pipelineCounts, MASTERS, SHIPMENTS, SUBS, getMaster, getShipment,
+  buildCards, pipelineCounts, MASTERS, SHIPMENTS, SUBS, SUPPLIERS, getMaster, getShipment,
 } from "@/data/pipelines";
 import { StageSection } from "@/components/leads/StageSection";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 const Index = () => {
   const [activePipeline, setActivePipeline] = useState<PipelineId>("sales");
-  const [filters, setFilters] = useState<FilterState>({ shippingMode: null, orderType: null, priority: null });
+  const [filters, setFilters] = useState<FilterState>({ shippingMode: null, orderType: null, priority: null, customer: null, supplierId: null });
 
   const [selectedCard, setSelectedCard] = useState<PipelineCard | null>(null);
   const [selectedMaster, setSelectedMaster] = useState<MasterProject | null>(null);
@@ -31,6 +31,16 @@ const Index = () => {
       if (filters.shippingMode && c.shippingMode !== filters.shippingMode) return false;
       if (filters.orderType && c.orderType !== filters.orderType) return false;
       if (filters.priority && c.priority !== filters.priority) return false;
+      if (filters.customer && c.master.customer !== filters.customer) return false;
+      if (filters.supplierId) {
+        // master cards (Sales) match if any of their subs use this supplier; sub cards match directly
+        if (c.kind === "sub") {
+          if (c.sub?.supplierId !== filters.supplierId) return false;
+        } else {
+          const masterSubs = SUBS.filter((s) => s.masterId === c.master.id);
+          if (!masterSubs.some((s) => s.supplierId === filters.supplierId)) return false;
+        }
+      }
       return true;
     });
   }, [cards, filters]);
@@ -127,7 +137,12 @@ const Index = () => {
           </div>
 
           <div className="mt-3">
-            <FilterBar value={filters} onChange={setFilters} />
+            <FilterBar
+              value={filters}
+              onChange={setFilters}
+              customers={customerOptions}
+              suppliers={SUPPLIERS}
+            />
           </div>
         </div>
       </header>
