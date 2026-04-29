@@ -311,10 +311,10 @@ const Index = () => {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <PipelineTabs active={activePipeline} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
+            <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
             <div className="flex items-center gap-1">
               {PIPELINES.map((p, i) => {
-                const idx = PIPELINES.findIndex((x) => x.id === activePipeline);
+                const idx = isAll ? -1 : PIPELINES.findIndex((x) => x.id === activePipeline);
                 return (
                   <span
                     key={p.id}
