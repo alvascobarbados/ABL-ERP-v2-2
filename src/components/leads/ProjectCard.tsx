@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { MoreVertical, Factory } from "lucide-react";
-import { PipelineCard } from "@/data/pipelines";
+import { PipelineCard, formatShippingLabel, getShipment } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
@@ -14,53 +14,32 @@ interface ProjectCardProps {
 }
 
 const TODAY = new Date(2026, 4, 8);
+const DAY = 86400000;
 
 function getUrgency(date: Date) {
-  const diff = Math.ceil((date.getTime() - TODAY.getTime()) / 86400000);
+  const diff = Math.ceil((date.getTime() - TODAY.getTime()) / DAY);
   if (diff < 0) return { label: `${Math.abs(diff)}d overdue`, tone: "urgent" as const };
   if (diff <= 7) return { label: `in ${diff}d`, tone: "urgent" as const };
   if (diff <= 14) return { label: `in ${diff}d`, tone: "soon" as const };
   return { label: `in ${diff}d`, tone: "neutral" as const };
 }
 
+const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
+
 const COMMIT_THRESHOLD_PX = 110;
 const PULSE_THRESHOLD_PX = 180;
 const RESISTANCE = 0.85;
 
-// Pipeline-specific bottom-left reference text. Returns { text, isPlaceholder }.
-function bottomLeftRef(card: PipelineCard): { text: string; placeholder: boolean } | null {
-  const { pipeline, stage, project: p } = card;
-
-  if (pipeline === "sales") {
-    if (stage === "proposal" || stage === "archive") return null;
-    // quote / confirming → show Q-XXXX or "Q-" placeholder
-    return p.quoteNumber
-      ? { text: p.quoteNumber, placeholder: false }
-      : { text: "Q-", placeholder: true };
-  }
-
-  if (pipeline === "operations") {
-    const modeText = p.shippingMode ?? "—";
-    const poText = p.poNumber ?? "PO-";
-    const placeholder = !p.shippingMode || !p.poNumber;
-    return { text: `${modeText} · ${poText}`, placeholder };
-  }
-
-  if (pipeline === "finance") {
-    return p.invoiceNumber
-      ? { text: p.invoiceNumber, placeholder: false }
-      : { text: "INV-", placeholder: true };
-  }
-
-  return null;
-}
+const urgencyHex = (tone: "urgent" | "soon" | "neutral") =>
+  tone === "urgent" ? "hsl(var(--urgent))"
+  : tone === "soon" ? "hsl(var(--brand-orange))"
+  : "hsl(var(--muted-foreground))";
 
 export const ProjectCard = ({
   card, onOpen, onSwipeForward, onSwipeBack, onOpenPicker,
 }: ProjectCardProps) => {
-  const u = getUrgency(card.deadlineDate);
-  const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
   const proj = card.project;
+  const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   const next = getNextStage(card.pipeline, card.stage);
   const prev = getPrevStage(card.pipeline, card.stage);
@@ -170,14 +149,159 @@ export const ProjectCard = ({
   const showResist = (dx > 12 && !canForward) || (dx < -12 && !canBack);
   const intensity = Math.min(1, Math.abs(dx) / COMMIT_THRESHOLD_PX);
 
-  const urgencyColor =
-    u.tone === "urgent" ? "hsl(var(--urgent))"
-    : u.tone === "soon" ? "hsl(var(--brand-orange))"
-    : "hsl(var(--muted-foreground))";
-
-  const isProduction = card.pipeline === "operations";
+  // ─── Pipeline-specific content for the right block & bottom row ───
+  const showRightBlock = card.pipeline !== "sales";
   const supplierName = card.supplier?.name;
-  const ref = bottomLeftRef(card);
+  const poText = proj.poNumber;
+
+  // Shipping line (used on Production / Shipping / Finance bottom row)
+  const ship = getShipment(proj.shipmentId);
+  const shippingLabel = formatShippingLabel(
+    proj.shippingMode,
+    ship?.code,
+    ship?.carrier,
+  );
+
+  const u = getUrgency(card.deadlineDate);
+
+  // Build the bottom row by pipeline
+  let topRefLine: React.ReactNode = null;        // optional first row of bottom area
+  let bottomLeft: React.ReactNode = null;        // left of last row
+  let bottomRight: React.ReactNode = null;       // right of last row
+
+  if (card.pipeline === "sales") {
+    // Single-line bottom: Q-XXXX  ·  deadline + urgency
+    if (card.stage !== "proposal" && card.stage !== "archive") {
+      const placeholder = !proj.quoteNumber;
+      bottomLeft = (
+        <span
+          className={cn(
+            "text-[12px] tabular leading-none",
+            placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+          )}
+        >
+          {proj.quoteNumber ?? "Q-"}
+        </span>
+      );
+    } else {
+      bottomLeft = <span />;
+    }
+    bottomRight = (
+      <span className="inline-flex items-center gap-2 leading-none">
+        <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
+        <span className="text-muted-foreground/35">·</span>
+        <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
+          {u.label}
+        </span>
+      </span>
+    );
+  } else if (card.pipeline === "operations") {
+    // Top: Q-XXXX (full width)
+    // Bottom: shipping label · customer deadline + urgency
+    topRefLine = (
+      <span
+        className={cn(
+          "text-[12px] tabular leading-none",
+          !proj.quoteNumber ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+        )}
+      >
+        {proj.quoteNumber ?? "Q-"}
+      </span>
+    );
+    bottomLeft = (
+      <span
+        className={cn(
+          "text-[12px] tabular leading-none truncate",
+          shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+        )}
+      >
+        {shippingLabel.text}
+      </span>
+    );
+    bottomRight = (
+      <span className="inline-flex items-center gap-2 leading-none shrink-0">
+        <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
+        <span className="text-muted-foreground/35">·</span>
+        <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
+          {u.label}
+        </span>
+      </span>
+    );
+  } else if (card.pipeline === "shipping") {
+    // Top: Q-XXXX
+    // Bottom: shipping label · ETD → ETA (urgency on ETA)
+    topRefLine = (
+      <span
+        className={cn(
+          "text-[12px] tabular leading-none",
+          !proj.quoteNumber ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+        )}
+      >
+        {proj.quoteNumber ?? "Q-"}
+      </span>
+    );
+    bottomLeft = (
+      <span
+        className={cn(
+          "text-[12px] tabular leading-none truncate",
+          shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+        )}
+      >
+        {shippingLabel.text}
+      </span>
+    );
+    if (ship) {
+      const etaUrgency = getUrgency(ship.eta);
+      bottomRight = (
+        <span className="inline-flex items-center gap-1.5 leading-none shrink-0 tabular">
+          <span className="text-[12px] text-muted-foreground/75">{fmtDate(ship.etd)}</span>
+          <span className="text-muted-foreground/55">→</span>
+          <span className="text-[12px] font-semibold" style={{ color: urgencyHex(etaUrgency.tone) }}>
+            {fmtDate(ship.eta)}
+          </span>
+        </span>
+      );
+    } else {
+      bottomRight = (
+        <span className="text-[12px] text-muted-foreground/45 italic leading-none shrink-0">
+          ETD → ETA
+        </span>
+      );
+    }
+  } else if (card.pipeline === "finance") {
+    // Top: Q-XXXX · INV-XXXX
+    // Bottom: shipping label · invoice due + urgency
+    topRefLine = (
+      <span className="text-[12px] tabular leading-none inline-flex items-center gap-1.5">
+        <span className={cn(!proj.quoteNumber && "text-muted-foreground/45 italic", proj.quoteNumber && "text-muted-foreground/85")}>
+          {proj.quoteNumber ?? "Q-"}
+        </span>
+        <span className="text-muted-foreground/40">·</span>
+        <span className={cn(!proj.invoiceNumber && "text-muted-foreground/45 italic", proj.invoiceNumber && "text-muted-foreground/85")}>
+          {proj.invoiceNumber ?? "INV-"}
+        </span>
+      </span>
+    );
+    bottomLeft = (
+      <span
+        className={cn(
+          "text-[12px] tabular leading-none truncate",
+          shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+        )}
+      >
+        {shippingLabel.text}
+      </span>
+    );
+    bottomRight = (
+      <span className="inline-flex items-center gap-2 leading-none shrink-0">
+        <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
+        <span className="text-muted-foreground/35">·</span>
+        <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
+          {u.label}
+        </span>
+      </span>
+    );
+  }
 
   return (
     <div className="relative">
@@ -261,7 +385,7 @@ export const ProjectCard = ({
           onClick={handleOpen}
           className="w-full text-left pl-5 pr-5 pt-5 pb-5"
         >
-          {/* ─── TOP SECTION: identity (left) + supplier (right, Production only) ─── */}
+          {/* ─── TOP: identity (left) + supplier+PO block (right) ─── */}
           <div className="flex items-start gap-3">
             {/* Identity block */}
             <div className="flex-1 min-w-0 pr-9">
@@ -281,18 +405,28 @@ export const ProjectCard = ({
               )}
             </div>
 
-            {/* Right block — supplier (Production only) */}
-            {isProduction && (
-              <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 inline-flex items-center gap-1.5">
-                <Factory
-                  className="h-3.5 w-3.5 shrink-0"
-                  style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
-                />
+            {/* Right block — supplier + PO (Production / Shipping / Finance) */}
+            {showRightBlock && (
+              <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 flex flex-col items-end text-right">
+                <span className="inline-flex items-center gap-1.5">
+                  <Factory
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
+                  />
+                  <span
+                    className="text-[13px] font-medium truncate"
+                    style={{ color: "hsl(var(--brand-navy))" }}
+                  >
+                    {supplierName ?? "Unassigned"}
+                  </span>
+                </span>
                 <span
-                  className="text-[13px] font-medium truncate"
-                  style={{ color: "hsl(var(--brand-navy))" }}
+                  className={cn(
+                    "text-[12px] tabular leading-none mt-1",
+                    poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
+                  )}
                 >
-                  {supplierName ?? "Unassigned"}
+                  {poText ?? "PO-"}
                 </span>
               </div>
             )}
@@ -304,30 +438,15 @@ export const ProjectCard = ({
             style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)" }}
           />
 
-          {/* ─── BOTTOM ROW: reference (left) + deadline (right) ─── */}
+          {/* ─── BOTTOM AREA ─── */}
+          {topRefLine && (
+            <div className="flex items-center min-h-[16px] mb-1.5">
+              {topRefLine}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3 min-h-[18px]">
-            <span
-              className={cn(
-                "text-[12px] tabular leading-none",
-                ref?.placeholder
-                  ? "text-muted-foreground/45 italic"
-                  : "text-muted-foreground/85",
-              )}
-            >
-              {ref?.text ?? ""}
-            </span>
-            <span className="inline-flex items-center gap-2 leading-none">
-              <span className="text-[12px] text-muted-foreground/75 tabular">
-                {card.deadline}
-              </span>
-              <span className="text-muted-foreground/35">·</span>
-              <span
-                className="text-[12px] font-semibold tabular"
-                style={{ color: urgencyColor }}
-              >
-                {u.label}
-              </span>
-            </span>
+            {bottomLeft}
+            {bottomRight}
           </div>
         </button>
       </div>
