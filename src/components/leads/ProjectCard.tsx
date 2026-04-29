@@ -1,12 +1,8 @@
 import { useRef, useState, useEffect } from "react";
-import { CalendarDays, User2, CornerDownRight, Container, MoreVertical, ArrowLeft, ArrowRight } from "lucide-react";
+import { MoreVertical } from "lucide-react";
 import { PipelineCard } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
-import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
-import { StatusPill, SupplierChip } from "./StatusPill";
-import { ShippingIcon } from "./ShippingIcon";
-import { MiniJourneyBar } from "./MiniJourneyBar";
-import { useFriendlyMode } from "@/hooks/useFriendlyMode";
+import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 interface ProjectCardProps {
@@ -34,16 +30,18 @@ const PULSE_THRESHOLD_PX = 180;
 const RESISTANCE = 0.85;
 
 export const ProjectCard = ({
-  card, onOpen, onOpenMaster, onOpenShipment,
+  card, onOpen,
   onSwipeForward, onSwipeBack, onOpenPicker,
 }: ProjectCardProps) => {
   const u = getUrgency(card.deadlineDate);
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
-  const { friendly } = useFriendlyMode();
 
+  // Customer always at top; project name + summary below
+  const customer = card.master.customer;
   const isSub = card.kind === "sub";
-  const titleLine = isSub ? `${card.sub!.itemName}` : card.master.customer;
-  const subline = isSub ? card.supplier?.name : card.master.pointPerson;
+  const projectLine = isSub
+    ? `${card.master.projectName} — ${card.sub!.itemName}`
+    : `${card.master.projectName} — ${card.master.summary}`;
 
   const next = getNextStage(card.pipeline, card.stage);
   const prev = getPrevStage(card.pipeline, card.stage);
@@ -153,6 +151,11 @@ export const ProjectCard = ({
   const showResist = (dx > 12 && !canForward) || (dx < -12 && !canBack);
   const intensity = Math.min(1, Math.abs(dx) / COMMIT_THRESHOLD_PX);
 
+  const urgencyColor =
+    u.tone === "urgent" ? "hsl(var(--urgent))"
+    : u.tone === "soon" ? "hsl(var(--brand-orange))"
+    : "hsl(var(--muted-foreground))";
+
   return (
     <div className="relative">
       {/* Action label underneath */}
@@ -215,188 +218,50 @@ export const ProjectCard = ({
           }}
         />
 
-        {/* Pipeline accent stripe (left edge) */}
-        <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: pipelineHex }} />
+        {/* Pipeline accent stripe (left edge — quiet) */}
+        <span
+          className="absolute left-0 top-0 bottom-0 w-[3px]"
+          style={{ backgroundColor: pipelineHex, opacity: 0.7 }}
+        />
 
-        {/* ⋮ Picker button */}
+        {/* ⋮ Three-dots menu */}
         <button
           data-no-drag
           onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
-          className="absolute top-2 right-2 z-10 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          aria-label="Move project"
+          className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
+          aria-label="Project actions"
         >
-          <MoreVertical className="h-4 w-4" />
+          <MoreVertical className="h-5 w-5" />
         </button>
 
-        {/* Master badge — only on sub cards (faint navy tint) */}
-        {isSub && (
-          <button
-            data-no-drag
-            onClick={(e) => { e.stopPropagation(); onOpenMaster(); }}
-            className="ml-3 mt-2.5 mr-12 inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md transition-colors hover:opacity-80 max-w-[calc(100%-3.75rem)]"
-            style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}
-          >
-            <CornerDownRight className="h-3 w-3 opacity-70" />
-            <span className="tracking-tight truncate">{card.master.projectName}</span>
-            <span className="opacity-60">·</span>
-            <span className="truncate">{card.master.customer}</span>
-          </button>
-        )}
+        <button
+          onClick={handleOpen}
+          className="w-full text-left pl-5 pr-12 pt-5 pb-5"
+        >
+          {/* 1. Customer — top, weighty */}
+          <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight mb-1.5">
+            {customer}
+          </h3>
 
-        <button onClick={handleOpen} className={cn("w-full text-left", friendly ? "px-5 pt-2 pb-5" : "px-5 pt-2 pb-4")}>
-          <div className={cn("flex items-start justify-between gap-3 mb-1.5 pr-6", !isSub && "pt-3")}>
-            <h3
-              className={cn(
-                "text-foreground leading-tight tracking-tight",
-                friendly ? "text-base sm:text-[17px] font-semibold" : "font-semibold text-[15px]",
-              )}
-            >
-              {titleLine}
-            </h3>
-            {card.priority === "Rush" && <StatusPill variant="rush" className="shrink-0" />}
-          </div>
-
-          {subline && (
-            <div className={cn("flex items-center gap-1.5 text-muted-foreground mb-3", friendly ? "text-sm" : "text-xs")}>
-              {isSub && card.supplier ? (
-                <SupplierChip color={supplierColor(card.supplier.id)} name={card.supplier.name} />
-              ) : (
-                <>
-                  <User2 className={friendly ? "h-3.5 w-3.5" : "h-3 w-3"} />
-                  <span>{subline}</span>
-                </>
-              )}
-            </div>
-          )}
-
-          <p className={cn("text-foreground/80 leading-snug font-normal mb-4", friendly ? "text-[15px]" : "text-sm")}>
-            {isSub ? (
-              <span className="text-muted-foreground">{card.sub!.summary}</span>
-            ) : (
-              <>
-                <span className="font-semibold">{card.master.projectName}</span>
-                <span className="text-muted-foreground"> — {card.master.summary}</span>
-              </>
-            )}
+          {/* 2. Project name + summary — middle, lighter */}
+          <p className="text-[14px] text-muted-foreground leading-snug font-normal mb-5 line-clamp-2">
+            {projectLine}
           </p>
 
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <ShippingIcon mode={card.shippingMode} />
-            {card.orderType === "Re-order" && <StatusPill variant="reorder" />}
-            {card.tag && (
-              <span
-                className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: card.tag === "Lost"
-                    ? "hsl(var(--urgent) / 0.12)"
-                    : card.tag === "Customs Pending"
-                      ? "hsl(var(--brand-orange) / 0.12)"
-                      : "hsl(var(--brand-navy) / 0.08)",
-                  color: card.tag === "Lost"
-                    ? "hsl(var(--urgent))"
-                    : card.tag === "Customs Pending"
-                      ? "hsl(var(--brand-orange))"
-                      : "hsl(var(--brand-navy))",
-                }}
-              >
-                {card.tag}
-              </span>
-            )}
-            {card.shipment && (
-              <span
-                data-no-drag
-                role="button"
-                onClick={(e) => { e.stopPropagation(); onOpenShipment?.(); }}
-                className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full text-white hover:opacity-90 transition-opacity"
-                style={{ backgroundColor: "hsl(var(--brand-navy))" }}
-              >
-                <Container className="h-2.5 w-2.5" /> {card.shipment.code}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between pt-3 border-t border-border/60">
-            <MiniJourneyBar pipeline={card.pipeline} />
-            <div className="flex items-center gap-2">
-              <div className={cn("flex items-center gap-1 text-muted-foreground", friendly ? "text-sm" : "text-xs")}>
-                <CalendarDays className={friendly ? "h-3.5 w-3.5" : "h-3 w-3"} />
-                <span className="font-medium text-foreground/70 tabular">{card.deadline}</span>
-              </div>
-              <span
-                className={cn(
-                  "font-semibold tabular px-2 py-0.5 rounded-full",
-                  friendly ? "text-sm" : "text-xs",
-                  u.tone === "urgent" && "bg-urgent/10 text-urgent",
-                  u.tone === "neutral" && "text-muted-foreground",
-                )}
-                style={u.tone === "soon" ? { backgroundColor: "hsl(var(--brand-orange) / 0.12)", color: "hsl(var(--brand-orange))" } : undefined}
-              >
-                {u.label}
-              </span>
-            </div>
+          {/* 3. Deadline + urgency — bottom right */}
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-[13px] text-muted-foreground/80 tabular">
+              {card.deadline}
+            </span>
+            <span className="text-muted-foreground/40">·</span>
+            <span
+              className="text-[13px] font-semibold tabular"
+              style={{ color: urgencyColor }}
+            >
+              {u.label}
+            </span>
           </div>
         </button>
-
-        {/* Friendly-mode action bar — visible buttons */}
-        {friendly && (
-          <div
-            data-no-drag
-            className="px-4 pb-4 pt-1 flex items-center gap-2 border-t border-border/60"
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <button
-              data-no-drag
-              type="button"
-              disabled={!canBack}
-              onClick={(e) => { e.stopPropagation(); if (canBack) onSwipeBack(); }}
-              className={cn(
-                "flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border text-sm font-medium transition-colors",
-                canBack ? "hover:bg-muted/40" : "opacity-40 cursor-not-allowed",
-              )}
-              style={{
-                borderColor: "hsl(var(--brand-navy) / 0.35)",
-                color: "hsl(var(--brand-navy))",
-                minHeight: 56, padding: "10px 12px",
-              }}
-              title={prev ? `Move back to ${getStageTitle(prev.pipeline, prev.stage)}` : ""}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="truncate">{prev ? `Back · ${getStageTitle(prev.pipeline, prev.stage)}` : "Back"}</span>
-            </button>
-            <button
-              data-no-drag
-              type="button"
-              disabled={!canForward}
-              onClick={(e) => { e.stopPropagation(); if (canForward) onSwipeForward(); }}
-              className={cn(
-                "flex-[1.4] inline-flex items-center justify-center gap-1.5 rounded-xl text-sm font-semibold text-white transition-opacity",
-                canForward ? "hover:opacity-90" : "opacity-40 cursor-not-allowed",
-              )}
-              style={{
-                backgroundColor: "hsl(var(--brand-orange))",
-                minHeight: 56, padding: "10px 12px",
-              }}
-              title={next ? `Move forward to ${getStageTitle(next.pipeline, next.stage)}` : ""}
-            >
-              <span className="truncate">{next ? `Move forward · ${getStageTitle(next.pipeline, next.stage)}` : "At final stage"}</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button
-              data-no-drag
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
-              className="inline-flex items-center justify-center rounded-xl border text-xs font-medium hover:bg-muted/40 transition-colors px-3"
-              style={{
-                borderColor: "hsl(var(--brand-navy) / 0.25)",
-                color: "hsl(var(--brand-navy))",
-                minHeight: 56,
-              }}
-              aria-label="More options"
-            >
-              More
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
