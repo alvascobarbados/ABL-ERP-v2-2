@@ -119,14 +119,56 @@ export interface Project {
   lineItems?: LineItem[];
 }
 
+export type AirCarrier = "DHL" | "FedEx";
+
 export interface Shipment {
   id: string;
+  /**
+   * Code body only — for ocean: FCL-125 / LCL-088. For air: 10-digit tracking
+   * number (no carrier prefix). The carrier field carries the prefix.
+   */
   code: string;
   mode: ShippingMode;
+  carrier?: AirCarrier; // required when mode === "Air"
   supplierId: string;
   etd: Date;
   eta: Date;
   status: "Booked" | "In Transit" | "Customs" | "Delayed" | "Delivered";
+}
+
+/**
+ * Canonical shipping label used everywhere on cards & detail views.
+ *  Ocean FCL · FCL-125
+ *  Ocean LCL · LCL-088
+ *  DHL · 4523891076
+ *  FedEx · 7728340195
+ *
+ * If the code is missing, the right side becomes a dim placeholder
+ * (e.g. "FCL-", "LCL-", "DHL · ", "FedEx · ", "— · —").
+ */
+export function formatShippingLabel(
+  mode: ShippingMode | undefined,
+  code: string | undefined,
+  carrier?: AirCarrier,
+): { text: string; placeholder: boolean } {
+  if (!mode) return { text: "— · —", placeholder: true };
+  if (mode === "Ocean FCL") return code
+    ? { text: `Ocean FCL · ${code}`, placeholder: false }
+    : { text: "Ocean FCL · FCL-", placeholder: true };
+  if (mode === "Ocean LCL") return code
+    ? { text: `Ocean LCL · ${code}`, placeholder: false }
+    : { text: "Ocean LCL · LCL-", placeholder: true };
+  // Air
+  const c = carrier ?? "DHL";
+  return code
+    ? { text: `${c} · ${code}`, placeholder: false }
+    : { text: `${c} · `, placeholder: true };
+}
+
+export function formatShipmentTitle(s: Shipment): string {
+  if (s.mode === "Air") return `${s.carrier ?? "DHL"} · ${s.code}`;
+  if (s.mode === "Ocean FCL") return `Ocean FCL · ${s.code}`;
+  return `Ocean LCL · ${s.code}`;
 }
 
 // ─────────── Unified pipeline card ───────────
@@ -312,61 +354,64 @@ export const PROJECTS: Project[] = [
   p("NCB Jamaica", "Sam Jones", "Branch Refresh", d(5, 26), 28000, "shipping", "shipment_assigned",
     { detailSummary: "Branch signage", supplierId: "sup-admax", shippingMode: "Ocean LCL", shipmentId: "ship-lcl088", orderType: "Re-order", tag: "Customs Pending" }),
 
-  // ── FINANCE · Invoice Required ──
+  // ── FINANCE · Invoice Required (just delivered, shipping refs preserved) ──
   p("Caribbean Airlines", "Anna Petrova", "Inflight Refresh", d(5, 29), 62000, "finance", "invoice_required",
-    { detailSummary: "Amenity kits", supplierId: "sup-freedom", shippingMode: "Ocean LCL" }),
+    { detailSummary: "Amenity kits", supplierId: "sup-freedom", shippingMode: "Ocean FCL", shipmentId: "ship-fcl120" }),
   p("Demerara Distillers", "Evelyn Reed", "Holiday Gift", d(5, 12), 26000, "finance", "invoice_required",
-    { detailSummary: "Rum gift boxes", supplierId: "sup-ningbo", shippingMode: "Ocean FCL", orderType: "Re-order" }),
+    { detailSummary: "Rum gift boxes", supplierId: "sup-ningbo", shippingMode: "Ocean FCL", shipmentId: "ship-fcl120", orderType: "Re-order" }),
   p("Trinidad Cement", "Maria Garcia", "Safety Campaign", d(5, 8), 21000, "finance", "invoice_required",
-    { detailSummary: "Hi-vis gear", supplierId: "sup-ningbo", shippingMode: "Ocean FCL" }),
+    { detailSummary: "Hi-vis gear", supplierId: "sup-ningbo", shippingMode: "Ocean FCL", shipmentId: "ship-fcl120" }),
   p("WIBISCO", "Aisha Khan", "Biscuit Promo", d(5, 6), 18000, "finance", "invoice_required",
-    { detailSummary: "POS shelf strips", supplierId: "sup-shenzhen", shippingMode: "Ocean LCL" }),
+    { detailSummary: "POS shelf strips", supplierId: "sup-shenzhen", shippingMode: "Ocean LCL", shipmentId: "ship-fcl120" }),
   p("Solo Beverages", "Devon Ali", "Summer SKUs", d(5, 4), 14500, "finance", "invoice_required",
-    { detailSummary: "Custom labels", supplierId: "sup-shenzhen", shippingMode: "Air" }),
+    { detailSummary: "Custom labels", supplierId: "sup-shenzhen", shippingMode: "Air", shipmentId: "ship-dhl2401" }),
 
   // ── FINANCE · Invoiced ──
   p("Sandals Resorts", "David Chen", "Spa Amenities", d(5, 25), 28000, "finance", "invoiced",
-    { detailSummary: "Branded robes", supplierId: "sup-ningbo", shippingMode: "Ocean LCL", orderType: "Re-order" }),
+    { detailSummary: "Branded robes", supplierId: "sup-ningbo", shippingMode: "Ocean LCL", shipmentId: "ship-fcl120", orderType: "Re-order" }),
   p("Sandals Resorts", "David Chen", "Spa Amenities", d(5, 25), 10000, "finance", "invoiced",
-    { detailSummary: "Amenity kits", supplierId: "sup-yiwu", shippingMode: "Ocean LCL", orderType: "Re-order" }),
+    { detailSummary: "Amenity kits", supplierId: "sup-yiwu", shippingMode: "Ocean LCL", shipmentId: "ship-fcl120", orderType: "Re-order" }),
   p("Digicel", "Anya Sharma", "Retail Refresh", d(5, 28), 26000, "finance", "invoiced",
-    { detailSummary: "Counter displays", supplierId: "sup-shenzhen", shippingMode: "Ocean FCL" }),
+    { detailSummary: "Counter displays", supplierId: "sup-shenzhen", shippingMode: "Ocean FCL", shipmentId: "ship-fcl120" }),
   p("Digicel", "Anya Sharma", "Retail Refresh", d(5, 28), 20000, "finance", "invoiced",
-    { detailSummary: "Crew polos", supplierId: "sup-ningbo", shippingMode: "Ocean FCL" }),
+    { detailSummary: "Crew polos", supplierId: "sup-ningbo", shippingMode: "Ocean FCL", shipmentId: "ship-fcl120" }),
   p("BTMI", "Melissa McGeary", "Trade Show", d(5, 30), 14000, "finance", "invoiced",
-    { detailSummary: "Brochure binders", supplierId: "sup-shenzhen", shippingMode: "Air", orderType: "Re-order" }),
+    { detailSummary: "Brochure binders", supplierId: "sup-shenzhen", shippingMode: "Air", shipmentId: "ship-dhl2401", orderType: "Re-order" }),
   p("BTMI", "Melissa McGeary", "Trade Show", d(5, 30), 14000, "finance", "invoiced",
-    { detailSummary: "Cotton totes", supplierId: "sup-ningbo", shippingMode: "Air", orderType: "Re-order" }),
+    { detailSummary: "Cotton totes", supplierId: "sup-ningbo", shippingMode: "Air", shipmentId: "ship-dhl2401", orderType: "Re-order" }),
   p("Republic Bank", "Sarah Kim", "ATM Wraps", d(6, 2), 22000, "finance", "invoiced",
-    { detailSummary: "Vinyl wraps", supplierId: "sup-shenzhen", shippingMode: "Air" }),
+    { detailSummary: "Vinyl wraps", supplierId: "sup-shenzhen", shippingMode: "Air", shipmentId: "ship-dhl2401" }),
 
   // ── FINANCE · Paid ──
   p("Coca-Cola Caribbean", "Priya Sharma", "Summer Activation", d(5, 5), 24000, "finance", "paid",
-    { detailSummary: "Branded coolers", supplierId: "sup-freedom", shippingMode: "Ocean FCL" }),
+    { detailSummary: "Branded coolers", supplierId: "sup-freedom", shippingMode: "Ocean FCL", shipmentId: "ship-fcl120" }),
   p("Coca-Cola Caribbean", "Priya Sharma", "Summer Activation", d(5, 5), 14000, "finance", "paid",
-    { detailSummary: "Beach shades", supplierId: "sup-freedom", shippingMode: "Ocean FCL" }),
+    { detailSummary: "Beach shades", supplierId: "sup-freedom", shippingMode: "Ocean FCL", shipmentId: "ship-fcl120" }),
   p("ANSA McAL", "Rachel Green", "Report Bundle", d(5, 3), 17500, "finance", "paid",
-    { detailSummary: "AGM bundles", supplierId: "sup-freedom", shippingMode: "Air" }),
+    { detailSummary: "AGM bundles", supplierId: "sup-freedom", shippingMode: "Air", shipmentId: "ship-dhl2401" }),
   p("GraceKennedy", "Kenji Tanaka", "Trade Show Kit", d(5, 7), 14000, "finance", "paid",
-    { detailSummary: "Booth crate", supplierId: "sup-shenzhen", shippingMode: "Ocean LCL" }),
+    { detailSummary: "Booth crate", supplierId: "sup-shenzhen", shippingMode: "Ocean LCL", shipmentId: "ship-fcl120" }),
   p("GraceKennedy", "Kenji Tanaka", "Trade Show Kit", d(5, 7), 8000, "finance", "paid",
-    { detailSummary: "Booth giveaways", supplierId: "sup-yiwu", shippingMode: "Ocean LCL" }),
+    { detailSummary: "Booth giveaways", supplierId: "sup-yiwu", shippingMode: "Ocean LCL", shipmentId: "ship-fcl120" }),
   p("Demerara Distillers", "Evelyn Reed", "Holiday Gift", d(5, 1), 26000, "finance", "paid",
-    { detailSummary: "Rum gift boxes", supplierId: "sup-ningbo", shippingMode: "Ocean FCL", orderType: "Re-order" }),
+    { detailSummary: "Rum gift boxes", supplierId: "sup-ningbo", shippingMode: "Ocean FCL", shipmentId: "ship-fcl120", orderType: "Re-order" }),
 ];
 
 // ─────────── Shipments ───────────
+// Air codes are bare 10-digit tracking numbers; the carrier lives in `carrier`.
+// Ocean codes are FCL-XXX / LCL-XXX (3 digits).
 export const SHIPMENTS: Shipment[] = [
-  { id: "ship-dhl2456", code: "DHL-2456", mode: "Air", supplierId: "sup-admax", etd: d(4, 28), eta: d(5, 3), status: "In Transit" },
-  { id: "ship-dhl2457", code: "DHL-2457", mode: "Air", supplierId: "sup-admax", etd: d(4, 30), eta: d(5, 5), status: "In Transit" },
-  { id: "ship-dhl2458", code: "DHL-2458", mode: "Air", supplierId: "sup-yiwu", etd: d(5, 2), eta: d(5, 7), status: "Delayed" },
-  { id: "ship-fedex9912", code: "FedEx-9912", mode: "Air", supplierId: "sup-admax", etd: d(5, 5), eta: d(5, 9), status: "In Transit" },
-  { id: "ship-fcl125", code: "FCL-125", mode: "Ocean FCL", supplierId: "sup-freedom", etd: d(4, 12), eta: d(5, 18), status: "In Transit" },
-  { id: "ship-fcl126", code: "FCL-126", mode: "Ocean FCL", supplierId: "sup-freedom", etd: d(4, 20), eta: d(5, 28), status: "In Transit" },
-  { id: "ship-lcl088", code: "LCL-088", mode: "Ocean LCL", supplierId: "sup-shenzhen", etd: d(4, 25), eta: d(6, 5), status: "Customs" },
-  { id: "ship-fcl120", code: "FCL-120", mode: "Ocean FCL", supplierId: "sup-freedom", etd: d(3, 15), eta: d(4, 18), status: "Delivered" },
-  { id: "ship-dhl2401", code: "DHL-2401", mode: "Air", supplierId: "sup-admax", etd: d(4, 5), eta: d(4, 10), status: "Delivered" },
+  { id: "ship-dhl2456",   code: "4523891076", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 28), eta: d(5, 3),  status: "In Transit" },
+  { id: "ship-dhl2457",   code: "4523918842", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 30), eta: d(5, 5),  status: "In Transit" },
+  { id: "ship-dhl2458",   code: "4524027193", mode: "Air",       carrier: "DHL",   supplierId: "sup-yiwu",     etd: d(5, 2),  eta: d(5, 7),  status: "Delayed" },
+  { id: "ship-fedex9912", code: "7728340195", mode: "Air",       carrier: "FedEx", supplierId: "sup-admax",    etd: d(5, 5),  eta: d(5, 9),  status: "In Transit" },
+  { id: "ship-fcl125",    code: "FCL-125",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 12), eta: d(5, 18), status: "In Transit" },
+  { id: "ship-fcl126",    code: "FCL-126",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 20), eta: d(5, 28), status: "In Transit" },
+  { id: "ship-lcl088",    code: "LCL-088",    mode: "Ocean LCL",                   supplierId: "sup-shenzhen", etd: d(4, 25), eta: d(6, 5),  status: "Customs" },
+  { id: "ship-fcl120",    code: "FCL-120",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(3, 15), eta: d(4, 18), status: "Delivered" },
+  { id: "ship-dhl2401",   code: "4521776304", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 5),  eta: d(4, 10), status: "Delivered" },
 ];
+
 
 // ─────────── Reference numbers + line items (deterministic enrichment) ───────────
 const ITEM_POOL: { description: string; qtyMin: number; qtyMax: number }[] = [

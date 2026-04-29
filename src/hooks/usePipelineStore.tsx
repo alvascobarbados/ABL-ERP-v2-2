@@ -109,6 +109,7 @@ interface MoveResult {
 export interface NewShipmentInput {
   mode: ShippingMode;
   code: string;
+  carrier?: "DHL" | "FedEx";
   etd: Date;
   eta: Date;
   supplierId: string;
@@ -155,15 +156,15 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       if (target.pipeline === "shipping" && target.stage === "shipment_required") {
         patch.shipmentId = undefined;
       }
-      // Auto-assign reference numbers when reaching gates
+      // Auto-assign reference numbers when reaching gates (per spec ranges)
       if (target.stage === "quote" && !p.quoteNumber) {
-        patch.quoteNumber = `Q-${2400 + Math.floor(Math.random() * 600)}`;
+        patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`; // 2040–2080
       }
       if (target.pipeline === "operations" && !p.poNumber) {
-        patch.poNumber = `PO-${1500 + Math.floor(Math.random() * 800)}`;
+        patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`; // 1080–1110
       }
       if (target.pipeline === "finance" && !p.invoiceNumber) {
-        patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
+        patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`; // 1040–1060
       }
       return { ...p, ...patch };
     }));
@@ -187,6 +188,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       id: `ship-${Date.now()}`,
       code: input.code,
       mode: input.mode,
+      carrier: input.mode === "Air" ? (input.carrier ?? "DHL") : undefined,
       supplierId: input.supplierId,
       etd: input.etd,
       eta: input.eta,

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Container, Factory, CalendarDays, CheckCircle2 } from "lucide-react";
 import { Sheet } from "./Sheet";
-import { Shipment, getSupplier, PIPELINES } from "@/data/pipelines";
+import { Shipment, getSupplier, PIPELINES, formatShipmentTitle } from "@/data/pipelines";
 import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
 import { ShippingIcon } from "./ShippingIcon";
 import { SupplierChip } from "./StatusPill";
@@ -28,10 +28,11 @@ export const ShipmentView = ({ shipment, onClose, onOpenProject }: Props) => {
   const isDelivered = shipment.status === "Delivered";
   const inShippingCount = subs.filter((s) => s.pipeline === "shipping").length;
 
+  const title = formatShipmentTitle(shipment);
   const onConfirmDeliver = () => {
     const { count } = markShipmentDelivered(shipment.id);
     setConfirmDeliver(false);
-    toast.success(`${shipment.code} delivered. ${count} project${count === 1 ? "" : "s"} sent to Finance.`, {
+    toast.success(`${title} delivered. ${count} project${count === 1 ? "" : "s"} sent to Finance.`, {
       duration: 6000,
     });
     onClose();
@@ -47,7 +48,7 @@ export const ShipmentView = ({ shipment, onClose, onOpenProject }: Props) => {
           <Container className="h-3 w-3" /> Shipment · {shipment.status}
         </span>
       }
-      title={shipment.code}
+      title={title}
     >
       <div className="space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -110,14 +111,14 @@ export const ShipmentView = ({ shipment, onClose, onOpenProject }: Props) => {
             style={{ backgroundColor: "hsl(var(--brand-teal))", minHeight: 56 }}
           >
             <CheckCircle2 className="h-5 w-5" />
-            Mark {shipment.code} as Delivered
+            Mark {title} as Delivered
           </button>
         )}
       </div>
 
       <ConfirmDialog
         open={confirmDeliver}
-        title={`Mark ${shipment.code} as delivered?`}
+        title={`Mark ${title} as delivered?`}
         description={`All ${inShippingCount} project${inShippingCount === 1 ? "" : "s"} on this shipment will move to Finance / Invoice Required.`}
         confirmLabel="Yes, mark delivered"
         cancelLabel="Cancel"
