@@ -403,6 +403,7 @@ const Index = () => {
 
       <Walkthrough />
     </div>
+    </JiggleProvider>
   );
 };
 
