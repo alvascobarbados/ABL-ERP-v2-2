@@ -119,14 +119,56 @@ export interface Project {
   lineItems?: LineItem[];
 }
 
+export type AirCarrier = "DHL" | "FedEx";
+
 export interface Shipment {
   id: string;
+  /**
+   * Code body only — for ocean: FCL-125 / LCL-088. For air: 10-digit tracking
+   * number (no carrier prefix). The carrier field carries the prefix.
+   */
   code: string;
   mode: ShippingMode;
+  carrier?: AirCarrier; // required when mode === "Air"
   supplierId: string;
   etd: Date;
   eta: Date;
   status: "Booked" | "In Transit" | "Customs" | "Delayed" | "Delivered";
+}
+
+/**
+ * Canonical shipping label used everywhere on cards & detail views.
+ *  Ocean FCL · FCL-125
+ *  Ocean LCL · LCL-088
+ *  DHL · 4523891076
+ *  FedEx · 7728340195
+ *
+ * If the code is missing, the right side becomes a dim placeholder
+ * (e.g. "FCL-", "LCL-", "DHL · ", "FedEx · ", "— · —").
+ */
+export function formatShippingLabel(
+  mode: ShippingMode | undefined,
+  code: string | undefined,
+  carrier?: AirCarrier,
+): { text: string; placeholder: boolean } {
+  if (!mode) return { text: "— · —", placeholder: true };
+  if (mode === "Ocean FCL") return code
+    ? { text: `Ocean FCL · ${code}`, placeholder: false }
+    : { text: "Ocean FCL · FCL-", placeholder: true };
+  if (mode === "Ocean LCL") return code
+    ? { text: `Ocean LCL · ${code}`, placeholder: false }
+    : { text: "Ocean LCL · LCL-", placeholder: true };
+  // Air
+  const c = carrier ?? "DHL";
+  return code
+    ? { text: `${c} · ${code}`, placeholder: false }
+    : { text: `${c} · `, placeholder: true };
+}
+
+export function formatShipmentTitle(s: Shipment): string {
+  if (s.mode === "Air") return `${s.carrier ?? "DHL"} · ${s.code}`;
+  if (s.mode === "Ocean FCL") return `Ocean FCL · ${s.code}`;
+  return `Ocean LCL · ${s.code}`;
 }
 
 // ─────────── Unified pipeline card ───────────
