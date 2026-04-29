@@ -1,5 +1,5 @@
 import { ArrowLeft, MoreVertical, Factory } from "lucide-react";
-import { PipelineCard, PIPELINES, getShipment } from "@/data/pipelines";
+import { PipelineCard, PIPELINES, getShipment, formatShipmentTitle, formatShippingLabel } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -36,11 +36,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onAdvance, onOpen
   const u = getUrgency(card.deadlineDate);
 
   const ship = getShipment(proj.shipmentId);
+  const shippingLabel = formatShippingLabel(proj.shippingMode, ship?.code, ship?.carrier);
   let shipmentLine: string;
   if (ship) {
-    shipmentLine = `${ship.mode} · ${ship.code}`;
+    shipmentLine = formatShipmentTitle(ship);
   } else if (proj.shippingMode) {
-    shipmentLine = `${proj.shippingMode} · Awaiting shipment`;
+    shipmentLine = `${shippingLabel.text} · Awaiting shipment`;
   } else {
     shipmentLine = "Awaiting shipment";
   }
