@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, Plane, Ship, MoreVertical } from "lucide-react";
-import { Shipment, Project, PipelineCard } from "@/data/pipelines";
+import { Shipment, Project, PipelineCard, formatShipmentTitle } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
@@ -96,7 +96,7 @@ const ShipmentCard = ({ shipment, subs, onOpenShipment }: ShipmentCardProps) => 
           <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0 pr-9">
               <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight">
-                {shipment.code}
+                {formatShipmentTitle(shipment)}
               </h3>
               <div className="mt-1 space-y-0.5">
                 {projectLabels.length === 0 ? (
@@ -136,7 +136,7 @@ const ShipmentCard = ({ shipment, subs, onOpenShipment }: ShipmentCardProps) => 
                 className="text-[13px] font-medium"
                 style={{ color: "hsl(var(--brand-navy))" }}
               >
-                {shipment.mode}
+                {shipment.mode === "Air" ? (shipment.carrier ?? "Air") : shipment.mode}
               </span>
             </div>
           </div>
