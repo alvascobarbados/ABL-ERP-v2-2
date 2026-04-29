@@ -180,6 +180,7 @@ const Index = () => {
   const allTotal = counts.sales + counts.operations + counts.shipping + counts.finance;
 
   return (
+    <JiggleProvider onPick={(card, target) => performMove(card, target)}>
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 pt-5 pb-3">
