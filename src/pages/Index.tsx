@@ -242,7 +242,8 @@ const Index = () => {
     });
   };
 
-  // Swipe gesture (between pipelines)
+  // Swipe gesture (between tabs, including "all")
+  const TAB_ORDER: TabId[] = ["all", "sales", "operations", "shipping", "finance"];
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -255,12 +256,14 @@ const Index = () => {
     const dy = t.clientY - touchStart.current.y;
     touchStart.current = null;
     if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
-    const idx = PIPELINES.findIndex((p) => p.id === activePipeline);
-    if (dx < 0 && idx < PIPELINES.length - 1) setActiveTab(PIPELINES[idx + 1].id);
-    if (dx > 0 && idx > 0) setActiveTab(PIPELINES[idx - 1].id);
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (dx < 0 && idx < TAB_ORDER.length - 1) setActiveTab(TAB_ORDER[idx + 1]);
+    if (dx > 0 && idx > 0) setActiveTab(TAB_ORDER[idx - 1]);
   };
 
-  const accentHex = PIPELINE_ACCENT[activePipeline].hex;
+  const accentHex = isAll ? "transparent" : PIPELINE_ACCENT[activePipeline].hex;
+  const hasActiveFilter = !!(filters.shippingMode || filters.orderType || filters.priority || filters.customer || filters.supplierId);
+  const allTotal = counts.sales + counts.operations + counts.shipping + counts.finance;
 
   return (
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
