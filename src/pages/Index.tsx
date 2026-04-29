@@ -16,12 +16,18 @@ import { ShipmentView } from "@/components/leads/ShipmentView";
 import { SuppliersView } from "@/components/leads/SuppliersView";
 import { StagePicker } from "@/components/leads/StagePicker";
 import { SplitToProductionSheet } from "@/components/leads/SplitToProductionSheet";
+import { SettingsMenu } from "@/components/leads/SettingsMenu";
+import { Walkthrough } from "@/components/leads/Walkthrough";
+import { WelcomeTip } from "@/components/leads/WelcomeTip";
+import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { useFriendlyMode, FRIENDLY_PIPELINE_SUBTITLES } from "@/hooks/useFriendlyMode";
 import { Factory } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Index = () => {
   const store = usePipelineStore();
   const { masters, subs, moveCard, splitMasterToProduction, pulsePipeline, triggerPulse } = store;
+  const { friendly } = useFriendlyMode();
 
   const [activePipeline, setActivePipeline] = useState<PipelineId>("sales");
   const [filters, setFilters] = useState<FilterState>({ shippingMode: null, orderType: null, priority: null, customer: null, supplierId: null });
@@ -36,6 +42,9 @@ const Index = () => {
 
   // Split sheet state
   const [splitMaster, setSplitMaster] = useState<MasterProject | null>(null);
+
+  // Pending "Lost" confirmation
+  const [confirmLost, setConfirmLost] = useState<{ card: PipelineCard; target: { pipeline: PipelineId; stage: StageId } } | null>(null);
 
   // Build cards from live store
   const cards = useMemo<PipelineCard[]>(() => {
