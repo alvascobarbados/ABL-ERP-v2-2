@@ -418,9 +418,9 @@ const Index = () => {
 
       <ConfirmDialog
         open={!!confirmLost}
-        title={confirmLost ? `Mark ${confirmLost.card.kind === "master" ? confirmLost.card.master.projectName : confirmLost.card.master.customer} as Lost?` : ""}
-        description="This means the customer didn't go ahead. You can move it back later if needed."
-        confirmLabel="Yes, mark as Lost"
+        title={confirmLost ? `Move ${confirmLost.card.kind === "master" ? confirmLost.card.master.projectName : confirmLost.card.master.customer} to Archive?` : ""}
+        description="Archive holds closed-but-not-deleted projects (cold leads, lost deals, anything paused). You can move it back later if it comes back to life."
+        confirmLabel="Yes, archive it"
         cancelLabel="Cancel"
         destructive
         onCancel={() => setConfirmLost(null)}
