@@ -2,8 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   PIPELINES, PipelineId, PipelineCard, MasterProject, Shipment, StageId,
-  buildCards as buildCardsFromData, pipelineCounts as pipelineCountsFromData,
-  SHIPMENTS, SUPPLIERS, getMaster, getShipment,
+  SUPPLIERS, getMaster,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, SplitDraftItem } from "@/hooks/usePipelineStore";
@@ -20,13 +19,15 @@ import { SettingsMenu } from "@/components/leads/SettingsMenu";
 import { Walkthrough } from "@/components/leads/Walkthrough";
 import { WelcomeTip } from "@/components/leads/WelcomeTip";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { ShippingPipelineView, ShippingFilter } from "@/components/leads/ShippingPipelineView";
+import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import { useFriendlyMode, FRIENDLY_PIPELINE_SUBTITLES } from "@/hooks/useFriendlyMode";
 import { Factory } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Index = () => {
   const store = usePipelineStore();
-  const { masters, subs, moveCard, splitMasterToProduction, pulsePipeline, triggerPulse } = store;
+  const { masters, subs, shipments, moveCard, splitMasterToProduction, pulsePipeline, triggerPulse } = store;
   const { friendly } = useFriendlyMode();
 
   const [activePipeline, setActivePipeline] = useState<PipelineId>("sales");
