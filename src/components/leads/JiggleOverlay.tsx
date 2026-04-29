@@ -195,7 +195,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
       {/* ── Stage chip strip ── */}
       <div
         id="jiggle-strip"
-        className="absolute"
+        className="no-select absolute"
         style={{
           left: Math.max(8, liftedLeft - 8),
           width: Math.min(cardWidth + 16, (typeof window !== "undefined" ? window.innerWidth : 1024) - 16),
