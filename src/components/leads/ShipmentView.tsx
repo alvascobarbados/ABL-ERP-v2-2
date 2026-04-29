@@ -19,10 +19,24 @@ interface Props {
 const fmt = (date: Date) => `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })}`;
 
 export const ShipmentView = ({ shipment, onClose, onOpenSub, onOpenMaster }: Props) => {
+  const { subs: liveSubs, markShipmentDelivered } = usePipelineStore();
+  const [confirmDeliver, setConfirmDeliver] = useState(false);
+
   if (!shipment) return null;
   const supplier = getSupplier(shipment.supplierId);
-  const subs = getSubsForShipment(shipment.id);
+  const subs = liveSubs.filter((s) => s.shipmentId === shipment.id);
   const totalValue = subs.reduce((a, s) => a + s.value, 0);
+  const isDelivered = shipment.status === "Delivered";
+  const inShippingCount = subs.filter((s) => s.pipeline === "shipping").length;
+
+  const onConfirmDeliver = () => {
+    const { count } = markShipmentDelivered(shipment.id);
+    setConfirmDeliver(false);
+    toast.success(`${shipment.code} delivered. ${count} sub-project${count === 1 ? "" : "s"} sent to Finance.`, {
+      duration: 6000,
+    });
+    onClose();
+  };
 
   return (
     <Sheet
@@ -94,7 +108,28 @@ export const ShipmentView = ({ shipment, onClose, onOpenSub, onOpenMaster }: Pro
             );
           })}
         </div>
+
+        {!isDelivered && inShippingCount > 0 && (
+          <button
+            onClick={() => setConfirmDeliver(true)}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-2xl text-white font-semibold py-4"
+            style={{ backgroundColor: "hsl(var(--brand-teal))", minHeight: 56 }}
+          >
+            <CheckCircle2 className="h-5 w-5" />
+            Mark {shipment.code} as Delivered
+          </button>
+        )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDeliver}
+        title={`Mark ${shipment.code} as delivered?`}
+        description={`All ${inShippingCount} sub-project${inShippingCount === 1 ? "" : "s"} on this shipment will move to Finance / Invoice Required.`}
+        confirmLabel="Yes, mark delivered"
+        cancelLabel="Cancel"
+        onCancel={() => setConfirmDeliver(false)}
+        onConfirm={onConfirmDeliver}
+      />
     </Sheet>
   );
 };
