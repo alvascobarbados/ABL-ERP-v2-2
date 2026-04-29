@@ -87,6 +87,11 @@ export const SUPPLIERS: Supplier[] = [
 ];
 
 // ─────────── Master & Sub Projects ───────────
+export interface LineItem {
+  qty: number;
+  description: string;
+}
+
 export interface MasterProject {
   id: string;
   customer: string;
@@ -120,6 +125,8 @@ export interface SubProject {
   priority: Priority;
   orderType: OrderType;
   tag?: CardTag;
+  poNumber?: string;
+  lineItems?: LineItem[];
 }
 
 export interface Shipment {
