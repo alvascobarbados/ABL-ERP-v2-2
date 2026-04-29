@@ -47,6 +47,10 @@ const Index = () => {
   // Pending "Lost" confirmation
   const [confirmLost, setConfirmLost] = useState<{ card: PipelineCard; target: { pipeline: PipelineId; stage: StageId } } | null>(null);
 
+  // Shipping pipeline state
+  const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
+  const [assignOpen, setAssignOpen] = useState(false);
+
   // Build cards from live store
   const cards = useMemo<PipelineCard[]>(() => {
     if (activePipeline === "sales") {
@@ -322,31 +326,61 @@ const Index = () => {
             activePipeline === "sales"
               ? "Welcome to Sales. New customer enquiries live here until they're confirmed. Tap any card to see details, or use Move Forward to advance it."
               : activePipeline === "operations"
-                ? "Operations covers Pre-Production, In Production and Shipping — everything between a confirmed sale and goods reaching the customer. One sales lead can become several sub-projects here, one per item per supplier."
-                : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
+                ? "Operations covers Pre-Production and In Production. When the factory finishes, items move to Shipping for shipment assignment."
+                : activePipeline === "shipping"
+                  ? "Shipping is organised by shipment, not by stage. Air and Ocean groups hold every active shipment — tap a code to see what's inside, or open it to mark delivered."
+                  : "Finance starts with Invoice Required (goods delivered, ready to invoice), then Invoiced, then Paid."
           }
         />
 
-        {pipeline.stages.map((stage) => (
-          <StageSection
-            key={stage.id}
-            title={stage.title}
-            stage={stage.id}
-            cards={visible.filter((c) => c.stage === stage.id)}
+        {activePipeline === "shipping" ? (
+          <ShippingPipelineView
+            subs={subs.filter((s) => {
+              if (s.pipeline !== "shipping") return false;
+              if (filters.shippingMode && s.shippingMode !== filters.shippingMode) return false;
+              if (filters.priority && s.priority !== filters.priority) return false;
+              if (filters.orderType && s.orderType !== filters.orderType) return false;
+              if (filters.supplierId && s.supplierId !== filters.supplierId) return false;
+              if (filters.customer) {
+                const m = masters.find((x) => x.id === s.masterId);
+                if (m?.customer !== filters.customer) return false;
+              }
+              return true;
+            })}
+            shipments={shipments}
+            filter={shippingFilter}
+            onFilterChange={setShippingFilter}
+            intakeCount={subs.filter((s) => s.pipeline === "shipping" && s.stage === "shipment_required").length}
+            onOpenIntake={() => setAssignOpen(true)}
+            onOpenShipment={openShipmentById}
             onOpenCard={setSelectedCard}
             onOpenMaster={openMasterById}
-            onOpenShipment={openShipmentById}
             onSwipeForward={onSwipeForward}
             onSwipeBack={onSwipeBack}
             onOpenPicker={onOpenPicker}
-            emptyHint={
-              stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
-              : stage.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
-              : stage.id === "invoice_required" ? "No projects awaiting an invoice."
-              : undefined
-            }
           />
-        ))}
+        ) : (
+          pipeline.stages.map((stage) => (
+            <StageSection
+              key={stage.id}
+              title={stage.title}
+              stage={stage.id}
+              cards={visible.filter((c) => c.stage === stage.id)}
+              onOpenCard={setSelectedCard}
+              onOpenMaster={openMasterById}
+              onOpenShipment={openShipmentById}
+              onSwipeForward={onSwipeForward}
+              onSwipeBack={onSwipeBack}
+              onOpenPicker={onOpenPicker}
+              emptyHint={
+                stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
+                : stage.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
+                : stage.id === "invoice_required" ? "No projects awaiting an invoice."
+                : undefined
+              }
+            />
+          ))
+        )}
 
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
