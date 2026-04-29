@@ -72,6 +72,7 @@ const Index = () => {
   const counts = useMemo<Record<PipelineId, number>>(() => ({
     sales: masters.filter((m) => m.pipeline === "sales").length,
     operations: subs.filter((s) => s.pipeline === "operations").length,
+    shipping: subs.filter((s) => s.pipeline === "shipping" && s.stage !== "shipment_delivered").length,
     finance: subs.filter((s) => s.pipeline === "finance").length,
   }), [masters, subs]);
 
