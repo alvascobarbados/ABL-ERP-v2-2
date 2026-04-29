@@ -594,6 +594,10 @@ export const getProjectsForShipment = (shipmentId: string) => PROJECTS.filter((p
 export const distinctProjectNames = (): string[] =>
   Array.from(new Set(PROJECTS.map((p) => p.projectName))).sort();
 
+// Master customer list — derived from existing projects (real app would be its own module)
+export const distinctCustomers = (): string[] =>
+  Array.from(new Set(PROJECTS.map((p) => p.customer))).sort();
+
 export function buildCard(project: Project): PipelineCard {
   return {
     id: project.id,
