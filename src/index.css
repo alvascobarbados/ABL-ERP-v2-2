@@ -4,97 +4,109 @@
 
 @layer base {
   :root {
-    /* Warm paper background */
-    --background: 41 33% 95%;          /* #F7F4ED */
-    --foreground: 25 20% 15%;
+    /* ─── Alvasco brand identity ────────────────────────────── */
+    /* Navy #1B2A4E   Soft Navy #2D3F66
+       Orange #E97B2C  Soft Orange #F4A468
+       Paper #F7F4ED  Ink #18181B  Stone #71717A
+    */
+    --brand-navy:        222 49% 21%;     /* #1B2A4E */
+    --brand-navy-soft:   222 39% 29%;     /* #2D3F66 */
+    --brand-orange:      24 81% 54%;      /* #E97B2C */
+    --brand-orange-soft: 26 86% 68%;      /* #F4A468 */
+    --brand-gold:        35 43% 51%;      /* #B8884D */
 
-    --card: 40 38% 98%;
-    --card-foreground: 25 20% 15%;
+    /* Surfaces & text */
+    --background: 41 33% 95%;             /* #F7F4ED warm paper */
+    --foreground: 240 6% 10%;             /* #18181B deep ink */
 
-    --popover: 40 38% 98%;
-    --popover-foreground: 25 20% 15%;
+    --card: 0 0% 100%;                    /* pure white */
+    --card-foreground: 240 6% 10%;
 
-    --primary: 25 25% 18%;
-    --primary-foreground: 41 33% 97%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 10%;
 
-    --secondary: 40 25% 92%;
-    --secondary-foreground: 25 20% 15%;
+    --primary: var(--brand-navy);
+    --primary-foreground: 0 0% 100%;
 
-    --muted: 40 22% 90%;
-    --muted-foreground: 30 10% 42%;
+    --secondary: 26 30% 92%;
+    --secondary-foreground: 240 6% 10%;
 
-    --accent: 40 25% 92%;
-    --accent-foreground: 25 20% 15%;
+    --muted: 35 18% 91%;
+    --muted-foreground: 240 4% 46%;       /* stone #71717A */
+
+    --accent: var(--brand-orange);
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 41 33% 97%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 36 20% 84%;
-    --input: 36 20% 84%;
-    --ring: 25 25% 18%;
+    --border: 36 18% 86%;
+    --input: 36 18% 86%;
+    --ring: var(--brand-navy);
 
     --radius: 0.85rem;
 
-    /* Stage accents (kept for legacy) */
-    --stage-proposal: 239 70% 60%;
-    --stage-quotation: 38 85% 50%;
-    --stage-pending: 160 55% 42%;
+    /* Stage accents — kept for backward refs in legacy components.
+       Per the new system, stage dots come from pipeline accent (see brand.ts). */
+    --stage-proposal: var(--brand-orange);
+    --stage-quotation: var(--brand-orange);
+    --stage-pending: var(--brand-navy);
 
-    /* Generic stage palette */
-    --accent-indigo: 239 70% 60%;
-    --accent-amber: 38 85% 50%;
-    --accent-emerald: 160 55% 42%;
-    --accent-rose: 350 75% 55%;
-    --accent-slate: 215 16% 47%;
-    --accent-violet: 270 60% 60%;
-    --accent-orange: 22 85% 55%;
-    --accent-teal: 180 55% 40%;
-    --accent-sky: 200 75% 55%;
-    --accent-cyan: 190 70% 45%;
-    --accent-fuchsia: 300 65% 55%;
+    --accent-indigo: var(--brand-navy);
+    --accent-amber: var(--brand-orange);
+    --accent-emerald: var(--brand-navy);
+    --accent-rose: 0 72% 51%;
+    --accent-slate: var(--brand-navy-soft);
+    --accent-violet: var(--brand-navy);
+    --accent-orange: var(--brand-orange);
+    --accent-teal: var(--brand-navy-soft);
+    --accent-sky: var(--brand-navy-soft);
+    --accent-cyan: var(--brand-navy-soft);
+    --accent-fuchsia: var(--brand-navy);
 
-    /* Deadline urgency */
+    /* Deadline urgency — red stays a warning; soon shifts to brand orange */
     --urgent: 0 72% 51%;
-    --soon: 35 88% 48%;
+    --soon:   24 81% 54%;                 /* Alvasco orange for ≤14d */
 
     /* Swipe action colors */
-    --swipe-forward: 145 22% 36%;   /* sage/forest green #4A6B57 */
-    --swipe-back: 38 49% 53%;       /* warm amber #C19A4D */
+    --swipe-forward: var(--brand-orange); /* progress = brand orange */
+    --swipe-back:    var(--brand-gold);   /* warm amber-gold for back */
 
-    --shadow-card: 0 1px 2px hsl(30 20% 20% / 0.05), 0 4px 14px hsl(30 20% 20% / 0.06);
-    --shadow-section: 0 6px 28px hsl(30 20% 20% / 0.08);
+    --shadow-card:    0 1px 2px hsl(222 30% 12% / 0.05), 0 4px 14px hsl(222 30% 12% / 0.06);
+    --shadow-section: 0 6px 28px hsl(222 30% 12% / 0.08);
+    --shadow-toast:   0 8px 32px hsl(222 30% 12% / 0.12);
 
     --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 41 33% 95%;
-    --sidebar-foreground: 25 20% 15%;
-    --sidebar-primary: 25 25% 18%;
-    --sidebar-primary-foreground: 41 33% 97%;
-    --sidebar-accent: 40 25% 92%;
-    --sidebar-accent-foreground: 25 20% 15%;
-    --sidebar-border: 36 20% 84%;
-    --sidebar-ring: 25 25% 18%;
+    --sidebar-foreground: 240 6% 10%;
+    --sidebar-primary: var(--brand-navy);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 35 18% 91%;
+    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-border: 36 18% 86%;
+    --sidebar-ring: var(--brand-navy);
   }
 
   .dark {
-    --background: 25 15% 10%;
+    --background: 222 30% 8%;
     --foreground: 41 33% 95%;
-    --card: 25 15% 13%;
+    --card: 222 28% 12%;
     --card-foreground: 41 33% 95%;
-    --popover: 25 15% 13%;
+    --popover: 222 28% 12%;
     --popover-foreground: 41 33% 95%;
     --primary: 41 33% 95%;
-    --primary-foreground: 25 15% 10%;
-    --secondary: 25 12% 18%;
+    --primary-foreground: 222 30% 8%;
+    --secondary: 222 22% 16%;
     --secondary-foreground: 41 33% 95%;
-    --muted: 25 12% 18%;
+    --muted: 222 22% 16%;
     --muted-foreground: 36 12% 65%;
-    --accent: 25 12% 18%;
-    --accent-foreground: 41 33% 95%;
+    --accent: var(--brand-orange);
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 45%;
     --destructive-foreground: 41 33% 95%;
-    --border: 25 12% 22%;
-    --input: 25 12% 22%;
+    --border: 222 18% 22%;
+    --input: 222 18% 22%;
     --ring: 41 33% 80%;
   }
 }
@@ -104,17 +116,43 @@
   html, body, #root { height: 100%; }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-family: 'Raleway', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-feature-settings: "tnum" 0;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+  /* Display title — light Raleway with generous tracking, brand navy */
+  .font-display {
+    font-family: 'Raleway', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 300;
+    letter-spacing: 0.01em;
+  }
+  /* Back-compat: any leftover .font-serif-display markers now render as Raleway display */
   .font-serif-display {
-    font-family: 'Fraunces', ui-serif, Georgia, serif;
-    font-optical-sizing: auto;
-    letter-spacing: -0.02em;
+    font-family: 'Raleway', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.005em;
   }
+  .tabular { font-variant-numeric: tabular-nums; }
 }
 
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Sonner toast — branded look */
+  [data-sonner-toaster][data-theme] [data-sonner-toast] {
+    background: hsl(var(--card)) !important;
+    color: hsl(var(--foreground)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-left: 3px solid hsl(var(--brand-orange)) !important;
+    box-shadow: var(--shadow-toast) !important;
+    font-family: 'Raleway', ui-sans-serif, system-ui, sans-serif !important;
+  }
+  [data-sonner-toaster][data-theme] [data-sonner-toast] [data-button] {
+    background: hsl(var(--brand-navy)) !important;
+    color: #fff !important;
+    border-radius: 9999px !important;
+    font-weight: 500 !important;
+  }
 }
