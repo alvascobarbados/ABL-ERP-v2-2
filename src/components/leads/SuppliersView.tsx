@@ -1,29 +1,28 @@
 import { Factory, MapPin, User2, CornerDownRight } from "lucide-react";
 import { Sheet } from "./Sheet";
-import { SUPPLIERS, getSubsForSupplier, getMaster, PIPELINES } from "@/data/pipelines";
+import { SUPPLIERS, getProjectsForSupplier, PIPELINES } from "@/data/pipelines";
 import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
 import { SupplierChip } from "./StatusPill";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onOpenSub: (subId: string) => void;
-  onOpenMaster: (masterId: string) => void;
+  onOpenProject: (projectId: string) => void;
 }
 
-export const SuppliersView = ({ open, onClose, onOpenSub, onOpenMaster }: Props) => {
+export const SuppliersView = ({ open, onClose, onOpenProject }: Props) => {
   if (!open) return null;
   return (
     <Sheet
       open
       onClose={onClose}
       width="max-w-xl"
-      eyebrow="Operations"
+      eyebrow="Production"
       title="Suppliers"
     >
       <div className="space-y-6">
         {SUPPLIERS.map((sup) => {
-          const subs = getSubsForSupplier(sup.id);
+          const subs = getProjectsForSupplier(sup.id);
           const active = subs.filter((s) => s.pipeline !== "finance" || s.stage !== "paid");
           return (
             <section key={sup.id}>
@@ -55,24 +54,24 @@ export const SuppliersView = ({ open, onClose, onOpenSub, onOpenMaster }: Props)
               ) : (
                 <div className="space-y-2">
                   {active.map((s) => {
-                    const master = getMaster(s.masterId)!;
                     const stageInfo = PIPELINES.flatMap((p) => p.stages.map((st) => ({ ...st, pipelineTitle: p.title }))).find((x) => x.id === s.stage);
                     return (
-                      <div key={s.id} className="rounded-xl border border-border bg-card p-3">
-                        <button
-                          onClick={() => onOpenMaster(master.id)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md mb-1 transition-colors hover:opacity-80"
-                          style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}
-                        >
+                      <button
+                        key={s.id}
+                        onClick={() => onOpenProject(s.id)}
+                        className="w-full text-left rounded-xl border border-border bg-card p-3 hover:bg-muted/40 transition-colors"
+                      >
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md mb-1"
+                          style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}>
                           <CornerDownRight className="h-3 w-3 opacity-70" />
-                          <span>{master.projectName}</span>
+                          <span>{s.customer}</span>
                           <span className="opacity-60">·</span>
-                          <span>{master.customer}</span>
-                        </button>
-                        <button onClick={() => onOpenSub(s.id)} className="w-full text-left flex items-start justify-between gap-3">
+                          <span>{s.projectName}</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="font-semibold text-foreground">{s.itemName}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5">Due {s.deadline} · {s.shippingMode}</div>
+                            <div className="font-semibold text-foreground">{s.detailSummary ?? s.projectName}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">Due {s.deadline} · {s.shippingMode ?? "—"}</div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PIPELINE_ACCENT[s.pipeline].hex }} />
@@ -80,8 +79,8 @@ export const SuppliersView = ({ open, onClose, onOpenSub, onOpenMaster }: Props)
                               {stageInfo?.pipelineTitle} · {stageInfo?.title}
                             </span>
                           </div>
-                        </button>
-                      </div>
+                        </div>
+                      </button>
                     );
                   })}
                 </div>

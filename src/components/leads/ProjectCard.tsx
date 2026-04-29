@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { MoreVertical } from "lucide-react";
-import { PipelineCard, getQuoteNumber, getInvoiceNumber, getSupplier } from "@/data/pipelines";
+import { PipelineCard } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
@@ -8,8 +8,6 @@ import { cn } from "@/lib/utils";
 interface ProjectCardProps {
   card: PipelineCard;
   onOpen: () => void;
-  onOpenMaster: () => void;
-  onOpenShipment?: () => void;
   onSwipeForward: () => void;
   onSwipeBack: () => void;
   onOpenPicker: () => void;
@@ -30,18 +28,11 @@ const PULSE_THRESHOLD_PX = 180;
 const RESISTANCE = 0.85;
 
 export const ProjectCard = ({
-  card, onOpen,
-  onSwipeForward, onSwipeBack, onOpenPicker,
+  card, onOpen, onSwipeForward, onSwipeBack, onOpenPicker,
 }: ProjectCardProps) => {
   const u = getUrgency(card.deadlineDate);
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
-
-  // Customer always at top; project name + summary below
-  const customer = card.master.customer;
-  const isSub = card.kind === "sub";
-  const projectLine = isSub
-    ? `${card.master.projectName} — ${card.sub!.itemName}`
-    : `${card.master.projectName} — ${card.master.summary}`;
+  const proj = card.project;
 
   const next = getNextStage(card.pipeline, card.stage);
   const prev = getPrevStage(card.pipeline, card.stage);
@@ -156,6 +147,37 @@ export const ProjectCard = ({
     : u.tone === "soon" ? "hsl(var(--brand-orange))"
     : "hsl(var(--muted-foreground))";
 
+  // ─── Pipeline-specific layout ───
+  const pipeline = card.pipeline;
+  const isProduction = pipeline === "operations";
+
+  // Production cards: supplier-dominant
+  // All others: customer-dominant
+  let topLine: string;
+  let secondLine: string | null = null;
+  let thirdLine: string | null = null;
+  let refLine: string | null = null;
+
+  if (isProduction) {
+    topLine = card.supplier?.name ?? "Unassigned supplier";
+    const parts: string[] = [];
+    if (proj.shippingMode) parts.push(proj.shippingMode);
+    if (proj.poNumber) parts.push(proj.poNumber);
+    secondLine = parts.length ? parts.join("  ·  ") : null;
+    const c = [proj.customer, proj.projectName, proj.detailSummary].filter(Boolean).join(" · ");
+    thirdLine = c;
+  } else {
+    topLine = proj.customer;
+    secondLine = proj.projectName;
+    thirdLine = proj.detailSummary?.trim() ? proj.detailSummary : null;
+
+    if (pipeline === "sales" && (card.stage === "quote" || card.stage === "confirming") && proj.quoteNumber) {
+      refLine = proj.quoteNumber;
+    } else if (pipeline === "finance" && proj.invoiceNumber) {
+      refLine = proj.invoiceNumber;
+    }
+  }
+
   return (
     <div className="relative">
       {/* Action label underneath */}
@@ -238,42 +260,41 @@ export const ProjectCard = ({
           onClick={handleOpen}
           className="w-full text-left pl-5 pr-12 pt-5 pb-5"
         >
-          {/* 1. Customer — top, weighty */}
+          {/* 1. Top line — customer (default) or supplier (Production) */}
           <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight mb-1.5">
-            {customer}
+            {topLine}
           </h3>
 
-          {/* 2. Project name + summary — middle, lighter */}
-          <p className="text-[14px] text-muted-foreground leading-snug font-normal mb-2 line-clamp-2">
-            {projectLine}
-          </p>
+          {/* 2. Second line */}
+          {secondLine && (
+            <p
+              className={cn(
+                "leading-snug",
+                isProduction
+                  ? "text-[13px] text-muted-foreground/85 tabular mb-1.5"
+                  : "text-[14px] text-foreground/80 font-normal mb-1",
+              )}
+            >
+              {secondLine}
+            </p>
+          )}
 
-          {/* Reference numbers — small, secondary */}
-          {(() => {
-            const lines: string[] = [];
-            if (card.pipeline === "sales" && (card.stage === "quote" || card.stage === "confirming")) {
-              const q = getQuoteNumber(card.master.id);
-              if (q) lines.push(q);
-            }
-            if (card.pipeline === "operations" && card.kind === "sub" && card.sub) {
-              const sup = getSupplier(card.sub.supplierId);
-              if (sup) lines.push(sup.name);
-              if (card.sub.poNumber) lines.push(card.sub.poNumber);
-            }
-            if (card.pipeline === "finance") {
-              const inv = getInvoiceNumber(card.master.id);
-              if (inv) lines.push(inv);
-            }
-            if (lines.length === 0) return null;
-            return (
-              <p className="text-[12px] text-muted-foreground/75 leading-snug mb-3 tabular">
-                {lines.join("  ·  ")}
-              </p>
-            );
-          })()}
+          {/* 3. Third line (detail summary OR customer·project·detail in Production) */}
+          {thirdLine && (
+            <p className="text-[13px] text-muted-foreground leading-snug mb-2">
+              {thirdLine}
+            </p>
+          )}
 
-          {/* 3. Deadline + urgency — bottom right */}
-          <div className="flex items-center justify-end gap-2 mt-2">
+          {/* Reference number (sales quote / finance invoice) */}
+          {refLine && (
+            <p className="text-[12px] text-muted-foreground/75 leading-snug mb-2 tabular">
+              {refLine}
+            </p>
+          )}
+
+          {/* 4. Deadline + urgency — bottom right */}
+          <div className="flex items-center justify-end gap-2 mt-3">
             <span className="text-[13px] text-muted-foreground/80 tabular">
               {card.deadline}
             </span>

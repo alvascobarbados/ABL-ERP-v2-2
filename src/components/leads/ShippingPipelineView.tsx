@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { ChevronDown, Plane, Ship, MoreVertical } from "lucide-react";
-import { Shipment, SubProject, getMaster } from "@/data/pipelines";
+import { Shipment, Project, getProject, PipelineCard } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
-import { PipelineCard } from "@/data/pipelines";
 import { cn } from "@/lib/utils";
 
 export type ShippingFilter = "in_transit" | "delivered" | "delayed";
 
 interface Props {
-  subs: SubProject[];          // already filtered by FilterBar
+  subs: Project[];          // already filtered by FilterBar
   shipments: Shipment[];
   filter: ShippingFilter;
   onFilterChange: (f: ShippingFilter) => void;
@@ -16,7 +15,6 @@ interface Props {
   onOpenIntake: () => void;
   onOpenShipment: (shipmentId: string) => void;
   onOpenCard: (c: PipelineCard) => void;
-  onOpenMaster: (masterId: string) => void;
   onSwipeForward: (c: PipelineCard) => void;
   onSwipeBack: (c: PipelineCard) => void;
   onOpenPicker: (c: PipelineCard) => void;
@@ -24,24 +22,23 @@ interface Props {
 
 const formatDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
 
-// Build distinct project labels (Customer · Project) from a list of subs.
-function uniqueProjectLabels(subs: SubProject[]): string[] {
+// Build distinct project labels from a list of projects.
+function uniqueProjectLabels(projs: Project[]): string[] {
   const seen = new Set<string>();
   const labels: string[] = [];
-  for (const s of subs) {
-    const m = getMaster(s.masterId);
-    if (!m) continue;
-    const key = m.id;
+  for (const s of projs) {
+    const key = `${s.customer}::${s.projectName}::${s.detailSummary ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    labels.push(`${m.customer} · ${m.projectName}`);
+    const tail = s.detailSummary ? ` · ${s.detailSummary}` : "";
+    labels.push(`${s.customer} · ${s.projectName}${tail}`);
   }
   return labels;
 }
 
 interface ShipmentCardProps {
   shipment: Shipment;
-  subs: SubProject[];
+  subs: Project[];
   onOpenShipment: (id: string) => void;
 }
 
@@ -69,20 +66,17 @@ const ShipmentCard = ({ shipment, subs, onOpenShipment }: ShipmentCardProps) => 
           "transition-all",
         )}
       >
-        {/* Quiet teal stripe */}
         <span
           className="absolute left-0 top-0 bottom-0 w-[3px]"
           style={{ backgroundColor: PIPELINE_ACCENT.shipping.hex, opacity: 0.7 }}
         />
 
         <div className="pl-5 pr-12 pt-5 pb-5">
-          {/* 1. Shipment code */}
-          <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight mb-2"
+          <h3 className="text-[17px] font-semibold tracking-tight leading-tight mb-2"
             style={{ color: "hsl(var(--brand-navy))" }}>
             {shipment.code}
           </h3>
 
-          {/* 2. Project names list */}
           <div className="text-[14px] text-muted-foreground leading-relaxed mb-5">
             {projectLabels.length === 0 ? (
               <span className="italic">No projects assigned</span>
@@ -98,7 +92,6 @@ const ShipmentCard = ({ shipment, subs, onOpenShipment }: ShipmentCardProps) => 
             )}
           </div>
 
-          {/* 3. ETD → ETA bottom-left, status pill bottom-right */}
           <div className="flex items-center justify-between gap-3">
             <span className="text-[13px] text-muted-foreground/80 tabular">
               {formatDate(shipment.etd)} → {formatDate(shipment.eta)}
@@ -113,7 +106,6 @@ const ShipmentCard = ({ shipment, subs, onOpenShipment }: ShipmentCardProps) => 
         </div>
       </button>
 
-      {/* Three-dots — opens shipment view */}
       <button
         onClick={(e) => { e.stopPropagation(); onOpenShipment(shipment.id); }}
         className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -128,7 +120,7 @@ const ShipmentCard = ({ shipment, subs, onOpenShipment }: ShipmentCardProps) => 
 interface GroupProps {
   title: "Air" | "Ocean";
   shipments: Shipment[];
-  subs: SubProject[];
+  subs: Project[];
   onOpenShipment: (id: string) => void;
 }
 
@@ -183,10 +175,9 @@ const Group = ({ title, shipments, subs, onOpenShipment }: GroupProps) => {
   );
 };
 
-// Calm collapsible "Awaiting shipment assignment"
 interface IntakeProps {
   count: number;
-  intakeSubs: SubProject[];
+  intakeSubs: Project[];
   onOpenIntake: () => void;
 }
 
@@ -241,7 +232,6 @@ export const ShippingPipelineView = ({
   subs, shipments,
   intakeCount, onOpenIntake, onOpenShipment,
 }: Props) => {
-  // Hide delivered shipments from default view; intake handled separately.
   const visibleShipments = shipments.filter((s) => s.status !== "Delivered");
   const assignedSubs = subs.filter((s) => s.stage === "shipment_assigned");
   const intakeSubs = subs.filter((s) => s.stage === "shipment_required");
