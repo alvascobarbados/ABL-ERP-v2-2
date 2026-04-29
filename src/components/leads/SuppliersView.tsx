@@ -1,4 +1,4 @@
-import { Factory, MapPin, User2, CornerDownRight } from "lucide-react";
+import { Factory, MapPin, User2 } from "lucide-react";
 import { Sheet } from "./Sheet";
 import { SUPPLIERS, getProjectsForSupplier, PIPELINES } from "@/data/pipelines";
 import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
