@@ -100,6 +100,15 @@ const Index = () => {
 
   // ─── Move logic ───
   const performMove = (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
+    // Friendly Mode safety net for "Lost"
+    if (friendly && target.stage === "lost" && card.stage !== "lost") {
+      setConfirmLost({ card, target });
+      return;
+    }
+    doMove(card, target);
+  };
+
+  const doMove = (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
     const fromPipeline = card.pipeline;
     const fromStage = card.stage;
     const label = card.kind === "master" ? card.master.projectName : `${card.master.customer} · ${card.sub!.itemName}`;
@@ -116,9 +125,14 @@ const Index = () => {
 
     if (target.pipeline !== fromPipeline) triggerPulse(target.pipeline);
 
-    toast(`${label} moved to ${getStageTitle(target.pipeline, target.stage)}`, {
-      description: `From ${getStageTitle(fromPipeline, fromStage)}`,
-      duration: 5000,
+    const successFn = friendly ? toast.success : toast;
+    const message = friendly
+      ? `Done — ${label} moved to ${getStageTitle(target.pipeline, target.stage)}`
+      : `${label} moved to ${getStageTitle(target.pipeline, target.stage)}`;
+
+    successFn(message, {
+      description: `From ${getStageTitle(fromPipeline, fromStage)}. Tap Undo to reverse.`,
+      duration: friendly ? 7000 : 5000,
       action: {
         label: "Undo",
         onClick: () => {
