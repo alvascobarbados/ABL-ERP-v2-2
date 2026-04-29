@@ -363,7 +363,14 @@ export const ProjectCard = ({
   }
 
   return (
-    <div className="relative">
+    <div
+      ref={rootRef}
+      className={cn(
+        "relative transition-opacity duration-200",
+        jiggleDimmed && "opacity-40 pointer-events-none",
+        jiggleActive && "opacity-0 pointer-events-none",
+      )}
+    >
       {/* Swipe action labels underneath */}
       <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none select-none">
         <span
@@ -392,6 +399,7 @@ export const ProjectCard = ({
       </div>
 
       <div
+        ref={innerRef}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
