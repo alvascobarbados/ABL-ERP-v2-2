@@ -451,6 +451,13 @@ const Index = () => {
         }}
       />
 
+      <AssignShipmentSheet
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        intakeSubs={subs.filter((s) => s.pipeline === "shipping" && s.stage === "shipment_required")}
+        shipments={shipments}
+      />
+
       <Walkthrough />
     </div>
   );

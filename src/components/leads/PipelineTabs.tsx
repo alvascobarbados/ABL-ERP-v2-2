@@ -39,17 +39,7 @@ export const PipelineTabs = ({ active, onChange, counts, pulse }: Props) => {
               ...(friendly ? { minHeight: 44 } : {}),
             }}
           >
-            <span className="flex flex-col items-start leading-tight">
-              <span>{p.title}</span>
-              {friendly && (
-                <span
-                  className="text-[10px] font-normal mt-0.5"
-                  style={{ color: isActive ? "rgba(255,255,255,0.85)" : "hsl(var(--muted-foreground))" }}
-                >
-                  {FRIENDLY_PIPELINE_SUBTITLES[p.id]}
-                </span>
-              )}
-            </span>
+            <span className="leading-tight">{p.title}</span>
             <span
               className={cn(
                 "text-[10px] tabular font-semibold px-1.5 py-0.5 rounded-full",
