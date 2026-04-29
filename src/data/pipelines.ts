@@ -1,17 +1,18 @@
-export type PipelineId = "sales" | "operations" | "finance";
+export type PipelineId = "sales" | "operations" | "shipping" | "finance";
 
 export type StageId =
   // sales
   | "proposal" | "quote" | "confirming" | "archive"
   // operations
-  | "preproduction" | "in_production" | "shipping"
+  | "preproduction" | "in_production"
+  // shipping (virtual stage used for routing only — UI groups by Air/Ocean + shipment code)
+  | "shipment_required" | "shipment_assigned" | "shipment_delivered"
   // finance
   | "invoice_required" | "invoiced" | "paid";
 
 export type ShippingMode = "Air" | "Ocean LCL" | "Ocean FCL";
 export type OrderType = "New" | "Re-order";
 export type Priority = "Standard" | "Rush";
-// Optional sub-classification tags for cards (e.g. inside Archive: Cold/Lost/Other; or Customs Pending in Shipping).
 export type CardTag = "Cold" | "Lost" | "Other" | "Customs Pending";
 
 export interface PipelineConfig {
@@ -37,7 +38,16 @@ export const PIPELINES: PipelineConfig[] = [
     stages: [
       { id: "preproduction", title: "Pre-Production" },
       { id: "in_production", title: "In Production" },
-      { id: "shipping", title: "Shipping" },
+    ],
+  },
+  {
+    id: "shipping",
+    title: "Shipping",
+    // Shipping doesn't render as stages — these exist only for routing/state.
+    stages: [
+      { id: "shipment_required", title: "Shipment Required" },
+      { id: "shipment_assigned", title: "In Transit" },
+      { id: "shipment_delivered", title: "Delivered" },
     ],
   },
   {
@@ -53,7 +63,8 @@ export const PIPELINES: PipelineConfig[] = [
 
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
-  preproduction: "violet", in_production: "orange", shipping: "sky",
+  preproduction: "violet", in_production: "orange",
+  shipment_required: "amber", shipment_assigned: "sky", shipment_delivered: "emerald",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
 };
 
@@ -118,12 +129,10 @@ export interface Shipment {
   supplierId: string;
   etd: Date;
   eta: Date;
-  status: "Booked" | "In Transit" | "Customs" | "Delivered";
+  status: "Booked" | "In Transit" | "Customs" | "Delayed" | "Delivered";
 }
 
 // ─────────── Unified pipeline card ───────────
-// In Sales, a card represents a Master.
-// In Operations/Finance, a card represents a SubProject (with its master).
 export interface PipelineCard {
   kind: "master" | "sub";
   id: string;
@@ -159,7 +168,7 @@ const m = (
 
 // ─────────── Master Projects ───────────
 export const MASTERS: MasterProject[] = [
-  // SALES — masters only (24 total: ~6 proposal, 6 quote, 6 confirming, 6 archive)
+  // SALES — masters only (24 total)
   m("m-s1", "BTMI", "Melissa McGeary", "Connect Barbados", "Welcome party premiums", d(5, 16), 18500, "sales", "proposal", "Air", "New", "Rush"),
   m("m-s2", "Digicel", "Anya Sharma", "Summer Activation", "Branded merchandise kits", d(5, 18), 24000, "sales", "proposal", "Ocean LCL"),
   m("m-s3", "Banks Beer", "Kenji Tanaka", "Crop Over 2026", "Festival giveaways", d(5, 22), 41000, "sales", "proposal", "Ocean FCL", "Re-order"),
@@ -181,7 +190,6 @@ export const MASTERS: MasterProject[] = [
   m("m-s17", "Demerara Distillers", "Evelyn Reed", "Holiday Gift", "Premium rum boxes", d(5, 26), 26000, "sales", "confirming", "Ocean FCL", "Re-order"),
   m("m-s18", "Trinidad Cement", "Maria Garcia", "Safety Campaign", "Hi-vis branded gear", d(5, 25), 21000, "sales", "confirming"),
 
-  // ARCHIVE — mix of Cold, Lost, Other tags (6 cards)
   m("m-s19", "PriceSmart", "Omar Hassan", "Membership Drive", "Branded reusables", d(6, 8), 11000, "sales", "archive", "Air", "New", "Standard", "Cold"),
   m("m-s20", "Courts Caribbean", "Isabelle Dubois", "Storefront Kit", "Window decals", d(6, 12), 8500, "sales", "archive", "Ocean LCL", "New", "Standard", "Cold"),
   m("m-s21", "Lucozade Caribbean", "Lena Petrova", "Sports Sponsorship", "Athlete kits", d(6, 15), 15000, "sales", "archive", "Air", "Re-order", "Standard", "Cold"),
@@ -189,7 +197,7 @@ export const MASTERS: MasterProject[] = [
   m("m-s23", "Subway TT", "Tom Becker", "Loyalty Cards", "Branded card stock", d(6, 5), 0, "sales", "archive", "Air", "New", "Standard", "Lost"),
   m("m-s24", "Burger King JM", "Hana Yusuf", "Promo Cups", "Limited edition cups", d(6, 8), 0, "sales", "archive", "Air", "New", "Standard", "Other"),
 
-  // OPERATIONS — masters (their subs split into preproduction / in_production / shipping)
+  // OPERATIONS — Pre-Production + In Production only
   m("m-pr1", "Bermudez Group", "Lucia Ramos", "Snack Launch", "Display stands & POS", d(5, 14), 34000, "operations", "preproduction", "Ocean LCL", "New", "Rush"),
   m("m-pr2", "Carib Brewery", "Mark Yeung", "Stadium Activation", "Coolers + banners", d(5, 19), 52000, "operations", "preproduction", "Ocean FCL"),
   m("m-pr3", "WIBISCO", "Aisha Khan", "Biscuit Promo", "POS shelf strips", d(5, 22), 18000, "operations", "preproduction"),
@@ -199,20 +207,22 @@ export const MASTERS: MasterProject[] = [
   m("m-pr7", "Sandals Resorts", "David Chen", "Spa Amenities", "Branded robes + amenity kits", d(5, 24), 38000, "operations", "in_production", "Ocean LCL", "Re-order"),
   m("m-pr8", "Republic Bank", "Sarah Kim", "ATM Wraps", "Vinyl branding", d(5, 28), 22000, "operations", "in_production"),
   m("m-pr9", "Massy Stores", "Mike Lee", "Eco Tote Run", "10k cotton bags", d(5, 30), 32000, "operations", "in_production", "Ocean FCL", "Re-order"),
-  m("m-pr10", "Banks Beer", "Kenji Tanaka", "Festival Kit", "Tents, flags & coolers", d(6, 2), 58000, "operations", "shipping", "Ocean FCL"),
-  m("m-pr11", "Chefette", "Emily Rodriguez", "Uniform Drop", "Crew shirts", d(6, 4), 24000, "operations", "shipping", "Air", "Re-order"),
-  m("m-pr12", "Sagicor", "Carlos Gomez", "Awards Order", "Engraved trophies", d(6, 6), 11500, "operations", "shipping", "Air"),
 
-  // (Former Shipping masters — folded into Operations/shipping)
-  m("m-sh1", "Coca-Cola Caribbean", "Priya Sharma", "Beach Tour", "Cooler bag run + shades", d(5, 18), 38000, "operations", "shipping", "Ocean FCL"),
-  m("m-sh2", "Goddard Enterprises", "Jenna Park", "Anniversary Gifts", "Award shipment", d(5, 20), 9800, "operations", "shipping", "Air", "Re-order", "Rush"),
-  m("m-sh3", "ANSA McAL", "Rachel Green", "Report Bundle", "AGM materials", d(5, 19), 17500, "operations", "shipping", "Air"),
-  m("m-sh4", "GraceKennedy", "Kenji Tanaka", "Trade Show Kit", "Booth crate + giveaways", d(5, 22), 22000, "operations", "shipping", "Ocean LCL"),
-  m("m-sh5", "FLOW Caribbean", "Maria Garcia", "Retail Launch", "POS displays + signage", d(5, 24), 47000, "operations", "shipping", "Ocean FCL"),
-  m("m-sh6", "NCB Jamaica", "Sam Jones", "Branch Refresh", "Signage shipment", d(5, 26), 28000, "operations", "shipping", "Ocean LCL", "Re-order", "Standard", "Customs Pending"),
-  m("m-sh7", "First Citizens", "Li Wei", "Onboarding Kit", "Welcome packs", d(5, 27), 13500, "operations", "shipping", "Air"),
+  // SHIPPING — masters that have moved past production. Pipeline = "shipping".
+  m("m-pr10", "Banks Beer", "Kenji Tanaka", "Festival Kit", "Tents, flags & coolers", d(6, 2), 58000, "shipping", "shipment_assigned", "Ocean FCL"),
+  m("m-pr11", "Chefette", "Emily Rodriguez", "Uniform Drop", "Crew shirts", d(6, 4), 24000, "shipping", "shipment_assigned", "Air", "Re-order"),
+  m("m-pr12", "Sagicor", "Carlos Gomez", "Awards Order", "Engraved trophies", d(6, 6), 11500, "shipping", "shipment_assigned", "Air"),
 
-  // FINANCE — masters (Invoice Required + Invoiced + Paid)
+  m("m-sh1", "Coca-Cola Caribbean", "Priya Sharma", "Beach Tour", "Cooler bag run + shades", d(5, 18), 38000, "shipping", "shipment_assigned", "Ocean FCL"),
+  m("m-sh2", "Goddard Enterprises", "Jenna Park", "Anniversary Gifts", "Award shipment", d(5, 20), 9800, "shipping", "shipment_assigned", "Air", "Re-order", "Rush"),
+  m("m-sh3", "ANSA McAL", "Rachel Green", "Report Bundle", "AGM materials", d(5, 19), 17500, "shipping", "shipment_assigned", "Air"),
+  m("m-sh4", "GraceKennedy", "Kenji Tanaka", "Trade Show Kit", "Booth crate + giveaways", d(5, 22), 22000, "shipping", "shipment_assigned", "Ocean LCL"),
+  m("m-sh5", "FLOW Caribbean", "Maria Garcia", "Retail Launch", "POS displays + signage", d(5, 24), 47000, "shipping", "shipment_assigned", "Ocean FCL"),
+  m("m-sh6", "NCB Jamaica", "Sam Jones", "Branch Refresh", "Signage shipment", d(5, 26), 28000, "shipping", "shipment_assigned", "Ocean LCL", "Re-order", "Standard", "Customs Pending"),
+  m("m-sh7", "First Citizens", "Li Wei", "Onboarding Kit", "Welcome packs", d(5, 27), 13500, "shipping", "shipment_assigned", "Air"),
+  m("m-sh8", "Hilton Caribbean", "Renee Allen", "Resort Refresh", "Lobby signage + welcome kits", d(5, 30), 34000, "shipping", "shipment_assigned", "Ocean FCL"),
+
+  // FINANCE
   m("m-f0a", "Caribbean Airlines", "Anna Petrova", "Inflight Refresh", "Goods delivered — invoice needed", d(5, 29), 62000, "finance", "invoice_required", "Ocean LCL"),
   m("m-f0b", "Demerara Distillers", "Evelyn Reed", "Holiday Gift", "Goods delivered — invoice needed", d(5, 12), 26000, "finance", "invoice_required", "Ocean FCL", "Re-order"),
   m("m-f0c", "Trinidad Cement", "Maria Garcia", "Safety Campaign", "Goods delivered — invoice needed", d(5, 8), 21000, "finance", "invoice_required"),
@@ -231,10 +241,18 @@ export const MASTERS: MasterProject[] = [
 
 // ─────────── Shipments ───────────
 export const SHIPMENTS: Shipment[] = [
-  { id: "ship-fcl125", code: "FCL-125", mode: "Ocean FCL", supplierId: "sup-freedom", etd: d(5, 10), eta: d(5, 30), status: "In Transit" },
-  { id: "ship-lcl088", code: "LCL-088", mode: "Ocean LCL", supplierId: "sup-shenzhen", etd: d(5, 12), eta: d(5, 28), status: "Customs" },
-  { id: "ship-dhl2456", code: "DHL-2456", mode: "Air", supplierId: "sup-admax", etd: d(5, 15), eta: d(5, 19), status: "In Transit" },
-  { id: "ship-fcl126", code: "FCL-126", mode: "Ocean FCL", supplierId: "sup-ningbo", etd: d(5, 5), eta: d(5, 26), status: "Booked" },
+  // Air
+  { id: "ship-dhl2456", code: "DHL-2456", mode: "Air", supplierId: "sup-admax", etd: d(4, 28), eta: d(5, 3), status: "In Transit" },
+  { id: "ship-dhl2457", code: "DHL-2457", mode: "Air", supplierId: "sup-admax", etd: d(4, 30), eta: d(5, 5), status: "In Transit" },
+  { id: "ship-dhl2458", code: "DHL-2458", mode: "Air", supplierId: "sup-yiwu", etd: d(5, 2), eta: d(5, 7), status: "Delayed" },
+  { id: "ship-fedex9912", code: "FedEx-9912", mode: "Air", supplierId: "sup-admax", etd: d(5, 5), eta: d(5, 9), status: "In Transit" },
+  // Ocean
+  { id: "ship-fcl125", code: "FCL-125", mode: "Ocean FCL", supplierId: "sup-freedom", etd: d(4, 12), eta: d(5, 18), status: "In Transit" },
+  { id: "ship-fcl126", code: "FCL-126", mode: "Ocean FCL", supplierId: "sup-freedom", etd: d(4, 20), eta: d(5, 28), status: "In Transit" },
+  { id: "ship-lcl088", code: "LCL-088", mode: "Ocean LCL", supplierId: "sup-shenzhen", etd: d(4, 25), eta: d(6, 5), status: "Customs" },
+  // Delivered (archive)
+  { id: "ship-fcl120", code: "FCL-120", mode: "Ocean FCL", supplierId: "sup-freedom", etd: d(3, 15), eta: d(4, 18), status: "Delivered" },
+  { id: "ship-dhl2401", code: "DHL-2401", mode: "Air", supplierId: "sup-admax", etd: d(4, 5), eta: d(4, 10), status: "Delivered" },
 ];
 
 // ─────────── Sub Projects ───────────
@@ -270,23 +288,43 @@ export const SUBS: SubProject[] = [
   sp("sub-pr8a", "m-pr8", "ATM Vinyl Wraps", "Full wraps x 35 units", "sup-shenzhen", "operations", "in_production", "Air", 22000, d(5, 28)),
   sp("sub-pr9a", "m-pr9", "Cotton Tote Bags", "Eco totes x 10000", "sup-ningbo", "operations", "in_production", "Ocean FCL", 32000, d(5, 30), { orderType: "Re-order" }),
 
-  // ── OPERATIONS · Shipping ──
-  sp("sub-pr10a", "m-pr10", "Tents", "Branded tents 3x3 x 30", "sup-freedom", "operations", "shipping", "Ocean FCL", 24000, d(6, 2), { shipmentId: "ship-fcl126" }),
-  sp("sub-pr10b", "m-pr10", "Feather Banners", "Flags x 80", "sup-admax", "operations", "shipping", "Air", 12000, d(6, 2), { shipmentId: "ship-dhl2456" }),
-  sp("sub-pr10c", "m-pr10", "Coolers", "Branded coolers x 150", "sup-freedom", "operations", "shipping", "Ocean FCL", 22000, d(6, 2), { shipmentId: "ship-fcl126" }),
-  sp("sub-pr11a", "m-pr11", "Crew Shirts", "Embroidered shirts x 800", "sup-ningbo", "operations", "shipping", "Air", 24000, d(6, 4), { orderType: "Re-order" }),
-  sp("sub-pr12a", "m-pr12", "Engraved Trophies", "Crystal trophies x 60", "sup-yiwu", "operations", "shipping", "Air", 11500, d(6, 6)),
+  // ── SHIPPING · Shipment Required (intake — awaiting assignment) ──
+  sp("sub-int1", "m-pr10", "Tents", "Branded tents 3x3 x 30", "sup-freedom", "shipping", "shipment_required", "Ocean FCL", 24000, d(6, 2)),
+  sp("sub-int2", "m-pr11", "Crew Shirts", "Embroidered shirts x 800", "sup-ningbo", "shipping", "shipment_required", "Air", 24000, d(6, 4), { orderType: "Re-order" }),
+  sp("sub-int3", "m-pr12", "Engraved Trophies", "Crystal trophies x 60", "sup-yiwu", "shipping", "shipment_required", "Air", 11500, d(6, 6)),
 
-  sp("sub-sh1a", "m-sh1", "Cooler Bags", "Insulated bags x 1500", "sup-freedom", "operations", "shipping", "Ocean FCL", 24000, d(5, 18), { shipmentId: "ship-fcl125" }),
-  sp("sub-sh1b", "m-sh1", "Beach Shades", "Pop-up shades x 80", "sup-freedom", "operations", "shipping", "Ocean FCL", 14000, d(5, 18), { shipmentId: "ship-fcl125" }),
-  sp("sub-sh2a", "m-sh2", "Engraved Awards", "Glass awards x 25", "sup-admax", "operations", "shipping", "Air", 9800, d(5, 20), { shipmentId: "ship-dhl2456", priority: "Rush", orderType: "Re-order" }),
-  sp("sub-sh3a", "m-sh3", "AGM Bundles", "Report packs x 800", "sup-freedom", "operations", "shipping", "Ocean FCL", 17500, d(5, 19), { shipmentId: "ship-fcl125" }),
-  sp("sub-sh4a", "m-sh4", "Booth Crate", "Demo booth + parts", "sup-shenzhen", "operations", "shipping", "Ocean LCL", 14000, d(5, 22), { shipmentId: "ship-lcl088" }),
-  sp("sub-sh4b", "m-sh4", "Booth Giveaways", "Branded merch x 500", "sup-yiwu", "operations", "shipping", "Ocean LCL", 8000, d(5, 22), { shipmentId: "ship-lcl088" }),
-  sp("sub-sh5a", "m-sh5", "POS Displays", "Floor displays x 60", "sup-freedom", "operations", "shipping", "Ocean FCL", 28000, d(5, 24), { shipmentId: "ship-fcl125" }),
-  sp("sub-sh5b", "m-sh5", "Store Signage", "Printed signage x 120", "sup-shenzhen", "operations", "shipping", "Ocean FCL", 19000, d(5, 24), { shipmentId: "ship-fcl126" }),
-  sp("sub-sh6a", "m-sh6", "Branch Signage", "Acrylic signage x 80", "sup-shenzhen", "operations", "shipping", "Ocean LCL", 28000, d(5, 26), { shipmentId: "ship-lcl088", orderType: "Re-order", tag: "Customs Pending" }),
-  sp("sub-sh7a", "m-sh7", "Welcome Packs", "Onboarding kits x 300", "sup-freedom", "operations", "shipping", "Air", 13500, d(5, 27)),
+  // ── SHIPPING · Air ──
+  // DHL-2456 — 2 sub-projects
+  sp("sub-sh-air-1a", "m-pr10", "Feather Banners", "Flags x 80", "sup-admax", "shipping", "shipment_assigned", "Air", 12000, d(6, 2), { shipmentId: "ship-dhl2456" }),
+  sp("sub-sh-air-1b", "m-sh2", "Engraved Awards", "Glass awards x 25", "sup-admax", "shipping", "shipment_assigned", "Air", 9800, d(5, 20), { shipmentId: "ship-dhl2456", priority: "Rush", orderType: "Re-order" }),
+  // DHL-2457 — 1
+  sp("sub-sh-air-2a", "m-sh3", "AGM Bundles (Air)", "Report packs x 200", "sup-admax", "shipping", "shipment_assigned", "Air", 8500, d(5, 19), { shipmentId: "ship-dhl2457" }),
+  // DHL-2458 — 3 (delayed)
+  sp("sub-sh-air-3a", "m-sh7", "Welcome Packs", "Onboarding kits x 300", "sup-yiwu", "shipping", "shipment_assigned", "Air", 13500, d(5, 27), { shipmentId: "ship-dhl2458" }),
+  sp("sub-sh-air-3b", "m-pr11", "Polo Shirts", "Embroidered polos x 200", "sup-yiwu", "shipping", "shipment_assigned", "Air", 7000, d(6, 4), { shipmentId: "ship-dhl2458" }),
+  sp("sub-sh-air-3c", "m-pr12", "Lapel Pins", "Branded pins x 500", "sup-yiwu", "shipping", "shipment_assigned", "Air", 4500, d(6, 6), { shipmentId: "ship-dhl2458" }),
+  // FedEx-9912 — 1
+  sp("sub-sh-air-4a", "m-sh2", "Trophy Stands", "Display stands x 25", "sup-admax", "shipping", "shipment_assigned", "Air", 6000, d(5, 20), { shipmentId: "ship-fedex9912" }),
+
+  // ── SHIPPING · Ocean ──
+  // FCL-125 — 6 sub-projects across 4 customers (BTMI, Banks Beer, Sandals, Hilton)
+  sp("sub-sh-fcl125-1", "m-pr10", "Coolers", "Branded coolers x 150", "sup-freedom", "shipping", "shipment_assigned", "Ocean FCL", 22000, d(6, 2), { shipmentId: "ship-fcl125" }),
+  sp("sub-sh-fcl125-2", "m-sh1", "Cooler Bags", "Insulated bags x 1500", "sup-freedom", "shipping", "shipment_assigned", "Ocean FCL", 24000, d(5, 18), { shipmentId: "ship-fcl125" }),
+  sp("sub-sh-fcl125-3", "m-sh1", "Beach Shades", "Pop-up shades x 80", "sup-freedom", "shipping", "shipment_assigned", "Ocean FCL", 14000, d(5, 18), { shipmentId: "ship-fcl125" }),
+  sp("sub-sh-fcl125-4", "m-sh3", "AGM Bundles", "Report packs x 800", "sup-freedom", "shipping", "shipment_assigned", "Ocean FCL", 17500, d(5, 19), { shipmentId: "ship-fcl125" }),
+  sp("sub-sh-fcl125-5", "m-sh5", "POS Displays", "Floor displays x 60", "sup-freedom", "shipping", "shipment_assigned", "Ocean FCL", 28000, d(5, 24), { shipmentId: "ship-fcl125" }),
+  sp("sub-sh-fcl125-6", "m-sh8", "Lobby Signage", "Acrylic signage x 40", "sup-freedom", "shipping", "shipment_assigned", "Ocean FCL", 18000, d(5, 30), { shipmentId: "ship-fcl125" }),
+  // FCL-126 — 4 sub-projects mixed Freedom + Yiwu
+  sp("sub-sh-fcl126-1", "m-sh5", "Store Signage", "Printed signage x 120", "sup-freedom", "shipping", "shipment_assigned", "Ocean FCL", 19000, d(5, 24), { shipmentId: "ship-fcl126" }),
+  sp("sub-sh-fcl126-2", "m-sh4", "Booth Crate", "Demo booth + parts", "sup-freedom", "shipping", "shipment_assigned", "Ocean FCL", 14000, d(5, 22), { shipmentId: "ship-fcl126" }),
+  sp("sub-sh-fcl126-3", "m-sh4", "Booth Giveaways", "Branded merch x 500", "sup-yiwu", "shipping", "shipment_assigned", "Ocean FCL", 8000, d(5, 22), { shipmentId: "ship-fcl126" }),
+  sp("sub-sh-fcl126-4", "m-sh8", "Welcome Amenity Kits", "Resort kits x 800", "sup-yiwu", "shipping", "shipment_assigned", "Ocean FCL", 16000, d(5, 30), { shipmentId: "ship-fcl126" }),
+  // LCL-088 — 1 sub-project from Admax (has Customs Pending tag)
+  sp("sub-sh-lcl088-1", "m-sh6", "Branch Signage", "Acrylic signage x 80", "sup-admax", "shipping", "shipment_assigned", "Ocean LCL", 28000, d(5, 26), { shipmentId: "ship-lcl088", orderType: "Re-order", tag: "Customs Pending" }),
+
+  // ── SHIPPING · Delivered (archive) ──
+  sp("sub-sh-fcl120-1", "m-sh1", "Cooler Bags (Delivered)", "Insulated bags x 800", "sup-freedom", "shipping", "shipment_delivered", "Ocean FCL", 12000, d(4, 18), { shipmentId: "ship-fcl120" }),
+  sp("sub-sh-dhl2401-1", "m-sh3", "Express Bundles", "Report packs x 200", "sup-admax", "shipping", "shipment_delivered", "Air", 6500, d(4, 10), { shipmentId: "ship-dhl2401" }),
 
   // ── FINANCE · Invoice Required ──
   sp("sub-f0a", "m-f0a", "Amenity Kits", "Inflight kits x 5000", "sup-freedom", "finance", "invoice_required", "Ocean LCL", 62000, d(5, 29)),
@@ -363,6 +401,7 @@ export function pipelineCounts(): Record<PipelineId, number> {
   return {
     sales: MASTERS.filter((m) => m.pipeline === "sales").length,
     operations: SUBS.filter((s) => s.pipeline === "operations").length,
+    shipping: SUBS.filter((s) => s.pipeline === "shipping").length,
     finance: SUBS.filter((s) => s.pipeline === "finance").length,
   };
 }
