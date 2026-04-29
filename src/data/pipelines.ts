@@ -206,7 +206,9 @@ const fmt = (date: Date) =>
 interface ProjOpts {
   detailSummary?: string;
   supplierId?: string;
+  supplierLabel?: SupplierLabelHint;
   shippingMode?: ShippingMode;
+  salesShippingLabel?: SalesShippingLabel;
   shipmentId?: string;
   orderType?: OrderType;
   priority?: Priority;
@@ -223,7 +225,9 @@ const p = (
   customer, pointPerson, projectName,
   detailSummary: opts.detailSummary,
   supplierId: opts.supplierId,
+  supplierLabel: opts.supplierLabel,
   shippingMode: opts.shippingMode,
+  salesShippingLabel: opts.salesShippingLabel,
   shipmentId: opts.shipmentId,
   pipeline, stage,
   deadline: fmt(date), deadlineDate: date,
