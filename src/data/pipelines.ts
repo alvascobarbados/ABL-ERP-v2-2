@@ -287,21 +287,6 @@ export const PROJECTS: Project[] = [
     { detailSummary: "Welcome party premiums", supplierId: "sup-freedom", shippingMode: "Ocean FCL", priority: "Rush" }),
   p("Digicel", "Anya Sharma", "Summer Activation", d(5, 18), 24000, "sales", "confirming",
     { detailSummary: "Branded merchandise kits", supplierId: "sup-admax", shippingMode: "Air" }),
-
-  // ── SALES · Confirming (supplier + shipping + detail required) ──
-  p("FLOW Caribbean", "Maria Garcia", "Retail Launch", d(5, 20), 47000, "sales", "confirming",
-    { detailSummary: "POS displays", supplierId: "sup-shenzhen", shippingMode: "Ocean FCL" }),
-  p("NCB Jamaica", "Sam Jones", "Branch Refresh", d(5, 17), 28000, "sales", "confirming",
-    { detailSummary: "Signage & stationery", supplierId: "sup-admax", shippingMode: "Ocean LCL" }),
-  p("First Citizens", "Li Wei", "Onboarding Kit", d(5, 19), 13500, "sales", "confirming",
-    { detailSummary: "New hire welcome packs", supplierId: "sup-yiwu", shippingMode: "Air", orderType: "Re-order" }),
-  p("Demerara Distillers", "Evelyn Reed", "Holiday Gift", d(5, 26), 26000, "sales", "confirming",
-    { detailSummary: "Premium rum boxes", supplierId: "sup-ningbo", shippingMode: "Ocean FCL", orderType: "Re-order" }),
-  p("Trinidad Cement", "Maria Garcia", "Safety Campaign", d(5, 25), 21000, "sales", "confirming",
-    { detailSummary: "Hi-vis branded gear", supplierId: "sup-ningbo", shippingMode: "Ocean FCL" }),
-  p("BTMI", "Melissa McGeary", "Connect Barbados", d(5, 16), 18500, "sales", "confirming",
-    { detailSummary: "Welcome party premiums", supplierId: "sup-freedom", shippingMode: "Ocean FCL", priority: "Rush" }),
-
   // ── SALES · Archive ──
   p("PriceSmart", "Omar Hassan", "Membership Drive", d(6, 8), 11000, "sales", "archive",
     { detailSummary: "Branded reusables", tag: "Cold" }),
