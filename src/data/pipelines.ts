@@ -134,7 +134,8 @@ export interface ProjectNote {
 export interface Project {
   id: string;
   customer: string;
-  pointPerson: string;
+  contactPerson?: string;       // person at the customer side
+  pointPerson: string;          // internal Alvasco owner
   projectName: string;
   detailSummary?: string;       // optional in Sales/Proposal; required from Confirming on
   supplierId?: string;          // required from Confirming on
@@ -142,6 +143,7 @@ export interface Project {
   shippingMode?: ShippingMode;  // required from Confirming on
   salesShippingLabel?: SalesShippingLabel; // Sales-only display string
   shipmentId?: string;          // assigned in Shipping
+  trackingRef?: string;         // free-form / FCL- / LCL- / carrier digits
   pipeline: PipelineId;
   stage: StageId;
   deadline: string;
@@ -154,6 +156,7 @@ export interface Project {
   poNumber?: string;
   invoiceNumber?: string;
   lineItems?: LineItem[];
+  notes?: ProjectNote[];
 }
 
 export type AirCarrier = "DHL" | "FedEx";
