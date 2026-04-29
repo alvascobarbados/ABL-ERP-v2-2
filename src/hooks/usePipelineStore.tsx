@@ -57,7 +57,6 @@ export function getPrevStage(pipeline: PipelineId, stage: StageId): { pipeline: 
     if (stage === "shipment_assigned" || stage === "shipment_required") {
       return { pipeline: "operations", stage: "in_production" };
     }
-    if (stage === "shipment_delivered") return { pipeline: "shipping", stage: "shipment_assigned" };
     return null;
   }
   const stages = forwardStages(pipeline);
