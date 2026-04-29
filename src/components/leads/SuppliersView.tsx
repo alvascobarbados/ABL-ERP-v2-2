@@ -1,4 +1,4 @@
-import { Factory, MapPin, User2, CornerDownRight } from "lucide-react";
+import { Factory, MapPin, User2 } from "lucide-react";
 import { Sheet } from "./Sheet";
 import { SUPPLIERS, getProjectsForSupplier, PIPELINES } from "@/data/pipelines";
 import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
@@ -61,17 +61,16 @@ export const SuppliersView = ({ open, onClose, onOpenProject }: Props) => {
                         onClick={() => onOpenProject(s.id)}
                         className="w-full text-left rounded-xl border border-border bg-card p-3 hover:bg-muted/40 transition-colors"
                       >
-                        <div className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md mb-1"
-                          style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}>
-                          <CornerDownRight className="h-3 w-3 opacity-70" />
-                          <span>{s.customer}</span>
-                          <span className="opacity-60">·</span>
-                          <span>{s.projectName}</span>
-                        </div>
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="font-semibold text-foreground">{s.detailSummary ?? s.projectName}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5">Due {s.deadline} · {s.shippingMode ?? "—"}</div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-foreground truncate">{s.customer}</div>
+                            <div className="text-[13px] truncate" style={{ color: "hsl(var(--brand-navy))" }}>
+                              {s.projectName}
+                            </div>
+                            {s.detailSummary && (
+                              <div className="text-xs text-muted-foreground mt-0.5 truncate">{s.detailSummary}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground mt-1">Due {s.deadline} · {s.shippingMode ?? "—"}</div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PIPELINE_ACCENT[s.pipeline].hex }} />

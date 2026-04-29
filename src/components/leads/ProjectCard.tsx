@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Factory } from "lucide-react";
 import { PipelineCard } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINE_ACCENT } from "@/lib/brand";
@@ -26,6 +26,34 @@ function getUrgency(date: Date) {
 const COMMIT_THRESHOLD_PX = 110;
 const PULSE_THRESHOLD_PX = 180;
 const RESISTANCE = 0.85;
+
+// Pipeline-specific bottom-left reference text. Returns { text, isPlaceholder }.
+function bottomLeftRef(card: PipelineCard): { text: string; placeholder: boolean } | null {
+  const { pipeline, stage, project: p } = card;
+
+  if (pipeline === "sales") {
+    if (stage === "proposal" || stage === "archive") return null;
+    // quote / confirming → show Q-XXXX or "Q-" placeholder
+    return p.quoteNumber
+      ? { text: p.quoteNumber, placeholder: false }
+      : { text: "Q-", placeholder: true };
+  }
+
+  if (pipeline === "operations") {
+    const modeText = p.shippingMode ?? "—";
+    const poText = p.poNumber ?? "PO-";
+    const placeholder = !p.shippingMode || !p.poNumber;
+    return { text: `${modeText} · ${poText}`, placeholder };
+  }
+
+  if (pipeline === "finance") {
+    return p.invoiceNumber
+      ? { text: p.invoiceNumber, placeholder: false }
+      : { text: "INV-", placeholder: true };
+  }
+
+  return null;
+}
 
 export const ProjectCard = ({
   card, onOpen, onSwipeForward, onSwipeBack, onOpenPicker,
@@ -147,40 +175,13 @@ export const ProjectCard = ({
     : u.tone === "soon" ? "hsl(var(--brand-orange))"
     : "hsl(var(--muted-foreground))";
 
-  // ─── Pipeline-specific layout ───
-  const pipeline = card.pipeline;
-  const isProduction = pipeline === "operations";
-
-  // Production cards: supplier-dominant
-  // All others: customer-dominant
-  let topLine: string;
-  let secondLine: string | null = null;
-  let thirdLine: string | null = null;
-  let refLine: string | null = null;
-
-  if (isProduction) {
-    topLine = card.supplier?.name ?? "Unassigned supplier";
-    const parts: string[] = [];
-    if (proj.shippingMode) parts.push(proj.shippingMode);
-    if (proj.poNumber) parts.push(proj.poNumber);
-    secondLine = parts.length ? parts.join("  ·  ") : null;
-    const c = [proj.customer, proj.projectName, proj.detailSummary].filter(Boolean).join(" · ");
-    thirdLine = c;
-  } else {
-    topLine = proj.customer;
-    secondLine = proj.projectName;
-    thirdLine = proj.detailSummary?.trim() ? proj.detailSummary : null;
-
-    if (pipeline === "sales" && (card.stage === "quote" || card.stage === "confirming") && proj.quoteNumber) {
-      refLine = proj.quoteNumber;
-    } else if (pipeline === "finance" && proj.invoiceNumber) {
-      refLine = proj.invoiceNumber;
-    }
-  }
+  const isProduction = card.pipeline === "operations";
+  const supplierName = card.supplier?.name;
+  const ref = bottomLeftRef(card);
 
   return (
     <div className="relative">
-      {/* Action label underneath */}
+      {/* Swipe action labels underneath */}
       <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none select-none">
         <span
           className={cn(
@@ -240,7 +241,7 @@ export const ProjectCard = ({
           }}
         />
 
-        {/* Pipeline accent stripe (left edge — quiet) */}
+        {/* Pipeline accent stripe */}
         <span
           className="absolute left-0 top-0 bottom-0 w-[3px]"
           style={{ backgroundColor: pipelineHex, opacity: 0.7 }}
@@ -258,52 +259,74 @@ export const ProjectCard = ({
 
         <button
           onClick={handleOpen}
-          className="w-full text-left pl-5 pr-12 pt-5 pb-5"
+          className="w-full text-left pl-5 pr-5 pt-5 pb-5"
         >
-          {/* 1. Top line — customer (default) or supplier (Production) */}
-          <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight mb-1.5">
-            {topLine}
-          </h3>
+          {/* ─── TOP SECTION: identity (left) + supplier (right, Production only) ─── */}
+          <div className="flex items-start gap-3">
+            {/* Identity block */}
+            <div className="flex-1 min-w-0 pr-9">
+              <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight">
+                {proj.customer}
+              </h3>
+              <p
+                className="text-[14px] leading-snug mt-1"
+                style={{ color: "hsl(var(--brand-navy))" }}
+              >
+                {proj.projectName}
+              </p>
+              {proj.detailSummary?.trim() && (
+                <p className="text-[13px] text-muted-foreground/85 leading-snug mt-1">
+                  {proj.detailSummary}
+                </p>
+              )}
+            </div>
 
-          {/* 2. Second line */}
-          {secondLine && (
-            <p
+            {/* Right block — supplier (Production only) */}
+            {isProduction && (
+              <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 inline-flex items-center gap-1.5">
+                <Factory
+                  className="h-3.5 w-3.5 shrink-0"
+                  style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
+                />
+                <span
+                  className="text-[13px] font-medium truncate"
+                  style={{ color: "hsl(var(--brand-navy))" }}
+                >
+                  {supplierName ?? "Unassigned"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* ─── DIVIDER ─── */}
+          <div
+            className="mt-4 mb-3 h-px w-full"
+            style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)" }}
+          />
+
+          {/* ─── BOTTOM ROW: reference (left) + deadline (right) ─── */}
+          <div className="flex items-center justify-between gap-3 min-h-[18px]">
+            <span
               className={cn(
-                "leading-snug",
-                isProduction
-                  ? "text-[13px] text-muted-foreground/85 tabular mb-1.5"
-                  : "text-[14px] text-foreground/80 font-normal mb-1",
+                "text-[12px] tabular leading-none",
+                ref?.placeholder
+                  ? "text-muted-foreground/45 italic"
+                  : "text-muted-foreground/85",
               )}
             >
-              {secondLine}
-            </p>
-          )}
-
-          {/* 3. Third line (detail summary OR customer·project·detail in Production) */}
-          {thirdLine && (
-            <p className="text-[13px] text-muted-foreground leading-snug mb-2">
-              {thirdLine}
-            </p>
-          )}
-
-          {/* Reference number (sales quote / finance invoice) */}
-          {refLine && (
-            <p className="text-[12px] text-muted-foreground/75 leading-snug mb-2 tabular">
-              {refLine}
-            </p>
-          )}
-
-          {/* 4. Deadline + urgency — bottom right */}
-          <div className="flex items-center justify-end gap-2 mt-3">
-            <span className="text-[13px] text-muted-foreground/80 tabular">
-              {card.deadline}
+              {ref?.text ?? ""}
             </span>
-            <span className="text-muted-foreground/40">·</span>
-            <span
-              className="text-[13px] font-semibold tabular"
-              style={{ color: urgencyColor }}
-            >
-              {u.label}
+            <span className="inline-flex items-center gap-2 leading-none">
+              <span className="text-[12px] text-muted-foreground/75 tabular">
+                {card.deadline}
+              </span>
+              <span className="text-muted-foreground/35">·</span>
+              <span
+                className="text-[12px] font-semibold tabular"
+                style={{ color: urgencyColor }}
+              >
+                {u.label}
+              </span>
             </span>
           </div>
         </button>

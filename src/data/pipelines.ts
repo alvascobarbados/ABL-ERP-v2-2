@@ -449,6 +449,36 @@ for (const proj of PROJECTS) {
   }
 }
 
+// Intentional placeholders — exercise the empty-state UI ("PO-", "Q-", "—")
+// so the team can see how unassigned references read across the app.
+function find(customer: string, projectName: string, detail?: string): Project | undefined {
+  return PROJECTS.find((p) =>
+    p.customer === customer && p.projectName === projectName &&
+    (detail === undefined || p.detailSummary === detail),
+  );
+}
+
+// A couple of Sales / Quote cards still missing a quote number
+const noQ1 = find("GraceKennedy", "Trade Show Kit", "Booth giveaways");
+if (noQ1) noQ1.quoteNumber = undefined;
+const noQ2 = find("Caribbean Airlines", "Inflight Refresh", "Branded amenity kits");
+if (noQ2) noQ2.quoteNumber = undefined;
+
+// A Production card with no PO yet (still in pre-production, awaiting paperwork)
+const noPO = find("Solo Beverages", "Summer SKUs", "Custom labels");
+if (noPO && noPO.pipeline === "operations") noPO.poNumber = undefined;
+
+// A Production card with no shipping mode decided yet
+const noMode = find("WIBISCO", "Biscuit Promo", "POS shelf strips");
+if (noMode && noMode.pipeline === "operations") noMode.shippingMode = undefined;
+
+// A Production card missing both
+const noBoth = find("Bermudez Group", "Snack Launch", "POS shelf strips");
+if (noBoth && noBoth.pipeline === "operations") {
+  noBoth.poNumber = undefined;
+  noBoth.shippingMode = undefined;
+}
+
 // ─────────── Lookups ───────────
 export const getProject = (id: string) => PROJECTS.find((x) => x.id === id);
 export const getSupplier = (id?: string) => (id ? SUPPLIERS.find((x) => x.id === id) : undefined);
