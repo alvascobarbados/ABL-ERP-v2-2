@@ -197,7 +197,7 @@ const Index = () => {
   const openSubById = (id: string) => {
     const sub = subs.find((s) => s.id === id);
     if (!sub) return;
-    setActivePipeline(sub.pipeline);
+    setActiveTab(sub.pipeline);
     // We can't build the card in the alternate pipeline synchronously here, but Index will rebuild on render.
     // Defer card-open via microtask
     setTimeout(() => {
@@ -246,8 +246,8 @@ const Index = () => {
     touchStart.current = null;
     if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
     const idx = PIPELINES.findIndex((p) => p.id === activePipeline);
-    if (dx < 0 && idx < PIPELINES.length - 1) setActivePipeline(PIPELINES[idx + 1].id);
-    if (dx > 0 && idx > 0) setActivePipeline(PIPELINES[idx - 1].id);
+    if (dx < 0 && idx < PIPELINES.length - 1) setActiveTab(PIPELINES[idx + 1].id);
+    if (dx > 0 && idx > 0) setActiveTab(PIPELINES[idx - 1].id);
   };
 
   const accentHex = PIPELINE_ACCENT[activePipeline].hex;
@@ -292,7 +292,7 @@ const Index = () => {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <PipelineTabs active={activePipeline} onChange={setActivePipeline} counts={counts} pulse={pulsePipeline} />
+            <PipelineTabs active={activePipeline} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
             <div className="flex items-center gap-1">
               {PIPELINES.map((p, i) => {
                 const idx = PIPELINES.findIndex((x) => x.id === activePipeline);
