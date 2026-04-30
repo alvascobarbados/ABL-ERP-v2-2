@@ -44,7 +44,7 @@ const MenuItem = ({
 );
 
 export const HamburgerDrawer = ({
-  open, onClose, onOpenSuppliers, onOpenCustomers, onOpenShipments,
+  open, onClose, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, trashCount,
 }: Props) => {
   useEffect(() => {
     if (!open) return;
