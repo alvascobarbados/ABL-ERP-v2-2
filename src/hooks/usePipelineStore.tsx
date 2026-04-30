@@ -115,7 +115,10 @@ export interface NewShipmentInput {
 }
 
 interface PipelineStoreCtx {
+  /** Live projects only — trashed projects are filtered out. */
   projects: Project[];
+  /** Soft-deleted projects (in Trash). */
+  trashedProjects: Project[];
   shipments: Shipment[];
   suppliers: Supplier[];
   moveCard: (cardId: string, target: { pipeline: PipelineId; stage: StageId }) => MoveResult;
@@ -126,6 +129,13 @@ interface PipelineStoreCtx {
   updateLineItem: (projectId: string, index: number, item: LineItem) => void;
   removeLineItem: (projectId: string, index: number) => void;
   duplicateProject: (projectId: string) => Project | null;
+  /** Soft-delete: send to Trash. */
+  softDeleteProject: (projectId: string) => { restoredFrom: { pipeline: PipelineId; stage: StageId } } | null;
+  /** Restore a trashed project to its original pipeline/stage. */
+  restoreProject: (projectId: string) => { pipeline: PipelineId; stage: StageId } | null;
+  /** Permanently remove a project from the database. */
+  hardDeleteProject: (projectId: string) => void;
+  /** @deprecated use softDeleteProject for the trash flow. */
   deleteProject: (projectId: string) => void;
   addSupplier: (input: { name: string; country: string; defaultShippingMode: ShippingMode }) => Supplier;
   isQuoteNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
