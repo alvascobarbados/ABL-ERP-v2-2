@@ -10,7 +10,7 @@ import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
-import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+
 
 interface ProjectCardProps {
   card: PipelineCard;
@@ -56,7 +56,7 @@ export const ProjectCard = ({
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  
 
   const next = getNextStage(card.pipeline, card.stage);
   const prev = getPrevStage(card.pipeline, card.stage);
@@ -398,7 +398,23 @@ export const ProjectCard = ({
       },
     });
   };
-  const handleDelete = () => setDeleteOpen(true);
+  const handleDelete = () => {
+    const result = store.softDeleteProject(proj.id);
+    if (!result) return;
+    const { restoredFrom } = result;
+    const label = `${proj.customer} · ${proj.projectName}`;
+    toast.success(`${label} moved to Trash`, {
+      duration: 8000,
+      description: "Restorable for 30 days from the Trash.",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          store.restoreProject(proj.id);
+          toast(`${label} restored`, { duration: 2000 });
+        },
+      },
+    });
+  };
 
   return (
     <div
@@ -610,17 +626,8 @@ export const ProjectCard = ({
         )}
       </div>
 
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        label={`${proj.customer} · ${proj.projectName}`}
-        onCancel={() => setDeleteOpen(false)}
-        onConfirm={() => {
-          setDeleteOpen(false);
-          store.deleteProject(proj.id);
-          toast.success(`${proj.customer} · ${proj.projectName} deleted`, { duration: 4000 });
-        }}
-      />
     </div>
   );
 };
+
 
