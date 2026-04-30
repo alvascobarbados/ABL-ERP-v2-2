@@ -47,6 +47,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   const [lockedTip, setLockedTip] = useState<FieldKey | null>(null);
   const [renameConfirm, setRenameConfirm] = useState<{ next: string; count: number } | null>(null);
   const [supplierConfirm, setSupplierConfirm] = useState<{ supplierId: string } | null>(null);
+  const pointerTapHandled = useRef(false);
 
   // Auto-dismiss locked-field tooltip after 2.4s
   useEffect(() => {
@@ -194,7 +195,16 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onTap(); }}
+          onPointerUp={(e) => {
+            e.stopPropagation();
+            pointerTapHandled.current = true;
+            onTap();
+            window.setTimeout(() => { pointerTapHandled.current = false; }, 0);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!pointerTapHandled.current) onTap();
+          }}
           className={cn(
             "w-full flex items-start gap-2 px-3 py-2.5 rounded-lg text-left transition-all border-2",
             locked
