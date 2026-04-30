@@ -87,6 +87,7 @@ export const HamburgerDrawer = ({
           <MenuItem icon={Factory} label="Suppliers" onClick={() => { onClose(); onOpenSuppliers(); }} />
           <MenuItem icon={Users} label="Customers" onClick={() => { onClose(); onOpenCustomers(); }} />
           <MenuItem icon={Ship} label="Shipments" onClick={() => { onClose(); onOpenShipments(); }} />
+          <MenuItem icon={Trash2} label="Trash" badge={trashCount} onClick={() => { onClose(); onOpenTrash(); }} />
 
           <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
 
