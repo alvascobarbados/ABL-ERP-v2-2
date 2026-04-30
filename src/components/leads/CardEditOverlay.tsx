@@ -387,9 +387,12 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   ];
 
   return (
-    <div className="relative" onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      className="relative flex flex-col min-h-0 flex-1"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       {/* Top header bar inside the lifted card */}
-      <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+      <div className="shrink-0 flex items-center justify-between px-4 pt-3.5 pb-2">
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">Editing</div>
           <div className="text-[15px] font-semibold tracking-tight truncate" style={{ color: "hsl(var(--brand-navy))" }}>
@@ -405,9 +408,13 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="h-px w-full" style={{ backgroundColor: "hsl(var(--brand-navy) / 0.1)" }} />
-      <div className="px-4 py-3.5 space-y-2">
+      <div className="shrink-0 h-px w-full" style={{ backgroundColor: "hsl(var(--brand-navy) / 0.1)" }} />
+      <div
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3.5 space-y-2"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         {renderFields()}
+        <div className="h-2" />
       </div>
       {/* accent stripe matching pipeline */}
       <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: accent, opacity: 0.85 }} />
