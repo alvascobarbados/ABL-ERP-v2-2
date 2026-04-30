@@ -166,6 +166,12 @@ export interface Project {
   invoiceNumber?: string;
   lineItems?: LineItem[];
   notes?: ProjectNote[];
+  // ── Trash (soft-delete) ──────────────────────────────────────────────
+  // Set when the project is moved to Trash. Filtered out of every
+  // pipeline view, search result, and count. Visible only in TrashView.
+  deletedAt?: Date;
+  deletedFromPipeline?: PipelineId;
+  deletedFromStage?: StageId;
 }
 
 export type AirCarrier = "DHL" | "FedEx";
