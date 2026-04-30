@@ -96,6 +96,7 @@ export const ProjectCard = ({
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     if (jiggleDimmed || jiggleActive) return;
+    if (isEditing || isEditDimmed) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-no-drag]")) return;
 
