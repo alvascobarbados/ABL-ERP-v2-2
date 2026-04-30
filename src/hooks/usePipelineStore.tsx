@@ -377,15 +377,25 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     return { count };
   }, []);
 
+  const liveProjects = useMemo(() => projects.filter((p) => !p.deletedAt), [projects]);
+  const trashedProjects = useMemo(
+    () => projects.filter((p) => !!p.deletedAt)
+      .sort((a, b) => (b.deletedAt!.getTime() - a.deletedAt!.getTime())),
+    [projects],
+  );
+
   const value = useMemo<PipelineStoreCtx>(() => ({
-    projects, shipments, suppliers,
+    projects: liveProjects, trashedProjects, shipments, suppliers,
     moveCard, updateProject, renameProject, addNote,
     addLineItem, updateLineItem, removeLineItem,
-    duplicateProject, deleteProject, addSupplier,
+    duplicateProject,
+    softDeleteProject, restoreProject, hardDeleteProject, deleteProject,
+    addSupplier,
     isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
     assignToShipment, createShipment, markShipmentDelivered,
     pulsePipeline, triggerPulse,
-  }), [projects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+  }), [liveProjects, trashedProjects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
