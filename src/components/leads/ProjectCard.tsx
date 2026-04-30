@@ -372,41 +372,73 @@ export const ProjectCard = ({
     );
   }
 
+  // ── Action menu handlers ───────────────────────────────────────────────
+  const handleEdit = () => {
+    haptics.pickup();
+    editMode.enter(card.id);
+  };
+  const handleOpenProject = () => onOpen();
+  const handleMoveStage = () => onOpenPicker();
+  const handleDuplicate = () => {
+    const dup = store.duplicateProject(proj.id);
+    if (dup) toast.success(`Duplicated · ${dup.customer} · ${dup.projectName}`, { duration: 4000 });
+  };
+  const handleArchive = () => {
+    const fromPipeline = card.pipeline;
+    const fromStage = card.stage;
+    store.moveCard(card.id, { pipeline: "sales", stage: "archive" });
+    toast.success(`${proj.customer} · ${proj.projectName} archived`, {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          store.moveCard(card.id, { pipeline: fromPipeline, stage: fromStage });
+          toast("Archive undone", { duration: 1800 });
+        },
+      },
+    });
+  };
+  const handleDelete = () => setDeleteOpen(true);
+
   return (
     <div
       ref={rootRef}
       className={cn(
-        "no-select relative transition-opacity duration-200",
+        "no-select relative transition-all duration-200",
         jiggleDimmed && "opacity-40 pointer-events-none",
         jiggleActive && "opacity-0 pointer-events-none",
+        isEditDimmed && "opacity-40 pointer-events-none",
+        isEditing && "z-[50]",
       )}
     >
-      {/* Swipe action labels underneath */}
-      <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none select-none">
-        <span
-          className={cn(
-            "text-xs font-semibold tracking-wide transition-opacity",
-            showBack ? "opacity-100" : "opacity-0",
-          )}
-          style={{ color: "hsl(var(--swipe-back))" }}
-        >
-          ← {prev ? getStageTitle(prev.pipeline, prev.stage) : ""}
-        </span>
-        <span
-          className={cn(
-            "text-xs font-semibold tracking-wide transition-opacity ml-auto",
-            showForward ? "opacity-100" : "opacity-0",
-          )}
-          style={{ color: "hsl(var(--swipe-forward))" }}
-        >
-          {next ? getStageTitle(next.pipeline, next.stage) : ""} →
-        </span>
-        {showResist && (
-          <span className="absolute left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-wider text-muted-foreground/80 italic">
-            {dx > 0 ? "Already at last stage" : "Already at first stage"}
+      {/* Swipe action labels underneath (hidden in edit mode) */}
+      {!isEditing && (
+        <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none select-none">
+          <span
+            className={cn(
+              "text-xs font-semibold tracking-wide transition-opacity",
+              showBack ? "opacity-100" : "opacity-0",
+            )}
+            style={{ color: "hsl(var(--swipe-back))" }}
+          >
+            ← {prev ? getStageTitle(prev.pipeline, prev.stage) : ""}
           </span>
-        )}
-      </div>
+          <span
+            className={cn(
+              "text-xs font-semibold tracking-wide transition-opacity ml-auto",
+              showForward ? "opacity-100" : "opacity-0",
+            )}
+            style={{ color: "hsl(var(--swipe-forward))" }}
+          >
+            {next ? getStageTitle(next.pipeline, next.stage) : ""} →
+          </span>
+          {showResist && (
+            <span className="absolute left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-wider text-muted-foreground/80 italic">
+              {dx > 0 ? "Already at last stage" : "Already at first stage"}
+            </span>
+          )}
+        </div>
+      )}
 
       <div
         ref={innerRef}
@@ -415,127 +447,180 @@ export const ProjectCard = ({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         style={{
-          transform: `translateX(${dx}px)`,
-          transition: snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
-          touchAction: "pan-y",
+          transform: isEditing ? "scale(1.02)" : `translateX(${dx}px)`,
+          transition: isEditing
+            ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms"
+            : snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
+          touchAction: isEditing ? "auto" : "pan-y",
+          backgroundColor: isEditing ? "hsl(41 33% 97%)" : undefined,
+          borderColor: isEditing ? "hsl(var(--brand-navy) / 0.45)" : undefined,
+          boxShadow: isEditing ? "0 18px 40px -12px hsl(var(--brand-navy) / 0.35)" : undefined,
         }}
         className={cn(
-          "group w-full text-left relative overflow-hidden rounded-2xl bg-card border border-border/70",
-          "shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
-          !dragging && "hover:-translate-y-0.5",
-          pulse && "scale-[1.015]",
+          "group w-full text-left relative overflow-hidden rounded-2xl bg-card border",
+          isEditing ? "border-[1.5px]" : "border-border/70 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
+          !dragging && !isEditing && "hover:-translate-y-0.5",
+          pulse && !isEditing && "scale-[1.015]",
         )}
       >
-        {/* Edge glow overlays */}
-        <div
-          className="pointer-events-none absolute inset-y-0 right-0 w-1/2 transition-opacity"
-          style={{
-            background: "linear-gradient(to left, hsl(var(--swipe-forward) / 0.28), transparent)",
-            opacity: showForward ? intensity : 0,
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-y-0 left-0 w-1/2 transition-opacity"
-          style={{
-            background: "linear-gradient(to right, hsl(var(--swipe-back) / 0.28), transparent)",
-            opacity: showBack ? intensity : 0,
-          }}
-        />
+        {/* Edge glow overlays — only when not editing */}
+        {!isEditing && (
+          <>
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 w-1/2 transition-opacity"
+              style={{
+                background: "linear-gradient(to left, hsl(var(--swipe-forward) / 0.28), transparent)",
+                opacity: showForward ? intensity : 0,
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 w-1/2 transition-opacity"
+              style={{
+                background: "linear-gradient(to right, hsl(var(--swipe-back) / 0.28), transparent)",
+                opacity: showBack ? intensity : 0,
+              }}
+            />
+            {/* Pipeline accent stripe */}
+            <span
+              className="absolute left-0 top-0 bottom-0 w-[3px]"
+              style={{ backgroundColor: pipelineHex, opacity: 0.7 }}
+            />
+          </>
+        )}
 
-        {/* Pipeline accent stripe */}
-        <span
-          className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ backgroundColor: pipelineHex, opacity: 0.7 }}
-        />
-
-        {/* ⋮ Three-dots menu */}
-        <button
-          data-no-drag
-          onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
-          className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
-          aria-label="Project actions"
-        >
-          <MoreVertical className="h-5 w-5" />
-        </button>
-
-        <button
-          onClick={handleOpen}
-          className="w-full text-left pl-5 pr-5 pt-5 pb-5"
-        >
-          {/* ─── TOP: identity (left) + supplier+PO block (right) ─── */}
-          <div className="flex items-start gap-3">
-            {/* Identity block */}
-            <div className="flex-1 min-w-0 pr-9">
-              <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight">
-                {proj.customer}
-              </h3>
-              <p
-                className="text-[14px] leading-snug mt-1"
-                style={{ color: "hsl(var(--brand-navy))" }}
+        {/* Three-dots / X menu */}
+        {isEditing ? (
+          <button
+            data-no-drag
+            onClick={(e) => { e.stopPropagation(); editMode.exit(); haptics.pickup(); }}
+            className="absolute top-3 right-2 z-20 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+            aria-label="Exit edit mode"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        ) : (
+          <CardActionsPopover
+            open={menuOpen}
+            onOpenChange={(o) => {
+              setMenuOpen(o);
+              if (o && typeof navigator !== "undefined" && "vibrate" in navigator) {
+                try { navigator.vibrate(10); } catch { /* noop */ }
+              }
+            }}
+            trigger={
+              <button
+                data-no-drag
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
+                aria-label="Project actions"
               >
-                {proj.projectName}
-              </p>
-              {proj.detailSummary?.trim() && (
-                <p className="text-[13px] text-muted-foreground/85 leading-snug mt-1">
-                  {proj.detailSummary}
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            }
+            onEdit={handleEdit}
+            onOpenProject={handleOpenProject}
+            onMoveStage={handleMoveStage}
+            onDuplicate={handleDuplicate}
+            onArchive={handleArchive}
+            onDelete={handleDelete}
+          />
+        )}
+
+        {isEditing ? (
+          <CardEditOverlay card={card} onExit={() => editMode.exit()} />
+        ) : (
+          <button
+            onClick={handleOpen}
+            className="w-full text-left pl-5 pr-5 pt-5 pb-5"
+          >
+            {/* ─── TOP: identity (left) + supplier+PO block (right) ─── */}
+            <div className="flex items-start gap-3">
+              {/* Identity block */}
+              <div className="flex-1 min-w-0 pr-9">
+                <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight">
+                  {proj.customer}
+                </h3>
+                <p
+                  className="text-[14px] leading-snug mt-1"
+                  style={{ color: "hsl(var(--brand-navy))" }}
+                >
+                  {proj.projectName}
                 </p>
+                {proj.detailSummary?.trim() && (
+                  <p className="text-[13px] text-muted-foreground/85 leading-snug mt-1">
+                    {proj.detailSummary}
+                  </p>
+                )}
+              </div>
+
+              {/* Right block — supplier + PO (Production / Shipping / Finance) */}
+              {showRightBlock && (
+                <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 flex flex-col items-end text-right">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Factory
+                      className="h-3.5 w-3.5 shrink-0"
+                      style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
+                    />
+                    <span
+                      className={cn(
+                        "text-[13px] truncate",
+                        supplierIsHint
+                          ? "italic font-normal text-muted-foreground/65"
+                          : "font-medium",
+                      )}
+                      style={
+                        supplierIsHint ? undefined : { color: "hsl(var(--brand-navy))" }
+                      }
+                    >
+                      {supplierName ?? supplierHint ?? "Unassigned"}
+                    </span>
+                  </span>
+                  {showPoLine && (
+                    <span
+                      className={cn(
+                        "text-[12px] tabular leading-none mt-1",
+                        poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
+                      )}
+                    >
+                      {poText ?? "PO-"}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* Right block — supplier + PO (Production / Shipping / Finance) */}
-            {showRightBlock && (
-              <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 flex flex-col items-end text-right">
-                <span className="inline-flex items-center gap-1.5">
-                  <Factory
-                    className="h-3.5 w-3.5 shrink-0"
-                    style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
-                  />
-                  <span
-                    className={cn(
-                      "text-[13px] truncate",
-                      supplierIsHint
-                        ? "italic font-normal text-muted-foreground/65"
-                        : "font-medium",
-                    )}
-                    style={
-                      supplierIsHint ? undefined : { color: "hsl(var(--brand-navy))" }
-                    }
-                  >
-                    {supplierName ?? supplierHint ?? "Unassigned"}
-                  </span>
-                </span>
-                {showPoLine && (
-                  <span
-                    className={cn(
-                      "text-[12px] tabular leading-none mt-1",
-                      poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
-                    )}
-                  >
-                    {poText ?? "PO-"}
-                  </span>
-                )}
+            {/* ─── DIVIDER ─── */}
+            <div
+              className="mt-4 mb-3 h-px w-full"
+              style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)" }}
+            />
+
+            {/* ─── BOTTOM AREA ─── */}
+            {topRefLine && (
+              <div className="flex items-center min-h-[16px] mb-1.5">
+                {topRefLine}
               </div>
             )}
-          </div>
-
-          {/* ─── DIVIDER ─── */}
-          <div
-            className="mt-4 mb-3 h-px w-full"
-            style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)" }}
-          />
-
-          {/* ─── BOTTOM AREA ─── */}
-          {topRefLine && (
-            <div className="flex items-center min-h-[16px] mb-1.5">
-              {topRefLine}
+            <div className="flex items-center justify-between gap-3 min-h-[18px]">
+              {bottomLeft}
+              {bottomRight}
             </div>
-          )}
-          <div className="flex items-center justify-between gap-3 min-h-[18px]">
-            {bottomLeft}
-            {bottomRight}
-          </div>
-        </button>
+          </button>
+        )}
       </div>
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        label={`${proj.customer} · ${proj.projectName}`}
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={() => {
+          setDeleteOpen(false);
+          store.deleteProject(proj.id);
+          toast.success(`${proj.customer} · ${proj.projectName} deleted`, { duration: 4000 });
+        }}
+      />
     </div>
   );
 };
+
