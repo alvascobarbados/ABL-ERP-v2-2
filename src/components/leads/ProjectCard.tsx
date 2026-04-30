@@ -1,11 +1,16 @@
 import { useRef, useState, useEffect } from "react";
-import { MoreVertical, Factory } from "lucide-react";
+import { MoreVertical, Factory, X } from "lucide-react";
+import { toast } from "sonner";
 import { PipelineCard, formatShippingLabel, getShipment } from "@/data/pipelines";
-import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
+import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
 import { useJiggle } from "@/hooks/useJiggle";
+import { useEditMode } from "@/hooks/useEditMode";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import { CardActionsPopover } from "./CardActionsPopover";
+import { CardEditOverlay } from "./CardEditOverlay";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 
 interface ProjectCardProps {
   card: PipelineCard;
