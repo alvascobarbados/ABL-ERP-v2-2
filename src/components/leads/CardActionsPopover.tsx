@@ -51,8 +51,8 @@ export const CardActionsPopover = ({
       <PopoverContent
         align="end"
         sideOffset={6}
-        className="w-56 p-1.5 rounded-xl shadow-lg"
-        style={{ borderColor: "hsl(var(--brand-navy) / 0.15)", backgroundColor: "hsl(var(--paper))" }}
+        className="w-56 p-1.5 rounded-xl shadow-lg bg-card"
+        style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
