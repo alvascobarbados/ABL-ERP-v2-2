@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Factory, Search, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,13 +22,15 @@ export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
-  if (!open) return null;
-  return (
+  if (!open || typeof document === "undefined") return null;
+  return createPortal((
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center sm:justify-center">
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div
         className="relative w-full sm:max-w-md bg-background rounded-t-3xl sm:rounded-2xl border-t sm:border shadow-2xl animate-slide-in-right"
         style={{ borderColor: "hsl(var(--brand-navy) / 0.15)", animation: "slide-up 220ms ease-out" }}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
           <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-1" style={{ minHeight: 44 }}>
@@ -49,7 +52,7 @@ export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", 
       </div>
       <style>{`@keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
     </div>
-  );
+  ), document.body);
 };
 
 // ─────────── Text editor ───────────
