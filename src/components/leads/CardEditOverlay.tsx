@@ -408,22 +408,14 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Top header bar inside the lifted card */}
-      <div className="shrink-0 flex items-center justify-between px-4 pt-3.5 pb-2">
+      {/* Top header bar */}
+      <div className="shrink-0 flex items-center justify-between px-4 pt-3.5 pb-2 pr-14">
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">Editing</div>
           <div className="text-[15px] font-semibold tracking-tight truncate" style={{ color: "hsl(var(--brand-navy))" }}>
-            {proj.customer}
+            {proj.customer} · {proj.projectName}
           </div>
         </div>
-        <button
-          onClick={onExit}
-          aria-label="Exit edit mode"
-          className="inline-flex items-center justify-center rounded-full hover:bg-muted/60 text-muted-foreground"
-          style={{ width: 36, height: 36 }}
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
       <div className="shrink-0 h-px w-full" style={{ backgroundColor: "hsl(var(--brand-navy) / 0.1)" }} />
       <div
