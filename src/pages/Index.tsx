@@ -500,7 +500,7 @@ const Index = () => {
         })()}
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
-          Swipe cards → to advance, ← to send back. Long-press or tap ⋮ for more.
+          Swipe → to advance, ← to send back. Long-press to jump stages. Tap ⋮ for actions.
         </p>
       </main>
 
