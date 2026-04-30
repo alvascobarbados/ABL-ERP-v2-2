@@ -1,0 +1,551 @@
+import { useEffect, useRef, useState } from "react";
+import { Lock, PencilLine, X } from "lucide-react";
+import { toast } from "sonner";
+import { PipelineCard, ShippingMode, getShipment } from "@/data/pipelines";
+import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { TextEditor, DateEditor, ListPicker, SupplierPicker, ListOption } from "./EditorSheets";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { haptics } from "@/lib/haptics";
+import { cn } from "@/lib/utils";
+import { PIPELINE_ACCENT } from "@/lib/brand";
+
+// ─── Permission scaffolding (future: per-role) ──────────────────────────
+// Customer is ALWAYS locked. Other flags are placeholders for role wiring.
+const PERMS = {
+  canEditCustomer: false,
+  canEditQuote: true,
+  canEditPO: true,
+  canEditInvoice: true,
+  canEditDeadline: true,
+  canEditProjectName: true,
+  canEditDetail: true,
+  canEditSupplier: true,
+  canEditShipping: true,
+  canEditTracking: true,
+  canEditEtdEta: true,
+};
+
+interface CardEditOverlayProps {
+  card: PipelineCard;
+  onExit: () => void;
+}
+
+type FieldKey =
+  | "customer" | "projectName" | "detail" | "quote" | "po" | "invoice"
+  | "supplier" | "shipping" | "tracking" | "deadline" | "etd" | "eta";
+
+const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
+
+export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
+  const store = usePipelineStore();
+  const proj = card.project;
+  const ship = getShipment(proj.shipmentId);
+  const accent = PIPELINE_ACCENT[card.pipeline].hex;
+
+  // Sub-editor state
+  const [editing, setEditing] = useState<FieldKey | null>(null);
+  const [lockedTip, setLockedTip] = useState<FieldKey | null>(null);
+  const [renameConfirm, setRenameConfirm] = useState<{ next: string; count: number } | null>(null);
+  const [supplierConfirm, setSupplierConfirm] = useState<{ supplierId: string } | null>(null);
+
+  // Auto-dismiss locked-field tooltip after 2.4s
+  useEffect(() => {
+    if (!lockedTip) return;
+    const t = window.setTimeout(() => setLockedTip(null), 2400);
+    return () => window.clearTimeout(t);
+  }, [lockedTip]);
+
+  const undoToast = (msg: string, prevPatch: () => void) => {
+    toast.success(msg, {
+      duration: 5000,
+      action: { label: "Undo", onClick: () => { prevPatch(); toast("Reverted", { duration: 1800 }); } },
+    });
+  };
+
+  // ── Commit helpers ──────────────────────────────────────────────────────
+  const commitText = (key: FieldKey, value: string) => {
+    if (key === "projectName") {
+      const trimmed = value.trim();
+      if (!trimmed || trimmed === proj.projectName) { setEditing(null); return; }
+      const count = store.projects.filter((p) => p.projectName === proj.projectName).length;
+      if (count > 1) {
+        setEditing(null);
+        setRenameConfirm({ next: trimmed, count });
+        return;
+      }
+      const prevName = proj.projectName;
+      store.updateProject(proj.id, { projectName: trimmed });
+      setEditing(null);
+      undoToast(`Project renamed to "${trimmed}"`, () => store.updateProject(proj.id, { projectName: prevName }));
+      return;
+    }
+    if (key === "detail") {
+      const prev = proj.detailSummary ?? "";
+      store.updateProject(proj.id, { detailSummary: value });
+      setEditing(null);
+      undoToast("Detail updated", () => store.updateProject(proj.id, { detailSummary: prev }));
+      return;
+    }
+    if (key === "quote") {
+      const v = value.trim() || undefined;
+      if (v && store.isQuoteNumberDuplicate(v, proj.id)) {
+        toast.error(`Quote ${v} is already in use`);
+        return;
+      }
+      const prev = proj.quoteNumber;
+      store.updateProject(proj.id, { quoteNumber: v });
+      setEditing(null);
+      undoToast(`Quote updated to ${v ?? "—"}`, () => store.updateProject(proj.id, { quoteNumber: prev }));
+      return;
+    }
+    if (key === "po") {
+      const v = value.trim() || undefined;
+      if (v && store.isPONumberDuplicate(v, proj.id)) {
+        toast.error(`PO ${v} is already in use`);
+        return;
+      }
+      const prev = proj.poNumber;
+      store.updateProject(proj.id, { poNumber: v });
+      setEditing(null);
+      undoToast(`PO updated to ${v ?? "—"}`, () => store.updateProject(proj.id, { poNumber: prev }));
+      return;
+    }
+    if (key === "invoice") {
+      const v = value.trim() || undefined;
+      if (v && store.isInvoiceNumberDuplicate(v, proj.id)) {
+        toast.error(`Invoice ${v} is already in use`);
+        return;
+      }
+      const prev = proj.invoiceNumber;
+      store.updateProject(proj.id, { invoiceNumber: v });
+      setEditing(null);
+      undoToast(`Invoice updated to ${v ?? "—"}`, () => store.updateProject(proj.id, { invoiceNumber: prev }));
+      return;
+    }
+    if (key === "tracking") {
+      const v = value.trim() || undefined;
+      const prev = proj.trackingRef;
+      store.updateProject(proj.id, { trackingRef: v });
+      setEditing(null);
+      undoToast(`Tracking updated`, () => store.updateProject(proj.id, { trackingRef: prev }));
+      return;
+    }
+  };
+
+  const commitDate = (key: FieldKey, d: Date) => {
+    if (key === "deadline") {
+      const prev = { date: proj.deadlineDate, label: proj.deadline };
+      store.updateProject(proj.id, { deadlineDate: d, deadline: fmtDate(d) });
+      setEditing(null);
+      undoToast(`Deadline → ${fmtDate(d)}`, () =>
+        store.updateProject(proj.id, { deadlineDate: prev.date, deadline: prev.label }));
+    }
+    // ETD/ETA edit shipment, not project — placeholder for now
+    if ((key === "etd" || key === "eta") && ship) {
+      // Best-effort: directly mutate via store API not exposed; show toast.
+      toast(`${key.toUpperCase()} editing for shipments — coming soon`);
+      setEditing(null);
+    }
+  };
+
+  const pickSupplier = (supplierId: string) => {
+    const hasItems = (proj.lineItems?.length ?? 0) > 0 || !!proj.poNumber;
+    if (hasItems && proj.supplierId && supplierId !== proj.supplierId && card.pipeline === "operations") {
+      setEditing(null);
+      setSupplierConfirm({ supplierId });
+      return;
+    }
+    const prev = proj.supplierId;
+    const sup = store.suppliers.find((s) => s.id === supplierId);
+    store.updateProject(proj.id, { supplierId, supplierLabel: undefined });
+    setEditing(null);
+    undoToast(`Supplier → ${sup?.name ?? supplierId}`, () => store.updateProject(proj.id, { supplierId: prev }));
+  };
+
+  const pickSupplierHint = (h: "TBD" | "Various") => {
+    const prev = { id: proj.supplierId, hint: proj.supplierLabel };
+    store.updateProject(proj.id, { supplierId: undefined, supplierLabel: h });
+    setEditing(null);
+    undoToast(`Supplier → ${h}`, () =>
+      store.updateProject(proj.id, { supplierId: prev.id, supplierLabel: prev.hint }));
+  };
+
+  const pickShipping = (mode: ShippingMode) => {
+    const prev = proj.shippingMode;
+    store.updateProject(proj.id, { shippingMode: mode });
+    setEditing(null);
+    undoToast(`Shipping → ${mode}`, () => store.updateProject(proj.id, { shippingMode: prev }));
+  };
+
+  // ── Field row component ────────────────────────────────────────────────
+  const FieldRow = ({
+    label, value, placeholder, onTap, locked, fieldKey,
+  }: {
+    label: string;
+    value: React.ReactNode;
+    placeholder?: boolean;
+    onTap: () => void;
+    locked?: boolean;
+    fieldKey: FieldKey;
+  }) => {
+    const showTip = lockedTip === fieldKey;
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={onTap}
+          className={cn(
+            "w-full flex items-start gap-2 px-3 py-2.5 rounded-lg text-left transition-colors border",
+            locked ? "bg-muted/30 border-border/50 cursor-not-allowed" : "bg-background hover:bg-muted/40",
+          )}
+          style={{
+            borderColor: locked ? undefined : "hsl(var(--brand-navy) / 0.18)",
+            minHeight: 48,
+          }}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">{label}</div>
+            <div className={cn(
+              "text-[14px] leading-tight mt-0.5 truncate",
+              placeholder ? "italic text-muted-foreground/60" : "text-foreground",
+            )}>
+              {value}
+            </div>
+          </div>
+          {locked
+            ? <Lock className="h-4 w-4 mt-1 shrink-0 text-muted-foreground/60" />
+            : <PencilLine className="h-3.5 w-3.5 mt-1.5 shrink-0 text-muted-foreground/55" />}
+        </button>
+        {showTip && (
+          <div
+            className="absolute z-10 right-2 -bottom-2 translate-y-full bg-foreground text-background text-[11px] px-2.5 py-1.5 rounded-md shadow-lg max-w-[260px]"
+          >
+            Customer can only be changed via Reassign Customer
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Pipeline-specific field set ────────────────────────────────────────
+  const renderFields = () => {
+    const supplier = store.suppliers.find((s) => s.id === proj.supplierId);
+    const supplierLabel: React.ReactNode = supplier?.name ?? proj.supplierLabel ?? "Unassigned";
+    const supplierPlaceholder = !supplier && !proj.supplierLabel;
+
+    const customerField = (
+      <FieldRow
+        fieldKey="customer"
+        label="Customer"
+        value={proj.customer}
+        locked
+        onTap={() => { haptics.nope(); setLockedTip("customer"); }}
+      />
+    );
+
+    const projectNameField = (
+      <FieldRow
+        fieldKey="projectName"
+        label="Project name"
+        value={proj.projectName}
+        locked={!PERMS.canEditProjectName}
+        onTap={() => PERMS.canEditProjectName ? setEditing("projectName") : setLockedTip("projectName")}
+      />
+    );
+    const detailField = (
+      <FieldRow
+        fieldKey="detail"
+        label="Detail"
+        value={proj.detailSummary || "Add summary…"}
+        placeholder={!proj.detailSummary}
+        onTap={() => setEditing("detail")}
+      />
+    );
+    const quoteField = (
+      <FieldRow
+        fieldKey="quote"
+        label="Quote"
+        value={proj.quoteNumber || "Q-"}
+        placeholder={!proj.quoteNumber}
+        onTap={() => setEditing("quote")}
+      />
+    );
+    const poField = (
+      <FieldRow
+        fieldKey="po"
+        label="PO number"
+        value={proj.poNumber || "PO-"}
+        placeholder={!proj.poNumber}
+        onTap={() => setEditing("po")}
+      />
+    );
+    const invoiceField = (
+      <FieldRow
+        fieldKey="invoice"
+        label="Invoice"
+        value={proj.invoiceNumber || "INV-"}
+        placeholder={!proj.invoiceNumber}
+        onTap={() => setEditing("invoice")}
+      />
+    );
+    const supplierField = (
+      <FieldRow
+        fieldKey="supplier"
+        label="Supplier"
+        value={supplierLabel}
+        placeholder={supplierPlaceholder}
+        onTap={() => setEditing("supplier")}
+      />
+    );
+    const shippingField = (
+      <FieldRow
+        fieldKey="shipping"
+        label="Shipping mode"
+        value={proj.shippingMode ?? "Not set"}
+        placeholder={!proj.shippingMode}
+        onTap={() => setEditing("shipping")}
+      />
+    );
+    const trackingField = (
+      <FieldRow
+        fieldKey="tracking"
+        label="Tracking ref"
+        value={proj.trackingRef || "—"}
+        placeholder={!proj.trackingRef}
+        onTap={() => setEditing("tracking")}
+      />
+    );
+    const deadlineField = (
+      <FieldRow
+        fieldKey="deadline"
+        label="Deadline"
+        value={fmtDate(proj.deadlineDate)}
+        onTap={() => setEditing("deadline")}
+      />
+    );
+
+    const grid = "grid grid-cols-1 sm:grid-cols-2 gap-2";
+
+    if (card.pipeline === "sales") {
+      return (
+        <div className={grid}>
+          {customerField}
+          {projectNameField}
+          {detailField}
+          {quoteField}
+          {supplierField}
+          {shippingField}
+          {deadlineField}
+        </div>
+      );
+    }
+    if (card.pipeline === "operations") {
+      return (
+        <div className={grid}>
+          {customerField}
+          {projectNameField}
+          {detailField}
+          {supplierField}
+          {poField}
+          {shippingField}
+          {trackingField}
+          {deadlineField}
+        </div>
+      );
+    }
+    if (card.pipeline === "shipping") {
+      return (
+        <div className={grid}>
+          {customerField}
+          <FieldRow fieldKey="projectName" label="Project name" value={proj.projectName} locked
+            onTap={() => setLockedTip("projectName")} />
+          {shippingField}
+          {trackingField}
+          <FieldRow fieldKey="etd" label="ETD" value={ship ? fmtDate(ship.etd) : "—"} placeholder={!ship}
+            onTap={() => ship && setEditing("etd")} />
+          <FieldRow fieldKey="eta" label="ETA" value={ship ? fmtDate(ship.eta) : "—"} placeholder={!ship}
+            onTap={() => ship && setEditing("eta")} />
+        </div>
+      );
+    }
+    // finance
+    return (
+      <div className={grid}>
+        {customerField}
+        {projectNameField}
+        {invoiceField}
+        {deadlineField}
+      </div>
+    );
+  };
+
+  // ── Sub-editor sheets ──────────────────────────────────────────────────
+  const shippingModeOptions: ListOption[] = [
+    { id: "Air", label: "Air" },
+    { id: "Ocean LCL", label: "Ocean LCL" },
+    { id: "Ocean FCL", label: "Ocean FCL" },
+  ];
+
+  return (
+    <div className="relative" onPointerDown={(e) => e.stopPropagation()}>
+      {/* Top header bar inside the lifted card */}
+      <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+        <div className="min-w-0">
+          <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">Editing</div>
+          <div className="text-[15px] font-semibold tracking-tight truncate" style={{ color: "hsl(var(--brand-navy))" }}>
+            {proj.customer}
+          </div>
+        </div>
+        <button
+          onClick={onExit}
+          aria-label="Exit edit mode"
+          className="inline-flex items-center justify-center rounded-full hover:bg-muted/60 text-muted-foreground"
+          style={{ width: 36, height: 36 }}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="h-px w-full" style={{ backgroundColor: "hsl(var(--brand-navy) / 0.1)" }} />
+      <div className="px-4 py-3.5 space-y-2">
+        {renderFields()}
+      </div>
+      {/* accent stripe matching pipeline */}
+      <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: accent, opacity: 0.85 }} />
+
+      {/* ── Editors ── */}
+      <TextEditor
+        open={editing === "projectName"}
+        onClose={() => setEditing(null)}
+        title="Project name"
+        value={proj.projectName}
+        onSave={(v) => commitText("projectName", v)}
+        warning={
+          store.projects.filter((p) => p.projectName === proj.projectName).length > 1
+            ? "This project name is shared with other cards — saving will rename them all."
+            : null
+        }
+      />
+      <TextEditor
+        open={editing === "detail"}
+        onClose={() => setEditing(null)}
+        title="Detail summary"
+        value={proj.detailSummary ?? ""}
+        multiline
+        onSave={(v) => commitText("detail", v)}
+      />
+      <TextEditor
+        open={editing === "quote"}
+        onClose={() => setEditing(null)}
+        title="Quote number"
+        value={proj.quoteNumber ?? ""}
+        placeholder="Q-2046"
+        onSave={(v) => commitText("quote", v)}
+      />
+      <TextEditor
+        open={editing === "po"}
+        onClose={() => setEditing(null)}
+        title="PO number"
+        value={proj.poNumber ?? ""}
+        placeholder="PO-1095"
+        onSave={(v) => commitText("po", v)}
+      />
+      <TextEditor
+        open={editing === "invoice"}
+        onClose={() => setEditing(null)}
+        title="Invoice number"
+        value={proj.invoiceNumber ?? ""}
+        placeholder="INV-1050"
+        onSave={(v) => commitText("invoice", v)}
+      />
+      <TextEditor
+        open={editing === "tracking"}
+        onClose={() => setEditing(null)}
+        title="Tracking reference"
+        value={proj.trackingRef ?? ""}
+        placeholder="—"
+        onSave={(v) => commitText("tracking", v)}
+      />
+      <DateEditor
+        open={editing === "deadline"}
+        onClose={() => setEditing(null)}
+        title="Deadline"
+        value={proj.deadlineDate}
+        onSave={(d) => commitDate("deadline", d)}
+      />
+      <DateEditor
+        open={editing === "etd"}
+        onClose={() => setEditing(null)}
+        title="ETD"
+        value={ship?.etd ?? new Date()}
+        onSave={(d) => commitDate("etd", d)}
+      />
+      <DateEditor
+        open={editing === "eta"}
+        onClose={() => setEditing(null)}
+        title="ETA"
+        value={ship?.eta ?? new Date()}
+        onSave={(d) => commitDate("eta", d)}
+      />
+      <ListPicker
+        open={editing === "shipping"}
+        onClose={() => setEditing(null)}
+        title="Shipping mode"
+        options={shippingModeOptions}
+        selectedId={proj.shippingMode}
+        onPick={(id) => pickShipping(id as ShippingMode)}
+      />
+      <SupplierPicker
+        open={editing === "supplier"}
+        onClose={() => setEditing(null)}
+        suppliers={store.suppliers}
+        selectedId={proj.supplierId}
+        selectedHint={proj.supplierLabel}
+        onPickSupplier={pickSupplier}
+        onPickHint={pickSupplierHint}
+        onAddSupplier={(input) => store.addSupplier(input)}
+      />
+
+      {/* Project name propagation confirmation */}
+      <ConfirmDialog
+        open={!!renameConfirm}
+        title="Rename across all cards?"
+        description={renameConfirm
+          ? `This will rename the project across all cards that share this name. ${renameConfirm.count} cards will be updated.`
+          : ""}
+        confirmLabel="Rename"
+        cancelLabel="Cancel"
+        onCancel={() => setRenameConfirm(null)}
+        onConfirm={() => {
+          if (!renameConfirm) return;
+          const prevName = proj.projectName;
+          const { next, count } = renameConfirm;
+          store.renameProject(prevName, next);
+          setRenameConfirm(null);
+          undoToast(`Renamed ${count} cards to "${next}"`, () => store.renameProject(next, prevName));
+        }}
+      />
+
+      {/* Supplier change confirmation when PO/items exist */}
+      <ConfirmDialog
+        open={!!supplierConfirm}
+        title="Change supplier?"
+        description="Changing supplier will reset the PO number for this card. Continue?"
+        confirmLabel="Change supplier"
+        cancelLabel="Cancel"
+        destructive
+        onCancel={() => setSupplierConfirm(null)}
+        onConfirm={() => {
+          if (!supplierConfirm) return;
+          const prev = { sup: proj.supplierId, po: proj.poNumber };
+          const sup = store.suppliers.find((s) => s.id === supplierConfirm.supplierId);
+          store.updateProject(proj.id, {
+            supplierId: supplierConfirm.supplierId, supplierLabel: undefined, poNumber: undefined,
+          });
+          setSupplierConfirm(null);
+          undoToast(`Supplier → ${sup?.name ?? "?"} (PO reset)`, () =>
+            store.updateProject(proj.id, { supplierId: prev.sup, poNumber: prev.po }));
+        }}
+      />
+    </div>
+  );
+};

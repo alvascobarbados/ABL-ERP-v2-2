@@ -28,6 +28,7 @@ import { AllPipelineView } from "@/components/leads/AllPipelineView";
 import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import type { TabId } from "@/components/leads/PipelineTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
+import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
 
 // Picker reused from FilterBar (was internal). Re-create a tiny inline one here to keep customer/project/supplier pickers working.
@@ -367,6 +368,7 @@ const Index = () => {
 
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
+    <EditModeProvider>
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
         {/* Strip 1: app header */}
@@ -498,7 +500,7 @@ const Index = () => {
         })()}
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
-          Swipe cards → to advance, ← to send back. Long-press or tap ⋮ for more.
+          Swipe → to advance, ← to send back. Long-press to jump stages. Tap ⋮ for actions.
         </p>
       </main>
 
@@ -622,6 +624,7 @@ const Index = () => {
 
       <Walkthrough />
     </div>
+    </EditModeProvider>
     </JiggleProvider>
   );
 };
