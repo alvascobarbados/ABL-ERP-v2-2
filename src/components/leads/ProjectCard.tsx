@@ -495,52 +495,38 @@ export const ProjectCard = ({
         />
 
 
-        {/* Three-dots / X menu */}
-        {isEditing ? (
-          <button
-            data-no-drag
-            onClick={(e) => { e.stopPropagation(); editMode.exit(); haptics.pickup(); }}
-            className="absolute top-3 right-2 z-20 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-            aria-label="Exit edit mode"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        ) : (
-          <CardActionsPopover
-            open={menuOpen}
-            onOpenChange={(o) => {
-              setMenuOpen(o);
-              if (o && typeof navigator !== "undefined" && "vibrate" in navigator) {
-                try { navigator.vibrate(10); } catch { /* noop */ }
-              }
-            }}
-            trigger={
-              <button
-                data-no-drag
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
-                aria-label="Project actions"
-              >
-                <MoreVertical className="h-5 w-5" />
-              </button>
+        {/* Three-dots menu */}
+        <CardActionsPopover
+          open={menuOpen}
+          onOpenChange={(o) => {
+            setMenuOpen(o);
+            if (o && typeof navigator !== "undefined" && "vibrate" in navigator) {
+              try { navigator.vibrate(10); } catch { /* noop */ }
             }
-            onEdit={handleEdit}
-            onOpenProject={handleOpenProject}
-            onMoveStage={handleMoveStage}
-            onDuplicate={handleDuplicate}
-            onArchive={handleArchive}
-            onDelete={handleDelete}
-          />
-        )}
+          }}
+          trigger={
+            <button
+              data-no-drag
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-3 right-2 z-10 p-2 rounded-full text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
+              aria-label="Project actions"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </button>
+          }
+          onEdit={handleEdit}
+          onOpenProject={handleOpenProject}
+          onMoveStage={handleMoveStage}
+          onDuplicate={handleDuplicate}
+          onArchive={handleArchive}
+          onDelete={handleDelete}
+        />
 
-        {isEditing ? (
-          <CardEditOverlay card={card} onExit={() => editMode.exit()} />
-        ) : (
-          <button
-            onClick={handleOpen}
-            className="w-full text-left pl-5 pr-5 pt-5 pb-5"
-          >
+        <button
+          onClick={handleOpen}
+          className="w-full text-left pl-5 pr-5 pt-5 pb-5"
+        >
             {/* ─── TOP: identity (left) + supplier+PO block (right) ─── */}
             <div className="flex items-start gap-3">
               {/* Identity block */}
