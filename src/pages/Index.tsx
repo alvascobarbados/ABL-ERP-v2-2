@@ -512,7 +512,10 @@ const Index = () => {
         onOpenSuppliers={() => setSuppliersOpen(true)}
         onOpenCustomers={() => setCustomersOpen(true)}
         onOpenShipments={() => setShipmentsListOpen(true)}
+        onOpenTrash={() => setTrashOpen(true)}
+        trashCount={store.trashedProjects.length}
       />
+      <TrashView open={trashOpen} onClose={() => setTrashOpen(false)} />
 
       <FilterSheet
         open={filterSheetOpen}
