@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Lock, PencilLine, X, Factory, Calendar as CalIcon, Truck } from "lucide-react";
+import { Lock, PencilLine, X } from "lucide-react";
 import { toast } from "sonner";
-import { PipelineCard, PipelineId, ShippingMode, getShipment, formatShippingLabel } from "@/data/pipelines";
+import { PipelineCard, ShippingMode, getShipment } from "@/data/pipelines";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { TextEditor, DateEditor, ListPicker, SupplierPicker, ListOption } from "./EditorSheets";
 import { ConfirmDialog } from "./ConfirmDialog";
