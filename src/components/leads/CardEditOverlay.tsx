@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Lock, PencilLine, X } from "lucide-react";
+import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, ShippingMode, getShipment } from "@/data/pipelines";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
