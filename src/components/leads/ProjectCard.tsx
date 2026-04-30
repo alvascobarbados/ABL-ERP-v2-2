@@ -424,10 +424,10 @@ export const ProjectCard = ({
         jiggleDimmed && "opacity-40 pointer-events-none",
         jiggleActive && "opacity-0 pointer-events-none",
         isEditDimmed && "opacity-40 pointer-events-none",
-        isEditing && "z-[50]",
+        isEditing && "invisible",
       )}
     >
-      {/* Swipe action labels underneath (hidden in edit mode) */}
+      {/* Swipe action labels underneath */}
       {!isEditing && (
         <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none select-none">
           <span
@@ -463,51 +463,37 @@ export const ProjectCard = ({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         style={{
-          transform: isEditing ? "scale(1.02)" : `translateX(${dx}px)`,
-          transition: isEditing
-            ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms, background-color 220ms"
-            : snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
-          touchAction: isEditing ? "auto" : "pan-y",
-          backgroundColor: isEditing ? "hsl(0 0% 100%)" : undefined,
-          borderColor: isEditing ? "hsl(var(--brand-navy))" : undefined,
-          boxShadow: isEditing
-            ? "0 0 0 1px hsl(var(--brand-navy) / 0.55), 0 24px 60px -12px hsl(var(--brand-navy) / 0.55), 0 0 50px -8px hsl(var(--brand-orange) / 0.35)"
-            : undefined,
-          maxHeight: isEditing ? "calc(100vh - 96px)" : undefined,
-          display: isEditing ? "flex" : undefined,
-          flexDirection: isEditing ? "column" : undefined,
+          transform: `translateX(${dx}px)`,
+          transition: snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
+          touchAction: "pan-y",
         }}
         className={cn(
-          "group w-full text-left relative overflow-hidden rounded-2xl bg-card border",
-          isEditing ? "border-2" : "border-border/70 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
-          !dragging && !isEditing && "hover:-translate-y-0.5",
-          pulse && !isEditing && "scale-[1.015]",
+          "group w-full text-left relative overflow-hidden rounded-2xl bg-card border border-border/70 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
+          !dragging && "hover:-translate-y-0.5",
+          pulse && "scale-[1.015]",
         )}
       >
-        {/* Edge glow overlays — only when not editing */}
-        {!isEditing && (
-          <>
-            <div
-              className="pointer-events-none absolute inset-y-0 right-0 w-1/2 transition-opacity"
-              style={{
-                background: "linear-gradient(to left, hsl(var(--swipe-forward) / 0.28), transparent)",
-                opacity: showForward ? intensity : 0,
-              }}
-            />
-            <div
-              className="pointer-events-none absolute inset-y-0 left-0 w-1/2 transition-opacity"
-              style={{
-                background: "linear-gradient(to right, hsl(var(--swipe-back) / 0.28), transparent)",
-                opacity: showBack ? intensity : 0,
-              }}
-            />
-            {/* Pipeline accent stripe */}
-            <span
-              className="absolute left-0 top-0 bottom-0 w-[3px]"
-              style={{ backgroundColor: pipelineHex, opacity: 0.7 }}
-            />
-          </>
-        )}
+        {/* Edge glow overlays */}
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-1/2 transition-opacity"
+          style={{
+            background: "linear-gradient(to left, hsl(var(--swipe-forward) / 0.28), transparent)",
+            opacity: showForward ? intensity : 0,
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 w-1/2 transition-opacity"
+          style={{
+            background: "linear-gradient(to right, hsl(var(--swipe-back) / 0.28), transparent)",
+            opacity: showBack ? intensity : 0,
+          }}
+        />
+        {/* Pipeline accent stripe */}
+        <span
+          className="absolute left-0 top-0 bottom-0 w-[3px]"
+          style={{ backgroundColor: pipelineHex, opacity: 0.7 }}
+        />
+
 
         {/* Three-dots / X menu */}
         {isEditing ? (
