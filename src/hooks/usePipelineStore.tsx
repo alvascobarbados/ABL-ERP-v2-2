@@ -265,9 +265,60 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     return copy;
   }, [projects]);
 
-  const deleteProject = useCallback((projectId: string) => {
+  // ── Trash (soft-delete) ────────────────────────────────────────────────
+  const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+  const softDeleteProject = useCallback<PipelineStoreCtx["softDeleteProject"]>((projectId) => {
+    const orig = projects.find((p) => p.id === projectId && !p.deletedAt);
+    if (!orig) return null;
+    const restoredFrom = { pipeline: orig.pipeline, stage: orig.stage };
+    setProjects((prev) => prev.map((p) =>
+      p.id === projectId
+        ? { ...p, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage }
+        : p,
+    ));
+    return { restoredFrom };
+  }, [projects]);
+
+  const restoreProject = useCallback<PipelineStoreCtx["restoreProject"]>((projectId) => {
+    const orig = projects.find((p) => p.id === projectId && p.deletedAt);
+    if (!orig) return null;
+    // Pipelines/stages can change over time. If the original stage is gone,
+    // fall back to a sensible default per pipeline.
+    const knownStages: StageId[] = PIPELINES.flatMap((pp) => pp.stages.map((s) => s.id));
+    const targetPipeline: PipelineId = orig.deletedFromPipeline ?? orig.pipeline ?? "sales";
+    const fallbackStage: Record<PipelineId, StageId> = {
+      sales: "quote", operations: "preproduction",
+      shipping: "shipment_required", finance: "invoice_required",
+    };
+    const targetStage: StageId =
+      orig.deletedFromStage && knownStages.includes(orig.deletedFromStage)
+        ? orig.deletedFromStage
+        : fallbackStage[targetPipeline];
+    setProjects((prev) => prev.map((p) =>
+      p.id === projectId
+        ? { ...p, pipeline: targetPipeline, stage: targetStage,
+            deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined }
+        : p,
+    ));
+    return { pipeline: targetPipeline, stage: targetStage };
+  }, [projects]);
+
+  const hardDeleteProject = useCallback((projectId: string) => {
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
   }, []);
+
+  // Back-compat alias — old call sites still use deleteProject (now soft).
+  const deleteProject = useCallback((projectId: string) => {
+    softDeleteProject(projectId);
+  }, [softDeleteProject]);
+
+  // Auto-purge expired trash entries (>30d) once on mount.
+  useState(() => {
+    const cutoff = Date.now() - TRASH_TTL_MS;
+    setProjects((prev) => prev.filter((p) => !p.deletedAt || p.deletedAt.getTime() > cutoff));
+    return undefined;
+  });
 
   const addSupplier = useCallback((input: { name: string; country: string; defaultShippingMode: ShippingMode }): Supplier => {
     const sup: Supplier = {
