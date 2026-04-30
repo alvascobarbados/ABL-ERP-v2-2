@@ -375,7 +375,7 @@ export const ProjectCard = ({
   // ── Action menu handlers ───────────────────────────────────────────────
   const handleEdit = () => {
     haptics.pickup();
-    editMode.enter(card.id);
+    editMode.enter(card);
   };
   const handleOpenProject = () => onOpen();
   const handleMoveStage = () => onOpenPicker();
