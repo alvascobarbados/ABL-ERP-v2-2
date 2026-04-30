@@ -15,6 +15,7 @@ import { ShipmentView } from "@/components/leads/ShipmentView";
 import { SuppliersView } from "@/components/leads/SuppliersView";
 import { CustomersView } from "@/components/leads/CustomersView";
 import { ShipmentsView } from "@/components/leads/ShipmentsView";
+import { TrashView } from "@/components/leads/TrashView";
 import { HamburgerDrawer } from "@/components/leads/HamburgerDrawer";
 import { TopControls } from "@/components/leads/TopControls";
 import { FilterSheet } from "@/components/leads/FilterSheet";
@@ -210,7 +211,7 @@ const Index = () => {
   const [suppliersOpen, setSuppliersOpen] = useState(false);
   const [customersOpen, setCustomersOpen] = useState(false);
   const [shipmentsListOpen, setShipmentsListOpen] = useState(false);
-
+  const [trashOpen, setTrashOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [filterPicker, setFilterPicker] = useState<null | "customer" | "project" | "supplier">(null);
@@ -511,7 +512,10 @@ const Index = () => {
         onOpenSuppliers={() => setSuppliersOpen(true)}
         onOpenCustomers={() => setCustomersOpen(true)}
         onOpenShipments={() => setShipmentsListOpen(true)}
+        onOpenTrash={() => setTrashOpen(true)}
+        trashCount={store.trashedProjects.length}
       />
+      <TrashView open={trashOpen} onClose={() => setTrashOpen(false)} />
 
       <FilterSheet
         open={filterSheetOpen}

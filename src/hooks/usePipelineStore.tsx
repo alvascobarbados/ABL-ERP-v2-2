@@ -115,7 +115,10 @@ export interface NewShipmentInput {
 }
 
 interface PipelineStoreCtx {
+  /** Live projects only — trashed projects are filtered out. */
   projects: Project[];
+  /** Soft-deleted projects (in Trash). */
+  trashedProjects: Project[];
   shipments: Shipment[];
   suppliers: Supplier[];
   moveCard: (cardId: string, target: { pipeline: PipelineId; stage: StageId }) => MoveResult;
@@ -126,6 +129,13 @@ interface PipelineStoreCtx {
   updateLineItem: (projectId: string, index: number, item: LineItem) => void;
   removeLineItem: (projectId: string, index: number) => void;
   duplicateProject: (projectId: string) => Project | null;
+  /** Soft-delete: send to Trash. */
+  softDeleteProject: (projectId: string) => { restoredFrom: { pipeline: PipelineId; stage: StageId } } | null;
+  /** Restore a trashed project to its original pipeline/stage. */
+  restoreProject: (projectId: string) => { pipeline: PipelineId; stage: StageId } | null;
+  /** Permanently remove a project from the database. */
+  hardDeleteProject: (projectId: string) => void;
+  /** @deprecated use softDeleteProject for the trash flow. */
   deleteProject: (projectId: string) => void;
   addSupplier: (input: { name: string; country: string; defaultShippingMode: ShippingMode }) => Supplier;
   isQuoteNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
@@ -255,9 +265,60 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     return copy;
   }, [projects]);
 
-  const deleteProject = useCallback((projectId: string) => {
+  // ── Trash (soft-delete) ────────────────────────────────────────────────
+  const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+  const softDeleteProject = useCallback<PipelineStoreCtx["softDeleteProject"]>((projectId) => {
+    const orig = projects.find((p) => p.id === projectId && !p.deletedAt);
+    if (!orig) return null;
+    const restoredFrom = { pipeline: orig.pipeline, stage: orig.stage };
+    setProjects((prev) => prev.map((p) =>
+      p.id === projectId
+        ? { ...p, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage }
+        : p,
+    ));
+    return { restoredFrom };
+  }, [projects]);
+
+  const restoreProject = useCallback<PipelineStoreCtx["restoreProject"]>((projectId) => {
+    const orig = projects.find((p) => p.id === projectId && p.deletedAt);
+    if (!orig) return null;
+    // Pipelines/stages can change over time. If the original stage is gone,
+    // fall back to a sensible default per pipeline.
+    const knownStages: StageId[] = PIPELINES.flatMap((pp) => pp.stages.map((s) => s.id));
+    const targetPipeline: PipelineId = orig.deletedFromPipeline ?? orig.pipeline ?? "sales";
+    const fallbackStage: Record<PipelineId, StageId> = {
+      sales: "quote", operations: "preproduction",
+      shipping: "shipment_required", finance: "invoice_required",
+    };
+    const targetStage: StageId =
+      orig.deletedFromStage && knownStages.includes(orig.deletedFromStage)
+        ? orig.deletedFromStage
+        : fallbackStage[targetPipeline];
+    setProjects((prev) => prev.map((p) =>
+      p.id === projectId
+        ? { ...p, pipeline: targetPipeline, stage: targetStage,
+            deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined }
+        : p,
+    ));
+    return { pipeline: targetPipeline, stage: targetStage };
+  }, [projects]);
+
+  const hardDeleteProject = useCallback((projectId: string) => {
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
   }, []);
+
+  // Back-compat alias — old call sites still use deleteProject (now soft).
+  const deleteProject = useCallback((projectId: string) => {
+    softDeleteProject(projectId);
+  }, [softDeleteProject]);
+
+  // Auto-purge expired trash entries (>30d) once on mount.
+  useState(() => {
+    const cutoff = Date.now() - TRASH_TTL_MS;
+    setProjects((prev) => prev.filter((p) => !p.deletedAt || p.deletedAt.getTime() > cutoff));
+    return undefined;
+  });
 
   const addSupplier = useCallback((input: { name: string; country: string; defaultShippingMode: ShippingMode }): Supplier => {
     const sup: Supplier = {
@@ -316,15 +377,25 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     return { count };
   }, []);
 
+  const liveProjects = useMemo(() => projects.filter((p) => !p.deletedAt), [projects]);
+  const trashedProjects = useMemo(
+    () => projects.filter((p) => !!p.deletedAt)
+      .sort((a, b) => (b.deletedAt!.getTime() - a.deletedAt!.getTime())),
+    [projects],
+  );
+
   const value = useMemo<PipelineStoreCtx>(() => ({
-    projects, shipments, suppliers,
+    projects: liveProjects, trashedProjects, shipments, suppliers,
     moveCard, updateProject, renameProject, addNote,
     addLineItem, updateLineItem, removeLineItem,
-    duplicateProject, deleteProject, addSupplier,
+    duplicateProject,
+    softDeleteProject, restoreProject, hardDeleteProject, deleteProject,
+    addSupplier,
     isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
     assignToShipment, createShipment, markShipmentDelivered,
     pulsePipeline, triggerPulse,
-  }), [projects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+  }), [liveProjects, trashedProjects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };

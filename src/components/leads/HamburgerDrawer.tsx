@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { X, Factory, Users, Ship, HelpCircle, LogOut } from "lucide-react";
+import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -9,11 +9,13 @@ interface Props {
   onOpenSuppliers: () => void;
   onOpenCustomers: () => void;
   onOpenShipments: () => void;
+  onOpenTrash: () => void;
+  trashCount: number;
 }
 
 const MenuItem = ({
-  icon: Icon, label, onClick, dim,
-}: { icon: typeof Factory; label: string; onClick: () => void; dim?: boolean }) => (
+  icon: Icon, label, onClick, dim, badge,
+}: { icon: typeof Factory; label: string; onClick: () => void; dim?: boolean; badge?: number }) => (
   <button
     onClick={onClick}
     className={cn(
@@ -23,14 +25,26 @@ const MenuItem = ({
     style={{ minHeight: 52 }}
   >
     <Icon className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy))" }} />
-    <span className="text-[15px] font-medium" style={{ color: dim ? undefined : "hsl(var(--brand-navy))" }}>
+    <span className="text-[15px] font-medium flex-1" style={{ color: dim ? undefined : "hsl(var(--brand-navy))" }}>
       {label}
     </span>
+    {badge !== undefined && badge > 0 && (
+      <span
+        className="inline-flex items-center justify-center text-[11px] font-semibold tabular px-1.5 rounded-full"
+        style={{
+          minWidth: 22, height: 20,
+          backgroundColor: "hsl(var(--brand-navy) / 0.1)",
+          color: "hsl(var(--brand-navy))",
+        }}
+      >
+        {badge}
+      </span>
+    )}
   </button>
 );
 
 export const HamburgerDrawer = ({
-  open, onClose, onOpenSuppliers, onOpenCustomers, onOpenShipments,
+  open, onClose, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, trashCount,
 }: Props) => {
   useEffect(() => {
     if (!open) return;
@@ -73,6 +87,7 @@ export const HamburgerDrawer = ({
           <MenuItem icon={Factory} label="Suppliers" onClick={() => { onClose(); onOpenSuppliers(); }} />
           <MenuItem icon={Users} label="Customers" onClick={() => { onClose(); onOpenCustomers(); }} />
           <MenuItem icon={Ship} label="Shipments" onClick={() => { onClose(); onOpenShipments(); }} />
+          <MenuItem icon={Trash2} label="Trash" badge={trashCount} onClick={() => { onClose(); onOpenTrash(); }} />
 
           <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
 
