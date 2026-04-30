@@ -33,8 +33,7 @@ export const EditModeProvider = ({ children }: { children: ReactNode }) => {
       {children}
       {activeId && (
         <div
-          className="fixed inset-0 z-[40] bg-black/60 backdrop-blur-[2px] animate-fade-in"
-          onClick={exit}
+          className="pointer-events-none fixed inset-0 z-[40] bg-black/60 backdrop-blur-[2px] animate-fade-in"
           aria-hidden
         />
       )}
