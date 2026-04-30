@@ -195,32 +195,37 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           type="button"
           onClick={onTap}
           className={cn(
-            "w-full flex items-start gap-2 px-3 py-2.5 rounded-lg text-left transition-colors border",
-            locked ? "bg-muted/30 border-border/50 cursor-not-allowed" : "bg-background hover:bg-muted/40",
+            "w-full flex items-start gap-2 px-3 py-2.5 rounded-lg text-left transition-all border-2",
+            locked
+              ? "bg-muted/40 border-dashed border-border cursor-not-allowed"
+              : "bg-white hover:bg-[hsl(41_50%_98%)] hover:border-[hsl(var(--brand-navy)/0.55)] active:scale-[0.99]",
           )}
           style={{
-            borderColor: locked ? undefined : "hsl(var(--brand-navy) / 0.18)",
-            minHeight: 48,
+            borderColor: locked ? undefined : "hsl(var(--brand-navy) / 0.35)",
+            minHeight: 52,
           }}
         >
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">{label}</div>
+            <div className={cn(
+              "text-[10px] uppercase tracking-[0.18em] font-medium",
+              locked ? "text-muted-foreground/70" : "text-[hsl(var(--brand-navy)/0.7)]",
+            )}>{label}</div>
             <div className={cn(
               "text-[14px] leading-tight mt-0.5 truncate",
-              placeholder ? "italic text-muted-foreground/60" : "text-foreground",
+              placeholder ? "italic text-muted-foreground/60" : locked ? "text-muted-foreground" : "text-foreground font-medium",
             )}>
               {value}
             </div>
           </div>
           {locked
-            ? <Lock className="h-4 w-4 mt-1 shrink-0 text-muted-foreground/60" />
-            : <PencilLine className="h-3.5 w-3.5 mt-1.5 shrink-0 text-muted-foreground/55" />}
+            ? <Lock className="h-4 w-4 mt-1 shrink-0 text-muted-foreground/70" />
+            : <PencilLine className="h-4 w-4 mt-1.5 shrink-0" style={{ color: "hsl(var(--brand-orange))" }} />}
         </button>
         {showTip && (
           <div
             className="absolute z-10 right-2 -bottom-2 translate-y-full bg-foreground text-background text-[11px] px-2.5 py-1.5 rounded-md shadow-lg max-w-[260px]"
           >
-            Customer can only be changed via Reassign Customer
+            Customer is selected from your customer list. Use Reassign Customer to change.
           </div>
         )}
       </div>
@@ -387,9 +392,12 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   ];
 
   return (
-    <div className="relative" onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      className="relative flex flex-col min-h-0 flex-1"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       {/* Top header bar inside the lifted card */}
-      <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+      <div className="shrink-0 flex items-center justify-between px-4 pt-3.5 pb-2">
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">Editing</div>
           <div className="text-[15px] font-semibold tracking-tight truncate" style={{ color: "hsl(var(--brand-navy))" }}>
@@ -405,9 +413,13 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="h-px w-full" style={{ backgroundColor: "hsl(var(--brand-navy) / 0.1)" }} />
-      <div className="px-4 py-3.5 space-y-2">
+      <div className="shrink-0 h-px w-full" style={{ backgroundColor: "hsl(var(--brand-navy) / 0.1)" }} />
+      <div
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3.5 space-y-2"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         {renderFields()}
+        <div className="h-2" />
       </div>
       {/* accent stripe matching pipeline */}
       <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: accent, opacity: 0.85 }} />

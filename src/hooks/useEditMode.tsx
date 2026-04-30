@@ -28,7 +28,7 @@ export const EditModeProvider = ({ children }: { children: ReactNode }) => {
       {children}
       {activeId && (
         <div
-          className="fixed inset-0 z-[40] bg-black/10 animate-fade-in"
+          className="fixed inset-0 z-[40] bg-black/60 backdrop-blur-[2px] animate-fade-in"
           onClick={exit}
           aria-hidden
         />

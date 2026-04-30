@@ -465,16 +465,21 @@ export const ProjectCard = ({
         style={{
           transform: isEditing ? "scale(1.02)" : `translateX(${dx}px)`,
           transition: isEditing
-            ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms"
+            ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms, background-color 220ms"
             : snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
           touchAction: isEditing ? "auto" : "pan-y",
-          backgroundColor: isEditing ? "hsl(41 33% 97%)" : undefined,
-          borderColor: isEditing ? "hsl(var(--brand-navy) / 0.45)" : undefined,
-          boxShadow: isEditing ? "0 18px 40px -12px hsl(var(--brand-navy) / 0.35)" : undefined,
+          backgroundColor: isEditing ? "hsl(0 0% 100%)" : undefined,
+          borderColor: isEditing ? "hsl(var(--brand-navy))" : undefined,
+          boxShadow: isEditing
+            ? "0 0 0 1px hsl(var(--brand-navy) / 0.55), 0 24px 60px -12px hsl(var(--brand-navy) / 0.55), 0 0 50px -8px hsl(var(--brand-orange) / 0.35)"
+            : undefined,
+          maxHeight: isEditing ? "calc(100vh - 96px)" : undefined,
+          display: isEditing ? "flex" : undefined,
+          flexDirection: isEditing ? "column" : undefined,
         }}
         className={cn(
           "group w-full text-left relative overflow-hidden rounded-2xl bg-card border",
-          isEditing ? "border-[1.5px]" : "border-border/70 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
+          isEditing ? "border-2" : "border-border/70 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
           !dragging && !isEditing && "hover:-translate-y-0.5",
           pulse && !isEditing && "scale-[1.015]",
         )}
