@@ -600,7 +600,7 @@ export const ProjectCard = ({
               {bottomRight}
             </div>
           </button>
-        )}
+
       </div>
 
     </div>
