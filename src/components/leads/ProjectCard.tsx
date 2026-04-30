@@ -46,15 +46,23 @@ export const ProjectCard = ({
   card, onOpen, onSwipeForward, onSwipeBack, onOpenPicker,
 }: ProjectCardProps) => {
   const jiggle = useJiggle();
+  const editMode = useEditMode();
+  const store = usePipelineStore();
   const jiggleActive = jiggle.activeId === card.id;
   const jiggleDimmed = jiggle.activeId !== null && !jiggleActive;
+  const isEditing = editMode.activeId === card.id;
+  const isEditDimmed = editMode.activeId !== null && !isEditing;
   const proj = card.project;
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const next = getNextStage(card.pipeline, card.stage);
   const prev = getPrevStage(card.pipeline, card.stage);
   const canForward = !!next;
   const canBack = !!prev;
+
 
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
