@@ -61,13 +61,14 @@ const SHIPPING_MODE_OPTIONS: ListOption[] = [
 
 export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const store = usePipelineStore();
+  const md = useMasterData();
   const editMode = useEditMode();
   const {
-    projects, suppliers,
+    projects,
     updateProject, addNote,
     addLineItem, updateLineItem, removeLineItem,
     duplicateProject, softDeleteProject, restoreProject,
-    addSupplier, moveCard,
+    moveCard,
     triggerPulse,
   } = store;
 
