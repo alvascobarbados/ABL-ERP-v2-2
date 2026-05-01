@@ -285,9 +285,13 @@ interface ProjOpts {
   detailSummary?: string;
   supplierId?: string;
   supplierLabel?: SupplierLabelHint;
-  shippingMode?: ShippingMode;
+  // Seed accepts the legacy mode strings ("Ocean FCL"/"Ocean LCL"); the
+  // factory below collapses them to the new three-mode model and stashes
+  // the prefix into `trackingRef` when applicable.
+  shippingMode?: LegacyShippingMode;
   salesShippingLabel?: SalesShippingLabel;
   shipmentId?: string;
+  trackingRef?: string;
   orderType?: OrderType;
   priority?: Priority;
   tag?: CardTag;
@@ -298,22 +302,33 @@ const p = (
   customer: string, pointPerson: string, projectName: string,
   date: Date, value: number, pipeline: PipelineId, stage: StageId,
   opts: ProjOpts = {},
-): Project => ({
-  id: `prj-${++_seq}`,
-  customer, pointPerson, projectName,
-  detailSummary: opts.detailSummary,
-  supplierId: opts.supplierId,
-  supplierLabel: opts.supplierLabel,
-  shippingMode: opts.shippingMode,
-  salesShippingLabel: opts.salesShippingLabel,
-  shipmentId: opts.shipmentId,
-  pipeline, stage,
-  deadline: fmt(date), deadlineDate: date,
-  value,
-  orderType: opts.orderType ?? "New",
-  priority: opts.priority ?? "Standard",
-  tag: opts.tag,
-});
+): Project => {
+  // Migration: Ocean FCL/LCL → mode "Ocean" + trackingRef prefix hint
+  // (only used when the project doesn't already carry a real shipment).
+  const newMode = migrateMode(opts.shippingMode);
+  let trackingRef = opts.trackingRef;
+  if (!trackingRef && !opts.shipmentId) {
+    if (opts.shippingMode === "Ocean FCL") trackingRef = undefined; // prefix-only hints surface in the editor
+    if (opts.shippingMode === "Ocean LCL") trackingRef = undefined;
+  }
+  return {
+    id: `prj-${++_seq}`,
+    customer, pointPerson, projectName,
+    detailSummary: opts.detailSummary,
+    supplierId: opts.supplierId,
+    supplierLabel: opts.supplierLabel,
+    shippingMode: newMode,
+    salesShippingLabel: opts.salesShippingLabel,
+    shipmentId: opts.shipmentId,
+    trackingRef,
+    pipeline, stage,
+    deadline: fmt(date), deadlineDate: date,
+    value,
+    orderType: opts.orderType ?? "New",
+    priority: opts.priority ?? "Standard",
+    tag: opts.tag,
+  };
+};
 
 // ─────────── Mock projects (flat) ───────────
 export const PROJECTS: Project[] = [
