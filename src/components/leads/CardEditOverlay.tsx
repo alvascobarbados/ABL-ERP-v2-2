@@ -576,7 +576,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         onConfirm={() => {
           if (!supplierConfirm) return;
           const prev = { sup: proj.supplierId, po: proj.poNumber };
-          const sup = store.suppliers.find((s) => s.id === supplierConfirm.supplierId);
+          const sup = md.getSupplierByAnyId(supplierConfirm.supplierId);
           store.updateProject(proj.id, {
             supplierId: supplierConfirm.supplierId, supplierLabel: undefined, poNumber: undefined,
           });
