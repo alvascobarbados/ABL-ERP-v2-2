@@ -322,11 +322,11 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         onTap={() => setEditing("shipping")}
       />
     );
-    const trackingField = (
+    const trackingField = proj.shippingMode === "Local" ? null : (
       <FieldRow
         fieldKey="tracking"
         label="Tracking ref"
-        value={proj.trackingRef || "—"}
+        value={proj.trackingRef ? proj.trackingRef.toUpperCase() : "—"}
         placeholder={!proj.trackingRef}
         onTap={() => setEditing("tracking")}
       />
