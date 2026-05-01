@@ -381,13 +381,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         placeholder="Contact name"
         onSave={saveContact}
       />
-      <TextEditor
+      <TeamMultiPicker
         open={editor?.kind === "salesRep"}
         onClose={() => setEditor(null)}
-        title="Edit sales rep"
-        value={live.pointPerson ?? ""}
-        placeholder="Initials or name"
-        onSave={saveSalesRep}
+        selected={parseInitials(live.pointPerson)}
+        onConfirm={saveSalesRepInitials}
       />
       <TextEditor
         open={editor?.kind === "amount"}
@@ -413,7 +411,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         multiline
         onSave={submitNote}
       />
-      <LineItemEditor
+      <ProductLineItemEditor
         open={editor?.kind === "addLineItem"}
         onClose={() => setEditor(null)}
         title="Add line item"
@@ -421,7 +419,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         description=""
         onSave={(q, d) => { addLineItem(live.id, { qty: q, description: d }); setEditor(null); }}
       />
-      <LineItemEditor
+      <ProductLineItemEditor
         open={editor?.kind === "editLineItem"}
         onClose={() => setEditor(null)}
         title="Edit line item"
@@ -438,15 +436,14 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           setEditor(null);
         }}
       />
-      <SupplierPicker
+      <EntityPicker
         open={editor?.kind === "supplier"}
         onClose={() => setEditor(null)}
-        suppliers={suppliers}
+        kind="supplier"
         selectedId={live.supplierId}
-        selectedHint={live.supplierLabel}
-        onPickSupplier={handlePickSupplier}
-        onPickHint={handlePickHint}
-        onAddSupplier={addSupplier}
+        selectedMeta={live.supplierLabel}
+        onPick={handlePickSupplier}
+        onPickMeta={handlePickSupplierMeta}
       />
       <ListPicker
         open={editor?.kind === "shippingMode"}
