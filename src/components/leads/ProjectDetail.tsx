@@ -107,7 +107,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
   const pipeline = PIPELINES.find((p) => p.id === live.pipeline)!;
   const accentHex = PIPELINE_ACCENT[live.pipeline].hex;
-  const supplier = suppliers.find((s) => s.id === live.supplierId);
+  const supplier = md.getSupplierByAnyId(live.supplierId);
 
   // ─── Stage move (used by both action sheet and ⋮ menu) ───
   const openStagePicker = () => setStagePickerOpen(true);
