@@ -280,7 +280,7 @@ export const MasterListPage = ({ kind }: Props) => {
       {/* Confirm delete */}
       <ConfirmDialog
         open={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
+        onCancel={() => setConfirmDelete(null)}
         title={confirmDelete ? `Delete ${confirmDelete.label}?` : ""}
         description={
           confirmDelete && confirmDelete.usage > 0
