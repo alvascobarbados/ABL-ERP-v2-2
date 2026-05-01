@@ -322,12 +322,14 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <span className="italic text-muted-foreground">Not yet decided</span>
             )}
           </RowClickable>
-          <RowClickable onClick={() => setEditor({ kind: "trackingRef" })}>
-            <span className="text-[13px]">
-              <span className="text-muted-foreground/70 mr-2">Tracking ref:</span>
-              {live.trackingRef ? <span className="tabular">{live.trackingRef}</span> : <span className="text-muted-foreground/50">—</span>}
-            </span>
-          </RowClickable>
+          {live.shippingMode !== "Local" && (
+            <RowClickable onClick={() => setEditor({ kind: "trackingRef" })}>
+              <span className="text-[13px]">
+                <span className="text-muted-foreground/70 mr-2">Tracking ref:</span>
+                {live.trackingRef ? <span className="tabular">{live.trackingRef.toUpperCase()}</span> : <span className="text-muted-foreground/50">—</span>}
+              </span>
+            </RowClickable>
+          )}
           {live.shipmentId && (
             <button
               onClick={() => onOpenShipment(live.shipmentId!)}
