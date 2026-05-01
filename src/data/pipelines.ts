@@ -202,17 +202,20 @@ export interface Project {
   deletedFromStage?: StageId;
 }
 
+/** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
 export type AirCarrier = "DHL" | "FedEx";
 
 export interface Shipment {
   id: string;
   /**
-   * Code body only — for ocean: FCL-125 / LCL-088. For air: 10-digit tracking
-   * number (no carrier prefix). The carrier field carries the prefix.
+   * Canonical PREFIX-number string. Examples:
+   *   FCL-125, LCL-088, DHL-373747, FEDEX-9382749, ARAMEX-49283740
+   * Always uppercase prefix, single hyphen, then the user-typed number.
    */
   code: string;
   mode: ShippingMode;
-  carrier?: AirCarrier; // required when mode === "Air"
+  /** @deprecated read carrier off `code` (the part before the dash). */
+  carrier?: AirCarrier;
   supplierId: string;
   etd: Date;
   eta: Date;
@@ -220,38 +223,41 @@ export interface Shipment {
 }
 
 /**
- * Canonical shipping label used everywhere on cards & detail views.
- *  Ocean FCL · FCL-125
- *  Ocean LCL · LCL-088
- *  DHL · 4523891076
- *  FedEx · 7728340195
- *
- * If the code is missing, the right side becomes a dim placeholder
- * (e.g. "FCL-", "LCL-", "DHL · ", "FedEx · ", "— · —").
+ * Pull the prefix portion ("FCL", "DHL", "ARAMEX", …) off a tracking ref.
+ * Returns `undefined` if the ref isn't in PREFIX-number form.
+ */
+export function trackingPrefix(ref: string | undefined): string | undefined {
+  if (!ref) return undefined;
+  const i = ref.indexOf("-");
+  if (i <= 0) return undefined;
+  return ref.slice(0, i).toUpperCase();
+}
+
+/**
+ * Canonical bottom-row shipping label for a project card.
+ *  Air · DHL-373747
+ *  Air · FEDEX-9382749
+ *  Ocean · FCL-125
+ *  Ocean · LCL-088
+ *  Local
+ *  Air · —  (mode set, tracking blank)
+ *  Ocean · —
+ *  — · — (mode unassigned — the "Mixed" / unknown state)
  */
 export function formatShippingLabel(
   mode: ShippingMode | undefined,
-  code: string | undefined,
-  carrier?: AirCarrier,
+  trackingRef?: string,
 ): { text: string; placeholder: boolean } {
   if (!mode) return { text: "— · —", placeholder: true };
-  if (mode === "Ocean FCL") return code
-    ? { text: `Ocean FCL · ${code}`, placeholder: false }
-    : { text: "Ocean FCL · FCL-", placeholder: true };
-  if (mode === "Ocean LCL") return code
-    ? { text: `Ocean LCL · ${code}`, placeholder: false }
-    : { text: "Ocean LCL · LCL-", placeholder: true };
-  // Air
-  const c = carrier ?? "DHL";
-  return code
-    ? { text: `${c} · ${code}`, placeholder: false }
-    : { text: `${c} · `, placeholder: true };
+  if (mode === "Local") return { text: "Local", placeholder: false };
+  const ref = trackingRef?.trim();
+  if (!ref) return { text: `${mode} · —`, placeholder: true };
+  return { text: `${mode} · ${ref.toUpperCase()}`, placeholder: false };
 }
 
 export function formatShipmentTitle(s: Shipment): string {
-  if (s.mode === "Air") return `${s.carrier ?? "DHL"} · ${s.code}`;
-  if (s.mode === "Ocean FCL") return `Ocean FCL · ${s.code}`;
-  return `Ocean LCL · ${s.code}`;
+  // The shipment code already carries the prefix (FCL-125 / DHL-373747).
+  return s.code.toUpperCase();
 }
 
 // ─────────── Unified pipeline card ───────────
