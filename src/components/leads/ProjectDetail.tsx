@@ -51,23 +51,17 @@ type EditorKind =
   | null;
 
 const SHIPPING_MODE_OPTIONS: ListOption[] = [
-  { id: "Ocean FCL", label: "Ocean FCL" },
-  { id: "Ocean LCL", label: "Ocean LCL" },
-  { id: "DHL",       label: "DHL", sublabel: "Air courier" },
-  { id: "FedEx",     label: "FedEx", sublabel: "Air courier" },
-  { id: "Courier",   label: "Courier", sublabel: "Other" },
-  { id: "Mixed",     label: "Mixed" },
-  { id: "Local",     label: "Local" },
+  { id: "Air",   label: "Air" },
+  { id: "Ocean", label: "Ocean" },
+  { id: "Local", label: "Local" },
 ];
 
-// Map a sales-style label or shipping mode to canonical display
+// Canonical shipping display: "Air · DHL-373747" / "Ocean · FCL-125" / "Local"
 function shippingDisplay(p: { shippingMode?: ShippingMode; salesShippingLabel?: SalesShippingLabel; trackingRef?: string }) {
-  const label =
-    p.salesShippingLabel ??
-    (p.shippingMode === "Ocean FCL" ? "Ocean FCL"
-      : p.shippingMode === "Ocean LCL" ? "Ocean LCL"
-      : p.shippingMode === "Air" ? "DHL" : undefined);
-  return { label, ref: p.trackingRef };
+  if (!p.shippingMode) return { label: p.salesShippingLabel, ref: p.trackingRef };
+  if (p.shippingMode === "Local") return { label: "Local" as string, ref: undefined };
+  const ref = p.trackingRef?.trim();
+  return { label: ref ? `${p.shippingMode} · ${ref.toUpperCase()}` : `${p.shippingMode} · —`, ref };
 }
 
 export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
@@ -194,13 +188,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   };
 
   const handlePickShippingMode = (id: string) => {
-    // Map the picker id to either ShippingMode or SalesShippingLabel + canonical mode
-    const patch: Partial<typeof live> = {};
-    if (id === "Ocean FCL") { patch.shippingMode = "Ocean FCL"; patch.salesShippingLabel = "Ocean FCL"; }
-    else if (id === "Ocean LCL") { patch.shippingMode = "Ocean LCL"; patch.salesShippingLabel = "Ocean LCL"; }
-    else if (id === "DHL") { patch.shippingMode = "Air"; patch.salesShippingLabel = "DHL"; }
-    else if (id === "FedEx") { patch.shippingMode = "Air"; patch.salesShippingLabel = "FedEx"; }
-    else { patch.salesShippingLabel = id as SalesShippingLabel; patch.shippingMode = undefined; }
+    // New three-mode model: Air / Ocean / Local. Carrier (DHL/FedEx/Other)
+    // and container (FCL/LCL) live inside trackingRef as a PREFIX-number
+    // string and are edited from there.
+    const mode = (id === "Air" || id === "Ocean" || id === "Local") ? (id as ShippingMode) : undefined;
+    const patch: Partial<typeof live> = { shippingMode: mode, salesShippingLabel: undefined };
+    if (mode === "Local") patch.trackingRef = undefined;
     updateProject(live.id, patch);
     setEditor(null);
   };
@@ -329,12 +322,14 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <span className="italic text-muted-foreground">Not yet decided</span>
             )}
           </RowClickable>
-          <RowClickable onClick={() => setEditor({ kind: "trackingRef" })}>
-            <span className="text-[13px]">
-              <span className="text-muted-foreground/70 mr-2">Tracking ref:</span>
-              {live.trackingRef ? <span className="tabular">{live.trackingRef}</span> : <span className="text-muted-foreground/50">—</span>}
-            </span>
-          </RowClickable>
+          {live.shippingMode !== "Local" && (
+            <RowClickable onClick={() => setEditor({ kind: "trackingRef" })}>
+              <span className="text-[13px]">
+                <span className="text-muted-foreground/70 mr-2">Tracking ref:</span>
+                {live.trackingRef ? <span className="tabular">{live.trackingRef.toUpperCase()}</span> : <span className="text-muted-foreground/50">—</span>}
+              </span>
+            </RowClickable>
+          )}
           {live.shipmentId && (
             <button
               onClick={() => onOpenShipment(live.shipmentId!)}
@@ -480,15 +475,15 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setEditor(null)}
         title="Pick shipping mode"
         options={SHIPPING_MODE_OPTIONS}
-        selectedId={live.salesShippingLabel}
+        selectedId={live.shippingMode}
         onPick={handlePickShippingMode}
       />
       <TextEditor
         open={editor?.kind === "trackingRef"}
         onClose={() => setEditor(null)}
         title="Edit tracking ref"
-        value={live.trackingRef ?? (live.shippingMode === "Ocean FCL" ? "FCL-" : live.shippingMode === "Ocean LCL" ? "LCL-" : "")}
-        placeholder="FCL-125 / 4523891076"
+        value={live.trackingRef ?? ""}
+        placeholder="FCL-125 / DHL-373747"
         onSave={saveTrackingRef}
       />
       <TextEditor

@@ -21,7 +21,13 @@ export type StageId =
   // finance
   | "invoice_required" | "invoiced" | "paid";
 
-export type ShippingMode = "Air" | "Ocean LCL" | "Ocean FCL";
+// Three modes only. Carrier (DHL/FedEx/Other) and container (FCL/LCL) live
+// inside the trackingRef as a PREFIX-number string.
+export type ShippingMode = "Air" | "Ocean" | "Local";
+
+// Built-in known prefixes. "Other" lets users type an arbitrary carrier.
+export type OceanPrefix = "FCL" | "LCL";
+export type AirPrefix = "DHL" | "FEDEX" | string; // Other → free-text uppercased
 export type OrderType = "New" | "Re-order";
 export type Priority = "Standard" | "Rush";
 export type CardTag = "Cold" | "Lost" | "Other" | "Customs Pending";
@@ -82,6 +88,12 @@ export const STAGE_ACCENT: Record<StageId, string> = {
 };
 
 // ─────────── Suppliers ───────────
+// Legacy seed value: source data still says "Ocean FCL"/"Ocean LCL". The
+// runtime migration at the bottom of this file collapses these to the new
+// three-mode model ("Air" | "Ocean" | "Local"). Keeping the wider type here
+// avoids rewriting every seed entry.
+type LegacyShippingMode = ShippingMode | "Ocean FCL" | "Ocean LCL";
+
 export interface Supplier {
   id: string;
   name: string;
@@ -91,7 +103,9 @@ export interface Supplier {
   notes?: string;
 }
 
-export const SUPPLIERS: Supplier[] = [
+// Seed list uses the legacy mode strings for readability; migration below
+// collapses them to the new three-mode model.
+const SUPPLIERS_SEED: (Omit<Supplier, "defaultShippingMode"> & { defaultShippingMode: LegacyShippingMode })[] = [
   { id: "sup-freedom", name: "Freedom Gifts", country: "China", defaultShippingMode: "Ocean FCL", contact: "Lily Wang", notes: "Reliable for promo merch; 30-day lead time." },
   { id: "sup-admax", name: "Admax", country: "China", defaultShippingMode: "Air", contact: "Jason Liu", notes: "Best for banners, flags, large format." },
   { id: "sup-yiwu", name: "Yiwu Star", country: "China", defaultShippingMode: "Ocean LCL", contact: "Mei Chen", notes: "Variety merchandise; budget-friendly." },
@@ -116,6 +130,20 @@ export const SUPPLIERS: Supplier[] = [
   { id: "sup-dechno", name: "Dechno", country: "China", defaultShippingMode: "Air", contact: "—" },
   { id: "sup-chili", name: "Chili Concept", country: "China", defaultShippingMode: "Ocean LCL", contact: "—" },
 ];
+
+// Map legacy mode → new ShippingMode (Ocean FCL/LCL collapse to Ocean).
+function migrateMode(legacy: LegacyShippingMode | undefined): ShippingMode | undefined {
+  if (!legacy) return undefined;
+  if (legacy === "Ocean FCL" || legacy === "Ocean LCL" || legacy === "Ocean") return "Ocean";
+  if (legacy === "Air") return "Air";
+  if (legacy === "Local") return "Local";
+  return undefined;
+}
+
+export const SUPPLIERS: Supplier[] = SUPPLIERS_SEED.map((s) => ({
+  ...s,
+  defaultShippingMode: migrateMode(s.defaultShippingMode) ?? "Ocean",
+}));
 
 // ─────────── Project (the only entity now) ───────────
 export interface LineItem {
@@ -174,17 +202,20 @@ export interface Project {
   deletedFromStage?: StageId;
 }
 
+/** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
 export type AirCarrier = "DHL" | "FedEx";
 
 export interface Shipment {
   id: string;
   /**
-   * Code body only — for ocean: FCL-125 / LCL-088. For air: 10-digit tracking
-   * number (no carrier prefix). The carrier field carries the prefix.
+   * Canonical PREFIX-number string. Examples:
+   *   FCL-125, LCL-088, DHL-373747, FEDEX-9382749, ARAMEX-49283740
+   * Always uppercase prefix, single hyphen, then the user-typed number.
    */
   code: string;
   mode: ShippingMode;
-  carrier?: AirCarrier; // required when mode === "Air"
+  /** @deprecated read carrier off `code` (the part before the dash). */
+  carrier?: AirCarrier;
   supplierId: string;
   etd: Date;
   eta: Date;
@@ -192,38 +223,41 @@ export interface Shipment {
 }
 
 /**
- * Canonical shipping label used everywhere on cards & detail views.
- *  Ocean FCL · FCL-125
- *  Ocean LCL · LCL-088
- *  DHL · 4523891076
- *  FedEx · 7728340195
- *
- * If the code is missing, the right side becomes a dim placeholder
- * (e.g. "FCL-", "LCL-", "DHL · ", "FedEx · ", "— · —").
+ * Pull the prefix portion ("FCL", "DHL", "ARAMEX", …) off a tracking ref.
+ * Returns `undefined` if the ref isn't in PREFIX-number form.
+ */
+export function trackingPrefix(ref: string | undefined): string | undefined {
+  if (!ref) return undefined;
+  const i = ref.indexOf("-");
+  if (i <= 0) return undefined;
+  return ref.slice(0, i).toUpperCase();
+}
+
+/**
+ * Canonical bottom-row shipping label for a project card.
+ *  Air · DHL-373747
+ *  Air · FEDEX-9382749
+ *  Ocean · FCL-125
+ *  Ocean · LCL-088
+ *  Local
+ *  Air · —  (mode set, tracking blank)
+ *  Ocean · —
+ *  — · — (mode unassigned — the "Mixed" / unknown state)
  */
 export function formatShippingLabel(
   mode: ShippingMode | undefined,
-  code: string | undefined,
-  carrier?: AirCarrier,
+  trackingRef?: string,
 ): { text: string; placeholder: boolean } {
   if (!mode) return { text: "— · —", placeholder: true };
-  if (mode === "Ocean FCL") return code
-    ? { text: `Ocean FCL · ${code}`, placeholder: false }
-    : { text: "Ocean FCL · FCL-", placeholder: true };
-  if (mode === "Ocean LCL") return code
-    ? { text: `Ocean LCL · ${code}`, placeholder: false }
-    : { text: "Ocean LCL · LCL-", placeholder: true };
-  // Air
-  const c = carrier ?? "DHL";
-  return code
-    ? { text: `${c} · ${code}`, placeholder: false }
-    : { text: `${c} · `, placeholder: true };
+  if (mode === "Local") return { text: "Local", placeholder: false };
+  const ref = trackingRef?.trim();
+  if (!ref) return { text: `${mode} · —`, placeholder: true };
+  return { text: `${mode} · ${ref.toUpperCase()}`, placeholder: false };
 }
 
 export function formatShipmentTitle(s: Shipment): string {
-  if (s.mode === "Air") return `${s.carrier ?? "DHL"} · ${s.code}`;
-  if (s.mode === "Ocean FCL") return `Ocean FCL · ${s.code}`;
-  return `Ocean LCL · ${s.code}`;
+  // The shipment code already carries the prefix (FCL-125 / DHL-373747).
+  return s.code.toUpperCase();
 }
 
 // ─────────── Unified pipeline card ───────────
@@ -251,9 +285,13 @@ interface ProjOpts {
   detailSummary?: string;
   supplierId?: string;
   supplierLabel?: SupplierLabelHint;
-  shippingMode?: ShippingMode;
+  // Seed accepts the legacy mode strings ("Ocean FCL"/"Ocean LCL"); the
+  // factory below collapses them to the new three-mode model and stashes
+  // the prefix into `trackingRef` when applicable.
+  shippingMode?: LegacyShippingMode;
   salesShippingLabel?: SalesShippingLabel;
   shipmentId?: string;
+  trackingRef?: string;
   orderType?: OrderType;
   priority?: Priority;
   tag?: CardTag;
@@ -264,22 +302,33 @@ const p = (
   customer: string, pointPerson: string, projectName: string,
   date: Date, value: number, pipeline: PipelineId, stage: StageId,
   opts: ProjOpts = {},
-): Project => ({
-  id: `prj-${++_seq}`,
-  customer, pointPerson, projectName,
-  detailSummary: opts.detailSummary,
-  supplierId: opts.supplierId,
-  supplierLabel: opts.supplierLabel,
-  shippingMode: opts.shippingMode,
-  salesShippingLabel: opts.salesShippingLabel,
-  shipmentId: opts.shipmentId,
-  pipeline, stage,
-  deadline: fmt(date), deadlineDate: date,
-  value,
-  orderType: opts.orderType ?? "New",
-  priority: opts.priority ?? "Standard",
-  tag: opts.tag,
-});
+): Project => {
+  // Migration: Ocean FCL/LCL → mode "Ocean" + trackingRef prefix hint
+  // (only used when the project doesn't already carry a real shipment).
+  const newMode = migrateMode(opts.shippingMode);
+  let trackingRef = opts.trackingRef;
+  if (!trackingRef && !opts.shipmentId) {
+    if (opts.shippingMode === "Ocean FCL") trackingRef = undefined; // prefix-only hints surface in the editor
+    if (opts.shippingMode === "Ocean LCL") trackingRef = undefined;
+  }
+  return {
+    id: `prj-${++_seq}`,
+    customer, pointPerson, projectName,
+    detailSummary: opts.detailSummary,
+    supplierId: opts.supplierId,
+    supplierLabel: opts.supplierLabel,
+    shippingMode: newMode,
+    salesShippingLabel: opts.salesShippingLabel,
+    shipmentId: opts.shipmentId,
+    trackingRef,
+    pipeline, stage,
+    deadline: fmt(date), deadlineDate: date,
+    value,
+    orderType: opts.orderType ?? "New",
+    priority: opts.priority ?? "Standard",
+    tag: opts.tag,
+  };
+};
 
 // ─────────── Mock projects (flat) ───────────
 export const PROJECTS: Project[] = [
@@ -472,19 +521,30 @@ export const PROJECTS: Project[] = [
 ];
 
 // ─────────── Shipments ───────────
-// Air codes are bare 10-digit tracking numbers; the carrier lives in `carrier`.
-// Ocean codes are FCL-XXX / LCL-XXX (3 digits).
-export const SHIPMENTS: Shipment[] = [
-  { id: "ship-dhl2456",   code: "4523891076", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 28), eta: d(5, 3),  status: "In Transit" },
-  { id: "ship-dhl2457",   code: "4523918842", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 30), eta: d(5, 5),  status: "In Transit" },
-  { id: "ship-dhl2458",   code: "4524027193", mode: "Air",       carrier: "DHL",   supplierId: "sup-yiwu",     etd: d(5, 2),  eta: d(5, 7),  status: "Delayed" },
-  { id: "ship-fedex9912", code: "7728340195", mode: "Air",       carrier: "FedEx", supplierId: "sup-admax",    etd: d(5, 5),  eta: d(5, 9),  status: "In Transit" },
-  { id: "ship-fcl125",    code: "FCL-125",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 12), eta: d(5, 18), status: "In Transit" },
-  { id: "ship-fcl126",    code: "FCL-126",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 20), eta: d(5, 28), status: "In Transit" },
-  { id: "ship-lcl088",    code: "LCL-088",    mode: "Ocean LCL",                   supplierId: "sup-shenzhen", etd: d(4, 25), eta: d(6, 5),  status: "Customs" },
-  { id: "ship-fcl120",    code: "FCL-120",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(3, 15), eta: d(4, 18), status: "Delivered" },
-  { id: "ship-dhl2401",   code: "4521776304", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 5),  eta: d(4, 10), status: "Delivered" },
+// Codes are now PREFIX-number canonical strings (uppercase prefix, single
+// hyphen). Air shipments embed the carrier in the prefix (DHL-…, FEDEX-…);
+// ocean shipments use FCL-/LCL- prefixes. Old `Ocean FCL` / `Ocean LCL`
+// modes collapse to `Ocean` — the container type lives in the code prefix.
+type LegacyShipmentMode = ShippingMode | "Ocean FCL" | "Ocean LCL";
+interface ShipmentSeed extends Omit<Shipment, "mode" | "code"> {
+  mode: LegacyShipmentMode;
+  code: string;
+}
+const SHIPMENTS_SEED: ShipmentSeed[] = [
+  { id: "ship-dhl2456",   code: "DHL-4523891076",   mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 28), eta: d(5, 3),  status: "In Transit" },
+  { id: "ship-dhl2457",   code: "DHL-4523918842",   mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 30), eta: d(5, 5),  status: "In Transit" },
+  { id: "ship-dhl2458",   code: "DHL-4524027193",   mode: "Air",       carrier: "DHL",   supplierId: "sup-yiwu",     etd: d(5, 2),  eta: d(5, 7),  status: "Delayed" },
+  { id: "ship-fedex9912", code: "FEDEX-7728340195", mode: "Air",       carrier: "FedEx", supplierId: "sup-admax",    etd: d(5, 5),  eta: d(5, 9),  status: "In Transit" },
+  { id: "ship-fcl125",    code: "FCL-125",          mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 12), eta: d(5, 18), status: "In Transit" },
+  { id: "ship-fcl126",    code: "FCL-126",          mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 20), eta: d(5, 28), status: "In Transit" },
+  { id: "ship-lcl088",    code: "LCL-088",          mode: "Ocean LCL",                   supplierId: "sup-shenzhen", etd: d(4, 25), eta: d(6, 5),  status: "Customs" },
+  { id: "ship-fcl120",    code: "FCL-120",          mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(3, 15), eta: d(4, 18), status: "Delivered" },
+  { id: "ship-dhl2401",   code: "DHL-4521776304",   mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 5),  eta: d(4, 10), status: "Delivered" },
 ];
+export const SHIPMENTS: Shipment[] = SHIPMENTS_SEED.map((s) => ({
+  ...s,
+  mode: migrateMode(s.mode) ?? "Ocean",
+}));
 
 
 // ─────────── Reference numbers + line items (deterministic enrichment) ───────────
@@ -566,6 +626,41 @@ for (const proj of PROJECTS) {
   if (reachedStage(proj, "invoice_required")) {
     proj.invoiceNumber = `INV-${_invSeq++}`;
   }
+}
+
+// ─────────── Sales-label → new shipping model migration ───────────
+// Convert legacy `salesShippingLabel` strings into canonical { shippingMode,
+// trackingRef } pairs per the simplification spec:
+//   Ocean FCL  → mode "Ocean", tracking blank (prefix-only hint = FCL)
+//   Ocean LCL  → mode "Ocean", tracking blank (prefix-only hint = LCL)
+//   DHL/FedEx  → mode "Air",   tracking blank (prefix-only hint = DHL/FEDEX)
+//   Courier    → mode "Air",   tracking blank
+//   Mixed      → mode unset    (missing-data flag)
+//   Local      → mode "Local", no tracking
+for (const proj of PROJECTS) {
+  // 1. Inherit trackingRef from the assigned shipment when present.
+  if (proj.shipmentId && !proj.trackingRef) {
+    const sh = SHIPMENTS.find((s) => s.id === proj.shipmentId);
+    if (sh) proj.trackingRef = sh.code;
+  }
+  // 2. Collapse sales-label hints (we drop the field afterward).
+  const lbl = proj.salesShippingLabel;
+  if (lbl) {
+    if (lbl === "Ocean FCL" || lbl === "Ocean LCL") {
+      proj.shippingMode = proj.shippingMode ?? "Ocean";
+    } else if (lbl === "DHL" || lbl === "FedEx" || lbl === "Courier") {
+      proj.shippingMode = "Air";
+    } else if (lbl === "Mixed") {
+      proj.shippingMode = undefined;
+    } else if (lbl === "Local") {
+      proj.shippingMode = "Local";
+      proj.trackingRef = undefined;
+    }
+  }
+  // 3. Local always has no tracking.
+  if (proj.shippingMode === "Local") proj.trackingRef = undefined;
+  // 4. Drop the now-redundant sales label.
+  proj.salesShippingLabel = undefined;
 }
 
 // Intentional placeholders — exercise the empty-state UI ("PO-", "Q-", "—")

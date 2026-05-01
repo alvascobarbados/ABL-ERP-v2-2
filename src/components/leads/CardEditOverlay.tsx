@@ -172,10 +172,12 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   };
 
   const pickShipping = (mode: ShippingMode) => {
-    const prev = proj.shippingMode;
-    store.updateProject(proj.id, { shippingMode: mode });
+    const prev = { mode: proj.shippingMode, ref: proj.trackingRef };
+    const patch: Partial<typeof proj> = { shippingMode: mode };
+    if (mode === "Local") patch.trackingRef = undefined;
+    store.updateProject(proj.id, patch);
     setEditing(null);
-    undoToast(`Shipping → ${mode}`, () => store.updateProject(proj.id, { shippingMode: prev }));
+    undoToast(`Shipping → ${mode}`, () => store.updateProject(proj.id, { shippingMode: prev.mode, trackingRef: prev.ref }));
   };
 
   // ── Field row component ────────────────────────────────────────────────
@@ -322,11 +324,11 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         onTap={() => setEditing("shipping")}
       />
     );
-    const trackingField = (
+    const trackingField = proj.shippingMode === "Local" ? null : (
       <FieldRow
         fieldKey="tracking"
         label="Tracking ref"
-        value={proj.trackingRef || "—"}
+        value={proj.trackingRef ? proj.trackingRef.toUpperCase() : "—"}
         placeholder={!proj.trackingRef}
         onTap={() => setEditing("tracking")}
       />
@@ -398,8 +400,8 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   // ── Sub-editor sheets ──────────────────────────────────────────────────
   const shippingModeOptions: ListOption[] = [
     { id: "Air", label: "Air" },
-    { id: "Ocean LCL", label: "Ocean LCL" },
-    { id: "Ocean FCL", label: "Ocean FCL" },
+    { id: "Ocean", label: "Ocean" },
+    { id: "Local", label: "Local" },
   ];
 
   return (

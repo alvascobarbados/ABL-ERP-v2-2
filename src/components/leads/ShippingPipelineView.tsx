@@ -59,7 +59,7 @@ const Group = ({ title, shipments, subs, onOpenCard, onSwipeForward, onSwipeBack
   const tail = subs.filter((s) => {
     if (groupSubIds.has(s.id)) return false;
     if (title === "Air") return s.shippingMode === "Air";
-    return s.shippingMode === "Ocean FCL" || s.shippingMode === "Ocean LCL";
+    return s.shippingMode === "Ocean";
   });
   const allSubs = [...groupSubs, ...tail];
   const totalProjects = uniqueProjectLabels(allSubs).length;
@@ -223,7 +223,7 @@ export const ShippingPipelineView = ({
   });
   const oceanSubs = assignedSubs.filter((s) => {
     const sh = getShipment(s.shipmentId);
-    return sh ? sh.mode !== "Air" : s.shippingMode === "Ocean FCL" || s.shippingMode === "Ocean LCL";
+    return sh ? sh.mode !== "Air" : s.shippingMode === "Ocean";
   });
 
   return (
