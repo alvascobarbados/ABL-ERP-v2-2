@@ -7,7 +7,12 @@ export type SortField =
   | "created"
   | "customer"
   | "projectName"
-  | "quote";
+  | "quote"
+  | "supplier"
+  | "shippingMode"
+  | "salesRep"
+  | "updated"
+  | "daysToDeadline";
 
 export type SortDir = "asc" | "desc";
 
@@ -25,18 +30,27 @@ interface Option {
 
 export const SORT_OPTIONS: Option[] = [
   { field: "deadline", label: "Deadline", ascLabel: "Soonest first", descLabel: "Latest first" },
+  { field: "daysToDeadline", label: "Days until deadline", ascLabel: "Most urgent first", descLabel: "Least urgent first" },
   { field: "created", label: "Date created", ascLabel: "Oldest first", descLabel: "Newest first" },
+  { field: "updated", label: "Last updated", ascLabel: "Oldest first", descLabel: "Most recent first" },
   { field: "customer", label: "Customer name", ascLabel: "A → Z", descLabel: "Z → A" },
   { field: "projectName", label: "Project name", ascLabel: "A → Z", descLabel: "Z → A" },
+  { field: "supplier", label: "Supplier", ascLabel: "A → Z", descLabel: "Z → A" },
+  { field: "shippingMode", label: "Shipping mode", ascLabel: "Air → Ocean → Local", descLabel: "Local → Ocean → Air" },
+  { field: "salesRep", label: "Sales rep", ascLabel: "A → Z", descLabel: "Z → A" },
   { field: "quote", label: "Quote #", ascLabel: "Ascending", descLabel: "Descending" },
 ];
 
-// Default direction for each field when first chosen
 export const DEFAULT_DIR: Record<SortField, SortDir> = {
-  deadline: "asc",   // soonest first
-  created: "desc",   // newest first
+  deadline: "asc",
+  daysToDeadline: "asc",
+  created: "desc",
+  updated: "desc",
   customer: "asc",
   projectName: "asc",
+  supplier: "asc",
+  shippingMode: "asc",
+  salesRep: "asc",
   quote: "desc",
 };
 

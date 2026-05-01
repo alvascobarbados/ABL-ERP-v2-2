@@ -10,7 +10,7 @@ import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
-import { FilterState } from "@/components/leads/FilterBar";
+import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
 import { ShipmentView } from "@/components/leads/ShipmentView";
 import { SuppliersView } from "@/components/leads/SuppliersView";
@@ -32,114 +32,27 @@ import type { TabId } from "@/components/leads/PipelineTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
-
-// Picker reused from FilterBar (was internal). Re-create a tiny inline one here to keep customer/project/supplier pickers working.
-import { useEffect as useEffect2 } from "react";
-import { Check, Search as SearchIcon, X, Users, Briefcase, Factory } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-interface PickerSheetProps {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  icon: React.ReactNode;
-  options: { id: string; label: string }[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-}
-const PickerSheet = ({ open, onClose, title, icon, options, selectedId, onSelect }: PickerSheetProps) => {
-  const [query, setQuery] = useState("");
-  useEffect2(() => { if (!open) setQuery(""); }, [open]);
-  useEffect2(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
-  }, [open, onClose]);
-  if (!open) return null;
-  const filtered = options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()));
-  return (
-    <div className="fixed inset-0 z-[60] flex flex-col sm:items-center sm:justify-center sm:p-6">
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/40 animate-fade-in" />
-      <div className={cn(
-        "relative bg-card shadow-[var(--shadow-section)] border animate-fade-in",
-        "mt-auto rounded-t-3xl w-full max-h-[85vh] flex flex-col",
-        "sm:mt-0 sm:rounded-2xl sm:max-w-md sm:w-full sm:max-h-[70vh]",
-      )} style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}>
-        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
-          <span className="block w-10 h-1.5 rounded-full bg-muted-foreground/30" />
-        </div>
-        <div className="px-5 pt-3 pb-3 flex items-center justify-between border-b border-border/60 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="inline-flex items-center justify-center rounded-full shrink-0"
-              style={{ width: 32, height: 32, backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}>{icon}</span>
-            <h3 className="text-base font-semibold tracking-tight truncate" style={{ color: "hsl(var(--brand-navy))" }}>{title}</h3>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close"
-            className="inline-flex items-center justify-center rounded-full hover:bg-muted/60 text-muted-foreground"
-            style={{ width: 36, height: 36 }}><X className="h-4 w-4" /></button>
-        </div>
-        <div className="px-4 py-3 border-b border-border/60 shrink-0">
-          <div className="flex items-center gap-2 rounded-xl border bg-background/60 px-3"
-            style={{ borderColor: "hsl(var(--brand-navy) / 0.2)", minHeight: 48 }}>
-            <SearchIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search ${title.toLowerCase()}…`}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground py-2" />
-            {query && (
-              <button type="button" onClick={() => setQuery("")} aria-label="Clear search"
-                className="p-1 rounded-md hover:bg-muted/60 text-muted-foreground shrink-0"><X className="h-3.5 w-3.5" /></button>
-            )}
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto px-2 py-2">
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic px-4 py-6 text-center">No matches.</p>
-          ) : (
-            <ul className="flex flex-col">
-              {filtered.map((o) => {
-                const isSelected = selectedId === o.id;
-                return (
-                  <li key={o.id}>
-                    <button type="button" onClick={() => { onSelect(o.id); onClose(); }}
-                      className={cn(
-                        "w-full text-left rounded-xl flex items-center justify-between gap-3 px-3 transition-colors",
-                        isSelected ? "bg-muted/70 font-medium text-foreground" : "hover:bg-muted/40",
-                      )} style={{ minHeight: 52 }}>
-                      <span className="text-[15px] truncate">{o.label}</span>
-                      {isSelected && (
-                        <span className="inline-flex items-center justify-center rounded-full text-white shrink-0"
-                          style={{ width: 22, height: 22, backgroundColor: "hsl(var(--brand-orange))" }}>
-                          <Check className="h-3 w-3" />
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <div className="px-4 pt-3 pb-[max(env(safe-area-inset-bottom),16px)] border-t border-border/60 flex gap-2 shrink-0">
-          {selectedId ? (
-            <button type="button" onClick={() => { onSelect(null); onClose(); }}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border text-sm font-medium hover:bg-muted/40 transition-colors"
-              style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: 48 }}>
-              <X className="h-4 w-4" /> Clear filter
-            </button>
-          ) : (
-            <button type="button" onClick={onClose}
-              className="flex-1 inline-flex items-center justify-center rounded-xl border text-sm font-medium hover:bg-muted/40 transition-colors"
-              style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: 48 }}>
-              Cancel
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+// ─── Filter persistence per-tab ───
+const FILTER_STORAGE = "alvasco.filters.v2";
+const DEFAULT_FILTERS: Record<TabId, FilterState> = {
+  all: EMPTY_FILTER, sales: EMPTY_FILTER, operations: EMPTY_FILTER,
+  shipping: EMPTY_FILTER, finance: EMPTY_FILTER,
 };
+function loadFilters(): Record<TabId, FilterState> {
+  try {
+    const raw = localStorage.getItem(FILTER_STORAGE);
+    if (!raw) return DEFAULT_FILTERS;
+    const parsed = JSON.parse(raw);
+    // Merge each tab to ensure new fields default cleanly
+    const out = { ...DEFAULT_FILTERS } as Record<TabId, FilterState>;
+    for (const k of Object.keys(out) as TabId[]) {
+      out[k] = { ...EMPTY_FILTER, ...(parsed?.[k] ?? {}) };
+    }
+    return out;
+  } catch {
+    return DEFAULT_FILTERS;
+  }
+}
 
 // ─── Sort persistence per-tab ───
 const SORT_STORAGE = "alvasco.sort.v1";
@@ -147,8 +60,8 @@ const DEFAULT_SORTS: Record<TabId, SortState> = {
   all: { field: "deadline", dir: "asc" },
   sales: { field: "deadline", dir: "asc" },
   operations: { field: "deadline", dir: "asc" },
-  shipping: { field: "deadline", dir: "asc" }, // ETA approximated by deadline; shipping view groups by Air/Ocean anyway
-  finance: { field: "deadline", dir: "asc" },  // most overdue first
+  shipping: { field: "deadline", dir: "asc" },
+  finance: { field: "deadline", dir: "asc" },
 };
 
 function loadSorts(): Record<TabId, SortState> {
@@ -162,25 +75,65 @@ function loadSorts(): Record<TabId, SortState> {
   }
 }
 
-function compareCards(a: PipelineCard, b: PipelineCard, sort: SortState, idIndex: Map<string, number>): number {
+const TODAY = new Date(2026, 4, 8);
+const DAY_MS = 86400000;
+const MODE_ORDER: Record<string, number> = { Air: 0, Ocean: 1, Local: 2 };
+
+function daysToDeadline(d: Date) {
+  return Math.ceil((d.getTime() - TODAY.getTime()) / DAY_MS);
+}
+
+function compareCards(
+  a: PipelineCard, b: PipelineCard, sort: SortState,
+  idIndex: Map<string, number>, supplierName: (id?: string) => string,
+): number {
   const dir = sort.dir === "asc" ? 1 : -1;
+  const nullLast = (av: string, bv: string) => {
+    if (av && !bv) return -1;
+    if (!av && bv) return 1;
+    return 0;
+  };
   switch (sort.field) {
     case "deadline":
       return dir * (a.deadlineDate.getTime() - b.deadlineDate.getTime());
+    case "daysToDeadline":
+      return dir * (daysToDeadline(a.deadlineDate) - daysToDeadline(b.deadlineDate));
     case "created": {
-      const ai = idIndex.get(a.id) ?? 0;
-      const bi = idIndex.get(b.id) ?? 0;
-      return dir * (ai - bi);
+      const at = a.project.createdAt?.getTime() ?? 0;
+      const bt = b.project.createdAt?.getTime() ?? 0;
+      if (at !== bt) return dir * (at - bt);
+      return dir * ((idIndex.get(a.id) ?? 0) - (idIndex.get(b.id) ?? 0));
+    }
+    case "updated": {
+      const at = a.project.updatedAt?.getTime() ?? a.project.createdAt?.getTime() ?? 0;
+      const bt = b.project.updatedAt?.getTime() ?? b.project.createdAt?.getTime() ?? 0;
+      return dir * (at - bt);
     }
     case "customer":
       return dir * a.project.customer.localeCompare(b.project.customer);
     case "projectName":
       return dir * a.project.projectName.localeCompare(b.project.projectName);
+    case "supplier": {
+      const av = supplierName(a.project.supplierId) || a.project.supplierLabel || "";
+      const bv = supplierName(b.project.supplierId) || b.project.supplierLabel || "";
+      const n = nullLast(av, bv); if (n) return n;
+      return dir * av.localeCompare(bv);
+    }
+    case "shippingMode": {
+      const av = a.project.shippingMode ?? "";
+      const bv = b.project.shippingMode ?? "";
+      const n = nullLast(av, bv); if (n) return n;
+      return dir * ((MODE_ORDER[av] ?? 99) - (MODE_ORDER[bv] ?? 99));
+    }
+    case "salesRep": {
+      const av = a.project.pointPerson ?? "";
+      const bv = b.project.pointPerson ?? "";
+      return dir * av.localeCompare(bv);
+    }
     case "quote": {
       const av = a.project.quoteNumber ?? "";
       const bv = b.project.quoteNumber ?? "";
-      if (av && !bv) return -1;
-      if (!av && bv) return 1;
+      const n = nullLast(av, bv); if (n) return n;
       return dir * av.localeCompare(bv, undefined, { numeric: true });
     }
   }
@@ -196,6 +149,56 @@ function projectMatchesSearch(p: Project, q: string): boolean {
   return fields.some((f) => f.toLowerCase().includes(needle));
 }
 
+// "Has missing data" heuristic. Required fields depend on stage:
+// - All stages: needs supplier (real id) + shippingMode beyond Confirming.
+// - Quote stage onward: needs quoteNumber.
+// - Production onward: needs poNumber.
+// - Finance onward: needs invoiceNumber.
+// Earlier stages just check that required-by-then fields are present.
+function projectHasMissingData(p: Project): boolean {
+  const stageRank: Record<StageId, number> = {
+    proposal: 0, quote: 1, confirming: 2, archive: 0,
+    preproduction: 3, in_production: 4,
+    shipment_required: 5, shipment_assigned: 6,
+    invoice_required: 7, invoiced: 8, paid: 9,
+  };
+  const r = stageRank[p.stage] ?? 0;
+  if (r >= 1 && !p.quoteNumber) return true;            // Quote+
+  if (r >= 2 && !p.supplierId) return true;             // Confirming+
+  if (r >= 2 && !p.shippingMode) return true;
+  if (r >= 2 && !p.detailSummary?.trim()) return true;
+  if (r >= 3 && !p.poNumber) return true;               // Production+
+  if (r >= 7 && !p.invoiceNumber) return true;          // Finance+
+  return false;
+}
+
+function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
+  const p = c.project;
+  if (f.customers.length && !f.customers.includes(p.customer)) return false;
+  if (f.projectNames.length && !f.projectNames.includes(p.projectName)) return false;
+  if (f.supplierIds.length) {
+    const wantUnassigned = f.supplierIds.includes("__unassigned");
+    const matchSup = p.supplierId && f.supplierIds.includes(p.supplierId);
+    const isUnassigned = !p.supplierId;
+    if (!matchSup && !(wantUnassigned && isUnassigned)) return false;
+  }
+  if (f.shippingModes.length) {
+    const mode = p.shippingMode ?? "Unassigned";
+    if (!f.shippingModes.includes(mode as never)) return false;
+  }
+  if (f.salesReps.length && !f.salesReps.includes(p.pointPerson)) return false;
+  if (f.stages.length && !f.stages.includes(p.stage)) return false;
+  if (f.urgency) {
+    const days = daysToDeadline(c.deadlineDate);
+    if (f.urgency === "overdue" && days >= 0) return false;
+    if (f.urgency === "this_week" && (days < 0 || days > 7)) return false;
+    if (f.urgency === "this_month" && (days < 0 || days > 30)) return false;
+    if (f.urgency === "no_deadline") return false; // no projects lack deadlines in this dataset
+  }
+  if (f.missingOnly && !projectHasMissingData(p)) return false;
+  return true;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -205,7 +208,15 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("sales");
   const activePipeline: PipelineId = activeTab === "all" ? "sales" : activeTab;
   const isAll = activeTab === "all";
-  const [filters, setFilters] = useState<FilterState>({ customer: null, projectName: null, supplierId: null });
+
+  // Per-tab filter persistence
+  const [filtersByTab, setFiltersByTab] = useState<Record<TabId, FilterState>>(loadFilters);
+  const filters = filtersByTab[activeTab];
+  const setFilters = (next: FilterState) => {
+    const updated = { ...filtersByTab, [activeTab]: next };
+    setFiltersByTab(updated);
+    try { localStorage.setItem(FILTER_STORAGE, JSON.stringify(updated)); } catch { /* noop */ }
+  };
 
   const [selectedCard, setSelectedCard] = useState<PipelineCard | null>(null);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
@@ -217,7 +228,6 @@ const Index = () => {
   const [trashOpen, setTrashOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
-  const [filterPicker, setFilterPicker] = useState<null | "customer" | "project" | "supplier">(null);
 
   const [search, setSearch] = useState("");
   const [searchScopeAll, setSearchScopeAll] = useState(false);
@@ -241,8 +251,6 @@ const Index = () => {
   useEffect(() => { setSearch(""); setSearchScopeAll(false); }, [activeTab]);
 
   // Open project detail when arriving from /spreadsheet?project=prj-X.
-  // The Spreadsheet view links to "/?project=ID" — we intercept it once,
-  // jump to the right tab, open the detail panel, and strip the query param.
   useEffect(() => {
     const id = searchParams.get("project");
     if (!id) return;
@@ -251,19 +259,23 @@ const Index = () => {
       setActiveTab(proj.pipeline);
       setTimeout(() => { setSelectedCard(buildCard(proj)); setSelectedShipment(null); }, 0);
     }
-    // Clear the param so refreshing doesn't re-trigger.
     const next = new URLSearchParams(searchParams);
     next.delete("project");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Index for "date created" sort proxy = order in seed data
+  // Index for stable secondary ordering
   const idIndex = useMemo(() => {
     const m = new Map<string, number>();
     projects.forEach((p, i) => m.set(p.id, i));
     return m;
   }, [projects]);
+
+  const supplierName = useMemo(() => {
+    const map = new Map(SUPPLIERS.map((s) => [s.id, s.name]));
+    return (id?: string) => (id ? map.get(id) ?? "" : "");
+  }, []);
 
   // Build cards list (scope by tab)
   const baseCards = useMemo<PipelineCard[]>(() => {
@@ -280,28 +292,26 @@ const Index = () => {
 
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
+  const salesRepOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.pointPerson).filter(Boolean))).sort(), [projects]);
 
   // Apply filters + search, then sort
   const visible = useMemo(() => {
     const searchActive = !!search.trim();
     let pool = baseCards;
     if (searchActive && searchScopeAll && !isAll) {
-      // Searching globally from a single pipeline tab
       pool = projects.map(buildCard);
     }
     return pool
       .filter((c) => {
-        if (filters.customer && c.project.customer !== filters.customer) return false;
-        if (filters.projectName && c.project.projectName !== filters.projectName) return false;
-        if (filters.supplierId && c.project.supplierId !== filters.supplierId) return false;
+        if (!cardMatchesFilter(c, filters)) return false;
         if (searchActive && !projectMatchesSearch(c.project, search.trim())) return false;
         return true;
       })
-      .sort((a, b) => compareCards(a, b, sort, idIndex));
-  }, [baseCards, projects, filters, sort, idIndex, search, searchScopeAll, isAll]);
+      .sort((a, b) => compareCards(a, b, sort, idIndex, supplierName));
+  }, [baseCards, projects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
 
   const pipeline = PIPELINES.find((p) => p.id === activePipeline)!;
-  const hasActiveFilter = !!(filters.customer || filters.projectName || filters.supplierId);
+  const hasActiveFilter = filterCount(filters) > 0;
   const isSearching = !!search.trim();
 
   // ─── Move logic (preserved) ───
@@ -452,9 +462,7 @@ const Index = () => {
         {(() => {
           const shippingProjectsFiltered = projects.filter((p) => {
             if (p.pipeline !== "shipping") return false;
-            if (filters.supplierId && p.supplierId !== filters.supplierId) return false;
-            if (filters.customer && p.customer !== filters.customer) return false;
-            if (filters.projectName && p.projectName !== filters.projectName) return false;
+            if (!cardMatchesFilter(buildCard(p), filters)) return false;
             if (isSearching && !projectMatchesSearch(p, search.trim())) return false;
             return true;
           });
@@ -547,41 +555,13 @@ const Index = () => {
         customers={customerOptions}
         projectNames={projectNameOptions}
         suppliers={SUPPLIERS}
-        onOpenPicker={(kind) => setFilterPicker(kind)}
+        salesReps={salesRepOptions}
       />
       <SortSheet
         open={sortSheetOpen}
         onClose={() => setSortSheetOpen(false)}
         value={sort}
         onChange={setSort}
-      />
-
-      <PickerSheet
-        open={filterPicker === "customer"}
-        onClose={() => setFilterPicker(null)}
-        title="Filter by customer"
-        icon={<Users className="h-4 w-4" />}
-        options={customerOptions.map((c) => ({ id: c, label: c }))}
-        selectedId={filters.customer}
-        onSelect={(id) => setFilters({ ...filters, customer: id })}
-      />
-      <PickerSheet
-        open={filterPicker === "project"}
-        onClose={() => setFilterPicker(null)}
-        title="Filter by project"
-        icon={<Briefcase className="h-4 w-4" />}
-        options={projectNameOptions.map((n) => ({ id: n, label: n }))}
-        selectedId={filters.projectName}
-        onSelect={(id) => setFilters({ ...filters, projectName: id })}
-      />
-      <PickerSheet
-        open={filterPicker === "supplier"}
-        onClose={() => setFilterPicker(null)}
-        title="Filter by supplier"
-        icon={<Factory className="h-4 w-4" />}
-        options={SUPPLIERS.map((s) => ({ id: s.id, label: s.name }))}
-        selectedId={filters.supplierId}
-        onSelect={(id) => setFilters({ ...filters, supplierId: id })}
       />
 
       <ProjectDetail card={selectedCard} onClose={() => setSelectedCard(null)} onOpenShipment={openShipmentById} />

@@ -187,187 +187,23 @@ export const ProjectCard = ({
   const showResist = (dx > 12 && !canForward) || (dx < -12 && !canBack);
   const intensity = Math.min(1, Math.abs(dx) / COMMIT_THRESHOLD_PX);
 
-  // ─── Pipeline-specific content for the right block & bottom row ───
-  // Right block visibility: shown for non-sales pipelines AND for Sales whenever
-  // a supplier signal exists (real id, TBD, or Various). Proposal stays bare.
-  const salesSupplierKnown = !!card.supplier || !!proj.supplierLabel;
-  const showRightBlock = card.pipeline !== "sales" || salesSupplierKnown;
+  // ─── Unified card content (same shape on every pipeline / stage) ───
+  // Empty fields render as dim italic placeholders rather than disappearing.
   const supplierName = card.supplier?.name;
-  const supplierHint = proj.supplierLabel; // "TBD" | "Various" | undefined
-  const supplierIsHint = !supplierName && !!supplierHint;
-  // Sales hides PO line entirely when supplier is only TBD/Various (no PO without supplier)
-  const showPoLine = card.pipeline !== "sales" || !!card.supplier;
-  const poText = proj.poNumber;
+  const supplierHint = proj.supplierLabel; // "TBD" | "Various"
+  const supplierIsEmpty = !supplierName && !supplierHint;
+  const supplierDisplay = supplierName ?? supplierHint ?? "Unassigned";
 
-  // Shipping line (used on Production / Shipping / Finance bottom row)
+  const poText = proj.poNumber;
+  const qText = proj.quoteNumber;
+  const invText = proj.invoiceNumber;
+
   const ship = getShipment(proj.shipmentId);
   const shippingLabel = formatShippingLabel(
     proj.shippingMode,
     proj.trackingRef ?? ship?.code,
   );
-
   const u = getUrgency(card.deadlineDate);
-
-  // Build the bottom row by pipeline
-  let topRefLine: React.ReactNode = null;        // optional first row of bottom area
-  let bottomLeft: React.ReactNode = null;        // left of last row
-  let bottomRight: React.ReactNode = null;       // right of last row
-
-  if (card.pipeline === "sales") {
-    // Sales shipping label = the canonical mode (Air / Ocean / Local) when set.
-    // The legacy `salesShippingLabel` free-form string is kept as a fallback
-    // for archived data but new data uses `shippingMode` directly.
-    const salesShipText =
-      proj.shippingMode ??
-      proj.salesShippingLabel;
-    const showShipLine = !!salesShipText;
-    const showQLine =
-      card.stage !== "proposal" && card.stage !== "archive";
-
-    // Top reference line: Q-XXXX (or dim "Q-" placeholder)
-    if (showQLine) {
-      const placeholder = !proj.quoteNumber;
-      topRefLine = (
-        <span
-          className={cn(
-            "text-[12px] tabular leading-none",
-            placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
-          )}
-        >
-          {proj.quoteNumber ?? "Q-"}
-        </span>
-      );
-    }
-
-    // Bottom-left: shipping mode (or empty if not yet known)
-    bottomLeft = showShipLine ? (
-      <span className="text-[12px] tabular leading-none truncate text-muted-foreground/85">
-        {salesShipText}
-      </span>
-    ) : (
-      <span />
-    );
-
-    // Bottom-right: deadline + urgency
-    bottomRight = (
-      <span className="inline-flex items-center gap-2 leading-none shrink-0">
-        <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
-        <span className="text-muted-foreground/35">·</span>
-        <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
-          {u.label}
-        </span>
-      </span>
-    );
-
-    // If neither Q-line nor a ship line exists (Proposal), collapse to single
-    // bottom row by leaving topRefLine null — handled by the JSX below.
-  } else if (card.pipeline === "operations") {
-    // Top: Q-XXXX (full width)
-    // Bottom: shipping label · customer deadline + urgency
-    topRefLine = (
-      <span
-        className={cn(
-          "text-[12px] tabular leading-none",
-          !proj.quoteNumber ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
-        )}
-      >
-        {proj.quoteNumber ?? "Q-"}
-      </span>
-    );
-    bottomLeft = (
-      <span
-        className={cn(
-          "text-[12px] tabular leading-none truncate",
-          shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
-        )}
-      >
-        {shippingLabel.text}
-      </span>
-    );
-    bottomRight = (
-      <span className="inline-flex items-center gap-2 leading-none shrink-0">
-        <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
-        <span className="text-muted-foreground/35">·</span>
-        <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
-          {u.label}
-        </span>
-      </span>
-    );
-  } else if (card.pipeline === "shipping") {
-    // Top: Q-XXXX
-    // Bottom: shipping label · ETD → ETA (urgency on ETA)
-    topRefLine = (
-      <span
-        className={cn(
-          "text-[12px] tabular leading-none",
-          !proj.quoteNumber ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
-        )}
-      >
-        {proj.quoteNumber ?? "Q-"}
-      </span>
-    );
-    bottomLeft = (
-      <span
-        className={cn(
-          "text-[12px] tabular leading-none truncate",
-          shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
-        )}
-      >
-        {shippingLabel.text}
-      </span>
-    );
-    if (ship) {
-      const etaUrgency = getUrgency(ship.eta);
-      bottomRight = (
-        <span className="inline-flex items-center gap-1.5 leading-none shrink-0 tabular">
-          <span className="text-[12px] text-muted-foreground/75">{fmtDate(ship.etd)}</span>
-          <span className="text-muted-foreground/55">→</span>
-          <span className="text-[12px] font-semibold" style={{ color: urgencyHex(etaUrgency.tone) }}>
-            {fmtDate(ship.eta)}
-          </span>
-        </span>
-      );
-    } else {
-      bottomRight = (
-        <span className="text-[12px] text-muted-foreground/45 italic leading-none shrink-0">
-          ETD → ETA
-        </span>
-      );
-    }
-  } else if (card.pipeline === "finance") {
-    // Top: Q-XXXX · INV-XXXX
-    // Bottom: shipping label · invoice due + urgency
-    topRefLine = (
-      <span className="text-[12px] tabular leading-none inline-flex items-center gap-1.5">
-        <span className={cn(!proj.quoteNumber && "text-muted-foreground/45 italic", proj.quoteNumber && "text-muted-foreground/85")}>
-          {proj.quoteNumber ?? "Q-"}
-        </span>
-        <span className="text-muted-foreground/40">·</span>
-        <span className={cn(!proj.invoiceNumber && "text-muted-foreground/45 italic", proj.invoiceNumber && "text-muted-foreground/85")}>
-          {proj.invoiceNumber ?? "INV-"}
-        </span>
-      </span>
-    );
-    bottomLeft = (
-      <span
-        className={cn(
-          "text-[12px] tabular leading-none truncate",
-          shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
-        )}
-      >
-        {shippingLabel.text}
-      </span>
-    );
-    bottomRight = (
-      <span className="inline-flex items-center gap-2 leading-none shrink-0">
-        <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
-        <span className="text-muted-foreground/35">·</span>
-        <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
-          {u.label}
-        </span>
-      </span>
-    );
-  }
 
   // ── Action menu handlers ───────────────────────────────────────────────
   const handleEdit = () => {
@@ -524,9 +360,8 @@ export const ProjectCard = ({
           onClick={handleOpen}
           className="w-full text-left pl-5 pr-5 pt-5 pb-5"
         >
-            {/* ─── TOP: identity (left) + supplier+PO block (right) ─── */}
+            {/* ─── TOP: identity (left) + supplier+PO (right) ─── */}
             <div className="flex items-start gap-3">
-              {/* Identity block */}
               <div className="flex-1 min-w-0 pr-9">
                 <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight">
                   {proj.customer}
@@ -537,47 +372,46 @@ export const ProjectCard = ({
                 >
                   {proj.projectName}
                 </p>
-                {proj.detailSummary?.trim() && (
-                  <p className="text-[13px] text-muted-foreground/85 leading-snug mt-1">
-                    {proj.detailSummary}
-                  </p>
-                )}
+                <p
+                  className={cn(
+                    "text-[13px] leading-snug mt-1",
+                    proj.detailSummary?.trim()
+                      ? "text-muted-foreground/85"
+                      : "text-muted-foreground/40 italic",
+                  )}
+                >
+                  {proj.detailSummary?.trim() ? proj.detailSummary : "—"}
+                </p>
               </div>
 
-              {/* Right block — supplier + PO (Production / Shipping / Finance) */}
-              {showRightBlock && (
-                <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 flex flex-col items-end text-right">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Factory
-                      className="h-3.5 w-3.5 shrink-0"
-                      style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
-                    />
-                    <span
-                      className={cn(
-                        "text-[13px] truncate",
-                        supplierIsHint
-                          ? "italic font-normal text-muted-foreground/65"
-                          : "font-medium",
-                      )}
-                      style={
-                        supplierIsHint ? undefined : { color: "hsl(var(--brand-navy))" }
-                      }
-                    >
-                      {supplierName ?? supplierHint ?? "Unassigned"}
-                    </span>
+              {/* Right block — supplier + PO (always shown) */}
+              <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 flex flex-col items-end text-right">
+                <span className="inline-flex items-center gap-1.5">
+                  <Factory
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
+                  />
+                  <span
+                    className={cn(
+                      "text-[13px] truncate",
+                      supplierIsEmpty
+                        ? "italic font-normal text-muted-foreground/45"
+                        : supplierName ? "font-medium" : "italic font-normal text-muted-foreground/65",
+                    )}
+                    style={supplierName ? { color: "hsl(var(--brand-navy))" } : undefined}
+                  >
+                    {supplierDisplay}
                   </span>
-                  {showPoLine && (
-                    <span
-                      className={cn(
-                        "text-[12px] tabular leading-none mt-1",
-                        poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
-                      )}
-                    >
-                      {poText ?? "PO-"}
-                    </span>
+                </span>
+                <span
+                  className={cn(
+                    "text-[12px] tabular leading-none mt-1",
+                    poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
                   )}
-                </div>
-              )}
+                >
+                  {poText ?? "PO-"}
+                </span>
+              </div>
             </div>
 
             {/* ─── DIVIDER ─── */}
@@ -586,15 +420,43 @@ export const ProjectCard = ({
               style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)" }}
             />
 
-            {/* ─── BOTTOM AREA ─── */}
-            {topRefLine && (
-              <div className="flex items-center min-h-[16px] mb-1.5">
-                {topRefLine}
-              </div>
-            )}
+            {/* ─── BOTTOM: Q-, INV-, mode/tracking + deadline ─── */}
+            <div className="flex items-center min-h-[16px] mb-1">
+              <span
+                className={cn(
+                  "text-[12px] tabular leading-none",
+                  qText ? "text-muted-foreground/85" : "text-muted-foreground/45 italic",
+                )}
+              >
+                {qText ?? "Q-"}
+              </span>
+            </div>
+            <div className="flex items-center min-h-[16px] mb-1.5">
+              <span
+                className={cn(
+                  "text-[12px] tabular leading-none",
+                  invText ? "text-muted-foreground/85" : "text-muted-foreground/45 italic",
+                )}
+              >
+                {invText ?? "INV-"}
+              </span>
+            </div>
             <div className="flex items-center justify-between gap-3 min-h-[18px]">
-              {bottomLeft}
-              {bottomRight}
+              <span
+                className={cn(
+                  "text-[12px] tabular leading-none truncate",
+                  shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+                )}
+              >
+                {shippingLabel.text}
+              </span>
+              <span className="inline-flex items-center gap-2 leading-none shrink-0">
+                <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
+                <span className="text-muted-foreground/35">·</span>
+                <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
+                  {u.label}
+                </span>
+              </span>
             </div>
           </button>
 
