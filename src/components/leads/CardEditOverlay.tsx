@@ -40,6 +40,7 @@ const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month
 
 export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   const store = usePipelineStore();
+  const md = useMasterData();
   const proj = card.project;
   const ship = store.shipments.find((s) => s.id === proj.shipmentId);
   const accent = PIPELINE_ACCENT[card.pipeline].hex;
