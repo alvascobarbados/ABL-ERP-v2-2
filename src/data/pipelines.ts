@@ -103,7 +103,9 @@ export interface Supplier {
   notes?: string;
 }
 
-export const SUPPLIERS: Supplier[] = [
+// Seed list uses the legacy mode strings for readability; migration below
+// collapses them to the new three-mode model.
+const SUPPLIERS_SEED: (Omit<Supplier, "defaultShippingMode"> & { defaultShippingMode: LegacyShippingMode })[] = [
   { id: "sup-freedom", name: "Freedom Gifts", country: "China", defaultShippingMode: "Ocean FCL", contact: "Lily Wang", notes: "Reliable for promo merch; 30-day lead time." },
   { id: "sup-admax", name: "Admax", country: "China", defaultShippingMode: "Air", contact: "Jason Liu", notes: "Best for banners, flags, large format." },
   { id: "sup-yiwu", name: "Yiwu Star", country: "China", defaultShippingMode: "Ocean LCL", contact: "Mei Chen", notes: "Variety merchandise; budget-friendly." },
@@ -128,6 +130,20 @@ export const SUPPLIERS: Supplier[] = [
   { id: "sup-dechno", name: "Dechno", country: "China", defaultShippingMode: "Air", contact: "—" },
   { id: "sup-chili", name: "Chili Concept", country: "China", defaultShippingMode: "Ocean LCL", contact: "—" },
 ];
+
+// Map legacy mode → new ShippingMode (Ocean FCL/LCL collapse to Ocean).
+function migrateMode(legacy: LegacyShippingMode | undefined): ShippingMode | undefined {
+  if (!legacy) return undefined;
+  if (legacy === "Ocean FCL" || legacy === "Ocean LCL" || legacy === "Ocean") return "Ocean";
+  if (legacy === "Air") return "Air";
+  if (legacy === "Local") return "Local";
+  return undefined;
+}
+
+export const SUPPLIERS: Supplier[] = SUPPLIERS_SEED.map((s) => ({
+  ...s,
+  defaultShippingMode: migrateMode(s.defaultShippingMode) ?? "Ocean",
+}));
 
 // ─────────── Project (the only entity now) ───────────
 export interface LineItem {
