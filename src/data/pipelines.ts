@@ -21,7 +21,13 @@ export type StageId =
   // finance
   | "invoice_required" | "invoiced" | "paid";
 
-export type ShippingMode = "Air" | "Ocean LCL" | "Ocean FCL";
+// Three modes only. Carrier (DHL/FedEx/Other) and container (FCL/LCL) live
+// inside the trackingRef as a PREFIX-number string.
+export type ShippingMode = "Air" | "Ocean" | "Local";
+
+// Built-in known prefixes. "Other" lets users type an arbitrary carrier.
+export type OceanPrefix = "FCL" | "LCL";
+export type AirPrefix = "DHL" | "FEDEX" | string; // Other → free-text uppercased
 export type OrderType = "New" | "Re-order";
 export type Priority = "Standard" | "Rush";
 export type CardTag = "Cold" | "Lost" | "Other" | "Customs Pending";
