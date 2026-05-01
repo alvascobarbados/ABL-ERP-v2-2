@@ -142,7 +142,10 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     if (!Number.isNaN(n)) updateProject(live.id, { value: n });
     setEditor(null);
   };
-  const saveSalesRep = (v: string) => { updateProject(live.id, { pointPerson: v }); setEditor(null); };
+  const saveSalesRepInitials = (initials: string[]) => {
+    updateProject(live.id, { pointPerson: formatInitials(initials) });
+    setEditor(null);
+  };
   const saveConfirmedDate = (d: Date) => {
     // Stored as an auto note for now — the project model has no dedicated field.
     addNote(live.id, `Confirmed date set to ${fmtLong(d)}`, "Av");
@@ -155,8 +158,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { supplierId: id, supplierLabel: undefined });
     setEditor(null);
   };
-  const handlePickHint = (h: SupplierLabelHint) => {
-    updateProject(live.id, { supplierLabel: h, supplierId: undefined });
+  const handlePickSupplierMeta = (meta: string) => {
+    const hint = meta === "Unassigned" ? undefined : (meta as SupplierLabelHint);
+    updateProject(live.id, { supplierLabel: hint, supplierId: undefined });
     setEditor(null);
   };
   const handlePickShippingMode = (id: string) => {
