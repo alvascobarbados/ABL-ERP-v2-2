@@ -175,6 +175,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     pulseTimer.current = window.setTimeout(() => setPulsePipeline(null), 900);
   }, []);
 
+  // Bump `updatedAt` on every project mutation. Spreadsheet view sorts by this.
+  const touch = (p: Project): Project => ({ ...p, updatedAt: new Date() });
+
   const moveCard = useCallback<PipelineStoreCtx["moveCard"]>((cardId, target) => {
     const proj = projects.find((p) => p.id === cardId);
     if (!proj) return { ok: false };
@@ -199,13 +202,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       if (target.pipeline === "finance" && !p.invoiceNumber) {
         patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`; // 1040–1060
       }
-      return { ...p, ...patch };
+      return touch({ ...p, ...patch });
     }));
     return { ok: true };
   }, [projects]);
 
   const updateProject = useCallback((id: string, patch: Partial<Project>) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    setProjects((prev) => prev.map((p) => (p.id === id ? touch({ ...p, ...patch }) : p)));
   }, []);
 
   const renameProject = useCallback((currentName: string, newName: string) => {
