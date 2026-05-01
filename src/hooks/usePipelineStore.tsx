@@ -214,7 +214,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const renameProject = useCallback((currentName: string, newName: string) => {
     let count = 0;
     setProjects((prev) => prev.map((p) => {
-      if (p.projectName === currentName) { count += 1; return { ...p, projectName: newName }; }
+      if (p.projectName === currentName) { count += 1; return touch({ ...p, projectName: newName }); }
       return p;
     }));
     return { count };
@@ -222,11 +222,11 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const addNote = useCallback((projectId: string, text: string, author = "Av") => {
     const note: ProjectNote = { id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, ts: new Date(), author, text };
-    setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, notes: [...(p.notes ?? []), note] } : p));
+    setProjects((prev) => prev.map((p) => p.id === projectId ? touch({ ...p, notes: [...(p.notes ?? []), note] }) : p));
   }, []);
 
   const addLineItem = useCallback((projectId: string, item: LineItem) => {
-    setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, lineItems: [...(p.lineItems ?? []), item] } : p));
+    setProjects((prev) => prev.map((p) => p.id === projectId ? touch({ ...p, lineItems: [...(p.lineItems ?? []), item] }) : p));
   }, []);
 
   const updateLineItem = useCallback((projectId: string, index: number, item: LineItem) => {
@@ -235,7 +235,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       const items = [...(p.lineItems ?? [])];
       if (index < 0 || index >= items.length) return p;
       items[index] = item;
-      return { ...p, lineItems: items };
+      return touch({ ...p, lineItems: items });
     }));
   }, []);
 
@@ -245,7 +245,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       const items = [...(p.lineItems ?? [])];
       if (index < 0 || index >= items.length) return p;
       items.splice(index, 1);
-      return { ...p, lineItems: items };
+      return touch({ ...p, lineItems: items });
     }));
   }, []);
 
