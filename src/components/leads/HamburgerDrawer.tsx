@@ -85,6 +85,7 @@ export const HamburgerDrawer = ({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+          <MenuItem icon={Table2} label="Spreadsheet" onClick={() => { onClose(); onOpenSpreadsheet(); }} />
           <MenuItem icon={Factory} label="Suppliers" onClick={() => { onClose(); onOpenSuppliers(); }} />
           <MenuItem icon={Users} label="Customers" onClick={() => { onClose(); onOpenCustomers(); }} />
           <MenuItem icon={Ship} label="Shipments" onClick={() => { onClose(); onOpenShipments(); }} />
