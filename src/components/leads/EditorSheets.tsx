@@ -177,7 +177,7 @@ export const SupplierPicker = ({
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCountry, setNewCountry] = useState("China");
-  const [newMode, setNewMode] = useState<ShippingMode>("Ocean LCL");
+  const [newMode, setNewMode] = useState<ShippingMode>("Ocean");
   useEffect(() => { if (open) { setQ(""); setAdding(false); setNewName(""); } }, [open]);
 
   const filtered = useMemo(() => {
