@@ -521,19 +521,30 @@ export const PROJECTS: Project[] = [
 ];
 
 // ─────────── Shipments ───────────
-// Air codes are bare 10-digit tracking numbers; the carrier lives in `carrier`.
-// Ocean codes are FCL-XXX / LCL-XXX (3 digits).
-export const SHIPMENTS: Shipment[] = [
-  { id: "ship-dhl2456",   code: "4523891076", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 28), eta: d(5, 3),  status: "In Transit" },
-  { id: "ship-dhl2457",   code: "4523918842", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 30), eta: d(5, 5),  status: "In Transit" },
-  { id: "ship-dhl2458",   code: "4524027193", mode: "Air",       carrier: "DHL",   supplierId: "sup-yiwu",     etd: d(5, 2),  eta: d(5, 7),  status: "Delayed" },
-  { id: "ship-fedex9912", code: "7728340195", mode: "Air",       carrier: "FedEx", supplierId: "sup-admax",    etd: d(5, 5),  eta: d(5, 9),  status: "In Transit" },
-  { id: "ship-fcl125",    code: "FCL-125",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 12), eta: d(5, 18), status: "In Transit" },
-  { id: "ship-fcl126",    code: "FCL-126",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 20), eta: d(5, 28), status: "In Transit" },
-  { id: "ship-lcl088",    code: "LCL-088",    mode: "Ocean LCL",                   supplierId: "sup-shenzhen", etd: d(4, 25), eta: d(6, 5),  status: "Customs" },
-  { id: "ship-fcl120",    code: "FCL-120",    mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(3, 15), eta: d(4, 18), status: "Delivered" },
-  { id: "ship-dhl2401",   code: "4521776304", mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 5),  eta: d(4, 10), status: "Delivered" },
+// Codes are now PREFIX-number canonical strings (uppercase prefix, single
+// hyphen). Air shipments embed the carrier in the prefix (DHL-…, FEDEX-…);
+// ocean shipments use FCL-/LCL- prefixes. Old `Ocean FCL` / `Ocean LCL`
+// modes collapse to `Ocean` — the container type lives in the code prefix.
+type LegacyShipmentMode = ShippingMode | "Ocean FCL" | "Ocean LCL";
+interface ShipmentSeed extends Omit<Shipment, "mode" | "code"> {
+  mode: LegacyShipmentMode;
+  code: string;
+}
+const SHIPMENTS_SEED: ShipmentSeed[] = [
+  { id: "ship-dhl2456",   code: "DHL-4523891076",   mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 28), eta: d(5, 3),  status: "In Transit" },
+  { id: "ship-dhl2457",   code: "DHL-4523918842",   mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 30), eta: d(5, 5),  status: "In Transit" },
+  { id: "ship-dhl2458",   code: "DHL-4524027193",   mode: "Air",       carrier: "DHL",   supplierId: "sup-yiwu",     etd: d(5, 2),  eta: d(5, 7),  status: "Delayed" },
+  { id: "ship-fedex9912", code: "FEDEX-7728340195", mode: "Air",       carrier: "FedEx", supplierId: "sup-admax",    etd: d(5, 5),  eta: d(5, 9),  status: "In Transit" },
+  { id: "ship-fcl125",    code: "FCL-125",          mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 12), eta: d(5, 18), status: "In Transit" },
+  { id: "ship-fcl126",    code: "FCL-126",          mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(4, 20), eta: d(5, 28), status: "In Transit" },
+  { id: "ship-lcl088",    code: "LCL-088",          mode: "Ocean LCL",                   supplierId: "sup-shenzhen", etd: d(4, 25), eta: d(6, 5),  status: "Customs" },
+  { id: "ship-fcl120",    code: "FCL-120",          mode: "Ocean FCL",                   supplierId: "sup-freedom",  etd: d(3, 15), eta: d(4, 18), status: "Delivered" },
+  { id: "ship-dhl2401",   code: "DHL-4521776304",   mode: "Air",       carrier: "DHL",   supplierId: "sup-admax",    etd: d(4, 5),  eta: d(4, 10), status: "Delivered" },
 ];
+export const SHIPMENTS: Shipment[] = SHIPMENTS_SEED.map((s) => ({
+  ...s,
+  mode: migrateMode(s.mode) ?? "Ocean",
+}));
 
 
 // ─────────── Reference numbers + line items (deterministic enrichment) ───────────
