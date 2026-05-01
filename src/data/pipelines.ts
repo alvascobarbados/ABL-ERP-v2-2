@@ -88,6 +88,12 @@ export const STAGE_ACCENT: Record<StageId, string> = {
 };
 
 // ─────────── Suppliers ───────────
+// Legacy seed value: source data still says "Ocean FCL"/"Ocean LCL". The
+// runtime migration at the bottom of this file collapses these to the new
+// three-mode model ("Air" | "Ocean" | "Local"). Keeping the wider type here
+// avoids rewriting every seed entry.
+type LegacyShippingMode = ShippingMode | "Ocean FCL" | "Ocean LCL";
+
 export interface Supplier {
   id: string;
   name: string;
