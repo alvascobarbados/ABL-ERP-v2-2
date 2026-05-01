@@ -143,6 +143,7 @@ interface PipelineStoreCtx {
   isInvoiceNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
   assignToShipment: (projectId: string, shipmentId: string) => void;
   createShipment: (input: NewShipmentInput) => Shipment;
+  updateShipment: (id: string, patch: Partial<Shipment>) => void;
   markShipmentDelivered: (shipmentId: string) => { count: number };
   pulsePipeline: PipelineId | null;
   triggerPulse: (id: PipelineId) => void;
