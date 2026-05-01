@@ -51,23 +51,17 @@ type EditorKind =
   | null;
 
 const SHIPPING_MODE_OPTIONS: ListOption[] = [
-  { id: "Ocean FCL", label: "Ocean FCL" },
-  { id: "Ocean LCL", label: "Ocean LCL" },
-  { id: "DHL",       label: "DHL", sublabel: "Air courier" },
-  { id: "FedEx",     label: "FedEx", sublabel: "Air courier" },
-  { id: "Courier",   label: "Courier", sublabel: "Other" },
-  { id: "Mixed",     label: "Mixed" },
-  { id: "Local",     label: "Local" },
+  { id: "Air",   label: "Air" },
+  { id: "Ocean", label: "Ocean" },
+  { id: "Local", label: "Local" },
 ];
 
-// Map a sales-style label or shipping mode to canonical display
+// Canonical shipping display: "Air · DHL-373747" / "Ocean · FCL-125" / "Local"
 function shippingDisplay(p: { shippingMode?: ShippingMode; salesShippingLabel?: SalesShippingLabel; trackingRef?: string }) {
-  const label =
-    p.salesShippingLabel ??
-    (p.shippingMode === "Ocean FCL" ? "Ocean FCL"
-      : p.shippingMode === "Ocean LCL" ? "Ocean LCL"
-      : p.shippingMode === "Air" ? "DHL" : undefined);
-  return { label, ref: p.trackingRef };
+  if (!p.shippingMode) return { label: p.salesShippingLabel, ref: p.trackingRef };
+  if (p.shippingMode === "Local") return { label: "Local" as string, ref: undefined };
+  const ref = p.trackingRef?.trim();
+  return { label: ref ? `${p.shippingMode} · ${ref.toUpperCase()}` : `${p.shippingMode} · —`, ref };
 }
 
 export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
