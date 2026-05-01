@@ -330,8 +330,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         <Section label="Project info">
           <InfoRow label="Contact" value={live.contactPerson}
             onClick={() => setEditor({ kind: "contact" })} />
-          <InfoRow label="Sales rep" value={live.pointPerson}
-            onClick={() => setEditor({ kind: "salesRep" })} />
+          <SalesRepRow
+            initials={parseInitials(live.pointPerson)}
+            getTeam={md.getTeamByInitials}
+            onClick={() => setEditor({ kind: "salesRep" })}
+          />
           <InfoRow label="Amount"
             value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
             onClick={() => setEditor({ kind: "amount" })} />
