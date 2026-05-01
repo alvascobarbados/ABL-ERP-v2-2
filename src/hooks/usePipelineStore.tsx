@@ -254,7 +254,10 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     if (!orig) return null;
     const copy: Project = {
       ...orig,
-      id: `prj-dup-${Date.now()}`,
+      // New unique ID — the duplicate is a brand-new record, NOT a clone of
+      // the original ID. This is the integrity invariant the spreadsheet
+      // view depends on.
+      id: `prj-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       quoteNumber: undefined,
       poNumber: undefined,
       invoiceNumber: undefined,
@@ -263,6 +266,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       lineItems: undefined,
       pipeline: "sales",
       stage: "proposal",
+      createdAt: new Date(),
+      updatedAt: undefined,
     };
     setProjects((prev) => [copy, ...prev]);
     return copy;
