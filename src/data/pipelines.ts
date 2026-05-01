@@ -628,6 +628,41 @@ for (const proj of PROJECTS) {
   }
 }
 
+// ─────────── Sales-label → new shipping model migration ───────────
+// Convert legacy `salesShippingLabel` strings into canonical { shippingMode,
+// trackingRef } pairs per the simplification spec:
+//   Ocean FCL  → mode "Ocean", tracking blank (prefix-only hint = FCL)
+//   Ocean LCL  → mode "Ocean", tracking blank (prefix-only hint = LCL)
+//   DHL/FedEx  → mode "Air",   tracking blank (prefix-only hint = DHL/FEDEX)
+//   Courier    → mode "Air",   tracking blank
+//   Mixed      → mode unset    (missing-data flag)
+//   Local      → mode "Local", no tracking
+for (const proj of PROJECTS) {
+  // 1. Inherit trackingRef from the assigned shipment when present.
+  if (proj.shipmentId && !proj.trackingRef) {
+    const sh = SHIPMENTS.find((s) => s.id === proj.shipmentId);
+    if (sh) proj.trackingRef = sh.code;
+  }
+  // 2. Collapse sales-label hints (we drop the field afterward).
+  const lbl = proj.salesShippingLabel;
+  if (lbl) {
+    if (lbl === "Ocean FCL" || lbl === "Ocean LCL") {
+      proj.shippingMode = proj.shippingMode ?? "Ocean";
+    } else if (lbl === "DHL" || lbl === "FedEx" || lbl === "Courier") {
+      proj.shippingMode = "Air";
+    } else if (lbl === "Mixed") {
+      proj.shippingMode = undefined;
+    } else if (lbl === "Local") {
+      proj.shippingMode = "Local";
+      proj.trackingRef = undefined;
+    }
+  }
+  // 3. Local always has no tracking.
+  if (proj.shippingMode === "Local") proj.trackingRef = undefined;
+  // 4. Drop the now-redundant sales label.
+  proj.salesShippingLabel = undefined;
+}
+
 // Intentional placeholders — exercise the empty-state UI ("PO-", "Q-", "—")
 // so the team can see how unassigned references read across the app.
 function find(customer: string, projectName: string, detail?: string): Project | undefined {
