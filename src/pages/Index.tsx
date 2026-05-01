@@ -10,7 +10,7 @@ import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
-import { FilterState } from "@/components/leads/FilterBar";
+import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
 import { ShipmentView } from "@/components/leads/ShipmentView";
 import { SuppliersView } from "@/components/leads/SuppliersView";
@@ -33,10 +33,6 @@ import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
 
-// Picker reused from FilterBar (was internal). Re-create a tiny inline one here to keep customer/project/supplier pickers working.
-import { useEffect as useEffect2 } from "react";
-import { Check, Search as SearchIcon, X, Users, Briefcase, Factory } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface PickerSheetProps {
   open: boolean;
