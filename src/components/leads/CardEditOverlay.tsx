@@ -3,7 +3,7 @@ import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, ShippingMode, getShipment } from "@/data/pipelines";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
-import { TextEditor, DateEditor, ListPicker, SupplierPicker, ListOption } from "./EditorSheets";
+import { TextEditor, DateEditor, ListPicker, SupplierPicker, TrackingEditor, ListOption } from "./EditorSheets";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
@@ -475,14 +475,29 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         placeholder="INV-1050"
         onSave={(v) => commitText("invoice", v)}
       />
-      <TextEditor
-        open={editing === "tracking"}
-        onClose={() => setEditing(null)}
-        title="Tracking reference"
-        value={proj.trackingRef ?? ""}
-        placeholder="—"
-        onSave={(v) => commitText("tracking", v)}
-      />
+      {proj.shippingMode === "Air" || proj.shippingMode === "Ocean" ? (
+        <TrackingEditor
+          open={editing === "tracking"}
+          onClose={() => setEditing(null)}
+          shippingMode={proj.shippingMode}
+          value={proj.trackingRef}
+          onSave={(v) => {
+            const prev = proj.trackingRef;
+            store.updateProject(proj.id, { trackingRef: v });
+            setEditing(null);
+            undoToast(`Tracking → ${v ?? "—"}`, () => store.updateProject(proj.id, { trackingRef: prev }));
+          }}
+        />
+      ) : (
+        <TextEditor
+          open={editing === "tracking"}
+          onClose={() => setEditing(null)}
+          title="Tracking reference"
+          value={proj.trackingRef ?? ""}
+          placeholder="—"
+          onSave={(v) => commitText("tracking", v)}
+        />
+      )}
       <DateEditor
         open={editing === "deadline"}
         onClose={() => setEditing(null)}
