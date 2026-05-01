@@ -360,9 +360,8 @@ export const ProjectCard = ({
           onClick={handleOpen}
           className="w-full text-left pl-5 pr-5 pt-5 pb-5"
         >
-            {/* ─── TOP: identity (left) + supplier+PO block (right) ─── */}
+            {/* ─── TOP: identity (left) + supplier+PO (right) ─── */}
             <div className="flex items-start gap-3">
-              {/* Identity block */}
               <div className="flex-1 min-w-0 pr-9">
                 <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight">
                   {proj.customer}
@@ -373,47 +372,46 @@ export const ProjectCard = ({
                 >
                   {proj.projectName}
                 </p>
-                {proj.detailSummary?.trim() && (
-                  <p className="text-[13px] text-muted-foreground/85 leading-snug mt-1">
-                    {proj.detailSummary}
-                  </p>
-                )}
+                <p
+                  className={cn(
+                    "text-[13px] leading-snug mt-1",
+                    proj.detailSummary?.trim()
+                      ? "text-muted-foreground/85"
+                      : "text-muted-foreground/40 italic",
+                  )}
+                >
+                  {proj.detailSummary?.trim() ? proj.detailSummary : "—"}
+                </p>
               </div>
 
-              {/* Right block — supplier + PO (Production / Shipping / Finance) */}
-              {showRightBlock && (
-                <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 flex flex-col items-end text-right">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Factory
-                      className="h-3.5 w-3.5 shrink-0"
-                      style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
-                    />
-                    <span
-                      className={cn(
-                        "text-[13px] truncate",
-                        supplierIsHint
-                          ? "italic font-normal text-muted-foreground/65"
-                          : "font-medium",
-                      )}
-                      style={
-                        supplierIsHint ? undefined : { color: "hsl(var(--brand-navy))" }
-                      }
-                    >
-                      {supplierName ?? supplierHint ?? "Unassigned"}
-                    </span>
+              {/* Right block — supplier + PO (always shown) */}
+              <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 flex flex-col items-end text-right">
+                <span className="inline-flex items-center gap-1.5">
+                  <Factory
+                    className="h-3.5 w-3.5 shrink-0"
+                    style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
+                  />
+                  <span
+                    className={cn(
+                      "text-[13px] truncate",
+                      supplierIsEmpty
+                        ? "italic font-normal text-muted-foreground/45"
+                        : supplierName ? "font-medium" : "italic font-normal text-muted-foreground/65",
+                    )}
+                    style={supplierName ? { color: "hsl(var(--brand-navy))" } : undefined}
+                  >
+                    {supplierDisplay}
                   </span>
-                  {showPoLine && (
-                    <span
-                      className={cn(
-                        "text-[12px] tabular leading-none mt-1",
-                        poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
-                      )}
-                    >
-                      {poText ?? "PO-"}
-                    </span>
+                </span>
+                <span
+                  className={cn(
+                    "text-[12px] tabular leading-none mt-1",
+                    poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
                   )}
-                </div>
-              )}
+                >
+                  {poText ?? "PO-"}
+                </span>
+              </div>
             </div>
 
             {/* ─── DIVIDER ─── */}
@@ -422,15 +420,43 @@ export const ProjectCard = ({
               style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)" }}
             />
 
-            {/* ─── BOTTOM AREA ─── */}
-            {topRefLine && (
-              <div className="flex items-center min-h-[16px] mb-1.5">
-                {topRefLine}
-              </div>
-            )}
+            {/* ─── BOTTOM: Q-, INV-, mode/tracking + deadline ─── */}
+            <div className="flex items-center min-h-[16px] mb-1">
+              <span
+                className={cn(
+                  "text-[12px] tabular leading-none",
+                  qText ? "text-muted-foreground/85" : "text-muted-foreground/45 italic",
+                )}
+              >
+                {qText ?? "Q-"}
+              </span>
+            </div>
+            <div className="flex items-center min-h-[16px] mb-1.5">
+              <span
+                className={cn(
+                  "text-[12px] tabular leading-none",
+                  invText ? "text-muted-foreground/85" : "text-muted-foreground/45 italic",
+                )}
+              >
+                {invText ?? "INV-"}
+              </span>
+            </div>
             <div className="flex items-center justify-between gap-3 min-h-[18px]">
-              {bottomLeft}
-              {bottomRight}
+              <span
+                className={cn(
+                  "text-[12px] tabular leading-none truncate",
+                  shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+                )}
+              >
+                {shippingLabel.text}
+              </span>
+              <span className="inline-flex items-center gap-2 leading-none shrink-0">
+                <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
+                <span className="text-muted-foreground/35">·</span>
+                <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
+                  {u.label}
+                </span>
+              </span>
             </div>
           </button>
 
