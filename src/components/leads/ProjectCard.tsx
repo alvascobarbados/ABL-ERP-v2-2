@@ -483,8 +483,8 @@ export const ProjectCard = ({
 
               {showStageLabel && (
                 <span
-                  className="text-[11px] leading-none truncate flex-1 text-center"
-                  style={{ color: "hsl(var(--brand-navy) / 0.50)" }}
+                  className="text-[12.5px] leading-none truncate flex-1 text-center font-normal"
+                  style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
                   title={stageLabel}
                 >
                   {stageLabel}
