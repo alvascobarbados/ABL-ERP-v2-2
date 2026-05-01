@@ -203,8 +203,7 @@ export const ProjectCard = ({
   const ship = getShipment(proj.shipmentId);
   const shippingLabel = formatShippingLabel(
     proj.shippingMode,
-    ship?.code,
-    ship?.carrier,
+    proj.trackingRef ?? ship?.code,
   );
 
   const u = getUrgency(card.deadlineDate);
