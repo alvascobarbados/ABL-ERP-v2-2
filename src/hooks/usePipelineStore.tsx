@@ -143,6 +143,7 @@ interface PipelineStoreCtx {
   isInvoiceNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
   assignToShipment: (projectId: string, shipmentId: string) => void;
   createShipment: (input: NewShipmentInput) => Shipment;
+  updateShipment: (id: string, patch: Partial<Shipment>) => void;
   markShipmentDelivered: (shipmentId: string) => { count: number };
   pulsePipeline: PipelineId | null;
   triggerPulse: (id: PipelineId) => void;
@@ -175,6 +176,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     pulseTimer.current = window.setTimeout(() => setPulsePipeline(null), 900);
   }, []);
 
+  // Bump `updatedAt` on every project mutation. Spreadsheet view sorts by this.
+  const touch = (p: Project): Project => ({ ...p, updatedAt: new Date() });
+
   const moveCard = useCallback<PipelineStoreCtx["moveCard"]>((cardId, target) => {
     const proj = projects.find((p) => p.id === cardId);
     if (!proj) return { ok: false };
@@ -199,19 +203,19 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       if (target.pipeline === "finance" && !p.invoiceNumber) {
         patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`; // 1040–1060
       }
-      return { ...p, ...patch };
+      return touch({ ...p, ...patch });
     }));
     return { ok: true };
   }, [projects]);
 
   const updateProject = useCallback((id: string, patch: Partial<Project>) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    setProjects((prev) => prev.map((p) => (p.id === id ? touch({ ...p, ...patch }) : p)));
   }, []);
 
   const renameProject = useCallback((currentName: string, newName: string) => {
     let count = 0;
     setProjects((prev) => prev.map((p) => {
-      if (p.projectName === currentName) { count += 1; return { ...p, projectName: newName }; }
+      if (p.projectName === currentName) { count += 1; return touch({ ...p, projectName: newName }); }
       return p;
     }));
     return { count };
@@ -219,11 +223,11 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const addNote = useCallback((projectId: string, text: string, author = "Av") => {
     const note: ProjectNote = { id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, ts: new Date(), author, text };
-    setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, notes: [...(p.notes ?? []), note] } : p));
+    setProjects((prev) => prev.map((p) => p.id === projectId ? touch({ ...p, notes: [...(p.notes ?? []), note] }) : p));
   }, []);
 
   const addLineItem = useCallback((projectId: string, item: LineItem) => {
-    setProjects((prev) => prev.map((p) => p.id === projectId ? { ...p, lineItems: [...(p.lineItems ?? []), item] } : p));
+    setProjects((prev) => prev.map((p) => p.id === projectId ? touch({ ...p, lineItems: [...(p.lineItems ?? []), item] }) : p));
   }, []);
 
   const updateLineItem = useCallback((projectId: string, index: number, item: LineItem) => {
@@ -232,7 +236,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       const items = [...(p.lineItems ?? [])];
       if (index < 0 || index >= items.length) return p;
       items[index] = item;
-      return { ...p, lineItems: items };
+      return touch({ ...p, lineItems: items });
     }));
   }, []);
 
@@ -242,7 +246,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       const items = [...(p.lineItems ?? [])];
       if (index < 0 || index >= items.length) return p;
       items.splice(index, 1);
-      return { ...p, lineItems: items };
+      return touch({ ...p, lineItems: items });
     }));
   }, []);
 
@@ -251,7 +255,10 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     if (!orig) return null;
     const copy: Project = {
       ...orig,
-      id: `prj-dup-${Date.now()}`,
+      // New unique ID — the duplicate is a brand-new record, NOT a clone of
+      // the original ID. This is the integrity invariant the spreadsheet
+      // view depends on.
+      id: `prj-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       quoteNumber: undefined,
       poNumber: undefined,
       invoiceNumber: undefined,
@@ -260,6 +267,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       lineItems: undefined,
       pipeline: "sales",
       stage: "proposal",
+      createdAt: new Date(),
+      updatedAt: undefined,
     };
     setProjects((prev) => [copy, ...prev]);
     return copy;
@@ -343,7 +352,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const ship = shipments.find((s) => s.id === shipmentId);
     if (!ship) return;
     setProjects((prev) => prev.map((p) => p.id === projectId
-      ? { ...p, shipmentId, pipeline: "shipping", stage: "shipment_assigned", shippingMode: ship.mode }
+      ? touch({ ...p, shipmentId, pipeline: "shipping", stage: "shipment_assigned", shippingMode: ship.mode })
       : p));
   }, [shipments]);
 
@@ -362,6 +371,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     return newShip;
   }, []);
 
+  const updateShipment = useCallback((id: string, patch: Partial<Shipment>) => {
+    setShipments((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+    // Bump updatedAt on all projects assigned to this shipment so the
+    // Spreadsheet "Last Updated" column reflects the change.
+    setProjects((prev) => prev.map((p) => (p.shipmentId === id ? touch(p) : p)));
+  }, []);
+
   const markShipmentDelivered = useCallback((shipmentId: string) => {
     let count = 0;
     setProjects((prev) => prev.map((p) => {
@@ -369,7 +385,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         count += 1;
         const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required" };
         if (!p.invoiceNumber) patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
-        return { ...p, ...patch };
+        return touch({ ...p, ...patch });
       }
       return p;
     }));
@@ -392,9 +408,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     softDeleteProject, restoreProject, hardDeleteProject, deleteProject,
     addSupplier,
     isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
-    assignToShipment, createShipment, markShipmentDelivered,
+    assignToShipment, createShipment, updateShipment, markShipmentDelivered,
     pulsePipeline, triggerPulse,
-  }), [liveProjects, trashedProjects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+  }), [liveProjects, trashedProjects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, updateShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
 
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

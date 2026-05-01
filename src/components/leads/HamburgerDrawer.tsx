@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2 } from "lucide-react";
+import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onOpenSpreadsheet: () => void;
   onOpenSuppliers: () => void;
   onOpenCustomers: () => void;
   onOpenShipments: () => void;
@@ -44,7 +45,7 @@ const MenuItem = ({
 );
 
 export const HamburgerDrawer = ({
-  open, onClose, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, trashCount,
+  open, onClose, onOpenSpreadsheet, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, trashCount,
 }: Props) => {
   useEffect(() => {
     if (!open) return;
@@ -84,6 +85,7 @@ export const HamburgerDrawer = ({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+          <MenuItem icon={Table2} label="Spreadsheet" onClick={() => { onClose(); onOpenSpreadsheet(); }} />
           <MenuItem icon={Factory} label="Suppliers" onClick={() => { onClose(); onOpenSuppliers(); }} />
           <MenuItem icon={Users} label="Customers" onClick={() => { onClose(); onOpenCustomers(); }} />
           <MenuItem icon={Ship} label="Shipments" onClick={() => { onClose(); onOpenShipments(); }} />

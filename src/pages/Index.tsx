@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Menu } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   PIPELINES, PipelineId, PipelineCard, Shipment, StageId,
@@ -196,6 +197,8 @@ function projectMatchesSearch(p: Project, q: string): boolean {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const store = usePipelineStore();
   const { projects, shipments, moveCard, pulsePipeline, triggerPulse } = store;
 
@@ -236,6 +239,24 @@ const Index = () => {
 
   // Reset search when switching tabs
   useEffect(() => { setSearch(""); setSearchScopeAll(false); }, [activeTab]);
+
+  // Open project detail when arriving from /spreadsheet?project=prj-X.
+  // The Spreadsheet view links to "/?project=ID" — we intercept it once,
+  // jump to the right tab, open the detail panel, and strip the query param.
+  useEffect(() => {
+    const id = searchParams.get("project");
+    if (!id) return;
+    const proj = projects.find((p) => p.id === id);
+    if (proj) {
+      setActiveTab(proj.pipeline);
+      setTimeout(() => { setSelectedCard(buildCard(proj)); setSelectedShipment(null); }, 0);
+    }
+    // Clear the param so refreshing doesn't re-trigger.
+    const next = new URLSearchParams(searchParams);
+    next.delete("project");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Index for "date created" sort proxy = order in seed data
   const idIndex = useMemo(() => {
@@ -509,6 +530,7 @@ const Index = () => {
       <HamburgerDrawer
         open={hamburgerOpen}
         onClose={() => setHamburgerOpen(false)}
+        onOpenSpreadsheet={() => navigate("/spreadsheet")}
         onOpenSuppliers={() => setSuppliersOpen(true)}
         onOpenCustomers={() => setCustomersOpen(true)}
         onOpenShipments={() => setShipmentsListOpen(true)}
