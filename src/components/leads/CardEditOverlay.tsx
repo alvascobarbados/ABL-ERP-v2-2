@@ -398,8 +398,8 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   // ── Sub-editor sheets ──────────────────────────────────────────────────
   const shippingModeOptions: ListOption[] = [
     { id: "Air", label: "Air" },
-    { id: "Ocean LCL", label: "Ocean LCL" },
-    { id: "Ocean FCL", label: "Ocean FCL" },
+    { id: "Ocean", label: "Ocean" },
+    { id: "Local", label: "Local" },
   ];
 
   return (
