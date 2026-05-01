@@ -188,13 +188,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   };
 
   const handlePickShippingMode = (id: string) => {
-    // Map the picker id to either ShippingMode or SalesShippingLabel + canonical mode
-    const patch: Partial<typeof live> = {};
-    if (id === "Ocean FCL") { patch.shippingMode = "Ocean FCL"; patch.salesShippingLabel = "Ocean FCL"; }
-    else if (id === "Ocean LCL") { patch.shippingMode = "Ocean LCL"; patch.salesShippingLabel = "Ocean LCL"; }
-    else if (id === "DHL") { patch.shippingMode = "Air"; patch.salesShippingLabel = "DHL"; }
-    else if (id === "FedEx") { patch.shippingMode = "Air"; patch.salesShippingLabel = "FedEx"; }
-    else { patch.salesShippingLabel = id as SalesShippingLabel; patch.shippingMode = undefined; }
+    // New three-mode model: Air / Ocean / Local. Carrier (DHL/FedEx/Other)
+    // and container (FCL/LCL) live inside trackingRef as a PREFIX-number
+    // string and are edited from there.
+    const mode = (id === "Air" || id === "Ocean" || id === "Local") ? (id as ShippingMode) : undefined;
+    const patch: Partial<typeof live> = { shippingMode: mode, salesShippingLabel: undefined };
+    if (mode === "Local") patch.trackingRef = undefined;
     updateProject(live.id, patch);
     setEditor(null);
   };
