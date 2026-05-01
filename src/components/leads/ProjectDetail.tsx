@@ -86,22 +86,25 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   // Re-derive the live project from the store so edits reflect immediately.
   const live = useMemo(() => card ? projects.find((p) => p.id === card.id) ?? null : null, [card, projects]);
 
+  // Derive Confirmed/Completed timestamps from the auto stage-move notes.
+  // NOTE: these hooks must run on every render, so they sit above the early
+  // return guard below — otherwise React sees a different hook count when
+  // the card opens/closes and throws "Rendered more hooks than…".
+  const confirmedAt = useMemo(() => {
+    const n = live?.notes?.find((x) => x.auto && /→\s*Confirming/i.test(x.text));
+    return n?.ts;
+  }, [live?.notes]);
+  const completedAt = useMemo(() => {
+    if (!live || live.pipeline !== "finance" || live.stage !== "paid") return undefined;
+    const n = [...(live.notes ?? [])].reverse().find((x) => x.auto && /→\s*Paid/i.test(x.text));
+    return n?.ts ?? live.updatedAt;
+  }, [live?.notes, live?.pipeline, live?.stage, live?.updatedAt, live]);
+
   if (!card || !live) return null;
 
   const pipeline = PIPELINES.find((p) => p.id === live.pipeline)!;
   const accentHex = PIPELINE_ACCENT[live.pipeline].hex;
   const supplier = suppliers.find((s) => s.id === live.supplierId);
-
-  // Derive Confirmed/Completed timestamps from the auto stage-move notes.
-  const confirmedAt = useMemo(() => {
-    const n = live.notes?.find((x) => x.auto && /→\s*Confirming/i.test(x.text));
-    return n?.ts;
-  }, [live.notes]);
-  const completedAt = useMemo(() => {
-    if (live.pipeline !== "finance" || live.stage !== "paid") return undefined;
-    const n = [...(live.notes ?? [])].reverse().find((x) => x.auto && /→\s*Paid/i.test(x.text));
-    return n?.ts ?? live.updatedAt;
-  }, [live.notes, live.pipeline, live.stage, live.updatedAt]);
 
   // ─── Stage move (used by both action sheet and ⋮ menu) ───
   const openStagePicker = () => setStagePickerOpen(true);
