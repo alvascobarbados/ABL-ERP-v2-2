@@ -214,13 +214,12 @@ export const ProjectCard = ({
   let bottomRight: React.ReactNode = null;       // right of last row
 
   if (card.pipeline === "sales") {
-    // Sales shipping label is a free-form display string set in mock/data
-    // ("Ocean FCL" / "Ocean LCL" / "DHL" / "FedEx" / "Courier" / "Mixed").
-    // For Confirming-stage projects with a real shippingMode, fall back to the
-    // canonical mode string (no shipment code yet — that comes in Shipping).
+    // Sales shipping label = the canonical mode (Air / Ocean / Local) when set.
+    // The legacy `salesShippingLabel` free-form string is kept as a fallback
+    // for archived data but new data uses `shippingMode` directly.
     const salesShipText =
-      proj.salesShippingLabel ??
-      (proj.shippingMode === "Air" ? undefined : proj.shippingMode);
+      proj.shippingMode ??
+      proj.salesShippingLabel;
     const showShipLine = !!salesShipText;
     const showQLine =
       card.stage !== "proposal" && card.stage !== "archive";
