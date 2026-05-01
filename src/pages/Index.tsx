@@ -197,6 +197,8 @@ function projectMatchesSearch(p: Project, q: string): boolean {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const store = usePipelineStore();
   const { projects, shipments, moveCard, pulsePipeline, triggerPulse } = store;
 
@@ -510,6 +512,7 @@ const Index = () => {
       <HamburgerDrawer
         open={hamburgerOpen}
         onClose={() => setHamburgerOpen(false)}
+        onOpenSpreadsheet={() => navigate("/spreadsheet")}
         onOpenSuppliers={() => setSuppliersOpen(true)}
         onOpenCustomers={() => setCustomersOpen(true)}
         onOpenShipments={() => setShipmentsListOpen(true)}
