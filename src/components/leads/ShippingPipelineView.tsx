@@ -223,7 +223,7 @@ export const ShippingPipelineView = ({
   });
   const oceanSubs = assignedSubs.filter((s) => {
     const sh = getShipment(s.shipmentId);
-    return sh ? sh.mode !== "Air" : s.shippingMode === "Ocean FCL" || s.shippingMode === "Ocean LCL";
+    return sh ? sh.mode !== "Air" : s.shippingMode === "Ocean";
   });
 
   return (
