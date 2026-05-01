@@ -473,15 +473,15 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setEditor(null)}
         title="Pick shipping mode"
         options={SHIPPING_MODE_OPTIONS}
-        selectedId={live.salesShippingLabel}
+        selectedId={live.shippingMode}
         onPick={handlePickShippingMode}
       />
       <TextEditor
         open={editor?.kind === "trackingRef"}
         onClose={() => setEditor(null)}
         title="Edit tracking ref"
-        value={live.trackingRef ?? (live.shippingMode === "Ocean FCL" ? "FCL-" : live.shippingMode === "Ocean LCL" ? "LCL-" : "")}
-        placeholder="FCL-125 / 4523891076"
+        value={live.trackingRef ?? ""}
+        placeholder="FCL-125 / DHL-373747"
         onSave={saveTrackingRef}
       />
       <TextEditor
