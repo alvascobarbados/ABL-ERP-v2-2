@@ -172,10 +172,12 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   };
 
   const pickShipping = (mode: ShippingMode) => {
-    const prev = proj.shippingMode;
-    store.updateProject(proj.id, { shippingMode: mode });
+    const prev = { mode: proj.shippingMode, ref: proj.trackingRef };
+    const patch: Partial<typeof proj> = { shippingMode: mode };
+    if (mode === "Local") patch.trackingRef = undefined;
+    store.updateProject(proj.id, patch);
     setEditing(null);
-    undoToast(`Shipping → ${mode}`, () => store.updateProject(proj.id, { shippingMode: prev }));
+    undoToast(`Shipping → ${mode}`, () => store.updateProject(proj.id, { shippingMode: prev.mode, trackingRef: prev.ref }));
   };
 
   // ── Field row component ────────────────────────────────────────────────
