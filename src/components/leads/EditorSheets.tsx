@@ -211,9 +211,9 @@ export const SupplierPicker = ({
           <div>
             <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Default shipping</label>
             <select value={newMode} onChange={(e) => setNewMode(e.target.value as ShippingMode)} className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]" style={{ minHeight: 48 }}>
-              <option value="Ocean FCL">Ocean FCL</option>
-              <option value="Ocean LCL">Ocean LCL</option>
               <option value="Air">Air</option>
+              <option value="Ocean">Ocean</option>
+              <option value="Local">Local</option>
             </select>
           </div>
         </div>
