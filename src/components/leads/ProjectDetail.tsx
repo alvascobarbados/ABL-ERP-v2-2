@@ -49,7 +49,7 @@ type EditorKind =
   | { kind: "addNote" }
   | { kind: "addLineItem" }
   | { kind: "editLineItem"; index: number }
-  | { kind: "supplier" }       // (still reachable through edit mode; kept for completeness)
+  | { kind: "supplier" }
   | { kind: "shippingMode" }
   | null;
 
