@@ -462,9 +462,7 @@ const Index = () => {
         {(() => {
           const shippingProjectsFiltered = projects.filter((p) => {
             if (p.pipeline !== "shipping") return false;
-            if (filters.supplierId && p.supplierId !== filters.supplierId) return false;
-            if (filters.customer && p.customer !== filters.customer) return false;
-            if (filters.projectName && p.projectName !== filters.projectName) return false;
+            if (!cardMatchesFilter(buildCard(p), filters)) return false;
             if (isSearching && !projectMatchesSearch(p, search.trim())) return false;
             return true;
           });
@@ -557,41 +555,13 @@ const Index = () => {
         customers={customerOptions}
         projectNames={projectNameOptions}
         suppliers={SUPPLIERS}
-        onOpenPicker={(kind) => setFilterPicker(kind)}
+        salesReps={salesRepOptions}
       />
       <SortSheet
         open={sortSheetOpen}
         onClose={() => setSortSheetOpen(false)}
         value={sort}
         onChange={setSort}
-      />
-
-      <PickerSheet
-        open={filterPicker === "customer"}
-        onClose={() => setFilterPicker(null)}
-        title="Filter by customer"
-        icon={<Users className="h-4 w-4" />}
-        options={customerOptions.map((c) => ({ id: c, label: c }))}
-        selectedId={filters.customer}
-        onSelect={(id) => setFilters({ ...filters, customer: id })}
-      />
-      <PickerSheet
-        open={filterPicker === "project"}
-        onClose={() => setFilterPicker(null)}
-        title="Filter by project"
-        icon={<Briefcase className="h-4 w-4" />}
-        options={projectNameOptions.map((n) => ({ id: n, label: n }))}
-        selectedId={filters.projectName}
-        onSelect={(id) => setFilters({ ...filters, projectName: id })}
-      />
-      <PickerSheet
-        open={filterPicker === "supplier"}
-        onClose={() => setFilterPicker(null)}
-        title="Filter by supplier"
-        icon={<Factory className="h-4 w-4" />}
-        options={SUPPLIERS.map((s) => ({ id: s.id, label: s.name }))}
-        selectedId={filters.supplierId}
-        onSelect={(id) => setFilters({ ...filters, supplierId: id })}
       />
 
       <ProjectDetail card={selectedCard} onClose={() => setSelectedCard(null)} onOpenShipment={openShipmentById} />
