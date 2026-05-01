@@ -303,6 +303,13 @@ interface ProjOpts {
 }
 
 let _seq = 0;
+// Deterministic pseudo-random for reproducible seed timestamps. Using a simple
+// LCG seeded by _seq so re-runs (and snapshot tests) produce the same dates.
+function seededOffset(seed: number, min: number, max: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  const r = x - Math.floor(x);
+  return Math.floor(min + r * (max - min));
+}
 const p = (
   customer: string, pointPerson: string, projectName: string,
   date: Date, value: number, pipeline: PipelineId, stage: StageId,
@@ -316,8 +323,13 @@ const p = (
     if (opts.shippingMode === "Ocean FCL") trackingRef = undefined; // prefix-only hints surface in the editor
     if (opts.shippingMode === "Ocean LCL") trackingRef = undefined;
   }
+  const seq = ++_seq;
+  // Back-date createdAt 7–120 days before the deadline so the Spreadsheet
+  // view has meaningful chronological data out of the box.
+  const daysBack = seededOffset(seq, 7, 120);
+  const createdAt = new Date(date.getTime() - daysBack * 24 * 60 * 60 * 1000);
   return {
-    id: `prj-${++_seq}`,
+    id: `prj-${seq}`,
     customer, pointPerson, projectName,
     detailSummary: opts.detailSummary,
     supplierId: opts.supplierId,
@@ -332,6 +344,7 @@ const p = (
     orderType: opts.orderType ?? "New",
     priority: opts.priority ?? "Standard",
     tag: opts.tag,
+    createdAt,
   };
 };
 
