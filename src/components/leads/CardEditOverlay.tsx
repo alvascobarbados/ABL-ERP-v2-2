@@ -254,7 +254,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
 
   // ── Pipeline-specific field set ────────────────────────────────────────
   const renderFields = () => {
-    const supplier = store.suppliers.find((s) => s.id === proj.supplierId);
+    const supplier = md.getSupplierByAnyId(proj.supplierId);
     const supplierLabel: React.ReactNode = supplier?.name ?? proj.supplierLabel ?? "Unassigned";
     const supplierPlaceholder = !supplier && !proj.supplierLabel;
 
