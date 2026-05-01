@@ -10,8 +10,10 @@ import { toast } from "sonner";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
-  TextEditor, DateEditor, ListPicker, SupplierPicker, LineItemEditor, ListOption,
+  TextEditor, DateEditor, ListPicker, LineItemEditor, ListOption, BottomSheet,
 } from "./EditorSheets";
+import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
+import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StagePicker } from "./StagePicker";
