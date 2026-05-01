@@ -3,11 +3,13 @@ import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, ShippingMode } from "@/data/pipelines";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
-import { TextEditor, DateEditor, ListPicker, SupplierPicker, TrackingEditor, ListOption } from "./EditorSheets";
+import { TextEditor, DateEditor, ListPicker, TrackingEditor, ListOption } from "./EditorSheets";
+import { EntityPicker } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import { PIPELINE_ACCENT } from "@/lib/brand";
+import { useMasterData } from "@/hooks/useMasterData";
 
 // ─── Permission scaffolding (future: per-role) ──────────────────────────
 // Customer is ALWAYS locked. Other flags are placeholders for role wiring.
@@ -38,6 +40,7 @@ const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month
 
 export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   const store = usePipelineStore();
+  const md = useMasterData();
   const proj = card.project;
   const ship = store.shipments.find((s) => s.id === proj.shipmentId);
   const accent = PIPELINE_ACCENT[card.pipeline].hex;
@@ -159,17 +162,19 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       return;
     }
     const prev = proj.supplierId;
-    const sup = store.suppliers.find((s) => s.id === supplierId);
+    const sup = md.getSupplierByAnyId(supplierId);
     store.updateProject(proj.id, { supplierId, supplierLabel: undefined });
     setEditing(null);
     undoToast(`Supplier → ${sup?.name ?? supplierId}`, () => store.updateProject(proj.id, { supplierId: prev }));
   };
 
-  const pickSupplierHint = (h: "TBD" | "Various") => {
+  const pickSupplierMeta = (meta: string) => {
     const prev = { id: proj.supplierId, hint: proj.supplierLabel };
-    store.updateProject(proj.id, { supplierId: undefined, supplierLabel: h });
+    // Only TBD / Various are stored as labels; Unassigned clears both.
+    const hint = meta === "Unassigned" ? undefined : (meta as "TBD" | "Various");
+    store.updateProject(proj.id, { supplierId: undefined, supplierLabel: hint });
     setEditing(null);
-    undoToast(`Supplier → ${h}`, () =>
+    undoToast(`Supplier → ${hint ?? "Unassigned"}`, () =>
       store.updateProject(proj.id, { supplierId: prev.id, supplierLabel: prev.hint }));
   };
 
@@ -249,7 +254,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
 
   // ── Pipeline-specific field set ────────────────────────────────────────
   const renderFields = () => {
-    const supplier = store.suppliers.find((s) => s.id === proj.supplierId);
+    const supplier = md.getSupplierByAnyId(proj.supplierId);
     const supplierLabel: React.ReactNode = supplier?.name ?? proj.supplierLabel ?? "Unassigned";
     const supplierPlaceholder = !supplier && !proj.supplierLabel;
 
@@ -529,15 +534,14 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         selectedId={proj.shippingMode}
         onPick={(id) => pickShipping(id as ShippingMode)}
       />
-      <SupplierPicker
+      <EntityPicker
         open={editing === "supplier"}
         onClose={() => setEditing(null)}
-        suppliers={store.suppliers}
+        kind="supplier"
         selectedId={proj.supplierId}
-        selectedHint={proj.supplierLabel}
-        onPickSupplier={pickSupplier}
-        onPickHint={pickSupplierHint}
-        onAddSupplier={(input) => store.addSupplier(input)}
+        selectedMeta={proj.supplierLabel}
+        onPick={pickSupplier}
+        onPickMeta={pickSupplierMeta}
       />
 
       {/* Project name propagation confirmation */}
@@ -572,7 +576,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         onConfirm={() => {
           if (!supplierConfirm) return;
           const prev = { sup: proj.supplierId, po: proj.poNumber };
-          const sup = store.suppliers.find((s) => s.id === supplierConfirm.supplierId);
+          const sup = md.getSupplierByAnyId(supplierConfirm.supplierId);
           store.updateProject(proj.id, {
             supplierId: supplierConfirm.supplierId, supplierLabel: undefined, poNumber: undefined,
           });

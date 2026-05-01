@@ -10,8 +10,10 @@ import { toast } from "sonner";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
-  TextEditor, DateEditor, ListPicker, SupplierPicker, LineItemEditor, ListOption,
+  TextEditor, DateEditor, ListPicker, ListOption, BottomSheet,
 } from "./EditorSheets";
+import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
+import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StagePicker } from "./StagePicker";
@@ -47,7 +49,7 @@ type EditorKind =
   | { kind: "addNote" }
   | { kind: "addLineItem" }
   | { kind: "editLineItem"; index: number }
-  | { kind: "supplier" }       // (still reachable through edit mode; kept for completeness)
+  | { kind: "supplier" }
   | { kind: "shippingMode" }
   | null;
 
@@ -59,13 +61,14 @@ const SHIPPING_MODE_OPTIONS: ListOption[] = [
 
 export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const store = usePipelineStore();
+  const md = useMasterData();
   const editMode = useEditMode();
   const {
-    projects, suppliers,
+    projects,
     updateProject, addNote,
     addLineItem, updateLineItem, removeLineItem,
     duplicateProject, softDeleteProject, restoreProject,
-    addSupplier, moveCard,
+    moveCard,
     triggerPulse,
   } = store;
 
@@ -104,7 +107,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
   const pipeline = PIPELINES.find((p) => p.id === live.pipeline)!;
   const accentHex = PIPELINE_ACCENT[live.pipeline].hex;
-  const supplier = suppliers.find((s) => s.id === live.supplierId);
+  const supplier = md.getSupplierByAnyId(live.supplierId);
 
   // ─── Stage move (used by both action sheet and ⋮ menu) ───
   const openStagePicker = () => setStagePickerOpen(true);
@@ -139,7 +142,10 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     if (!Number.isNaN(n)) updateProject(live.id, { value: n });
     setEditor(null);
   };
-  const saveSalesRep = (v: string) => { updateProject(live.id, { pointPerson: v }); setEditor(null); };
+  const saveSalesRepInitials = (initials: string[]) => {
+    updateProject(live.id, { pointPerson: formatInitials(initials) });
+    setEditor(null);
+  };
   const saveConfirmedDate = (d: Date) => {
     // Stored as an auto note for now — the project model has no dedicated field.
     addNote(live.id, `Confirmed date set to ${fmtLong(d)}`, "Av");
@@ -152,8 +158,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { supplierId: id, supplierLabel: undefined });
     setEditor(null);
   };
-  const handlePickHint = (h: SupplierLabelHint) => {
-    updateProject(live.id, { supplierLabel: h, supplierId: undefined });
+  const handlePickSupplierMeta = (meta: string) => {
+    const hint = meta === "Unassigned" ? undefined : (meta as SupplierLabelHint);
+    updateProject(live.id, { supplierLabel: hint, supplierId: undefined });
     setEditor(null);
   };
   const handlePickShippingMode = (id: string) => {
@@ -323,8 +330,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         <Section label="Project info">
           <InfoRow label="Contact" value={live.contactPerson}
             onClick={() => setEditor({ kind: "contact" })} />
-          <InfoRow label="Sales rep" value={live.pointPerson}
-            onClick={() => setEditor({ kind: "salesRep" })} />
+          <SalesRepRow
+            initials={parseInitials(live.pointPerson)}
+            getTeam={md.getTeamByInitials}
+            onClick={() => setEditor({ kind: "salesRep" })}
+          />
           <InfoRow label="Amount"
             value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
             onClick={() => setEditor({ kind: "amount" })} />
@@ -371,13 +381,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         placeholder="Contact name"
         onSave={saveContact}
       />
-      <TextEditor
+      <TeamMultiPicker
         open={editor?.kind === "salesRep"}
         onClose={() => setEditor(null)}
-        title="Edit sales rep"
-        value={live.pointPerson ?? ""}
-        placeholder="Initials or name"
-        onSave={saveSalesRep}
+        selected={parseInitials(live.pointPerson)}
+        onConfirm={saveSalesRepInitials}
       />
       <TextEditor
         open={editor?.kind === "amount"}
@@ -403,7 +411,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         multiline
         onSave={submitNote}
       />
-      <LineItemEditor
+      <ProductLineItemEditor
         open={editor?.kind === "addLineItem"}
         onClose={() => setEditor(null)}
         title="Add line item"
@@ -411,7 +419,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         description=""
         onSave={(q, d) => { addLineItem(live.id, { qty: q, description: d }); setEditor(null); }}
       />
-      <LineItemEditor
+      <ProductLineItemEditor
         open={editor?.kind === "editLineItem"}
         onClose={() => setEditor(null)}
         title="Edit line item"
@@ -428,15 +436,14 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           setEditor(null);
         }}
       />
-      <SupplierPicker
+      <EntityPicker
         open={editor?.kind === "supplier"}
         onClose={() => setEditor(null)}
-        suppliers={suppliers}
+        kind="supplier"
         selectedId={live.supplierId}
-        selectedHint={live.supplierLabel}
-        onPickSupplier={handlePickSupplier}
-        onPickHint={handlePickHint}
-        onAddSupplier={addSupplier}
+        selectedMeta={live.supplierLabel}
+        onPick={handlePickSupplier}
+        onPickMeta={handlePickSupplierMeta}
       />
       <ListPicker
         open={editor?.kind === "shippingMode"}
@@ -703,3 +710,166 @@ const InfoRow = ({
     </button>
   );
 };
+
+// ─────────── Sales rep row (chips) ───────────
+const SalesRepRow = ({
+  initials, getTeam, onClick,
+}: {
+  initials: string[];
+  getTeam: (init: string) => { full_name: string } | undefined;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-muted/40 transition-colors"
+    style={{ minHeight: 40 }}
+  >
+    <span className="text-[11px] uppercase tracking-wider text-muted-foreground/80 w-28 shrink-0">
+      Sales rep
+    </span>
+    <span className="flex-1 min-w-0 flex flex-wrap justify-end gap-1.5">
+      {initials.length === 0 ? (
+        <span className="text-[14px] italic text-muted-foreground/50">—</span>
+      ) : (
+        initials.map((init) => {
+          const t = getTeam(init);
+          return (
+            <span
+              key={init}
+              title={t?.full_name ?? init}
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-semibold tracking-wide"
+              style={{
+                background: "hsl(var(--brand-navy) / 0.1)",
+                color: "hsl(var(--brand-navy))",
+              }}
+            >
+              {init}
+            </span>
+          );
+        })
+      )}
+    </span>
+    <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.35)" }} />
+  </button>
+);
+
+// ─────────── Line item editor (qty + product picker, with custom escape valve) ───────────
+interface ProductLineItemEditorProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  qty: number | "";
+  description: string;
+  onSave: (qty: number, description: string) => void;
+  onDelete?: () => void;
+}
+
+const ProductLineItemEditor = ({
+  open, onClose, title, qty, description, onSave, onDelete,
+}: ProductLineItemEditorProps) => {
+  const md = useMasterData();
+  const [q, setQ] = useState<string>(String(qty ?? ""));
+  const [d, setD] = useState(description);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [customMode, setCustomMode] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setQ(String(qty ?? ""));
+      setD(description);
+      setPickerOpen(false);
+      // If the existing description doesn't match a known product, treat as custom.
+      const isKnown = description && md.products.some((p) => p.name === description);
+      setCustomMode(!!description && !isKnown);
+    }
+  }, [open, qty, description, md.products]);
+
+  const qNum = Number(q);
+  const valid = qNum > 0 && d.trim().length > 0;
+
+  const isKnownProduct = !!d && md.products.some((p) => p.name === d);
+
+  return (
+    <>
+      <BottomSheet
+        open={open && !pickerOpen}
+        onClose={onClose}
+        title={title}
+        onSave={() => valid && onSave(qNum, d.trim())}
+        saveDisabled={!valid}
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Quantity</label>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value.replace(/[^\d]/g, ""))}
+              inputMode="numeric"
+              className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+              style={{ minHeight: 48 }}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Product</label>
+            {customMode ? (
+              <div className="space-y-1.5">
+                <input
+                  value={d}
+                  onChange={(e) => setD(e.target.value)}
+                  placeholder="Custom item description"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+                  style={{ minHeight: 48 }}
+                />
+                <button
+                  onClick={() => { setCustomMode(false); setD(""); setPickerOpen(true); }}
+                  className="text-[12px] font-medium hover:underline"
+                  style={{ color: "hsl(var(--brand-orange))" }}
+                >
+                  Pick from product list instead
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setPickerOpen(true)}
+                className="w-full flex items-center justify-between gap-2 rounded-xl border-2 bg-white px-3 py-2.5 text-left transition-all hover:bg-[hsl(41_50%_98%)]"
+                style={{
+                  borderColor: "hsl(var(--brand-navy) / 0.35)",
+                  minHeight: 48,
+                }}
+              >
+                <span className={cn("text-[15px] truncate", d ? "text-foreground font-medium" : "italic text-muted-foreground/60")}>
+                  {d || "Tap to pick a product…"}
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.4)" }} />
+              </button>
+            )}
+            {!customMode && d && !isKnownProduct && (
+              <div className="text-[11px] text-muted-foreground italic mt-1">Custom (not in product list)</div>
+            )}
+          </div>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="w-full mt-2 px-3.5 py-3 rounded-xl border text-sm font-medium hover:bg-muted/40 transition-colors"
+              style={{ borderColor: "hsl(var(--urgent) / 0.4)", color: "hsl(var(--urgent))", minHeight: 48 }}
+            >
+              Delete item
+            </button>
+          )}
+        </div>
+      </BottomSheet>
+      <EntityPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        kind="product"
+        selectedId={isKnownProduct ? d : null}
+        onPick={(name) => { setD(name); setCustomMode(false); setPickerOpen(false); }}
+        onPickMeta={(meta) => {
+          if (meta === "Custom") { setCustomMode(true); setD(""); setPickerOpen(false); }
+        }}
+      />
+    </>
+  );
+};
+
