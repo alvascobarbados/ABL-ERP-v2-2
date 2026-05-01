@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2, Table2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2, Table2, UserCircle2, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -47,6 +48,7 @@ const MenuItem = ({
 export const HamburgerDrawer = ({
   open, onClose, onOpenSpreadsheet, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, trashCount,
 }: Props) => {
+  const navigate = useNavigate();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -86,8 +88,15 @@ export const HamburgerDrawer = ({
 
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
           <MenuItem icon={Table2} label="Spreadsheet" onClick={() => { onClose(); onOpenSpreadsheet(); }} />
-          <MenuItem icon={Factory} label="Suppliers" onClick={() => { onClose(); onOpenSuppliers(); }} />
-          <MenuItem icon={Users} label="Customers" onClick={() => { onClose(); onOpenCustomers(); }} />
+
+          <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
+          <div className="px-5 pb-1 text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70 font-medium">Master data</div>
+          <MenuItem icon={Users}        label="Customers" onClick={() => { onClose(); navigate("/customers"); }} />
+          <MenuItem icon={Factory}      label="Suppliers" onClick={() => { onClose(); navigate("/suppliers"); }} />
+          <MenuItem icon={UserCircle2}  label="Team"      onClick={() => { onClose(); navigate("/team"); }} />
+          <MenuItem icon={Package}      label="Products"  onClick={() => { onClose(); navigate("/products"); }} />
+
+          <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
           <MenuItem icon={Ship} label="Shipments" onClick={() => { onClose(); onOpenShipments(); }} />
           <MenuItem icon={Trash2} label="Trash" badge={trashCount} onClick={() => { onClose(); onOpenTrash(); }} />
 
