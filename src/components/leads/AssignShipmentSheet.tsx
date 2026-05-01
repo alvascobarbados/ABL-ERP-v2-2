@@ -14,7 +14,7 @@ interface Props {
   onAssigned?: () => void;
 }
 
-const SHIPPING_MODES: ShippingMode[] = ["Air", "Ocean LCL", "Ocean FCL"];
+const SHIPPING_MODES: ShippingMode[] = ["Air", "Ocean", "Local"];
 
 export const AssignShipmentSheet = ({ open, onClose, intakeSubs, shipments }: Props) => {
   const { assignToShipment, createShipment } = usePipelineStore();
