@@ -194,6 +194,11 @@ export interface Project {
   invoiceNumber?: string;
   lineItems?: LineItem[];
   notes?: ProjectNote[];
+  // Audit timestamps. createdAt is set when the project first enters the system.
+  // updatedAt bumps on every mutation through the store (updateProject, addNote,
+  // line-item changes, stage moves). Spreadsheet view sorts/filters by these.
+  createdAt: Date;
+  updatedAt?: Date;
   // ── Trash (soft-delete) ──────────────────────────────────────────────
   // Set when the project is moved to Trash. Filtered out of every
   // pipeline view, search result, and count. Visible only in TrashView.
