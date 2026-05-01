@@ -26,7 +26,7 @@ export const ConfirmDialog = ({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-[1200] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={onCancel} />
       <div
         className="relative w-full max-w-md rounded-2xl bg-card shadow-[var(--shadow-section)] border p-5 sm:p-6 animate-fade-in"

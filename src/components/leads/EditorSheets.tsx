@@ -24,7 +24,7 @@ export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", 
   }, [open, onClose]);
   if (!open || typeof document === "undefined") return null;
   return createPortal((
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center sm:justify-center">
+    <div className="fixed inset-0 z-[1100] flex items-end sm:items-center sm:justify-center">
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div
         className="relative w-full sm:max-w-md bg-background rounded-t-3xl sm:rounded-2xl border-t sm:border shadow-2xl animate-slide-in-right"
