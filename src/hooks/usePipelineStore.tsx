@@ -351,7 +351,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const ship = shipments.find((s) => s.id === shipmentId);
     if (!ship) return;
     setProjects((prev) => prev.map((p) => p.id === projectId
-      ? { ...p, shipmentId, pipeline: "shipping", stage: "shipment_assigned", shippingMode: ship.mode }
+      ? touch({ ...p, shipmentId, pipeline: "shipping", stage: "shipment_assigned", shippingMode: ship.mode })
       : p));
   }, [shipments]);
 
@@ -370,6 +370,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     return newShip;
   }, []);
 
+  const updateShipment = useCallback((id: string, patch: Partial<Shipment>) => {
+    setShipments((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+    // Bump updatedAt on all projects assigned to this shipment so the
+    // Spreadsheet "Last Updated" column reflects the change.
+    setProjects((prev) => prev.map((p) => (p.shipmentId === id ? touch(p) : p)));
+  }, []);
+
   const markShipmentDelivered = useCallback((shipmentId: string) => {
     let count = 0;
     setProjects((prev) => prev.map((p) => {
@@ -377,7 +384,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         count += 1;
         const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required" };
         if (!p.invoiceNumber) patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
-        return { ...p, ...patch };
+        return touch({ ...p, ...patch });
       }
       return p;
     }));
