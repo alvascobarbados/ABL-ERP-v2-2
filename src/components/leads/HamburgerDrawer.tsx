@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2 } from "lucide-react";
+import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onOpenSpreadsheet: () => void;
   onOpenSuppliers: () => void;
   onOpenCustomers: () => void;
   onOpenShipments: () => void;
@@ -44,7 +45,7 @@ const MenuItem = ({
 );
 
 export const HamburgerDrawer = ({
-  open, onClose, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, trashCount,
+  open, onClose, onOpenSpreadsheet, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, trashCount,
 }: Props) => {
   useEffect(() => {
     if (!open) return;
