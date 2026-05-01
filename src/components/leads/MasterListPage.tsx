@@ -1,0 +1,434 @@
+/**
+ * Generic master-data list management page. Used by 4 routes:
+ *   /customers · /suppliers · /team · /products
+ *
+ * Layout (mobile-first, matches existing app shell):
+ *   ← Back · Title · count               + Add new
+ *   ────────────────────────────────────────────────
+ *   [search]
+ *   ────────────────────────────────────────────────
+ *   [Sortable column headers]
+ *   …rows… (tap row → entity detail/edit sheet)
+ *
+ * Merge feature is intentionally deferred to a follow-up pass per the
+ * locked scope ("Phase 1: pickers + list pages, Merge in pass 2").
+ */
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Plus, Search, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Sheet } from "@/components/leads/Sheet";
+import { useMasterData, EntityKind } from "@/hooks/useMasterData";
+import { InlineAdd } from "@/components/leads/EntityPicker";
+import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { BottomSheet } from "@/components/leads/EditorSheets";
+import type { ShippingMode } from "@/data/pipelines";
+
+interface Column { key: string; label: string; align?: "left" | "right" }
+interface Row { id: string; cells: (string | number)[]; usage: number; raw: any }
+
+interface Props { kind: EntityKind }
+
+const KIND_CONFIG: Record<EntityKind, { title: string; subtitle: string; eyebrow: string }> = {
+  customer: { title: "Customers", subtitle: "Master list", eyebrow: "Master data" },
+  supplier: { title: "Suppliers", subtitle: "Master list", eyebrow: "Master data" },
+  team:     { title: "Team",      subtitle: "Sales reps & internal owners", eyebrow: "Master data" },
+  product:  { title: "Products",  subtitle: "Line item catalogue (placeholder)", eyebrow: "Master data" },
+};
+
+export const MasterListPage = ({ kind }: Props) => {
+  const navigate = useNavigate();
+  const md = useMasterData();
+  const [q, setQ] = useState("");
+  const [sortKey, setSortKey] = useState<string>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; label: string; usage: number } | null>(null);
+
+  // ─── Build columns + rows per kind ─────────────────────────────────────
+  const { columns, rows } = useMemo<{ columns: Column[]; rows: Row[] }>(() => {
+    const term = q.trim().toLowerCase();
+    if (kind === "customer") {
+      const cols: Column[] = [
+        { key: "name", label: "Name" },
+        { key: "industry", label: "Industry" },
+        { key: "usage", label: "Used in", align: "right" },
+      ];
+      const r: Row[] = md.customers
+        .filter((c) => !term || c.name.toLowerCase().includes(term) || (c.industry ?? "").toLowerCase().includes(term))
+        .map((c) => ({
+          id: c.id, raw: c,
+          usage: md.customerUsage(c.name),
+          cells: [c.name, c.industry ?? "—", md.customerUsage(c.name)],
+        }));
+      return { columns: cols, rows: r };
+    }
+    if (kind === "supplier") {
+      const cols: Column[] = [
+        { key: "name", label: "Name" },
+        { key: "country", label: "Country" },
+        { key: "default_shipping_mode", label: "Default mode" },
+        { key: "usage", label: "Used in", align: "right" },
+      ];
+      const r: Row[] = md.suppliers
+        .filter((s) => !term || s.name.toLowerCase().includes(term) || (s.country ?? "").toLowerCase().includes(term))
+        .map((s) => ({
+          id: s.id, raw: s,
+          usage: md.supplierUsage(s.id, s.legacy_id),
+          cells: [s.name, s.country ?? "—", s.default_shipping_mode ?? "—", md.supplierUsage(s.id, s.legacy_id)],
+        }));
+      return { columns: cols, rows: r };
+    }
+    if (kind === "team") {
+      const cols: Column[] = [
+        { key: "initials", label: "Initials" },
+        { key: "full_name", label: "Full name" },
+        { key: "role", label: "Role" },
+        { key: "usage", label: "Used in", align: "right" },
+      ];
+      const r: Row[] = md.teamMembers
+        .filter((t) => !term || t.initials.toLowerCase().includes(term) || t.full_name.toLowerCase().includes(term))
+        .map((t) => ({
+          id: t.id, raw: t,
+          usage: md.teamUsage(t.initials),
+          cells: [t.initials, t.full_name, t.role ?? "—", md.teamUsage(t.initials)],
+        }));
+      return { columns: cols, rows: r };
+    }
+    // product
+    const cols: Column[] = [
+      { key: "name", label: "Name" },
+      { key: "default_unit", label: "Unit" },
+      { key: "usage", label: "Used in", align: "right" },
+    ];
+    const r: Row[] = md.products
+      .filter((p) => !term || p.name.toLowerCase().includes(term))
+      .map((p) => ({
+        id: p.id, raw: p,
+        usage: md.productUsage(p.name),
+        cells: [p.name, p.default_unit ?? "—", md.productUsage(p.name)],
+      }));
+    return { columns: cols, rows: r };
+  }, [kind, q, md]);
+
+  const sorted = useMemo(() => {
+    const colIdx = columns.findIndex((c) => c.key === sortKey);
+    if (colIdx < 0) return rows;
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = a.cells[colIdx]; const bv = b.cells[colIdx];
+      if (typeof av === "number" && typeof bv === "number") return dir * (av - bv);
+      return dir * String(av).localeCompare(String(bv));
+    });
+  }, [rows, columns, sortKey, sortDir]);
+
+  const onSortClick = (key: string) => {
+    if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const cfg = KIND_CONFIG[kind];
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    if (confirmDelete.usage > 0) {
+      toast.error(`Cannot delete — used in ${confirmDelete.usage} project${confirmDelete.usage === 1 ? "" : "s"}.`);
+      setConfirmDelete(null);
+      return;
+    }
+    try {
+      if (kind === "customer") await md.deleteCustomer(confirmDelete.id);
+      else if (kind === "supplier") await md.deleteSupplier(confirmDelete.id);
+      else if (kind === "team") await md.deleteTeamMember(confirmDelete.id);
+      else await md.deleteProduct(confirmDelete.id);
+      toast.success(`${confirmDelete.label} deleted`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Delete failed");
+    }
+    setConfirmDelete(null);
+  };
+
+  const editingRow = editingId ? rows.find((r) => r.id === editingId) : null;
+
+  return (
+    <div className="min-h-dvh" style={{ backgroundColor: "hsl(var(--background))" }}>
+      {/* Top bar */}
+      <header
+        className="sticky top-0 z-20 backdrop-blur-md border-b"
+        style={{ backgroundColor: "hsl(var(--background) / 0.92)", borderColor: "hsl(var(--brand-navy) / 0.12)" }}
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),12px)] pb-3 flex items-center gap-3">
+          <button
+            onClick={() => navigate("/")}
+            aria-label="Back"
+            className="p-2 -ml-2 rounded-full hover:bg-muted/50"
+          >
+            <ArrowLeft className="h-5 w-5" style={{ color: "hsl(var(--brand-navy))" }} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">{cfg.eyebrow}</div>
+            <h1
+              className="text-[22px] leading-tight font-light tracking-tight truncate"
+              style={{ color: "hsl(var(--brand-navy))", fontWeight: 300 }}
+            >
+              {cfg.title} <span className="text-muted-foreground font-light">· {rows.length}</span>
+            </h1>
+          </div>
+          <button
+            onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold transition-colors"
+            style={{ background: "hsl(var(--brand-orange))", color: "white", minHeight: 40 }}
+          >
+            <Plus className="h-4 w-4" /> Add
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
+        {/* Search */}
+        <div className="relative my-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={`Search ${cfg.title.toLowerCase()}…`}
+            className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+            style={{ minHeight: 48 }}
+          />
+        </div>
+
+        {/* Header row */}
+        <div
+          className="grid gap-3 px-3 py-2 text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground"
+          style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
+        >
+          {columns.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => onSortClick(c.key)}
+              className={cn(
+                "inline-flex items-center gap-1 hover:text-foreground transition-colors",
+                c.align === "right" && "justify-end",
+              )}
+            >
+              {c.label}
+              {sortKey === c.key && (
+                sortDir === "asc"
+                  ? <ChevronUp className="h-3 w-3" />
+                  : <ChevronDown className="h-3 w-3" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Rows */}
+        <ul className="space-y-1.5">
+          {sorted.map((r) => (
+            <li key={r.id}>
+              <button
+                onClick={() => setEditingId(r.id)}
+                className="w-full grid gap-3 px-3 py-3 text-left rounded-xl border border-border/60 bg-card hover:bg-muted/40 transition-colors"
+                style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`, minHeight: 56 }}
+              >
+                {r.cells.map((cell, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "text-[14px] truncate",
+                      i === 0 ? "font-medium text-foreground" : "text-muted-foreground",
+                      columns[i].align === "right" && "text-right tabular",
+                    )}
+                  >
+                    {columns[i].key === "usage" ? `${cell} project${cell === 1 ? "" : "s"}` : cell}
+                  </span>
+                ))}
+              </button>
+            </li>
+          ))}
+          {sorted.length === 0 && (
+            <li className="text-sm text-muted-foreground italic px-3 py-12 text-center">
+              {q ? "No matches." : `No ${cfg.title.toLowerCase()} yet.`}
+            </li>
+          )}
+        </ul>
+      </main>
+
+      {/* Add new */}
+      <InlineAdd
+        open={adding}
+        kind={kind}
+        onClose={() => setAdding(false)}
+        onCreated={() => setAdding(false)}
+      />
+
+      {/* Edit / detail sheet */}
+      {editingRow && (
+        <EditEntitySheet
+          kind={kind}
+          row={editingRow}
+          onClose={() => setEditingId(null)}
+          onDelete={() => {
+            const label = editingRow.cells[0] as string;
+            setConfirmDelete({ id: editingRow.id, label, usage: editingRow.usage });
+            setEditingId(null);
+          }}
+        />
+      )}
+
+      {/* Confirm delete */}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+        title={confirmDelete ? `Delete ${confirmDelete.label}?` : ""}
+        description={
+          confirmDelete && confirmDelete.usage > 0
+            ? `Used in ${confirmDelete.usage} project${confirmDelete.usage === 1 ? "" : "s"}. Reassign or merge those projects first.`
+            : "This cannot be undone."
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDelete}
+      />
+    </div>
+  );
+};
+
+// ─── Edit sheet (inline form bound to selected entity) ───────────────────
+interface EditProps {
+  kind: EntityKind;
+  row: Row;
+  onClose: () => void;
+  onDelete: () => void;
+}
+const EditEntitySheet = ({ kind, row, onClose, onDelete }: EditProps) => {
+  const md = useMasterData();
+  const ent = row.raw;
+  const [form, setForm] = useState<Record<string, any>>(() => ({ ...ent }));
+  const [saving, setSaving] = useState(false);
+
+  const labelCls = "block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5";
+  const inputCls = "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]";
+  const setField = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      if (kind === "customer") {
+        await md.updateCustomer(ent.id, {
+          name: form.name, industry: form.industry || null,
+          contact_name: form.contact_name || null, phone: form.phone || null,
+          email: form.email || null, default_shipping_mode: form.default_shipping_mode || null,
+          notes: form.notes || null,
+        });
+      } else if (kind === "supplier") {
+        await md.updateSupplier(ent.id, {
+          name: form.name, country: form.country || null,
+          default_shipping_mode: form.default_shipping_mode || null, notes: form.notes || null,
+        });
+      } else if (kind === "team") {
+        await md.updateTeamMember(ent.id, {
+          initials: form.initials, full_name: form.full_name,
+          role: form.role || null, email: form.email || null,
+        });
+      } else {
+        await md.updateProduct(ent.id, {
+          name: form.name, default_unit: form.default_unit || null, notes: form.notes || null,
+        });
+      }
+      toast.success("Saved");
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+    }
+    setSaving(false);
+  };
+
+  const titles: Record<EntityKind, string> = {
+    customer: "Edit customer", supplier: "Edit supplier",
+    team: "Edit team member", product: "Edit product",
+  };
+
+  return (
+    <BottomSheet
+      open
+      onClose={onClose}
+      title={titles[kind]}
+      onSave={submit}
+      saveDisabled={saving}
+      saveLabel="Save"
+    >
+      <div className="space-y-3">
+        {kind === "customer" && (
+          <>
+            <Field label="Name"><input className={inputCls} style={{ minHeight: 48 }} value={form.name ?? ""} onChange={(e) => setField("name", e.target.value)} /></Field>
+            <Field label="Industry"><input className={inputCls} style={{ minHeight: 48 }} value={form.industry ?? ""} onChange={(e) => setField("industry", e.target.value)} /></Field>
+            <Field label="Contact"><input className={inputCls} style={{ minHeight: 48 }} value={form.contact_name ?? ""} onChange={(e) => setField("contact_name", e.target.value)} /></Field>
+            <Field label="Phone"><input className={inputCls} style={{ minHeight: 48 }} value={form.phone ?? ""} onChange={(e) => setField("phone", e.target.value)} /></Field>
+            <Field label="Email"><input className={inputCls} style={{ minHeight: 48 }} value={form.email ?? ""} onChange={(e) => setField("email", e.target.value)} /></Field>
+            <Field label="Default shipping">
+              <select className={inputCls} style={{ minHeight: 48 }} value={form.default_shipping_mode ?? ""} onChange={(e) => setField("default_shipping_mode", e.target.value || null)}>
+                <option value="">—</option><option value="Air">Air</option><option value="Ocean">Ocean</option><option value="Local">Local</option>
+              </select>
+            </Field>
+          </>
+        )}
+        {kind === "supplier" && (
+          <>
+            <Field label="Name"><input className={inputCls} style={{ minHeight: 48 }} value={form.name ?? ""} onChange={(e) => setField("name", e.target.value)} /></Field>
+            <Field label="Country"><input className={inputCls} style={{ minHeight: 48 }} value={form.country ?? ""} onChange={(e) => setField("country", e.target.value)} /></Field>
+            <Field label="Default shipping">
+              <select className={inputCls} style={{ minHeight: 48 }} value={form.default_shipping_mode ?? ""} onChange={(e) => setField("default_shipping_mode", e.target.value as ShippingMode || null)}>
+                <option value="">—</option><option value="Air">Air</option><option value="Ocean">Ocean</option><option value="Local">Local</option>
+              </select>
+            </Field>
+            <Field label="Notes"><textarea className={inputCls} rows={3} value={form.notes ?? ""} onChange={(e) => setField("notes", e.target.value)} /></Field>
+          </>
+        )}
+        {kind === "team" && (
+          <>
+            <Field label="Initials"><input className={inputCls} style={{ minHeight: 48 }} value={form.initials ?? ""} onChange={(e) => setField("initials", e.target.value.toUpperCase())} /></Field>
+            <Field label="Full name"><input className={inputCls} style={{ minHeight: 48 }} value={form.full_name ?? ""} onChange={(e) => setField("full_name", e.target.value)} /></Field>
+            <Field label="Role">
+              <select className={inputCls} style={{ minHeight: 48 }} value={form.role ?? ""} onChange={(e) => setField("role", e.target.value || null)}>
+                <option value="">—</option><option value="Sales">Sales</option><option value="Production">Production</option>
+                <option value="Finance">Finance</option><option value="Admin">Admin</option><option value="Mixed">Mixed</option>
+              </select>
+            </Field>
+            <Field label="Email"><input className={inputCls} style={{ minHeight: 48 }} value={form.email ?? ""} onChange={(e) => setField("email", e.target.value)} /></Field>
+          </>
+        )}
+        {kind === "product" && (
+          <>
+            <Field label="Name"><input className={inputCls} style={{ minHeight: 48 }} value={form.name ?? ""} onChange={(e) => setField("name", e.target.value)} /></Field>
+            <Field label="Default unit"><input className={inputCls} style={{ minHeight: 48 }} value={form.default_unit ?? ""} onChange={(e) => setField("default_unit", e.target.value)} /></Field>
+            <Field label="Notes"><textarea className={inputCls} rows={3} value={form.notes ?? ""} onChange={(e) => setField("notes", e.target.value)} /></Field>
+          </>
+        )}
+
+        <div className="pt-2 border-t border-border/60">
+          <div className="text-[11px] text-muted-foreground mb-2">
+            Used in {row.usage} project{row.usage === 1 ? "" : "s"}.
+          </div>
+          <button
+            onClick={onDelete}
+            disabled={row.usage > 0}
+            className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-3 rounded-xl border text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ borderColor: "hsl(var(--urgent) / 0.4)", color: "hsl(var(--urgent))", minHeight: 48 }}
+            title={row.usage > 0 ? `Cannot delete — used in ${row.usage} projects. Reassign or merge first.` : ""}
+          >
+            <Trash2 className="h-4 w-4" /> Delete
+          </button>
+        </div>
+      </div>
+    </BottomSheet>
+  );
+};
+
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div>
+    <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">{label}</label>
+    {children}
+  </div>
+);
