@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { MoreVertical, Factory } from "lucide-react";
 import { toast } from "sonner";
-import { PipelineCard, formatShippingLabel, getShipment } from "@/data/pipelines";
+import { PipelineCard, formatShippingLabel, getShipment, PIPELINES } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
 import { useJiggle } from "@/hooks/useJiggle";
 import { useEditMode } from "@/hooks/useEditMode";
@@ -17,6 +17,9 @@ interface ProjectCardProps {
   onSwipeForward: () => void;
   onSwipeBack: () => void;
   onOpenPicker: () => void;
+  /** When true, renders a quiet "Pipeline · Stage" label in the bottom row.
+      Used by the flat All view where there are no section headers. */
+  showStageLabel?: boolean;
 }
 
 const TODAY = new Date(2026, 4, 8);
@@ -30,8 +33,6 @@ function getUrgency(date: Date) {
   return { label: `in ${diff}d`, tone: "neutral" as const };
 }
 
-const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
-
 const COMMIT_THRESHOLD_PX = 110;
 const PULSE_THRESHOLD_PX = 180;
 const RESISTANCE = 0.85;
@@ -41,8 +42,12 @@ const urgencyHex = (tone: "urgent" | "soon" | "neutral") =>
   : tone === "soon" ? "hsl(var(--brand-orange))"
   : "hsl(var(--muted-foreground))";
 
+function pipelineTitle(id: PipelineCard["pipeline"]) {
+  return PIPELINES.find((p) => p.id === id)?.title ?? id;
+}
+
 export const ProjectCard = ({
-  card, onOpen, onSwipeForward, onSwipeBack, onOpenPicker,
+  card, onOpen, onSwipeForward, onSwipeBack, onOpenPicker, showStageLabel = false,
 }: ProjectCardProps) => {
   const jiggle = useJiggle();
   const editMode = useEditMode();
@@ -55,7 +60,6 @@ export const ProjectCard = ({
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   const [menuOpen, setMenuOpen] = useState(false);
-  
 
   const next = getNextStage(card.pipeline, card.stage);
   const prev = getPrevStage(card.pipeline, card.stage);
@@ -78,7 +82,6 @@ export const ProjectCard = ({
 
   useEffect(() => () => { if (longPressTimer.current) window.clearTimeout(longPressTimer.current); }, []);
 
-  // Cancel any pending long-press if the user starts scrolling.
   useEffect(() => {
     const onScroll = () => cancelLongPress();
     window.addEventListener("scroll", onScroll, { capture: true, passive: true });
@@ -109,10 +112,6 @@ export const ProjectCard = ({
 
     longPressTimer.current = window.setTimeout(() => {
       cancelLongPress();
-      // Fire haptic + activate jiggle in the same synchronous tick so the
-      // buzz lands the moment the visual lift starts. Vibration must be
-      // called from within a user-gesture-derived handler — the long-press
-      // setTimeout still qualifies because the pointer is still down.
       const rect = (innerRef.current ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
       haptics.pickup();
       jiggle.activate(card, rect);
@@ -187,10 +186,9 @@ export const ProjectCard = ({
   const showResist = (dx > 12 && !canForward) || (dx < -12 && !canBack);
   const intensity = Math.min(1, Math.abs(dx) / COMMIT_THRESHOLD_PX);
 
-  // ─── Unified card content (same shape on every pipeline / stage) ───
-  // Empty fields render as dim italic placeholders rather than disappearing.
+  // ─── Unified card content ───
   const supplierName = card.supplier?.name;
-  const supplierHint = proj.supplierLabel; // "TBD" | "Various"
+  const supplierHint = proj.supplierLabel;
   const supplierIsEmpty = !supplierName && !supplierHint;
   const supplierDisplay = supplierName ?? supplierHint ?? "Unassigned";
 
@@ -205,11 +203,10 @@ export const ProjectCard = ({
   );
   const u = getUrgency(card.deadlineDate);
 
-  // ── Action menu handlers ───────────────────────────────────────────────
-  const handleEdit = () => {
-    haptics.pickup();
-    editMode.enter(card);
-  };
+  const stageLabel = `${pipelineTitle(card.pipeline)} · ${getStageTitle(card.pipeline, card.stage)}`;
+
+  // Action menu handlers
+  const handleEdit = () => { haptics.pickup(); editMode.enter(card); };
   const handleOpenProject = () => onOpen();
   const handleMoveStage = () => onOpenPicker();
   const handleDuplicate = () => {
@@ -234,7 +231,6 @@ export const ProjectCard = ({
   const handleDelete = () => {
     const result = store.softDeleteProject(proj.id);
     if (!result) return;
-    const { restoredFrom } = result;
     const label = `${proj.customer} · ${proj.projectName}`;
     toast.success(`${label} moved to Trash`, {
       duration: 8000,
@@ -260,7 +256,6 @@ export const ProjectCard = ({
         isEditing && "invisible",
       )}
     >
-      {/* Swipe action labels underneath */}
       {!isEditing && (
         <div className="absolute inset-0 flex items-center justify-between px-5 pointer-events-none select-none">
           <span
@@ -306,7 +301,6 @@ export const ProjectCard = ({
           pulse && "scale-[1.015]",
         )}
       >
-        {/* Edge glow overlays */}
         <div
           className="pointer-events-none absolute inset-y-0 right-0 w-1/2 transition-opacity"
           style={{
@@ -321,14 +315,12 @@ export const ProjectCard = ({
             opacity: showBack ? intensity : 0,
           }}
         />
-        {/* Pipeline accent stripe */}
+        {/* Pipeline accent stripe — slightly thicker (4px) so it registers as a pipeline indicator */}
         <span
-          className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ backgroundColor: pipelineHex, opacity: 0.7 }}
+          className="absolute left-0 top-0 bottom-0 w-[4px]"
+          style={{ backgroundColor: pipelineHex, opacity: 0.85 }}
         />
 
-
-        {/* Three-dots menu */}
         <CardActionsPopover
           open={menuOpen}
           onOpenChange={(o) => {
@@ -358,33 +350,44 @@ export const ProjectCard = ({
 
         <button
           onClick={handleOpen}
-          className="w-full text-left pl-5 pr-5 pt-5 pb-5"
+          className="w-full text-left pl-[18px] pr-[16px] pt-[16px] pb-[16px]"
         >
-            {/* ─── TOP: identity (left) + supplier+PO (right) ─── */}
+            {/* ─── TIER 1 + 2: identity (left) + supplier+PO (right) ─── */}
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0 pr-9">
-                <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight">
+                {/* Tier 1: Customer (loudest) */}
+                <h3
+                  className="text-[18px] font-bold tracking-tight leading-tight"
+                  style={{ color: "hsl(var(--brand-navy))" }}
+                >
                   {proj.customer}
                 </h3>
+                {/* Tier 1: Project name (slightly quieter than customer, tight to it) */}
                 <p
-                  className="text-[14px] leading-snug mt-1"
+                  className="text-[15px] font-medium leading-snug mt-0.5"
                   style={{ color: "hsl(var(--brand-navy))" }}
                 >
                   {proj.projectName}
                 </p>
+                {/* Tier 2: Detail summary (mt-3 = bigger gap to mark a tier break) */}
                 <p
                   className={cn(
-                    "text-[13px] leading-snug mt-1",
+                    "text-[13px] leading-snug mt-3",
                     proj.detailSummary?.trim()
-                      ? "text-muted-foreground/85"
-                      : "text-muted-foreground/40 italic",
+                      ? "italic"
+                      : "italic",
                   )}
+                  style={{
+                    color: proj.detailSummary?.trim()
+                      ? "hsl(var(--brand-navy) / 0.70)"
+                      : "hsl(var(--brand-navy) / 0.35)",
+                  }}
                 >
                   {proj.detailSummary?.trim() ? proj.detailSummary : "—"}
                 </p>
               </div>
 
-              {/* Right block — supplier + PO (always shown) */}
+              {/* Right block — Tier 2 supplier + Tier 3 PO */}
               <div className="shrink-0 max-w-[45%] mt-0.5 mr-7 flex flex-col items-end text-right">
                 <span className="inline-flex items-center gap-1.5">
                   <Factory
@@ -395,64 +398,107 @@ export const ProjectCard = ({
                     className={cn(
                       "text-[13px] truncate",
                       supplierIsEmpty
-                        ? "italic font-normal text-muted-foreground/45"
-                        : supplierName ? "font-medium" : "italic font-normal text-muted-foreground/65",
+                        ? "italic font-normal"
+                        : supplierName ? "font-normal" : "italic font-normal",
                     )}
-                    style={supplierName ? { color: "hsl(var(--brand-navy))" } : undefined}
+                    style={{
+                      color: supplierName
+                        ? "hsl(var(--brand-navy))"
+                        : supplierIsEmpty
+                          ? "hsl(var(--brand-navy) / 0.40)"
+                          : "hsl(var(--brand-navy) / 0.65)",
+                    }}
                   >
                     {supplierDisplay}
                   </span>
                 </span>
+                {/* Tier 3: PO */}
                 <span
                   className={cn(
-                    "text-[12px] tabular leading-none mt-1",
-                    poText ? "text-muted-foreground/75" : "text-muted-foreground/45 italic",
+                    "text-[12px] tabular leading-none mt-1.5",
+                    poText ? "" : "italic",
                   )}
+                  style={{
+                    color: poText
+                      ? "hsl(var(--brand-navy) / 0.60)"
+                      : "hsl(var(--brand-navy) / 0.40)",
+                  }}
                 >
                   {poText ?? "PO-"}
                 </span>
               </div>
             </div>
 
-            {/* ─── DIVIDER ─── */}
+            {/* ─── DIVIDER (more space above) ─── */}
             <div
-              className="mt-4 mb-3 h-px w-full"
-              style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)" }}
+              className="mt-5 mb-3 h-px w-full"
+              style={{ backgroundColor: "hsl(var(--brand-navy) / 0.10)" }}
             />
 
-            {/* ─── BOTTOM: Q-, INV-, mode/tracking + deadline ─── */}
-            <div className="flex items-center min-h-[16px] mb-1">
+            {/* ─── TIER 3: Q-, INV- ─── */}
+            <div className="flex items-center gap-4 min-h-[16px] mb-2">
               <span
                 className={cn(
                   "text-[12px] tabular leading-none",
-                  qText ? "text-muted-foreground/85" : "text-muted-foreground/45 italic",
+                  qText ? "" : "italic",
                 )}
+                style={{
+                  color: qText
+                    ? "hsl(var(--brand-navy) / 0.60)"
+                    : "hsl(var(--brand-navy) / 0.40)",
+                }}
               >
                 {qText ?? "Q-"}
               </span>
-            </div>
-            <div className="flex items-center min-h-[16px] mb-1.5">
               <span
                 className={cn(
                   "text-[12px] tabular leading-none",
-                  invText ? "text-muted-foreground/85" : "text-muted-foreground/45 italic",
+                  invText ? "" : "italic",
                 )}
+                style={{
+                  color: invText
+                    ? "hsl(var(--brand-navy) / 0.60)"
+                    : "hsl(var(--brand-navy) / 0.40)",
+                }}
               >
                 {invText ?? "INV-"}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3 min-h-[18px]">
+
+            {/* ─── BOTTOM ROW: mode/tracking · stage label (All view) · deadline ─── */}
+            <div className="flex items-center gap-3 min-h-[18px]">
               <span
                 className={cn(
-                  "text-[12px] tabular leading-none truncate",
-                  shippingLabel.placeholder ? "text-muted-foreground/45 italic" : "text-muted-foreground/85",
+                  "text-[12px] tabular leading-none truncate min-w-0",
+                  shippingLabel.placeholder ? "italic" : "",
                 )}
+                style={{
+                  color: shippingLabel.placeholder
+                    ? "hsl(var(--brand-navy) / 0.40)"
+                    : "hsl(var(--brand-navy) / 0.60)",
+                }}
               >
                 {shippingLabel.text}
               </span>
-              <span className="inline-flex items-center gap-2 leading-none shrink-0">
-                <span className="text-[12px] text-muted-foreground/75 tabular">{card.deadline}</span>
-                <span className="text-muted-foreground/35">·</span>
+
+              {showStageLabel && (
+                <span
+                  className="text-[11px] leading-none truncate flex-1 text-center"
+                  style={{ color: "hsl(var(--brand-navy) / 0.50)" }}
+                  title={stageLabel}
+                >
+                  {stageLabel}
+                </span>
+              )}
+
+              <span className="inline-flex items-center gap-2 leading-none shrink-0 ml-auto">
+                <span
+                  className="text-[12px] font-medium tabular"
+                  style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
+                >
+                  {card.deadline}
+                </span>
+                <span style={{ color: "hsl(var(--brand-navy) / 0.30)" }}>·</span>
                 <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
                   {u.label}
                 </span>
@@ -465,5 +511,3 @@ export const ProjectCard = ({
     </div>
   );
 };
-
-
