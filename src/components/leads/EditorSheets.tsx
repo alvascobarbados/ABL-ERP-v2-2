@@ -283,6 +283,126 @@ export const SupplierPicker = ({
   );
 };
 
+// ─────────── Tracking reference editor ───────────
+// Air → DHL / FedEx / Other (free-text carrier name)
+// Ocean → FCL / LCL
+interface TrackingEditorProps {
+  open: boolean;
+  onClose: () => void;
+  shippingMode: "Air" | "Ocean";
+  value?: string; // canonical PREFIX-number, e.g. "DHL-373747" or "FCL-125"
+  onSave: (v: string | undefined) => void;
+}
+const parseTracking = (raw?: string) => {
+  if (!raw) return { prefix: "", number: "" };
+  const m = raw.match(/^([A-Za-z][A-Za-z0-9]*)-(.*)$/);
+  if (m) return { prefix: m[1].toUpperCase(), number: m[2] };
+  return { prefix: "", number: raw };
+};
+export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: TrackingEditorProps) => {
+  const air = ["DHL", "FedEx", "Other"] as const;
+  const ocean = ["FCL", "LCL"] as const;
+  const initial = parseTracking(value);
+  const initialChoice = shippingMode === "Air"
+    ? (air.includes(initial.prefix as any) ? initial.prefix : (initial.prefix ? "Other" : ""))
+    : (ocean.includes(initial.prefix as any) ? initial.prefix : "");
+  const [choice, setChoice] = useState<string>(initialChoice);
+  const [otherCarrier, setOtherCarrier] = useState<string>(
+    shippingMode === "Air" && initialChoice === "Other" ? initial.prefix : ""
+  );
+  const [number, setNumber] = useState<string>(initial.number);
+
+  useEffect(() => {
+    if (!open) return;
+    const p = parseTracking(value);
+    const c = shippingMode === "Air"
+      ? (air.includes(p.prefix as any) ? p.prefix : (p.prefix ? "Other" : ""))
+      : (ocean.includes(p.prefix as any) ? p.prefix : "");
+    setChoice(c);
+    setOtherCarrier(shippingMode === "Air" && c === "Other" ? p.prefix : "");
+    setNumber(p.number);
+  }, [open, value, shippingMode]);
+
+  const effectivePrefix = shippingMode === "Air"
+    ? (choice === "Other" ? otherCarrier.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") : choice)
+    : choice;
+  const cleanNumber = number.trim();
+  const valid = !!effectivePrefix && !!cleanNumber;
+  const canonical = valid ? `${effectivePrefix}-${cleanNumber}` : undefined;
+  const options = shippingMode === "Air" ? air : ocean;
+
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={shippingMode === "Air" ? "Air tracking" : "Ocean tracking"}
+      onSave={() => onSave(canonical)}
+      saveDisabled={!valid}
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+            {shippingMode === "Air" ? "Carrier" : "Container"}
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {options.map((o) => (
+              <button
+                key={o}
+                onClick={() => setChoice(o)}
+                className={cn(
+                  "px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors hover:bg-muted/40",
+                  choice === o ? "bg-muted/60" : "bg-card border-border/60",
+                )}
+                style={{ minHeight: 48, borderColor: choice === o ? "hsl(var(--brand-navy) / 0.45)" : undefined }}
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {shippingMode === "Air" && choice === "Other" && (
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+              Carrier name
+            </label>
+            <input
+              value={otherCarrier}
+              onChange={(e) => setOtherCarrier(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+              placeholder="e.g. UPS"
+              className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tracking-wide focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+              style={{ minHeight: 48 }}
+              autoFocus
+            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground">Letters and digits only — uppercased automatically.</p>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+            {shippingMode === "Air" ? "Tracking number" : "Container / booking number"}
+          </label>
+          <input
+            value={number}
+            onChange={(e) => setNumber(e.target.value)}
+            placeholder={shippingMode === "Air" ? "373747" : "125"}
+            inputMode={shippingMode === "Air" ? "text" : "text"}
+            className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+            style={{ minHeight: 48 }}
+          />
+        </div>
+
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-3 py-2.5">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1">Preview</div>
+          <div className="text-[15px] font-semibold tabular" style={{ color: "hsl(var(--brand-navy))" }}>
+            {canonical ?? <span className="italic text-muted-foreground font-normal">PREFIX-number</span>}
+          </div>
+        </div>
+      </div>
+    </BottomSheet>
+  );
+};
+
 // ─────────── Line item editor ───────────
 interface LineItemEditorProps {
   open: boolean;
