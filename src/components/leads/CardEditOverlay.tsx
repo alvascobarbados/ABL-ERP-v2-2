@@ -162,17 +162,19 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       return;
     }
     const prev = proj.supplierId;
-    const sup = store.suppliers.find((s) => s.id === supplierId);
+    const sup = md.getSupplierByAnyId(supplierId);
     store.updateProject(proj.id, { supplierId, supplierLabel: undefined });
     setEditing(null);
     undoToast(`Supplier → ${sup?.name ?? supplierId}`, () => store.updateProject(proj.id, { supplierId: prev }));
   };
 
-  const pickSupplierHint = (h: "TBD" | "Various") => {
+  const pickSupplierMeta = (meta: string) => {
     const prev = { id: proj.supplierId, hint: proj.supplierLabel };
-    store.updateProject(proj.id, { supplierId: undefined, supplierLabel: h });
+    // Only TBD / Various are stored as labels; Unassigned clears both.
+    const hint = meta === "Unassigned" ? undefined : (meta as "TBD" | "Various");
+    store.updateProject(proj.id, { supplierId: undefined, supplierLabel: hint });
     setEditing(null);
-    undoToast(`Supplier → ${h}`, () =>
+    undoToast(`Supplier → ${hint ?? "Unassigned"}`, () =>
       store.updateProject(proj.id, { supplierId: prev.id, supplierLabel: prev.hint }));
   };
 
