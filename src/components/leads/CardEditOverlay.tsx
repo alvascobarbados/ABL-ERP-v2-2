@@ -534,15 +534,14 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         selectedId={proj.shippingMode}
         onPick={(id) => pickShipping(id as ShippingMode)}
       />
-      <SupplierPicker
+      <EntityPicker
         open={editing === "supplier"}
         onClose={() => setEditing(null)}
-        suppliers={store.suppliers}
+        kind="supplier"
         selectedId={proj.supplierId}
-        selectedHint={proj.supplierLabel}
-        onPickSupplier={pickSupplier}
-        onPickHint={pickSupplierHint}
-        onAddSupplier={(input) => store.addSupplier(input)}
+        selectedMeta={proj.supplierLabel}
+        onPick={pickSupplier}
+        onPickMeta={pickSupplierMeta}
       />
 
       {/* Project name propagation confirmation */}
