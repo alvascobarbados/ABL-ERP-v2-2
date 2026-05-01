@@ -3,11 +3,13 @@ import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, ShippingMode } from "@/data/pipelines";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
-import { TextEditor, DateEditor, ListPicker, SupplierPicker, TrackingEditor, ListOption } from "./EditorSheets";
+import { TextEditor, DateEditor, ListPicker, TrackingEditor, ListOption } from "./EditorSheets";
+import { EntityPicker } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import { PIPELINE_ACCENT } from "@/lib/brand";
+import { useMasterData } from "@/hooks/useMasterData";
 
 // ─── Permission scaffolding (future: per-role) ──────────────────────────
 // Customer is ALWAYS locked. Other flags are placeholders for role wiring.
