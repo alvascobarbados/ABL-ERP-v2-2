@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Filter as FilterIcon, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FilterState } from "./FilterBar";
+import { filterCount as computeFilterCount } from "./FilterBar";
 import type { SortState } from "./SortSheet";
 import { SORT_OPTIONS } from "./SortSheet";
 
@@ -24,7 +25,7 @@ export const TopControls = ({
     if (searching) inputRef.current?.focus();
   }, [searching]);
 
-  const filterCount = [filter.customer, filter.projectName, filter.supplierId].filter(Boolean).length;
+  const filterCount = computeFilterCount(filter);
   const sortOpt = SORT_OPTIONS.find((o) => o.field === sort.field)!;
   const Arrow = sort.dir === "asc" ? ArrowUp : ArrowDown;
 
