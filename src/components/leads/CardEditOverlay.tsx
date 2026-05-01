@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
-import { PipelineCard, ShippingMode, getShipment } from "@/data/pipelines";
+import { PipelineCard, ShippingMode } from "@/data/pipelines";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { TextEditor, DateEditor, ListPicker, SupplierPicker, TrackingEditor, ListOption } from "./EditorSheets";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -39,7 +39,7 @@ const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month
 export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   const store = usePipelineStore();
   const proj = card.project;
-  const ship = getShipment(proj.shipmentId);
+  const ship = store.shipments.find((s) => s.id === proj.shipmentId);
   const accent = PIPELINE_ACCENT[card.pipeline].hex;
 
   // Sub-editor state
