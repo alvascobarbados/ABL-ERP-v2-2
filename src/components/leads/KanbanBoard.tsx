@@ -114,24 +114,30 @@ export const KanbanBoard = ({
                 </span>
               </div>
 
-              {/* Independently scrolling card list */}
-              <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3">
+              {/* Independently scrolling card grid — wraps into multiple
+                  cards per row when the column is wide enough. */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
                 {col.cards.length === 0 ? (
                   <p className="text-[12px] text-muted-foreground italic px-2 py-6 text-center">
                     No projects here.
                   </p>
                 ) : (
-                  col.cards.map((c) => (
-                    <ProjectCard
-                      key={c.id}
-                      card={c}
-                      showStageLabel={activeTab === "all"}
-                      onOpen={() => onOpenCard(c)}
-                      onSwipeForward={() => onSwipeForward(c)}
-                      onSwipeBack={() => onSwipeBack(c)}
-                      onOpenPicker={() => onOpenPicker(c)}
-                    />
-                  ))
+                  <div
+                    className="grid gap-3 items-start"
+                    style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}
+                  >
+                    {col.cards.map((c) => (
+                      <ProjectCard
+                        key={c.id}
+                        card={c}
+                        showStageLabel={activeTab === "all"}
+                        onOpen={() => onOpenCard(c)}
+                        onSwipeForward={() => onSwipeForward(c)}
+                        onSwipeBack={() => onSwipeBack(c)}
+                        onOpenPicker={() => onOpenPicker(c)}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
