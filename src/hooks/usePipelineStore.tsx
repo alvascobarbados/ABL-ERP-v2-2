@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from "react";
 import {
   PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
-  PROJECTS as SEED_PROJECTS, SHIPMENTS as SEED_SHIPMENTS, SUPPLIERS, ShippingMode,
+  SHIPMENTS as SEED_SHIPMENTS, SUPPLIERS, ShippingMode,
 } from "@/data/pipelines";
+import { ABL_PROJECTS as SEED_PROJECTS } from "@/data/abl-projects";
 
 // ─────────── Stage helpers ───────────
 export interface StagePos {
