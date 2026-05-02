@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { validateMove } from "@/hooks/usePipelineStore";
@@ -25,6 +25,7 @@ interface ChipDef {
   title: string;
   isCurrent: boolean;
   isInvalid: boolean;
+  isSamePipeline: boolean;
   /** First chip in its pipeline group — render the group label above it. */
   groupStart: boolean;
   pipelineTitle: string;
@@ -36,6 +37,8 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
   const [focusedIdx, setFocusedIdx] = useState<number>(-1);
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);
+  /** Per-chip 0..1 proximity to scroller center (1 = at center). */
+  const [proximities, setProximities] = useState<number[]>([]);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const stripScrollRef = useRef<HTMLDivElement>(null);
@@ -76,6 +79,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
           title: s.title,
           isCurrent,
           isInvalid: !v.ok,
+          isSamePipeline: p.id === card.pipeline,
           groupStart: first,
           pipelineTitle: p.title,
         });
@@ -85,43 +89,51 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
     return out;
   }, [anchor]);
 
-  // Recompute focus = chip closest to viewport horizontal center.
+  // Recompute focus + proximities = chip closest to viewport horizontal center.
   const recomputeFocus = () => {
     const scroller = stripScrollRef.current;
     if (!scroller) return;
     const sRect = scroller.getBoundingClientRect();
     const centerX = sRect.left + sRect.width / 2;
+    // Falloff distance: ~half the scroller width — chips within this range
+    // brighten toward 1.0 the closer they get to center.
+    const falloff = sRect.width * 0.45;
+
     let bestIdx = -1;
     let bestDist = Infinity;
+    const prox: number[] = new Array(chips.length).fill(0);
+
     chipRefs.current.forEach((el, i) => {
       if (!el) return;
       const c = chips[i];
-      if (!c || c.isCurrent) return; // skip current — never focusable
+      if (!c) return;
       const r = el.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const d = Math.abs(cx - centerX);
-      if (d < bestDist) {
+      // Smooth proximity 0..1
+      prox[i] = Math.max(0, 1 - d / falloff);
+      if (!c.isCurrent && d < bestDist) {
         bestDist = d;
         bestIdx = i;
       }
     });
+
+    setProximities(prox);
+
     if (bestIdx !== lastFocusRef.current) {
       lastFocusRef.current = bestIdx;
       setFocusedIdx(bestIdx);
-      // Light tick on focus change (Netflix/iOS picker feel)
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
         try { navigator.vibrate(5); } catch { /* no-op */ }
       }
     }
-    // Edge fade visibility
     setShowLeftFade(scroller.scrollLeft > 4);
     setShowRightFade(
       scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 4,
     );
   };
 
-  // Initial centering: scroll so the current stage chip sits in the middle,
-  // then compute focus from there.
+  // Initial centering: scroll so the current stage chip sits in the middle.
   useLayoutEffect(() => {
     if (!anchor || !mounted) return;
     const scroller = stripScrollRef.current;
@@ -147,24 +159,44 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
   const proj = card.project;
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
-  // ── Compact lifted card geometry ──
-  const liftScale = 1.02;
-  const compactHeight = 72;
-  const cardWidth = rect.width;
-  const liftedLeft = rect.left;
-  // Center the compact card vertically near where the original card sat,
-  // but clamp to viewport.
+  // ── Fixed picker geometry ──
+  // Picker zone always sits at ~42% of viewport height regardless of where the
+  // user long-pressed. This gives reliable muscle memory.
   const viewportH = typeof window !== "undefined" ? window.innerHeight : 800;
-  let liftedTop = rect.top + rect.height / 2 - compactHeight / 2;
-  liftedTop = Math.max(16, Math.min(liftedTop, viewportH - compactHeight - 180));
-
+  const viewportW = typeof window !== "undefined" ? window.innerWidth : 1024;
+  const compactHeight = 72;
+  const stripBlockHeight = 110;
   const stripGap = 16;
-  const stripBlockHeight = 96; // labels + chips + padding
-  let stripTop = liftedTop + compactHeight * liftScale + stripGap;
-  if (stripTop + stripBlockHeight > viewportH - 16) {
-    // Place strip above instead
-    stripTop = liftedTop - stripGap - stripBlockHeight;
-  }
+
+  // Lifted card width: match original card width but cap to viewport.
+  const cardWidth = Math.min(rect.width, viewportW - 32);
+  const liftedLeft = (viewportW - cardWidth) / 2;
+  const totalBlockHeight = compactHeight + stripGap + stripBlockHeight;
+  const zoneTop = Math.round(viewportH * 0.42 - totalBlockHeight / 2);
+  const liftedTop = Math.max(24, zoneTop);
+  const stripTop = liftedTop + compactHeight + stripGap;
+
+  const stripLeft = 8;
+  const stripWidth = viewportW - 16;
+
+  // Highlight pulse on the original card location (spatial context).
+  const originHighlight = (
+    <div
+      className="absolute pointer-events-none rounded-2xl"
+      style={{
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        boxShadow: mounted
+          ? `0 0 0 2px hsl(var(--brand-orange) / 0.55), 0 0 24px hsl(var(--brand-orange) / 0.35)`
+          : `0 0 0 0 hsl(var(--brand-orange) / 0)`,
+        opacity: mounted ? 1 : 0,
+        transition: "box-shadow 240ms ease-out, opacity 200ms ease-out",
+        animation: mounted ? "origin-pulse 1.6s ease-in-out infinite" : undefined,
+      }}
+    />
+  );
 
   const commit = (chip: ChipDef) => {
     if (chip.isCurrent) {
@@ -189,22 +221,21 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
     onClose();
   };
 
-  const stripLeft = 8;
-  const stripWidth =
-    (typeof window !== "undefined" ? window.innerWidth : 1024) - 16;
-
   return createPortal(
     <div
       className="fixed inset-0 z-50"
       onPointerDown={onBackdropPointerDown}
       style={{
-        background: mounted ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0)",
-        transition: "background 200ms ease-out",
+        background: mounted ? "rgba(0,0,0,0.28)" : "rgba(0,0,0,0)",
+        transition: "background 220ms ease-out",
       }}
       aria-modal="true"
       role="dialog"
     >
-      {/* ── Compact lifted card ── */}
+      {/* Origin pulse — preserves spatial context */}
+      {originHighlight}
+
+      {/* ── Compact lifted card (fixed position) ── */}
       <div
         ref={cardRef}
         className={cn(
@@ -218,13 +249,13 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
           width: cardWidth,
           height: compactHeight,
           transformOrigin: "center center",
-          transform: mounted ? `scale(${liftScale})` : "scale(1)",
+          transform: mounted ? `scale(1.02)` : "scale(0.96)",
           transition:
-            "transform 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms ease-out, opacity 200ms ease-out",
+            "transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease-out, opacity 220ms ease-out",
           boxShadow: mounted
-            ? "0 24px 48px hsl(222 30% 12% / 0.28), 0 8px 16px hsl(222 30% 12% / 0.18)"
+            ? "0 24px 48px hsl(222 30% 12% / 0.32), 0 8px 16px hsl(222 30% 12% / 0.18)"
             : "var(--shadow-card)",
-          opacity: mounted ? 1 : 0.6,
+          opacity: mounted ? 1 : 0,
           willChange: "transform",
         }}
         onPointerDown={(e) => e.stopPropagation()}
@@ -246,7 +277,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
         </div>
       </div>
 
-      {/* ── Netflix-style stage strip ── */}
+      {/* ── Netflix-style stage strip (fixed position) ── */}
       <div
         id="jiggle-strip"
         className="no-select absolute"
@@ -257,7 +288,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
           opacity: mounted ? 1 : 0,
           transform: mounted ? "translateY(0)" : "translateY(8px)",
           transition:
-            "opacity 200ms ease-out, transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+            "opacity 220ms ease-out, transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
         }}
         onPointerDown={(e) => e.stopPropagation()}
       >
@@ -268,56 +299,78 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
             shaking && "animate-nope-shake",
           )}
         >
-          {/* Edge fades */}
+          {/* Stronger edge fades (~30px) */}
           <div
-            className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 rounded-l-2xl z-10"
+            className="pointer-events-none absolute left-0 top-0 bottom-0 w-[30px] rounded-l-2xl z-10"
             style={{
               background:
-                "linear-gradient(to right, hsl(var(--card)) 0%, hsl(var(--card) / 0) 100%)",
+                "linear-gradient(to right, hsl(var(--card)) 0%, hsl(var(--card) / 0.85) 50%, hsl(var(--card) / 0) 100%)",
               opacity: showLeftFade ? 1 : 0,
-              transition: "opacity 180ms ease-out",
+              transition: "opacity 200ms ease-out",
             }}
           />
           <div
-            className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 rounded-r-2xl z-10"
+            className="pointer-events-none absolute right-0 top-0 bottom-0 w-[30px] rounded-r-2xl z-10"
             style={{
               background:
-                "linear-gradient(to left, hsl(var(--card)) 0%, hsl(var(--card) / 0) 100%)",
+                "linear-gradient(to left, hsl(var(--card)) 0%, hsl(var(--card) / 0.85) 50%, hsl(var(--card) / 0) 100%)",
               opacity: showRightFade ? 1 : 0,
-              transition: "opacity 180ms ease-out",
+              transition: "opacity 200ms ease-out",
             }}
           />
-          {/* Edge chevrons */}
-          <ChevronLeft
-            className="absolute left-1 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 z-20 pointer-events-none animate-pulse"
-            style={{ opacity: showLeftFade ? 1 : 0, transition: "opacity 180ms ease-out" }}
-          />
-          <ChevronRight
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70 z-20 pointer-events-none animate-pulse"
-            style={{ opacity: showRightFade ? 1 : 0, transition: "opacity 180ms ease-out" }}
-          />
+          {/* Chevrons */}
+          <div
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20 pointer-events-none"
+            style={{
+              opacity: showLeftFade ? 0.6 : 0,
+              transition: "opacity 200ms ease-out",
+              animation: showLeftFade ? "chev-pulse 2s ease-in-out infinite" : undefined,
+            }}
+          >
+            <ChevronLeft className="h-5 w-5" style={{ color: "hsl(var(--brand-navy))" }} />
+          </div>
+          <div
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 z-20 pointer-events-none"
+            style={{
+              opacity: showRightFade ? 0.6 : 0,
+              transition: "opacity 200ms ease-out",
+              animation: showRightFade ? "chev-pulse 2s ease-in-out infinite" : undefined,
+            }}
+          >
+            <ChevronRight className="h-5 w-5" style={{ color: "hsl(var(--brand-navy))" }} />
+          </div>
 
           <div
             ref={stripScrollRef}
             onScroll={recomputeFocus}
-            className="overflow-x-auto no-scrollbar px-4 pt-2 pb-3"
+            className="overflow-x-auto no-scrollbar px-5 pt-2 pb-3"
             style={{ scrollBehavior: "smooth" }}
           >
             <div className="flex items-end gap-2.5" style={{ minWidth: "min-content" }}>
               {chips.map((c, idx) => {
                 const accent = PIPELINE_ACCENT[c.pipeline].hex;
                 const isFocused = idx === focusedIdx && !c.isCurrent;
+                const prox = proximities[idx] ?? 0;
+
+                // Pipeline emphasis:
+                // - same-pipeline chips: full opacity baseline (1.0)
+                // - other-pipeline chips: 0.55 baseline, brighten toward 1.0 by proximity
+                const baseOpacity = c.isSamePipeline
+                  ? 1
+                  : Math.min(1, 0.55 + prox * 0.45);
 
                 let bg = "hsl(var(--card))";
                 let color = "hsl(var(--brand-navy))";
-                let border = "1.5px solid hsl(var(--brand-navy) / 0.2)";
+                let border = c.isSamePipeline
+                  ? "1.5px solid hsl(var(--brand-navy) / 0.22)"
+                  : "1.5px solid hsl(var(--brand-navy) / 0.14)";
                 let shadow = "none";
                 let scale = 1;
-                let opacity = 1;
+                let opacity = baseOpacity;
 
                 if (c.isCurrent) {
                   opacity = 0.5;
-                  border = "1.5px solid hsl(var(--brand-navy) / 0.15)";
+                  border = "1.5px dashed hsl(var(--brand-navy) / 0.3)";
                   bg = "hsl(var(--muted) / 0.4)";
                 } else if (isFocused) {
                   bg = "hsl(var(--brand-orange))";
@@ -325,17 +378,26 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
                   border = "1.5px solid hsl(var(--brand-orange))";
                   shadow = "0 6px 16px hsl(var(--brand-orange) / 0.35)";
                   scale = 1.05;
+                  opacity = 1;
                 }
+
+                // Group label emphasis:
+                // - current pipeline label: 0.85 opacity navy
+                // - other labels: 0.4 baseline, brightening to 0.85 by proximity
+                const labelOpacity = c.isSamePipeline
+                  ? 0.85
+                  : Math.min(0.85, 0.4 + prox * 0.45);
 
                 return (
                   <div key={`${c.pipeline}-${c.stage}`} className="flex flex-col items-start">
                     {/* Pipeline group label */}
                     <span
-                      className="text-[9px] uppercase tracking-[0.22em] font-medium mb-1.5 pl-1 whitespace-nowrap"
+                      className="text-[9px] uppercase tracking-[0.22em] font-semibold mb-1.5 pl-1 whitespace-nowrap"
                       style={{
-                        color: c.groupStart ? accent : "transparent",
-                        opacity: c.groupStart ? 0.55 : 0,
+                        color: c.groupStart ? "hsl(var(--brand-navy))" : "transparent",
+                        opacity: c.groupStart ? labelOpacity : 0,
                         height: 12,
+                        transition: "opacity 220ms ease-out",
                       }}
                     >
                       {c.pipelineTitle}
@@ -354,22 +416,40 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
                         opacity,
                         transform: `scale(${scale})`,
                         transition:
-                          "background-color 200ms ease-out, color 200ms ease-out, transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out",
+                          "background-color 220ms ease-out, color 220ms ease-out, transform 220ms ease-out, box-shadow 220ms ease-out, border-color 220ms ease-out, opacity 220ms ease-out",
                         cursor: c.isCurrent ? "default" : "pointer",
                       }}
                       aria-label={c.isCurrent ? `${c.title} (current)` : `Move to ${c.title}`}
                     >
-                      <span
-                        className="rounded-full"
-                        style={{
-                          width: 6,
-                          height: 6,
-                          backgroundColor: isFocused ? "rgba(255,255,255,0.9)" : accent,
-                          opacity: c.isCurrent ? 0.6 : 1,
-                        }}
-                      />
+                      {c.isCurrent ? (
+                        <Check
+                          className="h-3 w-3"
+                          style={{ color: "hsl(var(--brand-navy))", opacity: 0.7 }}
+                        />
+                      ) : (
+                        <span
+                          className="rounded-full"
+                          style={{
+                            width: 6,
+                            height: 6,
+                            backgroundColor: isFocused ? "rgba(255,255,255,0.9)" : accent,
+                          }}
+                        />
+                      )}
                       <span>{c.title}</span>
                     </button>
+                    {/* "current" sublabel under the current chip */}
+                    <span
+                      className="text-[9px] mt-1 pl-1 italic whitespace-nowrap"
+                      style={{
+                        color: "hsl(var(--brand-navy))",
+                        opacity: c.isCurrent ? 0.55 : 0,
+                        height: 10,
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      current
+                    </span>
                   </div>
                 );
               })}
