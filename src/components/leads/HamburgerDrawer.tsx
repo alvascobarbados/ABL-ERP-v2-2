@@ -100,6 +100,7 @@ export const HamburgerDrawer = ({
 
           <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
           <MenuItem icon={Ship} label="Shipments" onClick={() => { onClose(); onOpenShipments(); }} />
+          <MenuItem icon={Archive} label="Archive" badge={archiveCount} onClick={() => { onClose(); onOpenArchive(); }} />
           <MenuItem icon={Trash2} label="Trash" badge={trashCount} onClick={() => { onClose(); onOpenTrash(); }} />
 
           <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
