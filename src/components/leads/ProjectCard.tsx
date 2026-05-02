@@ -488,6 +488,7 @@ export const ProjectCard = ({
                           ? "hsl(var(--brand-navy) / 0.40)"
                           : "hsl(var(--brand-navy) / 0.65)",
                     }}
+                    title={supplierName ?? supplierDisplay}
                   >
                     {supplierDisplay}
                   </span>
