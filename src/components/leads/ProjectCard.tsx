@@ -434,22 +434,24 @@ export const ProjectCard = ({
               <div className="flex-1 min-w-0 pr-9">
                 {/* Tier 1: Customer (loudest) */}
                 <h3
-                  className="text-[18px] font-bold tracking-tight leading-tight"
+                  className="clamp-1 text-[18px] font-bold tracking-tight leading-tight"
                   style={{ color: "hsl(var(--brand-navy))" }}
+                  title={proj.customer}
                 >
                   {proj.customer}
                 </h3>
                 {/* Tier 1: Project name (slightly quieter than customer, tight to it) */}
                 <p
-                  className="text-[15px] font-medium leading-snug mt-0.5"
+                  className="clamp-2 text-[15px] font-medium leading-snug mt-0.5"
                   style={{ color: "hsl(var(--brand-navy))" }}
+                  title={proj.projectName}
                 >
                   {proj.projectName}
                 </p>
                 {/* Tier 2: Detail summary (mt-3 = bigger gap to mark a tier break) */}
                 <p
                   className={cn(
-                    "text-[13px] leading-snug mt-3",
+                    "clamp-2 text-[13px] leading-snug mt-3",
                     proj.detailSummary?.trim()
                       ? "italic"
                       : "italic",
@@ -459,6 +461,7 @@ export const ProjectCard = ({
                       ? "hsl(var(--brand-navy) / 0.70)"
                       : "hsl(var(--brand-navy) / 0.35)",
                   }}
+                  title={proj.detailSummary?.trim() ? proj.detailSummary : undefined}
                 >
                   {proj.detailSummary?.trim() ? proj.detailSummary : "—"}
                 </p>
