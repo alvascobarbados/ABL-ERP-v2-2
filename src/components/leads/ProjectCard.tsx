@@ -336,6 +336,7 @@ export const ProjectCard = ({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onClick={handleOpen}
         style={{
           transform: `translateX(${dx}px)`,
           transition: snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
@@ -424,7 +425,6 @@ export const ProjectCard = ({
         />
 
         <div
-          onClick={handleOpen}
           className="w-full text-left pl-[18px] pr-[16px] pt-[16px] pb-[16px] cursor-pointer"
         >
             {/* ─── TOP ZONE: identity (left) + supplier+PO (right) ─── */}
