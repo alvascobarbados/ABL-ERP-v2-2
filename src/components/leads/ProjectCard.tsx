@@ -375,7 +375,22 @@ export const ProjectCard = ({
           style={{ backgroundColor: pipelineHex, opacity: 0.85 }}
         />
 
-        <CardActionsPopover
+        {/* Double-tap flag burst */}
+        {burst && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+            <Flag
+              className="flag-burst"
+              style={{
+                color: "hsl(var(--brand-orange))",
+                fill: "hsl(var(--brand-orange))",
+                width: 72,
+                height: 72,
+                filter: "drop-shadow(0 4px 12px hsl(var(--brand-orange) / 0.5))",
+              }}
+            />
+          </div>
+        )}
+
           open={menuOpen}
           onOpenChange={(o) => {
             setMenuOpen(o);
