@@ -753,123 +753,133 @@ const SalesRepRow = ({
   </button>
 );
 
-// ─────────── Line item editor (qty + product picker, with custom escape valve) ───────────
-interface ProductLineItemEditorProps {
+// ─────────── Line item editor (free text — qty + description + optional unit price) ───────────
+// NOTE: Intentionally NO product picker / autocomplete / master-data lookup
+// in this phase. The Products master list will land in a later phase; until
+// then, line items are pure free text per project. The data model already
+// carries an optional `productId` so future items can reference the master
+// list without breaking existing free-text rows.
+interface LineItemEditorProps {
   open: boolean;
   onClose: () => void;
   title: string;
   qty: number | "";
   description: string;
-  onSave: (qty: number, description: string) => void;
+  unitPrice?: number;
+  onSave: (qty: number, description: string, unitPrice?: number) => void;
   onDelete?: () => void;
 }
 
+const fmtMoney = (n: number) =>
+  n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 const ProductLineItemEditor = ({
-  open, onClose, title, qty, description, onSave, onDelete,
-}: ProductLineItemEditorProps) => {
-  const md = useMasterData();
+  open, onClose, title, qty, description, unitPrice, onSave, onDelete,
+}: LineItemEditorProps) => {
   const [q, setQ] = useState<string>(String(qty ?? ""));
   const [d, setD] = useState(description);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [customMode, setCustomMode] = useState(false);
+  const [price, setPrice] = useState<string>(unitPrice != null ? String(unitPrice) : "");
 
   useEffect(() => {
     if (open) {
       setQ(String(qty ?? ""));
       setD(description);
-      setPickerOpen(false);
-      // If the existing description doesn't match a known product, treat as custom.
-      const isKnown = description && md.products.some((p) => p.name === description);
-      setCustomMode(!!description && !isKnown);
+      setPrice(unitPrice != null ? String(unitPrice) : "");
     }
-  }, [open, qty, description, md.products]);
+  }, [open, qty, description, unitPrice]);
 
   const qNum = Number(q);
-  const valid = qNum > 0 && d.trim().length > 0;
+  const priceNum = price.trim() === "" ? undefined : Number(price);
+  const priceValid = priceNum === undefined || (!Number.isNaN(priceNum) && priceNum >= 0);
+  const valid = qNum > 0 && d.trim().length > 0 && priceValid;
 
-  const isKnownProduct = !!d && md.products.some((p) => p.name === d);
+  const computedTotal =
+    priceNum !== undefined && qNum > 0 ? qNum * priceNum : undefined;
 
   return (
-    <>
-      <BottomSheet
-        open={open && !pickerOpen}
-        onClose={onClose}
-        title={title}
-        onSave={() => valid && onSave(qNum, d.trim())}
-        saveDisabled={!valid}
-      >
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Quantity</label>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      onSave={() => valid && onSave(qNum, d.trim(), priceNum)}
+      saveDisabled={!valid}
+    >
+      <div className="space-y-3">
+        <div>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+            Quantity
+          </label>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value.replace(/[^\d]/g, ""))}
+            inputMode="numeric"
+            placeholder="0"
+            className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+            style={{ minHeight: 48 }}
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+            Description
+          </label>
+          <input
+            value={d}
+            onChange={(e) => setD(e.target.value)}
+            placeholder="e.g. Branded Coolers 60L"
+            className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+            style={{ minHeight: 48 }}
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+            Unit price <span className="normal-case tracking-normal text-muted-foreground/70">(BBD, optional)</span>
+          </label>
+          <div className="relative">
+            <span
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] tabular pointer-events-none"
+              style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
+            >
+              $
+            </span>
             <input
-              value={q}
-              onChange={(e) => setQ(e.target.value.replace(/[^\d]/g, ""))}
-              inputMode="numeric"
-              className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+              value={price}
+              onChange={(e) => {
+                // Allow digits + single decimal point
+                const v = e.target.value.replace(/[^\d.]/g, "");
+                const parts = v.split(".");
+                const cleaned = parts.length > 1
+                  ? `${parts[0]}.${parts.slice(1).join("").slice(0, 2)}`
+                  : v;
+                setPrice(cleaned);
+              }}
+              inputMode="decimal"
+              placeholder="0.00"
+              className="w-full rounded-xl border border-border bg-card pl-7 pr-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
               style={{ minHeight: 48 }}
-              autoFocus
             />
           </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Product</label>
-            {customMode ? (
-              <div className="space-y-1.5">
-                <input
-                  value={d}
-                  onChange={(e) => setD(e.target.value)}
-                  placeholder="Custom item description"
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
-                  style={{ minHeight: 48 }}
-                />
-                <button
-                  onClick={() => { setCustomMode(false); setD(""); setPickerOpen(true); }}
-                  className="text-[12px] font-medium hover:underline"
-                  style={{ color: "hsl(var(--brand-orange))" }}
-                >
-                  Pick from product list instead
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setPickerOpen(true)}
-                className="w-full flex items-center justify-between gap-2 rounded-xl border-2 bg-white px-3 py-2.5 text-left transition-all hover:bg-[hsl(41_50%_98%)]"
-                style={{
-                  borderColor: "hsl(var(--brand-navy) / 0.35)",
-                  minHeight: 48,
-                }}
-              >
-                <span className={cn("text-[15px] truncate", d ? "text-foreground font-medium" : "italic text-muted-foreground/60")}>
-                  {d || "Tap to pick a product…"}
-                </span>
-                <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.4)" }} />
-              </button>
-            )}
-            {!customMode && d && !isKnownProduct && (
-              <div className="text-[11px] text-muted-foreground italic mt-1">Custom (not in product list)</div>
-            )}
+          <div
+            className="mt-2 flex items-center justify-between text-[12px]"
+            style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
+          >
+            <span className="uppercase tracking-[0.16em] text-muted-foreground/80">Total</span>
+            <span className="tabular font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>
+              {computedTotal !== undefined ? `$${fmtMoney(computedTotal)}` : "—"}
+            </span>
           </div>
-          {onDelete && (
-            <button
-              onClick={onDelete}
-              className="w-full mt-2 px-3.5 py-3 rounded-xl border text-sm font-medium hover:bg-muted/40 transition-colors"
-              style={{ borderColor: "hsl(var(--urgent) / 0.4)", color: "hsl(var(--urgent))", minHeight: 48 }}
-            >
-              Delete item
-            </button>
-          )}
         </div>
-      </BottomSheet>
-      <EntityPicker
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        kind="product"
-        selectedId={isKnownProduct ? d : null}
-        onPick={(name) => { setD(name); setCustomMode(false); setPickerOpen(false); }}
-        onPickMeta={(meta) => {
-          if (meta === "Custom") { setCustomMode(true); setD(""); setPickerOpen(false); }
-        }}
-      />
-    </>
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="w-full mt-2 px-3.5 py-3 rounded-xl border text-sm font-medium hover:bg-muted/40 transition-colors"
+            style={{ borderColor: "hsl(var(--urgent) / 0.4)", color: "hsl(var(--urgent))", minHeight: 48 }}
+          >
+            Delete item
+          </button>
+        )}
+      </div>
+    </BottomSheet>
   );
 };
 
