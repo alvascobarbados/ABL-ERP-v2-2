@@ -399,9 +399,13 @@ const Index = () => {
     ? "all pipelines"
     : (searchScopeAll ? "all pipelines" : pipeline.title);
 
-  // Collapsible Tier-1 (brand row) on scroll. Frozen while picker is open.
-  const brandHiddenRaw = useCollapsibleHeader({ hideAfter: 60, upDelta: 4 });
-  const brandHidden = pickerCard ? false : brandHiddenRaw;
+  // Scroll-linked Tier-1 (brand row). Frozen while picker is open.
+  const BRAND_ROW_HEIGHT = 56;
+  const { offset: brandOffset, progress: brandProgress } = useCollapsibleHeader({
+    collapseDistance: BRAND_ROW_HEIGHT,
+    frozen: !!pickerCard,
+  });
+  const brandHidden = brandProgress >= 0.99;
 
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
@@ -409,17 +413,23 @@ const Index = () => {
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
 
-        {/* Tier 1: brand row — collapses on scroll down, returns on scroll up */}
+        {/* Tier 1: brand row — scroll-linked translate, tracks gesture 1:1 */}
         <div
           aria-hidden={brandHidden}
-          className="overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out"
+          className="overflow-hidden"
           style={{
-            maxHeight: brandHidden ? 0 : "calc(max(env(safe-area-inset-top), 8px) + 52px)",
-            opacity: brandHidden ? 0 : 1,
-            transform: brandHidden ? "translateY(-6px)" : "translateY(0)",
+            height: `calc(max(env(safe-area-inset-top), 8px) + 52px - ${brandOffset}px)`,
+            opacity: Math.max(0, 1 - brandProgress),
             pointerEvents: brandHidden ? "none" : "auto",
+            willChange: "height, opacity",
           }}
         >
+          <div
+            style={{
+              transform: `translate3d(0, -${brandOffset}px, 0)`,
+              willChange: "transform",
+            }}
+          >
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),8px)] pb-1.5 flex items-center justify-between">
             <button
               onClick={() => setHamburgerOpen(true)}
