@@ -279,18 +279,24 @@ const Index = () => {
     return (id?: string) => (id ? map.get(id) ?? "" : "");
   }, []);
 
+  // Pipeline-facing project list — excludes archived (sales/archive lives only in ArchiveView).
+  const pipelineProjects = useMemo(
+    () => projects.filter((p) => !(p.pipeline === "sales" && p.stage === "archive")),
+    [projects],
+  );
+
   // Build cards list (scope by tab)
   const baseCards = useMemo<PipelineCard[]>(() => {
-    if (isAll) return projects.map(buildCard);
-    return projects.filter((p) => p.pipeline === activePipeline).map(buildCard);
-  }, [activePipeline, isAll, projects]);
+    if (isAll) return pipelineProjects.map(buildCard);
+    return pipelineProjects.filter((p) => p.pipeline === activePipeline).map(buildCard);
+  }, [activePipeline, isAll, pipelineProjects]);
 
   const counts = useMemo<Record<PipelineId, number>>(() => ({
-    sales: projects.filter((p) => p.pipeline === "sales").length,
-    operations: projects.filter((p) => p.pipeline === "operations").length,
-    shipping: projects.filter((p) => p.pipeline === "shipping").length,
-    finance: projects.filter((p) => p.pipeline === "finance").length,
-  }), [projects]);
+    sales: pipelineProjects.filter((p) => p.pipeline === "sales").length,
+    operations: pipelineProjects.filter((p) => p.pipeline === "operations").length,
+    shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
+    finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
+  }), [pipelineProjects]);
 
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
