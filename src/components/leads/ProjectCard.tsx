@@ -423,11 +423,11 @@ export const ProjectCard = ({
           onDelete={handleDelete}
         />
 
-        <button
+        <div
           onClick={handleOpen}
-          className="w-full text-left pl-[18px] pr-[16px] pt-[16px] pb-[16px]"
+          className="w-full text-left pl-[18px] pr-[16px] pt-[16px] pb-[16px] cursor-pointer"
         >
-            {/* ─── TIER 1 + 2: identity (left) + supplier+PO (right) ─── */}
+            {/* ─── TOP ZONE: identity (left) + supplier+PO (right) ─── */}
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0 pr-9">
                 {/* Tier 1: Customer (loudest) */}
@@ -504,13 +504,121 @@ export const ProjectCard = ({
               </div>
             </div>
 
-            {/* ─── DIVIDER (more space above) ─── */}
-            <div
-              className="mt-5 mb-3 h-px w-full"
-              style={{ backgroundColor: "hsl(var(--brand-navy) / 0.10)" }}
-            />
+            {/* ─── FOLD LINE: divider with centered chevron ─── */}
+            <div className="relative mt-5 mb-3 h-[18px] flex items-center">
+              {/* Left segment of divider */}
+              <div
+                className="h-px flex-1"
+                style={{ backgroundColor: "hsl(var(--brand-navy) / 0.10)" }}
+              />
+              {/* Chevron — sits ON the divider, breaks it visually */}
+              <button
+                type="button"
+                data-no-drag
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!hasLineItems) return;
+                  setExpanded((v) => !v);
+                  haptics.threshold();
+                }}
+                disabled={!hasLineItems}
+                aria-label={expanded ? "Collapse line items" : "Expand line items"}
+                aria-expanded={expanded}
+                className={cn(
+                  "relative shrink-0 h-11 w-11 mx-2 flex items-center justify-center -my-[14px]",
+                  hasLineItems ? "" : "cursor-default",
+                )}
+                style={!hasLineItems ? { pointerEvents: "none" } : undefined}
+              >
+                <ChevronDown
+                  className="transition-transform duration-[250ms] ease-out"
+                  style={{
+                    width: 18,
+                    height: 18,
+                    color: "hsl(var(--brand-navy))",
+                    opacity: hasLineItems ? 0.6 : 0.3,
+                    transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                />
+              </button>
+              {/* Right segment of divider */}
+              <div
+                className="h-px flex-1"
+                style={{ backgroundColor: "hsl(var(--brand-navy) / 0.10)" }}
+              />
+            </div>
 
-            {/* ─── TIER 3: Q-, INV- ─── */}
+            {/* ─── EXPANDABLE LINE ITEMS (between fold line and bottom zone) ─── */}
+            <div
+              className="overflow-hidden transition-[max-height,opacity] duration-[250ms] ease-out"
+              style={{
+                maxHeight: expanded && hasLineItems ? 1200 : 0,
+                opacity: expanded && hasLineItems ? 1 : 0,
+              }}
+            >
+              {hasLineItems && (
+                <div className="pb-3">
+                  <div
+                    className="text-[10px] font-semibold uppercase tracking-[0.12em] mb-2"
+                    style={{ color: "hsl(var(--brand-navy) / 0.50)" }}
+                  >
+                    Line Items
+                  </div>
+                  <ul className="flex flex-col gap-2">
+                    {lineItems.map((li, idx) => {
+                      const anyLi = li as unknown as { unitPrice?: number; total?: number };
+                      const unit = typeof anyLi.unitPrice === "number"
+                        ? `$${anyLi.unitPrice.toFixed(2)}`
+                        : "—";
+                      const total = typeof anyLi.total === "number"
+                        ? `$${anyLi.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : "—";
+                      return (
+                        <li
+                          key={idx}
+                          className="flex items-baseline gap-2 text-[13px] leading-snug"
+                          style={{ color: "hsl(var(--brand-navy))" }}
+                        >
+                          <span className="tabular shrink-0 font-medium" style={{ minWidth: 28 }}>
+                            {li.qty}
+                          </span>
+                          <span style={{ color: "hsl(var(--brand-navy) / 0.40)" }}>×</span>
+                          <span className="flex-1 min-w-0 break-words">{li.description}</span>
+                          <span className="tabular shrink-0 text-right" style={{ minWidth: 56, color: "hsl(var(--brand-navy) / 0.70)" }}>
+                            {unit}
+                          </span>
+                          <span className="tabular shrink-0 text-right font-semibold" style={{ minWidth: 72 }}>
+                            {total}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {(() => {
+                    const anyItems = lineItems as unknown as Array<{ total?: number }>;
+                    const sum = anyItems.reduce((n, li) => n + (typeof li.total === "number" ? li.total : 0), 0);
+                    const showSum = sum > 0;
+                    return (
+                      <div
+                        className="mt-3 text-right text-[11px] tabular"
+                        style={{ color: "hsl(var(--brand-navy) / 0.60)" }}
+                      >
+                        {lineItems.length} {lineItems.length === 1 ? "item" : "items"}
+                        {showSum && ` · $${sum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      </div>
+                    );
+                  })()}
+                  {/* Subtle divider separating line items from bottom zone */}
+                  <div
+                    className="mt-3 h-px w-full"
+                    style={{ backgroundColor: "hsl(var(--brand-navy) / 0.10)" }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ─── BOTTOM ZONE: Q-, INV- ─── */}
             <div className="flex items-center gap-4 min-h-[16px] mb-2">
               <span
                 className={cn(
@@ -579,108 +687,8 @@ export const ProjectCard = ({
                 </span>
               </span>
             </div>
-          </button>
+          </div>
 
-        {/* Expand/collapse chevron — absolute, sibling of the card-body button */}
-        <button
-          data-no-drag
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!hasLineItems) return;
-            setExpanded((v) => !v);
-            haptics.threshold();
-          }}
-          disabled={!hasLineItems}
-          aria-label={expanded ? "Collapse line items" : "Expand line items"}
-          aria-expanded={expanded}
-          className={cn(
-            "absolute bottom-2 right-2 z-10 h-11 w-11 flex items-center justify-center",
-            hasLineItems
-              ? "text-foreground/60 hover:text-foreground"
-              : "cursor-default",
-          )}
-          style={!hasLineItems ? { pointerEvents: "none" } : undefined}
-        >
-          <ChevronDown
-            className="transition-transform duration-[250ms] ease-out"
-            style={{
-              width: 18,
-              height: 18,
-              color: "hsl(var(--brand-navy))",
-              opacity: hasLineItems ? 0.6 : 0.3,
-              transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-            }}
-          />
-        </button>
-
-        {/* Expandable line items section */}
-        <div
-          className="overflow-hidden transition-[max-height,opacity] duration-[250ms] ease-out"
-          style={{
-            maxHeight: expanded && hasLineItems ? 1200 : 0,
-            opacity: expanded && hasLineItems ? 1 : 0,
-          }}
-        >
-          {hasLineItems && (
-            <div className="px-[18px] pb-4">
-              <div
-                className="h-px w-full mb-3"
-                style={{ backgroundColor: "hsl(var(--brand-navy) / 0.10)" }}
-              />
-              <div
-                className="text-[10px] font-semibold uppercase tracking-[0.12em] mb-2"
-                style={{ color: "hsl(var(--brand-navy) / 0.50)" }}
-              >
-                Line Items
-              </div>
-              <ul className="flex flex-col gap-2">
-                {lineItems.map((li, idx) => {
-                  const anyLi = li as unknown as { unitPrice?: number; total?: number };
-                  const unit = typeof anyLi.unitPrice === "number"
-                    ? `$${anyLi.unitPrice.toFixed(2)}`
-                    : "—";
-                  const total = typeof anyLi.total === "number"
-                    ? `$${anyLi.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                    : "—";
-                  return (
-                    <li
-                      key={idx}
-                      className="flex items-baseline gap-2 text-[13px] leading-snug"
-                      style={{ color: "hsl(var(--brand-navy))" }}
-                    >
-                      <span className="tabular shrink-0 font-medium" style={{ minWidth: 28 }}>
-                        {li.qty}
-                      </span>
-                      <span style={{ color: "hsl(var(--brand-navy) / 0.40)" }}>×</span>
-                      <span className="flex-1 min-w-0 break-words">{li.description}</span>
-                      <span className="tabular shrink-0 text-right" style={{ minWidth: 56, color: "hsl(var(--brand-navy) / 0.70)" }}>
-                        {unit}
-                      </span>
-                      <span className="tabular shrink-0 text-right font-semibold" style={{ minWidth: 72 }}>
-                        {total}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-              {(() => {
-                const anyItems = lineItems as unknown as Array<{ total?: number }>;
-                const sum = anyItems.reduce((n, li) => n + (typeof li.total === "number" ? li.total : 0), 0);
-                const showSum = sum > 0;
-                return (
-                  <div
-                    className="mt-3 text-right text-[11px] tabular"
-                    style={{ color: "hsl(var(--brand-navy) / 0.60)" }}
-                  >
-                    {lineItems.length} {lineItems.length === 1 ? "item" : "items"}
-                    {showSum && ` · $${sum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-        </div>
 
       </div>
 
