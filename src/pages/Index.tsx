@@ -24,6 +24,7 @@ import { SortSheet, SortState, DEFAULT_DIR, SortField } from "@/components/leads
 import { StagePicker } from "@/components/leads/StagePicker";
 import { SettingsMenu } from "@/components/leads/SettingsMenu";
 import { Walkthrough } from "@/components/leads/Walkthrough";
+import { Wordmark } from "@/components/leads/Wordmark";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 import { ShippingPipelineView, ShippingFilter } from "@/components/leads/ShippingPipelineView";
 import { AllPipelineView } from "@/components/leads/AllPipelineView";
@@ -402,8 +403,8 @@ const Index = () => {
     <EditModeProvider>
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
-        {/* Strip 1: app header */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),10px)] pb-2.5 flex items-center justify-between">
+        {/* Strip 1: app header — tight */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),8px)] pb-1.5 flex items-center justify-between">
           <button
             onClick={() => setHamburgerOpen(true)}
             aria-label="Open menu"
@@ -412,20 +413,17 @@ const Index = () => {
           >
             <Menu className="h-4 w-4" />
           </button>
-          <h1 className="font-display text-base sm:text-lg font-semibold tracking-[0.18em]"
-            style={{ color: "hsl(var(--brand-navy))" }}>
-            ALVASCO ERP
-          </h1>
+          <Wordmark />
           <SettingsMenu />
         </div>
 
-        {/* Strip 2: pipeline tabs */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2.5">
+        {/* Strip 2: pipeline tabs — tight */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5">
           <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
         </div>
 
-        {/* Strip 3: filter / sort / search */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-3">
+        {/* Strip 3: filter / sort / search — tight */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
           <TopControls
             filter={filters}
             sort={sort}
@@ -435,11 +433,9 @@ const Index = () => {
             onOpenSort={() => setSortSheetOpen(true)}
           />
         </div>
-
-        <div className="h-[3px] w-full transition-colors duration-300" style={{ backgroundColor: accentHex }} />
       </header>
 
-      <main key={activeTab} className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 animate-fade-in">
+      <main key={activeTab} className="max-w-6xl mx-auto px-4 sm:px-6 pt-2.5 pb-6 sm:pt-3 sm:pb-8 space-y-4 sm:space-y-5 animate-fade-in">
         {isSearching && (
           <div className="flex items-center justify-between gap-3 px-1">
             <p className="text-xs text-muted-foreground">
