@@ -338,6 +338,7 @@ export const ProjectCard = ({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onClick={handleOpen}
         style={{
           transform: `translateX(${dx}px)`,
           transition: snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
