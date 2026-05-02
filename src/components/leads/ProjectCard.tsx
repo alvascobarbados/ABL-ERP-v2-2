@@ -179,7 +179,27 @@ export const ProjectCard = ({
     isHorizontal.current = null;
   };
 
-  const handleOpen = () => { if (!moved.current) onOpen(); };
+  const lastTapRef = useRef<number>(0);
+  const tapTimerRef = useRef<number | null>(null);
+  const handleOpen = () => {
+    if (moved.current) return;
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      lastTapRef.current = 0;
+      if (tapTimerRef.current) {
+        window.clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = null;
+      }
+      handleToggleFlag({ burst: true });
+      return;
+    }
+    lastTapRef.current = now;
+    if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = window.setTimeout(() => {
+      tapTimerRef.current = null;
+      onOpen();
+    }, 300);
+  };
 
   const showForward = dx > 12 && canForward;
   const showBack = dx < -12 && canBack;
