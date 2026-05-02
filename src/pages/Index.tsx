@@ -36,6 +36,9 @@ import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
 import { DesktopRail } from "@/components/leads/DesktopRail";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
+import { ProjectTable } from "@/components/leads/ProjectTable";
+import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
+import { useViewMode } from "@/hooks/useViewMode";
 // ─── Filter persistence per-tab ───
 const FILTER_STORAGE = "alvasco.filters.v2";
 const DEFAULT_FILTERS: Record<TabId, FilterState> = {
