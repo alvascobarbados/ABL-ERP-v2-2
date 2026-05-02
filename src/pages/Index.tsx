@@ -36,6 +36,9 @@ import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
 import { DesktopRail } from "@/components/leads/DesktopRail";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
+import { ProjectTable } from "@/components/leads/ProjectTable";
+import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
+import { useViewMode } from "@/hooks/useViewMode";
 // ─── Filter persistence per-tab ───
 const FILTER_STORAGE = "alvasco.filters.v2";
 const DEFAULT_FILTERS: Record<TabId, FilterState> = {
@@ -211,6 +214,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("sales");
   const activePipeline: PipelineId = activeTab === "all" ? "sales" : activeTab;
   const isAll = activeTab === "all";
+  const { view: desktopView, setView: setDesktopView } = useViewMode(activeTab);
 
   // Per-tab filter persistence
   const [filtersByTab, setFiltersByTab] = useState<Record<TabId, FilterState>>(loadFilters);
@@ -458,15 +462,20 @@ const Index = () => {
 
         {/* Filter row */}
         <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-2">
-            <TopControls
-              filter={filters}
-              sort={sort}
-              search={search}
-              onSearchChange={setSearch}
-              onOpenFilter={() => setFilterSheetOpen(true)}
-              onOpenSort={() => setSortSheetOpen(true)}
-            />
+          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-2 flex items-center gap-3">
+            <div className="hidden lg:block shrink-0">
+              <ViewSwitcher value={desktopView} onChange={setDesktopView} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <TopControls
+                filter={filters}
+                sort={sort}
+                search={search}
+                onSearchChange={setSearch}
+                onOpenFilter={() => setFilterSheetOpen(true)}
+                onOpenSort={() => setSortSheetOpen(true)}
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -565,18 +574,27 @@ const Index = () => {
         </p>
       </main>
 
-      {/* Desktop kanban — only at ≥1024px. Mobile main above is hidden at lg. */}
+      {/* Desktop main — Kanban or Table, only at ≥1024px. Mobile main above is hidden at lg. */}
       <div className="hidden lg:flex lg:flex-1 lg:min-h-0">
-        <KanbanBoard
-          activeTab={activeTab}
-          visible={visible}
-          projects={projects}
-          shipments={shipments}
-          onOpenCard={setSelectedCard}
-          onSwipeForward={onSwipeForward}
-          onSwipeBack={onSwipeBack}
-          onOpenPicker={onOpenPicker}
-        />
+        {desktopView === "table" ? (
+          <ProjectTable
+            activeTab={activeTab}
+            visible={visible}
+            onOpenCard={setSelectedCard}
+            onOpenPicker={onOpenPicker}
+          />
+        ) : (
+          <KanbanBoard
+            activeTab={activeTab}
+            visible={visible}
+            projects={projects}
+            shipments={shipments}
+            onOpenCard={setSelectedCard}
+            onSwipeForward={onSwipeForward}
+            onSwipeBack={onSwipeBack}
+            onOpenPicker={onOpenPicker}
+          />
+        )}
       </div>
 
       {/* Sheets / drawers */}
