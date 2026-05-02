@@ -418,8 +418,8 @@ const Index = () => {
           backgroundColor: "hsl(var(--background))",
         }}
       >
-        {/* Brand row */}
-        <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
+        {/* Brand row — mobile only (rail handles brand on desktop) */}
+        <div className="relative lg:hidden" style={{ backgroundColor: "hsl(var(--background))" }}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[52px] flex items-center justify-between">
             <button
               onClick={() => setHamburgerOpen(true)}
@@ -434,16 +434,21 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tabs row */}
+        {/* Tabs row — on desktop, also carries SettingsMenu on the right */}
         <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5">
-            <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
+          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-1.5 pt-1.5 lg:pt-3 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
+            </div>
+            <div className="hidden lg:block">
+              <SettingsMenu />
+            </div>
           </div>
         </div>
 
         {/* Filter row */}
         <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
+          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-2">
             <TopControls
               filter={filters}
               sort={sort}
