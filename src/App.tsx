@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PipelineStoreProvider } from "@/hooks/usePipelineStore";
 import { FriendlyModeProvider } from "@/hooks/useFriendlyMode";
+import { ExpandedCardsProvider } from "@/hooks/useExpandedCards";
 import { MasterDataProvider } from "@/hooks/useMasterData";
 import Index from "./pages/Index.tsx";
 import Spreadsheet from "./pages/Spreadsheet.tsx";
