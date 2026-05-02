@@ -214,6 +214,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("sales");
   const activePipeline: PipelineId = activeTab === "all" ? "sales" : activeTab;
   const isAll = activeTab === "all";
+  const { view: desktopView, setView: setDesktopView } = useViewMode(activeTab);
 
   // Per-tab filter persistence
   const [filtersByTab, setFiltersByTab] = useState<Record<TabId, FilterState>>(loadFilters);
