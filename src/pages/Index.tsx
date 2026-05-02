@@ -32,6 +32,7 @@ import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import type { TabId } from "@/components/leads/PipelineTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
+import { useCollapsibleHeader } from "@/hooks/useCollapsibleHeader";
 import { haptics } from "@/lib/haptics";
 // ─── Filter persistence per-tab ───
 const FILTER_STORAGE = "alvasco.filters.v2";
