@@ -427,7 +427,6 @@ export const ProjectCard = ({
         />
 
         <div
-          onClick={handleOpen}
           className="w-full text-left pl-[18px] pr-[16px] pt-[16px] pb-[16px] cursor-pointer"
         >
             {/* ─── TOP ZONE: identity (left) + supplier+PO (right) ─── */}
