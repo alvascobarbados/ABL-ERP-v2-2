@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { MoreVertical, Factory, Flag } from "lucide-react";
+import { MoreVertical, Factory, Flag, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, formatShippingLabel, getShipment, PIPELINES } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
