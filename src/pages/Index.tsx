@@ -399,13 +399,12 @@ const Index = () => {
     ? "all pipelines"
     : (searchScopeAll ? "all pipelines" : pipeline.title);
 
-  // Scroll-linked Tier-1 (brand row). Frozen while picker is open.
+  // Scroll-linked header: translate the entire chrome up by Tier 1 height.
   const BRAND_ROW_HEIGHT = 56;
-  const { offset: brandOffset, progress: brandProgress } = useCollapsibleHeader({
+  const { offset: brandOffset } = useCollapsibleHeader({
     collapseDistance: BRAND_ROW_HEIGHT,
     frozen: !!pickerCard,
   });
-  const brandHidden = brandProgress >= 0.99;
 
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
@@ -416,32 +415,24 @@ const Index = () => {
         style={{
           zIndex: 100,
           backgroundColor: "hsl(var(--background))",
+          top: "env(safe-area-inset-top, 0px)",
+          transform: `translate3d(0, -${brandOffset}px, 0)`,
+          willChange: "transform",
         }}
       >
 
-        {/* Tier 1: brand row — scroll-linked translate, tracks gesture 1:1.
-            overflow-hidden clips the inner translated content so it disappears
-            cleanly above Tier 2 instead of bleeding through. */}
+        {/* Tier 1: brand row — fixed height, moves off-screen with the whole header. */}
         <div
-          aria-hidden={brandHidden}
+          aria-hidden={brandOffset >= BRAND_ROW_HEIGHT}
           className="overflow-hidden relative"
           style={{
-            height: `calc(max(env(safe-area-inset-top), 8px) + 52px - ${brandOffset}px)`,
-            opacity: Math.max(0, 1 - brandProgress),
-            pointerEvents: brandHidden ? "none" : "auto",
+            height: BRAND_ROW_HEIGHT,
+            pointerEvents: brandOffset >= BRAND_ROW_HEIGHT ? "none" : "auto",
             backgroundColor: "hsl(var(--background))",
-            willChange: "height, opacity",
             zIndex: 1,
           }}
         >
-          <div
-            style={{
-              transform: `translate3d(0, -${brandOffset}px, 0)`,
-              willChange: "transform",
-              backgroundColor: "hsl(var(--background))",
-            }}
-          >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),8px)] pb-1.5 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
             <button
               onClick={() => setHamburgerOpen(true)}
               aria-label="Open menu"
@@ -453,30 +444,30 @@ const Index = () => {
             <Wordmark />
             <SettingsMenu />
           </div>
+        </div>
+
+        {/* Tier 2: controls — immediately below Tier 1, translated by the same header transform. */}
+        <div className="relative" style={{ backgroundColor: "hsl(var(--background))", zIndex: 2 }}>
+          <div
+            className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 relative"
+            style={{ backgroundColor: "hsl(var(--background))" }}
+          >
+            <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
           </div>
-        </div>
 
-        {/* Tier 2: pipeline tabs — always sticky, opaque */}
-        <div
-          className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 relative"
-          style={{ backgroundColor: "hsl(var(--background))", zIndex: 2 }}
-        >
-          <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
-        </div>
-
-        {/* Tier 2: filter / sort / search — always sticky, opaque */}
-        <div
-          className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 relative"
-          style={{ backgroundColor: "hsl(var(--background))", zIndex: 2 }}
-        >
-          <TopControls
-            filter={filters}
-            sort={sort}
-            search={search}
-            onSearchChange={setSearch}
-            onOpenFilter={() => setFilterSheetOpen(true)}
-            onOpenSort={() => setSortSheetOpen(true)}
-          />
+          <div
+            className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 relative"
+            style={{ backgroundColor: "hsl(var(--background))" }}
+          >
+            <TopControls
+              filter={filters}
+              sort={sort}
+              search={search}
+              onSearchChange={setSearch}
+              onOpenFilter={() => setFilterSheetOpen(true)}
+              onOpenSort={() => setSortSheetOpen(true)}
+            />
+          </div>
         </div>
       </header>
 
