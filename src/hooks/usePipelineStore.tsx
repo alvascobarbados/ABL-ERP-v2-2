@@ -116,10 +116,12 @@ export interface NewShipmentInput {
 }
 
 interface PipelineStoreCtx {
-  /** Live projects only — trashed projects are filtered out. */
+  /** Live projects only — trashed projects are filtered out. Includes archived projects (sales/archive). */
   projects: Project[];
   /** Soft-deleted projects (in Trash). */
   trashedProjects: Project[];
+  /** Projects sitting in sales/archive — excluded from pipeline views/counts; surfaced in ArchiveView. */
+  archivedProjects: Project[];
   shipments: Shipment[];
   suppliers: Supplier[];
   moveCard: (cardId: string, target: { pipeline: PipelineId; stage: StageId }) => MoveResult;
@@ -430,9 +432,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       .sort((a, b) => (b.deletedAt!.getTime() - a.deletedAt!.getTime())),
     [projects],
   );
+  const archivedProjects = useMemo(
+    () => liveProjects.filter((p) => p.pipeline === "sales" && p.stage === "archive"),
+    [liveProjects],
+  );
 
   const value = useMemo<PipelineStoreCtx>(() => ({
-    projects: liveProjects, trashedProjects, shipments, suppliers,
+    projects: liveProjects, trashedProjects, archivedProjects, shipments, suppliers,
     moveCard, updateProject, renameProject, addNote,
     addLineItem, updateLineItem, removeLineItem,
     duplicateProject, createProject, toggleFlag,
@@ -441,7 +447,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
     assignToShipment, createShipment, updateShipment, markShipmentDelivered,
     pulsePipeline, triggerPulse,
-  }), [liveProjects, trashedProjects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, createProject, toggleFlag, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, updateShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+  }), [liveProjects, trashedProjects, archivedProjects, shipments, suppliers, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, createProject, toggleFlag, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, updateShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
 
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
