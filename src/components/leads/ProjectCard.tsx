@@ -220,7 +220,11 @@ export const ProjectCard = ({
   const intensity = Math.min(1, Math.abs(dx) / COMMIT_THRESHOLD_PX);
 
   // ─── Unified card content ───
-  const supplierName = card.supplier?.name;
+  // Resolve supplier from the LIVE master-data + project (not the cached
+  // card.supplier from buildCard, which uses a static seed list and won't
+  // reflect newly assigned suppliers from the Supabase suppliers table).
+  const supplierName =
+    md.getSupplierByAnyId(proj.supplierId)?.name ?? card.supplier?.name;
   const supplierHint = proj.supplierLabel;
   const supplierIsEmpty = !supplierName && !supplierHint;
   const supplierDisplay = supplierName ?? supplierHint ?? "Unassigned";
