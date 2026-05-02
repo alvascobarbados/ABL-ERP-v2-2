@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   X, Filter as FilterIcon, Users, Briefcase, Factory,
-  Plane, Ship, MapPin, UserCircle2, Layers, Clock, AlertTriangle, Check, Search,
+  Plane, Ship, MapPin, UserCircle2, Layers, Clock, AlertTriangle, Check, Search, Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PIPELINES, ShippingMode } from "@/data/pipelines";
@@ -289,6 +289,41 @@ export const FilterSheet = ({
                       style={{
                         backgroundColor: sel ? "hsl(var(--brand-navy))" : undefined,
                         borderColor: sel ? "hsl(var(--brand-navy))" : "hsl(var(--brand-navy) / 0.18)",
+                      }}>
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Flagged tri-state */}
+            <div className="rounded-xl border p-3" style={{ borderColor: "hsl(var(--brand-navy) / 0.18)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <Flag className="h-4 w-4" style={{ color: "hsl(var(--brand-orange))" }} />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Flagged</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {value.flagged === null ? "All" : value.flagged ? "Only flagged" : "Only unflagged"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: null as boolean | null, label: "All" },
+                  { id: true as boolean | null, label: "Only flagged" },
+                  { id: false as boolean | null, label: "Only unflagged" },
+                ].map((o) => {
+                  const sel = value.flagged === o.id;
+                  return (
+                    <button
+                      key={String(o.id)} type="button"
+                      onClick={() => onChange({ ...value, flagged: o.id })}
+                      className={cn(
+                        "text-xs rounded-full border px-3 py-1.5 transition-colors",
+                        sel ? "text-white border-transparent" : "bg-background text-foreground/80 hover:border-foreground/30",
+                      )}
+                      style={{
+                        backgroundColor: sel ? "hsl(var(--brand-orange))" : undefined,
+                        borderColor: sel ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy) / 0.18)",
                       }}>
                       {o.label}
                     </button>
