@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { MoreVertical, Factory } from "lucide-react";
+import { MoreVertical, Factory, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, formatShippingLabel, getShipment, PIPELINES } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
@@ -70,6 +70,7 @@ export const ProjectCard = ({
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [pulse, setPulse] = useState(false);
+  const [burst, setBurst] = useState(false);
   const [snapTransition, setSnapTransition] = useState(false);
   const startX = useRef(0);
   const startY = useRef(0);
@@ -179,7 +180,27 @@ export const ProjectCard = ({
     isHorizontal.current = null;
   };
 
-  const handleOpen = () => { if (!moved.current) onOpen(); };
+  const lastTapRef = useRef<number>(0);
+  const tapTimerRef = useRef<number | null>(null);
+  const handleOpen = () => {
+    if (moved.current) return;
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      lastTapRef.current = 0;
+      if (tapTimerRef.current) {
+        window.clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = null;
+      }
+      handleToggleFlag({ burst: true });
+      return;
+    }
+    lastTapRef.current = now;
+    if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = window.setTimeout(() => {
+      tapTimerRef.current = null;
+      onOpen();
+    }, 300);
+  };
 
   const showForward = dx > 12 && canForward;
   const showBack = dx < -12 && canBack;
@@ -244,10 +265,26 @@ export const ProjectCard = ({
       },
     });
   };
-  const handleToggleFlag = () => {
+  const handleToggleFlag = (opts?: { burst?: boolean }) => {
+    const wasFlagged = !!proj.flagged;
     store.toggleFlag(proj.id);
-    haptics.threshold();
-    toast(proj.flagged ? `Unflagged · ${proj.customer}` : `Flagged · ${proj.customer}`, { duration: 1800 });
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      try { navigator.vibrate(wasFlagged ? 10 : 20); } catch { /* noop */ }
+    } else {
+      haptics.threshold();
+    }
+    if (opts?.burst && !wasFlagged) {
+      setBurst(true);
+      window.setTimeout(() => setBurst(false), 420);
+    }
+    const label = `${proj.customer} · ${proj.projectName}`;
+    toast(wasFlagged ? `Unflagged · ${label}` : `Flagged · ${label}`, {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => store.toggleFlag(proj.id),
+      },
+    });
   };
   const flagged = !!proj.flagged;
 
@@ -337,6 +374,22 @@ export const ProjectCard = ({
           className="absolute left-0 top-0 bottom-0 w-[4px] z-[2]"
           style={{ backgroundColor: pipelineHex, opacity: 0.85 }}
         />
+
+        {/* Double-tap flag burst */}
+        {burst && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+            <Flag
+              className="flag-burst"
+              style={{
+                color: "hsl(var(--brand-orange))",
+                fill: "hsl(var(--brand-orange))",
+                width: 72,
+                height: 72,
+                filter: "drop-shadow(0 4px 12px hsl(var(--brand-orange) / 0.5))",
+              }}
+            />
+          </div>
+        )}
 
         <CardActionsPopover
           open={menuOpen}
