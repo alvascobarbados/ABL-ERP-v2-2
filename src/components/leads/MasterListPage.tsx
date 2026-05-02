@@ -294,6 +294,7 @@ export const MasterListPage = ({ kind }: Props) => {
         destructive
         onConfirm={handleDelete}
       />
+      </div>
     </div>
   );
 };
