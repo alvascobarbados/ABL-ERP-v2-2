@@ -414,8 +414,10 @@ const Index = () => {
     <div className="min-h-screen bg-background lg:flex lg:h-screen lg:min-h-0 lg:overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <DesktopRail
         trashCount={store.trashedProjects.length}
+        archiveCount={store.archivedProjects.length}
         onOpenShipments={() => setShipmentsListOpen(true)}
         onOpenTrash={() => setTrashOpen(true)}
+        onOpenArchive={() => setArchiveOpen(true)}
         onOpenSpreadsheet={() => navigate("/spreadsheet")}
       />
       <div className="contents lg:flex lg:flex-1 lg:min-w-0 lg:flex-col lg:h-screen lg:overflow-hidden">
@@ -586,9 +588,12 @@ const Index = () => {
         onOpenCustomers={() => setCustomersOpen(true)}
         onOpenShipments={() => setShipmentsListOpen(true)}
         onOpenTrash={() => setTrashOpen(true)}
+        onOpenArchive={() => setArchiveOpen(true)}
         trashCount={store.trashedProjects.length}
+        archiveCount={store.archivedProjects.length}
       />
       <TrashView open={trashOpen} onClose={() => setTrashOpen(false)} />
+      <ArchiveView open={archiveOpen} onClose={() => setArchiveOpen(false)} />
 
       <FilterSheet
         open={filterSheetOpen}
