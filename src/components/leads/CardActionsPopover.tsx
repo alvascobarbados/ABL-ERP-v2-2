@@ -1,6 +1,6 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  PencilLine, FolderOpen, ArrowRightLeft, Copy, Archive, Trash2,
+  PencilLine, FolderOpen, ArrowRightLeft, Copy, Archive, Trash2, Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
@@ -9,6 +9,8 @@ export interface CardActionsPopoverProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trigger: ReactNode;
+  flagged?: boolean;
+  onToggleFlag?: () => void;
   onEdit: () => void;
   onOpenProject: () => void;
   onMoveStage: () => void;
@@ -41,7 +43,7 @@ const Row = ({ icon: Icon, label, onClick, destructive }: RowProps) => (
 );
 
 export const CardActionsPopover = ({
-  open, onOpenChange, trigger,
+  open, onOpenChange, trigger, flagged, onToggleFlag,
   onEdit, onOpenProject, onMoveStage, onDuplicate, onArchive, onDelete,
 }: CardActionsPopoverProps) => {
   const wrap = (fn: () => void) => () => { onOpenChange(false); fn(); };
@@ -56,6 +58,9 @@ export const CardActionsPopover = ({
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
+        {onToggleFlag && (
+          <Row icon={Flag} label={flagged ? "Unflag" : "Flag"} onClick={wrap(onToggleFlag)} />
+        )}
         <Row icon={PencilLine} label="Edit" onClick={wrap(onEdit)} />
         <Row icon={FolderOpen} label="Open project" onClick={wrap(onOpenProject)} />
         <Row icon={ArrowRightLeft} label="Move to stage…" onClick={wrap(onMoveStage)} />
