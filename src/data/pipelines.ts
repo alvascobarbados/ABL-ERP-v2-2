@@ -42,11 +42,14 @@ export const PIPELINES: PipelineConfig[] = [
   {
     id: "sales",
     title: "Sales",
+    // NOTE: "archive" is a valid StageId and projects can still sit in
+    // sales/archive, but Archive is NOT a kanban stage anymore — it lives
+    // in the left rail (see ArchiveView). Pipeline views, counts, and the
+    // StagePicker hide archived projects entirely.
     stages: [
       { id: "proposal", title: "Proposal" },
       { id: "quote", title: "Quote" },
       { id: "confirming", title: "Confirming" },
-      { id: "archive", title: "Archive" },
     ],
   },
   {
