@@ -408,12 +408,7 @@ const Index = () => {
     <EditModeProvider>
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
-        {/* Strip 1: app header — tight */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),8px)] pb-1.5 flex items-center justify-between">
-          <button
-            onClick={() => setHamburgerOpen(true)}
-            aria-label="Open menu"
-      <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
+
         {/* Tier 1: brand row — collapses on scroll down, returns on scroll up */}
         <div
           aria-hidden={brandHidden}
