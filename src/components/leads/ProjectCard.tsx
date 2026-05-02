@@ -521,7 +521,7 @@ export const ProjectCard = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!hasLineItems) return;
-                  setExpanded((v) => !v);
+                  expandCtx.toggleOverride(card.id);
                   haptics.threshold();
                 }}
                 disabled={!hasLineItems}
