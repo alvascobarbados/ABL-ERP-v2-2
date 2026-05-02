@@ -60,6 +60,9 @@ export const ProjectCard = ({
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const lineItems = proj.lineItems ?? [];
+  const hasLineItems = lineItems.length > 0;
 
   const next = getNextStage(card.pipeline, card.stage);
   const prev = getPrevStage(card.pipeline, card.stage);
