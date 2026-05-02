@@ -186,6 +186,7 @@ export const ProjectCard = ({
   const lastTapRef = useRef<number>(0);
   const tapTimerRef = useRef<number | null>(null);
   const handleOpen = () => {
+    console.log("[ProjectCard] handleOpen fired, moved=", moved.current);
     if (moved.current) return;
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
@@ -200,6 +201,7 @@ export const ProjectCard = ({
     lastTapRef.current = now;
     if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
     tapTimerRef.current = window.setTimeout(() => {
+      console.log("[ProjectCard] tap timer fired -> onOpen");
       tapTimerRef.current = null;
       onOpen();
     }, 300);
