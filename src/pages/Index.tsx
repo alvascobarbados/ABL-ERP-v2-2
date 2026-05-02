@@ -399,6 +399,10 @@ const Index = () => {
     ? "all pipelines"
     : (searchScopeAll ? "all pipelines" : pipeline.title);
 
+  // Collapsible Tier-1 (brand row) on scroll. Frozen while picker is open.
+  const brandHiddenRaw = useCollapsibleHeader({ hideAfter: 60, upDelta: 4 });
+  const brandHidden = pickerCard ? false : brandHiddenRaw;
+
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
     <EditModeProvider>
