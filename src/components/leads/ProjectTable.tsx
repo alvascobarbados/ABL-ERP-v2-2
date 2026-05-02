@@ -151,7 +151,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: P
   const [sortKey, setSortKey] = useState<SortKey>("deadline");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingCard, setEditingCard] = useState<PipelineCard | null>(null);
 
   const sorted = useMemo(() => {
     const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir));
@@ -223,7 +223,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: P
                 onMenuOpenChange={(open) => setMenuFor(open ? card.id : null)}
                 onOpen={() => onOpenCard(card)}
                 onToggleFlag={() => store.toggleFlag(card.project.id)}
-                onEdit={() => setEditingId(card.project.id)}
+                onEdit={() => setEditingCard(card)}
                 onMoveStage={() => onOpenPicker(card)}
                 onDuplicate={() => store.duplicateProject(card.project.id)}
                 onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
@@ -243,10 +243,10 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: P
         {totalAmount > 0 && <> · ${totalAmount.toLocaleString()} BBD total</>}
       </div>
 
-      {editingId && (
+      {editingCard && (
         <CardEditOverlay
-          projectId={editingId}
-          onClose={() => setEditingId(null)}
+          card={editingCard}
+          onExit={() => setEditingCard(null)}
         />
       )}
     </div>
