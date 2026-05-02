@@ -32,7 +32,6 @@ import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import type { TabId } from "@/components/leads/PipelineTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
-import { useCollapsibleHeader } from "@/hooks/useCollapsibleHeader";
 import { haptics } from "@/lib/haptics";
 // ─── Filter persistence per-tab ───
 const FILTER_STORAGE = "alvasco.filters.v2";
@@ -399,13 +398,6 @@ const Index = () => {
     ? "all pipelines"
     : (searchScopeAll ? "all pipelines" : pipeline.title);
 
-  // Scroll-linked header: translate the entire chrome up by Tier 1 height.
-  const BRAND_ROW_HEIGHT = 56;
-  const { offset: brandOffset } = useCollapsibleHeader({
-    collapseDistance: BRAND_ROW_HEIGHT,
-    frozen: !!pickerCard,
-  });
-
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
     <EditModeProvider>
@@ -415,24 +407,11 @@ const Index = () => {
         style={{
           zIndex: 100,
           backgroundColor: "hsl(var(--background))",
-          top: "env(safe-area-inset-top, 0px)",
-          transform: `translate3d(0, -${brandOffset}px, 0)`,
-          willChange: "transform",
         }}
       >
-
-        {/* Tier 1: brand row — fixed height, moves off-screen with the whole header. */}
-        <div
-          aria-hidden={brandOffset >= BRAND_ROW_HEIGHT}
-          className="overflow-hidden relative"
-          style={{
-            height: BRAND_ROW_HEIGHT,
-            pointerEvents: brandOffset >= BRAND_ROW_HEIGHT ? "none" : "auto",
-            backgroundColor: "hsl(var(--background))",
-            zIndex: 1,
-          }}
-        >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
+        {/* Brand row */}
+        <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[52px] flex items-center justify-between">
             <button
               onClick={() => setHamburgerOpen(true)}
               aria-label="Open menu"
@@ -446,19 +425,16 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tier 2: controls — immediately below Tier 1, translated by the same header transform. */}
-        <div className="relative" style={{ backgroundColor: "hsl(var(--background))", zIndex: 2 }}>
-          <div
-            className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 relative"
-            style={{ backgroundColor: "hsl(var(--background))" }}
-          >
+        {/* Tabs row */}
+        <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5">
             <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
           </div>
+        </div>
 
-          <div
-            className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 relative"
-            style={{ backgroundColor: "hsl(var(--background))" }}
-          >
+        {/* Filter row */}
+        <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
             <TopControls
               filter={filters}
               sort={sort}
