@@ -266,14 +266,25 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       // the original ID. This is the integrity invariant the spreadsheet
       // view depends on.
       id: `prj-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      // Suffix the name so the user can find the duplicate via search.
+      projectName: `${orig.projectName} (Copy)`,
+      // Reference numbers are unique per project — clear them so the copy
+      // doesn't trip duplicate-number validators.
       quoteNumber: undefined,
       poNumber: undefined,
       invoiceNumber: undefined,
       shipmentId: undefined,
       notes: undefined,
       lineItems: undefined,
-      pipeline: "sales",
-      stage: "proposal",
+      // Keep the original pipeline/stage so the duplicate appears next to
+      // the source — sending it back to Sales · Proposal made it invisible
+      // when the user was viewing any other tab.
+      pipeline: orig.pipeline,
+      stage: orig.stage,
+      flagged: false,
+      deletedAt: undefined,
+      deletedFromPipeline: undefined,
+      deletedFromStage: undefined,
       createdAt: new Date(),
       updatedAt: undefined,
     };
