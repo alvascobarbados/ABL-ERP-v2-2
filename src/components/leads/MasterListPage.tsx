@@ -23,6 +23,7 @@ import { useMasterData, EntityKind } from "@/hooks/useMasterData";
 import { InlineAdd } from "@/components/leads/EntityPicker";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 import { BottomSheet } from "@/components/leads/EditorSheets";
+import { DesktopRail } from "@/components/leads/DesktopRail";
 import type { ShippingMode } from "@/data/pipelines";
 
 interface Column { key: string; label: string; align?: "left" | "right" }
@@ -153,7 +154,9 @@ export const MasterListPage = ({ kind }: Props) => {
   const editingRow = editingId ? rows.find((r) => r.id === editingId) : null;
 
   return (
-    <div className="min-h-dvh" style={{ backgroundColor: "hsl(var(--background))" }}>
+    <div className="min-h-dvh lg:flex" style={{ backgroundColor: "hsl(var(--background))" }}>
+      <DesktopRail trashCount={0} />
+      <div className="lg:flex-1 lg:min-w-0">
       {/* Top bar */}
       <header
         className="sticky top-0 z-20 backdrop-blur-md border-b"
