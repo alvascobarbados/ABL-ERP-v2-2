@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { MoreVertical, Factory, Flag } from "lucide-react";
+import { MoreVertical, Factory } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, formatShippingLabel, getShipment, PIPELINES } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
@@ -337,24 +337,6 @@ export const ProjectCard = ({
           className="absolute left-0 top-0 bottom-0 w-[4px] z-[2]"
           style={{ backgroundColor: pipelineHex, opacity: 0.85 }}
         />
-
-        {/* Flag toggle (always visible, fills orange when flagged) */}
-        <button
-          data-no-drag
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); handleToggleFlag(); }}
-          className="absolute top-3 right-10 z-10 p-1.5 rounded-full hover:bg-muted/60 transition-colors"
-          aria-label={flagged ? "Unflag project" : "Flag project"}
-          title={flagged ? "Unflag" : "Flag"}
-        >
-          <Flag
-            className="h-4 w-4"
-            style={{
-              color: "hsl(var(--brand-orange))",
-              fill: flagged ? "hsl(var(--brand-orange))" : "transparent",
-            }}
-          />
-        </button>
 
         <CardActionsPopover
           open={menuOpen}
