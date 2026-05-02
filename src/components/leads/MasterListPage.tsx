@@ -155,7 +155,7 @@ export const MasterListPage = ({ kind }: Props) => {
 
   return (
     <div className="min-h-dvh lg:flex" style={{ backgroundColor: "hsl(var(--background))" }}>
-      <DesktopRail trashCount={0} />
+      <DesktopRail trashCount={0} archiveCount={0} />
       <div className="lg:flex-1 lg:min-w-0">
       {/* Top bar */}
       <header
