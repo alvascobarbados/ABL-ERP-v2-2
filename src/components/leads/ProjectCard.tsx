@@ -9,6 +9,7 @@ import { PIPELINE_ACCENT } from "@/lib/brand";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import { useExpandedCards } from "@/hooks/useExpandedCards";
+import { useMasterData } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
 
 
@@ -53,6 +54,12 @@ export const ProjectCard = ({
   const jiggle = useJiggle();
   const editMode = useEditMode();
   const store = usePipelineStore();
+  const md = useMasterData();
+  // SINGLE SOURCE OF TRUTH: always read the live project record from the
+  // central store. The `card.project` snapshot held by the parent list can
+  // be one render behind after edits — going through the store guarantees
+  // edits propagate immediately to the card surface.
+  const liveProject = store.projects.find((p) => p.id === card.project.id) ?? card.project;
   const jiggleActive = jiggle.activeId === card.id;
   const jiggleDimmed = jiggle.activeId !== null && !jiggleActive;
   const isEditing = editMode.activeId === card.id;
