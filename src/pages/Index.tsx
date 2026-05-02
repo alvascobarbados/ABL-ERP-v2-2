@@ -17,6 +17,7 @@ import { SuppliersView } from "@/components/leads/SuppliersView";
 import { CustomersView } from "@/components/leads/CustomersView";
 import { ShipmentsView } from "@/components/leads/ShipmentsView";
 import { TrashView } from "@/components/leads/TrashView";
+import { ArchiveView } from "@/components/leads/ArchiveView";
 import { HamburgerDrawer } from "@/components/leads/HamburgerDrawer";
 import { TopControls } from "@/components/leads/TopControls";
 import { FilterSheet } from "@/components/leads/FilterSheet";
@@ -228,6 +229,7 @@ const Index = () => {
   const [customersOpen, setCustomersOpen] = useState(false);
   const [shipmentsListOpen, setShipmentsListOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
 
@@ -279,18 +281,24 @@ const Index = () => {
     return (id?: string) => (id ? map.get(id) ?? "" : "");
   }, []);
 
+  // Pipeline-facing project list — excludes archived (sales/archive lives only in ArchiveView).
+  const pipelineProjects = useMemo(
+    () => projects.filter((p) => !(p.pipeline === "sales" && p.stage === "archive")),
+    [projects],
+  );
+
   // Build cards list (scope by tab)
   const baseCards = useMemo<PipelineCard[]>(() => {
-    if (isAll) return projects.map(buildCard);
-    return projects.filter((p) => p.pipeline === activePipeline).map(buildCard);
-  }, [activePipeline, isAll, projects]);
+    if (isAll) return pipelineProjects.map(buildCard);
+    return pipelineProjects.filter((p) => p.pipeline === activePipeline).map(buildCard);
+  }, [activePipeline, isAll, pipelineProjects]);
 
   const counts = useMemo<Record<PipelineId, number>>(() => ({
-    sales: projects.filter((p) => p.pipeline === "sales").length,
-    operations: projects.filter((p) => p.pipeline === "operations").length,
-    shipping: projects.filter((p) => p.pipeline === "shipping").length,
-    finance: projects.filter((p) => p.pipeline === "finance").length,
-  }), [projects]);
+    sales: pipelineProjects.filter((p) => p.pipeline === "sales").length,
+    operations: pipelineProjects.filter((p) => p.pipeline === "operations").length,
+    shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
+    finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
+  }), [pipelineProjects]);
 
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
@@ -301,7 +309,7 @@ const Index = () => {
     const searchActive = !!search.trim();
     let pool = baseCards;
     if (searchActive && searchScopeAll && !isAll) {
-      pool = projects.map(buildCard);
+      pool = pipelineProjects.map(buildCard);
     }
     return pool
       .filter((c) => {
@@ -310,7 +318,7 @@ const Index = () => {
         return true;
       })
       .sort((a, b) => compareCards(a, b, sort, idIndex, supplierName));
-  }, [baseCards, projects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
+  }, [baseCards, pipelineProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
 
   const pipeline = PIPELINES.find((p) => p.id === activePipeline)!;
   const hasActiveFilter = filterCount(filters) > 0;
@@ -406,8 +414,10 @@ const Index = () => {
     <div className="min-h-screen bg-background lg:flex lg:h-screen lg:min-h-0 lg:overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <DesktopRail
         trashCount={store.trashedProjects.length}
+        archiveCount={store.archivedProjects.length}
         onOpenShipments={() => setShipmentsListOpen(true)}
         onOpenTrash={() => setTrashOpen(true)}
+        onOpenArchive={() => setArchiveOpen(true)}
         onOpenSpreadsheet={() => navigate("/spreadsheet")}
       />
       <div className="contents lg:flex lg:flex-1 lg:min-w-0 lg:flex-col lg:h-screen lg:overflow-hidden">
@@ -578,9 +588,12 @@ const Index = () => {
         onOpenCustomers={() => setCustomersOpen(true)}
         onOpenShipments={() => setShipmentsListOpen(true)}
         onOpenTrash={() => setTrashOpen(true)}
+        onOpenArchive={() => setArchiveOpen(true)}
         trashCount={store.trashedProjects.length}
+        archiveCount={store.archivedProjects.length}
       />
       <TrashView open={trashOpen} onClose={() => setTrashOpen(false)} />
+      <ArchiveView open={archiveOpen} onClose={() => setArchiveOpen(false)} />
 
       <FilterSheet
         open={filterSheetOpen}

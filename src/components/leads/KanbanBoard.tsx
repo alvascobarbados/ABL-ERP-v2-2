@@ -72,14 +72,14 @@ export const KanbanBoard = ({
 
   return (
     <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
-      <div className="h-full flex gap-4 px-5 py-4 min-w-max">
+      <div className="h-full flex gap-4 px-5 py-4 w-full">
         {columns.map((col) => {
           const accentHex = PIPELINE_ACCENT[col.pipeline].hex;
           return (
             <div
               key={col.id}
-              className="flex flex-col rounded-2xl border border-border/60 bg-card/60 shrink-0"
-              style={{ width: 312, maxHeight: "100%" }}
+              className="flex flex-col rounded-2xl border border-border/60 bg-card/60"
+              style={{ flex: "1 1 0", minWidth: 280, maxWidth: 480, maxHeight: "100%" }}
             >
               {/* Sticky column header */}
               <div

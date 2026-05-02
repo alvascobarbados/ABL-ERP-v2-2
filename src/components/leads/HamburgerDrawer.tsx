@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2, Table2, UserCircle2, Package } from "lucide-react";
+import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2, Table2, UserCircle2, Package, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -12,7 +12,9 @@ interface Props {
   onOpenCustomers: () => void;
   onOpenShipments: () => void;
   onOpenTrash: () => void;
+  onOpenArchive: () => void;
   trashCount: number;
+  archiveCount: number;
 }
 
 const MenuItem = ({
@@ -46,7 +48,7 @@ const MenuItem = ({
 );
 
 export const HamburgerDrawer = ({
-  open, onClose, onOpenSpreadsheet, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, trashCount,
+  open, onClose, onOpenSpreadsheet, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, onOpenArchive, trashCount, archiveCount,
 }: Props) => {
   const navigate = useNavigate();
   useEffect(() => {
@@ -98,6 +100,7 @@ export const HamburgerDrawer = ({
 
           <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
           <MenuItem icon={Ship} label="Shipments" onClick={() => { onClose(); onOpenShipments(); }} />
+          <MenuItem icon={Archive} label="Archive" badge={archiveCount} onClick={() => { onClose(); onOpenArchive(); }} />
           <MenuItem icon={Trash2} label="Trash" badge={trashCount} onClick={() => { onClose(); onOpenTrash(); }} />
 
           <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />

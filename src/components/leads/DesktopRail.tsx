@@ -6,15 +6,17 @@
  * existing HamburgerDrawer untouched.
  */
 import { useNavigate, useLocation } from "react-router-dom";
-import { Users, Factory, UserCircle2, Package, Ship, Trash2, HelpCircle, LogOut, Table2 } from "lucide-react";
+import { Users, Factory, UserCircle2, Package, Ship, Trash2, HelpCircle, LogOut, Table2, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "./Wordmark";
 
 interface Props {
   trashCount: number;
+  archiveCount: number;
   onOpenShipments?: () => void;
   onOpenTrash?: () => void;
+  onOpenArchive?: () => void;
   onOpenSpreadsheet?: () => void;
 }
 
@@ -28,7 +30,7 @@ interface Item {
   active?: boolean;
 }
 
-export const DesktopRail = ({ trashCount, onOpenShipments, onOpenTrash, onOpenSpreadsheet }: Props) => {
+export const DesktopRail = ({ trashCount, archiveCount, onOpenShipments, onOpenTrash, onOpenArchive, onOpenSpreadsheet }: Props) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -43,6 +45,7 @@ export const DesktopRail = ({ trashCount, onOpenShipments, onOpenTrash, onOpenSp
   const utilityItems: Item[] = [
     { icon: Table2, label: "Spreadsheet", onClick: () => onOpenSpreadsheet ? onOpenSpreadsheet() : navigate("/spreadsheet"), active: isActive("/spreadsheet") },
     { icon: Ship, label: "Shipments", onClick: () => onOpenShipments?.() },
+    { icon: Archive, label: "Archive", onClick: () => onOpenArchive?.(), badge: archiveCount },
     { icon: Trash2, label: "Trash", onClick: () => onOpenTrash?.(), badge: trashCount },
   ];
   const footerItems: Item[] = [
