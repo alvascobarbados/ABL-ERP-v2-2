@@ -417,7 +417,15 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Add line item"
         qty=""
         description=""
-        onSave={(q, d) => { addLineItem(live.id, { qty: q, description: d }); setEditor(null); }}
+        onSave={(q, d, price) => {
+          addLineItem(live.id, {
+            qty: q,
+            description: d,
+            unitPrice: price,
+            total: price !== undefined ? +(q * price).toFixed(2) : undefined,
+          });
+          setEditor(null);
+        }}
       />
       <ProductLineItemEditor
         open={editor?.kind === "editLineItem"}
@@ -425,9 +433,17 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Edit line item"
         qty={editor?.kind === "editLineItem" ? (live.lineItems?.[editor.index]?.qty ?? 0) : 0}
         description={editor?.kind === "editLineItem" ? (live.lineItems?.[editor.index]?.description ?? "") : ""}
-        onSave={(q, d) => {
+        unitPrice={editor?.kind === "editLineItem" ? live.lineItems?.[editor.index]?.unitPrice : undefined}
+        onSave={(q, d, price) => {
           if (editor?.kind !== "editLineItem") return;
-          updateLineItem(live.id, editor.index, { qty: q, description: d });
+          const existing = live.lineItems?.[editor.index];
+          updateLineItem(live.id, editor.index, {
+            ...existing,
+            qty: q,
+            description: d,
+            unitPrice: price,
+            total: price !== undefined ? +(q * price).toFixed(2) : undefined,
+          });
           setEditor(null);
         }}
         onDelete={() => {
