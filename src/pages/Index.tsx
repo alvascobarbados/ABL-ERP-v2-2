@@ -307,7 +307,7 @@ const Index = () => {
     const searchActive = !!search.trim();
     let pool = baseCards;
     if (searchActive && searchScopeAll && !isAll) {
-      pool = projects.map(buildCard);
+      pool = pipelineProjects.map(buildCard);
     }
     return pool
       .filter((c) => {
@@ -316,7 +316,7 @@ const Index = () => {
         return true;
       })
       .sort((a, b) => compareCards(a, b, sort, idIndex, supplierName));
-  }, [baseCards, projects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
+  }, [baseCards, pipelineProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
 
   const pipeline = PIPELINES.find((p) => p.id === activePipeline)!;
   const hasActiveFilter = filterCount(filters) > 0;
