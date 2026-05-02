@@ -461,7 +461,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main key={activeTab} className="max-w-6xl mx-auto px-4 sm:px-6 pt-2.5 pb-6 sm:pt-3 sm:pb-8 space-y-4 sm:space-y-5 animate-fade-in">
+      <main key={activeTab} className="lg:hidden max-w-6xl mx-auto px-4 sm:px-6 pt-2.5 pb-6 sm:pt-3 sm:pb-8 space-y-4 sm:space-y-5 animate-fade-in">
         {isSearching && (
           <div className="flex items-center justify-between gap-3 px-1">
             <p className="text-xs text-muted-foreground">
