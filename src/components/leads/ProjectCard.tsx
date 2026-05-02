@@ -391,6 +391,7 @@ export const ProjectCard = ({
           </div>
         )}
 
+        <CardActionsPopover
           open={menuOpen}
           onOpenChange={(o) => {
             setMenuOpen(o);
