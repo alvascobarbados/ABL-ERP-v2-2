@@ -61,7 +61,8 @@ export const ProjectCard = ({
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const expandCtx = useExpandedCards();
+  const expanded = expandCtx.isExpanded(card.id);
   const lineItems = proj.lineItems ?? [];
   const hasLineItems = lineItems.length > 0;
 
