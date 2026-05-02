@@ -411,23 +411,34 @@ const Index = () => {
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
     <EditModeProvider>
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
+      <header
+        className="sticky top-0 border-b border-border/70"
+        style={{
+          zIndex: 100,
+          backgroundColor: "hsl(var(--background))",
+        }}
+      >
 
-        {/* Tier 1: brand row — scroll-linked translate, tracks gesture 1:1 */}
+        {/* Tier 1: brand row — scroll-linked translate, tracks gesture 1:1.
+            overflow-hidden clips the inner translated content so it disappears
+            cleanly above Tier 2 instead of bleeding through. */}
         <div
           aria-hidden={brandHidden}
-          className="overflow-hidden"
+          className="overflow-hidden relative"
           style={{
             height: `calc(max(env(safe-area-inset-top), 8px) + 52px - ${brandOffset}px)`,
             opacity: Math.max(0, 1 - brandProgress),
             pointerEvents: brandHidden ? "none" : "auto",
+            backgroundColor: "hsl(var(--background))",
             willChange: "height, opacity",
+            zIndex: 1,
           }}
         >
           <div
             style={{
               transform: `translate3d(0, -${brandOffset}px, 0)`,
               willChange: "transform",
+              backgroundColor: "hsl(var(--background))",
             }}
           >
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),8px)] pb-1.5 flex items-center justify-between">
@@ -445,13 +456,19 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tier 2: pipeline tabs — always sticky */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5">
+        {/* Tier 2: pipeline tabs — always sticky, opaque */}
+        <div
+          className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 relative"
+          style={{ backgroundColor: "hsl(var(--background))", zIndex: 2 }}
+        >
           <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
         </div>
 
-        {/* Tier 2: filter / sort / search — always sticky */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
+        {/* Tier 2: filter / sort / search — always sticky, opaque */}
+        <div
+          className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 relative"
+          style={{ backgroundColor: "hsl(var(--background))", zIndex: 2 }}
+        >
           <TopControls
             filter={filters}
             sort={sort}
