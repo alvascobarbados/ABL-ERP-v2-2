@@ -33,6 +33,8 @@ import type { TabId } from "@/components/leads/PipelineTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
+import { DesktopRail } from "@/components/leads/DesktopRail";
+import { KanbanBoard } from "@/components/leads/KanbanBoard";
 // ─── Filter persistence per-tab ───
 const FILTER_STORAGE = "alvasco.filters.v2";
 const DEFAULT_FILTERS: Record<TabId, FilterState> = {
