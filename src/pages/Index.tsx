@@ -24,6 +24,7 @@ import { SortSheet, SortState, DEFAULT_DIR, SortField } from "@/components/leads
 import { StagePicker } from "@/components/leads/StagePicker";
 import { SettingsMenu } from "@/components/leads/SettingsMenu";
 import { Walkthrough } from "@/components/leads/Walkthrough";
+import { Wordmark } from "@/components/leads/Wordmark";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 import { ShippingPipelineView, ShippingFilter } from "@/components/leads/ShippingPipelineView";
 import { AllPipelineView } from "@/components/leads/AllPipelineView";
