@@ -403,7 +403,14 @@ const Index = () => {
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
     <EditModeProvider>
-    <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="min-h-screen bg-background lg:flex lg:h-screen lg:min-h-0 lg:overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <DesktopRail
+        trashCount={store.trashedProjects.length}
+        onOpenShipments={() => setShipmentsListOpen(true)}
+        onOpenTrash={() => setTrashOpen(true)}
+        onOpenSpreadsheet={() => navigate("/spreadsheet")}
+      />
+      <div className="contents lg:flex lg:flex-1 lg:min-w-0 lg:flex-col lg:h-screen lg:overflow-hidden">
       <header
         className="sticky top-0 border-b border-border/70"
         style={{
