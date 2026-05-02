@@ -17,6 +17,7 @@ import { SuppliersView } from "@/components/leads/SuppliersView";
 import { CustomersView } from "@/components/leads/CustomersView";
 import { ShipmentsView } from "@/components/leads/ShipmentsView";
 import { TrashView } from "@/components/leads/TrashView";
+import { ArchiveView } from "@/components/leads/ArchiveView";
 import { HamburgerDrawer } from "@/components/leads/HamburgerDrawer";
 import { TopControls } from "@/components/leads/TopControls";
 import { FilterSheet } from "@/components/leads/FilterSheet";
@@ -228,6 +229,7 @@ const Index = () => {
   const [customersOpen, setCustomersOpen] = useState(false);
   const [shipmentsListOpen, setShipmentsListOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
 
