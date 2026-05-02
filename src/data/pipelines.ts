@@ -152,6 +152,12 @@ export const SUPPLIERS: Supplier[] = SUPPLIERS_SEED.map((s) => ({
 export interface LineItem {
   qty: number;
   description: string;
+  /** Unit price in BBD. Optional — line items without a price show "—". */
+  unitPrice?: number;
+  /** Cached qty * unitPrice. Recomputed on save; never the source of truth. */
+  total?: number;
+  /** Reserved for the future Products master list. Free-text items have no id. */
+  productId?: string;
 }
 
 /**
