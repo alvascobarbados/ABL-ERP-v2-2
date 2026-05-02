@@ -32,6 +32,7 @@ import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import type { TabId } from "@/components/leads/PipelineTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
+import { useCollapsibleHeader } from "@/hooks/useCollapsibleHeader";
 import { haptics } from "@/lib/haptics";
 // ─── Filter persistence per-tab ───
 const FILTER_STORAGE = "alvasco.filters.v2";
@@ -398,31 +399,47 @@ const Index = () => {
     ? "all pipelines"
     : (searchScopeAll ? "all pipelines" : pipeline.title);
 
+  // Collapsible Tier-1 (brand row) on scroll. Frozen while picker is open.
+  const brandHiddenRaw = useCollapsibleHeader({ hideAfter: 60, upDelta: 4 });
+  const brandHidden = pickerCard ? false : brandHiddenRaw;
+
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
     <EditModeProvider>
     <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/70">
-        {/* Strip 1: app header — tight */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),8px)] pb-1.5 flex items-center justify-between">
-          <button
-            onClick={() => setHamburgerOpen(true)}
-            aria-label="Open menu"
-            className="inline-flex items-center justify-center rounded-full border bg-card/60 hover:bg-card transition-colors"
-            style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", color: "hsl(var(--brand-navy))", width: 36, height: 36 }}
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-          <Wordmark />
-          <SettingsMenu />
+
+        {/* Tier 1: brand row — collapses on scroll down, returns on scroll up */}
+        <div
+          aria-hidden={brandHidden}
+          className="overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out"
+          style={{
+            maxHeight: brandHidden ? 0 : 64,
+            opacity: brandHidden ? 0 : 1,
+            transform: brandHidden ? "translateY(-6px)" : "translateY(0)",
+            pointerEvents: brandHidden ? "none" : "auto",
+          }}
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),8px)] pb-1.5 flex items-center justify-between">
+            <button
+              onClick={() => setHamburgerOpen(true)}
+              aria-label="Open menu"
+              className="inline-flex items-center justify-center rounded-full border bg-card/60 hover:bg-card transition-colors"
+              style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", color: "hsl(var(--brand-navy))", width: 36, height: 36 }}
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            <Wordmark />
+            <SettingsMenu />
+          </div>
         </div>
 
-        {/* Strip 2: pipeline tabs — tight */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5">
+        {/* Tier 2: pipeline tabs — always sticky */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5">
           <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
         </div>
 
-        {/* Strip 3: filter / sort / search — tight */}
+        {/* Tier 2: filter / sort / search — always sticky */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
           <TopControls
             filter={filters}
