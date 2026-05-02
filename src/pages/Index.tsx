@@ -33,6 +33,8 @@ import type { TabId } from "@/components/leads/PipelineTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
+import { DesktopRail } from "@/components/leads/DesktopRail";
+import { KanbanBoard } from "@/components/leads/KanbanBoard";
 // ─── Filter persistence per-tab ───
 const FILTER_STORAGE = "alvasco.filters.v2";
 const DEFAULT_FILTERS: Record<TabId, FilterState> = {
@@ -401,7 +403,14 @@ const Index = () => {
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
     <EditModeProvider>
-    <div className="min-h-screen bg-background" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="min-h-screen bg-background lg:flex lg:h-screen lg:min-h-0 lg:overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <DesktopRail
+        trashCount={store.trashedProjects.length}
+        onOpenShipments={() => setShipmentsListOpen(true)}
+        onOpenTrash={() => setTrashOpen(true)}
+        onOpenSpreadsheet={() => navigate("/spreadsheet")}
+      />
+      <div className="contents lg:flex lg:flex-1 lg:min-w-0 lg:flex-col lg:h-screen lg:overflow-hidden">
       <header
         className="sticky top-0 border-b border-border/70"
         style={{
@@ -409,8 +418,8 @@ const Index = () => {
           backgroundColor: "hsl(var(--background))",
         }}
       >
-        {/* Brand row */}
-        <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
+        {/* Brand row — mobile only (rail handles brand on desktop) */}
+        <div className="relative lg:hidden" style={{ backgroundColor: "hsl(var(--background))" }}>
           <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[52px] flex items-center justify-between">
             <button
               onClick={() => setHamburgerOpen(true)}
@@ -425,16 +434,21 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tabs row */}
+        {/* Tabs row — on desktop, also carries SettingsMenu on the right */}
         <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5">
-            <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
+          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-1.5 pt-1.5 lg:pt-3 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
+            </div>
+            <div className="hidden lg:block">
+              <SettingsMenu />
+            </div>
           </div>
         </div>
 
         {/* Filter row */}
         <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
+          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-2">
             <TopControls
               filter={filters}
               sort={sort}
@@ -447,7 +461,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main key={activeTab} className="max-w-6xl mx-auto px-4 sm:px-6 pt-2.5 pb-6 sm:pt-3 sm:pb-8 space-y-4 sm:space-y-5 animate-fade-in">
+      <main key={activeTab} className="lg:hidden max-w-6xl mx-auto px-4 sm:px-6 pt-2.5 pb-6 sm:pt-3 sm:pb-8 space-y-4 sm:space-y-5 animate-fade-in">
         {isSearching && (
           <div className="flex items-center justify-between gap-3 px-1">
             <p className="text-xs text-muted-foreground">
@@ -540,6 +554,20 @@ const Index = () => {
           Swipe → to advance, ← to send back. Long-press to jump stages. Tap ⋮ for actions.
         </p>
       </main>
+
+      {/* Desktop kanban — only at ≥1024px. Mobile main above is hidden at lg. */}
+      <div className="hidden lg:flex lg:flex-1 lg:min-h-0">
+        <KanbanBoard
+          activeTab={activeTab}
+          visible={visible}
+          projects={projects}
+          shipments={shipments}
+          onOpenCard={setSelectedCard}
+          onSwipeForward={onSwipeForward}
+          onSwipeBack={onSwipeBack}
+          onOpenPicker={onOpenPicker}
+        />
+      </div>
 
       {/* Sheets / drawers */}
       <HamburgerDrawer
@@ -636,6 +664,7 @@ const Index = () => {
       />
 
       <Walkthrough />
+      </div>
     </div>
     </EditModeProvider>
     </JiggleProvider>
