@@ -129,6 +129,10 @@ interface PipelineStoreCtx {
   updateLineItem: (projectId: string, index: number, item: LineItem) => void;
   removeLineItem: (projectId: string, index: number) => void;
   duplicateProject: (projectId: string) => Project | null;
+  /** Create a brand-new project (lands in Sales · Proposal). */
+  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string }) => Project;
+  /** Toggle the "needs attention" flag on a project. */
+  toggleFlag: (projectId: string) => void;
   /** Soft-delete: send to Trash. */
   softDeleteProject: (projectId: string) => { restoredFrom: { pipeline: PipelineId; stage: StageId } } | null;
   /** Restore a trashed project to its original pipeline/stage. */
@@ -273,6 +277,32 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     setProjects((prev) => [copy, ...prev]);
     return copy;
   }, [projects]);
+
+  const createProject = useCallback<PipelineStoreCtx["createProject"]>((input) => {
+    const newProj: Project = {
+      id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      customer: input.customer,
+      projectName: input.projectName,
+      detailSummary: input.detailSummary,
+      pointPerson: input.pointPerson ?? "AV",
+      pipeline: "sales",
+      stage: "proposal",
+      deadline: "—",
+      deadlineDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      value: 0,
+      orderType: "New",
+      priority: "Standard",
+      createdAt: new Date(),
+    };
+    setProjects((prev) => [newProj, ...prev]);
+    return newProj;
+  }, []);
+
+  const toggleFlag = useCallback<PipelineStoreCtx["toggleFlag"]>((projectId) => {
+    setProjects((prev) => prev.map((p) =>
+      p.id === projectId ? touch({ ...p, flagged: !p.flagged }) : p,
+    ));
+  }, []);
 
   // ── Trash (soft-delete) ────────────────────────────────────────────────
   const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
