@@ -70,6 +70,7 @@ export const ProjectCard = ({
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [pulse, setPulse] = useState(false);
+  const [burst, setBurst] = useState(false);
   const [snapTransition, setSnapTransition] = useState(false);
   const startX = useRef(0);
   const startY = useRef(0);
