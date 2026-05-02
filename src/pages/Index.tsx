@@ -645,6 +645,7 @@ const Index = () => {
       />
 
       <Walkthrough />
+      </div>
     </div>
     </EditModeProvider>
     </JiggleProvider>
