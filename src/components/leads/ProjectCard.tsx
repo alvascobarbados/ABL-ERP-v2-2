@@ -8,6 +8,7 @@ import { useEditMode } from "@/hooks/useEditMode";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import { useExpandedCards } from "@/hooks/useExpandedCards";
 import { CardActionsPopover } from "./CardActionsPopover";
 
 
