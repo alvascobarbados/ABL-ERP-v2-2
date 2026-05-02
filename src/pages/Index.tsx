@@ -414,7 +414,7 @@ const Index = () => {
           aria-hidden={brandHidden}
           className="overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out"
           style={{
-            maxHeight: brandHidden ? 0 : 64,
+            maxHeight: brandHidden ? 0 : "calc(max(env(safe-area-inset-top), 8px) + 52px)",
             opacity: brandHidden ? 0 : 1,
             transform: brandHidden ? "translateY(-6px)" : "translateY(0)",
             pointerEvents: brandHidden ? "none" : "auto",
