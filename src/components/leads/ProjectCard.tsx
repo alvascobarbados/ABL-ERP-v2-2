@@ -64,7 +64,7 @@ export const ProjectCard = ({
   const jiggleDimmed = jiggle.activeId !== null && !jiggleActive;
   const isEditing = editMode.activeId === card.id;
   const isEditDimmed = editMode.activeId !== null && !isEditing;
-  const proj = card.project;
+  const proj = liveProject;
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   const [menuOpen, setMenuOpen] = useState(false);
