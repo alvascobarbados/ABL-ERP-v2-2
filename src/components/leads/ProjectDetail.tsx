@@ -277,29 +277,63 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           {!live.lineItems || live.lineItems.length === 0 ? (
             <div className="px-3 py-3 text-[13px] text-muted-foreground italic">No line items yet</div>
           ) : (() => {
-            const maxDigits = Math.max(...live.lineItems.map((li) => li.qty.toLocaleString().length), 3);
+            const items = live.lineItems;
+            const maxDigits = Math.max(...items.map((li) => li.qty.toLocaleString().length), 3);
+            const sumTotal = items.reduce(
+              (n, li) => n + (typeof li.total === "number" ? li.total : 0),
+              0,
+            );
+            const showSum = sumTotal > 0;
+            const fmtMoney = (n: number) =>
+              n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             return (
-              <ul>
-                {live.lineItems.map((li, i) => (
-                  <li key={i}>
-                    <button
-                      onClick={() => setEditor({ kind: "editLineItem", index: i })}
-                      className="w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg hover:bg-muted/40 transition-colors"
-                      style={{ minHeight: 48 }}
-                    >
-                      <span
-                        className="text-right tabular font-semibold text-foreground shrink-0"
-                        style={{ width: `${maxDigits + 1}ch` }}
+              <>
+                <ul>
+                  {items.map((li, i) => (
+                    <li key={i}>
+                      <button
+                        onClick={() => setEditor({ kind: "editLineItem", index: i })}
+                        className="w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg hover:bg-muted/40 transition-colors"
+                        style={{ minHeight: 48 }}
                       >
-                        {li.qty.toLocaleString()}
-                      </span>
-                      <span className="text-muted-foreground/60">×</span>
-                      <span className="text-foreground/90 leading-snug flex-1">{li.description}</span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                        <span
+                          className="text-right tabular font-semibold text-foreground shrink-0"
+                          style={{ width: `${maxDigits + 1}ch` }}
+                        >
+                          {li.qty.toLocaleString()}
+                        </span>
+                        <span className="text-muted-foreground/60">×</span>
+                        <span className="text-foreground/90 leading-snug flex-1 min-w-0 break-words">
+                          {li.description}
+                        </span>
+                        <span
+                          className="tabular shrink-0 text-right text-[13px]"
+                          style={{ minWidth: 64, color: "hsl(var(--brand-navy) / 0.65)" }}
+                        >
+                          {typeof li.unitPrice === "number" ? `$${fmtMoney(li.unitPrice)}` : "—"}
+                        </span>
+                        <span
+                          className="tabular shrink-0 text-right text-[13px] font-semibold"
+                          style={{ minWidth: 80, color: "hsl(var(--brand-navy))" }}
+                        >
+                          {typeof li.total === "number" ? `$${fmtMoney(li.total)}` : "—"}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div
+                  className="px-3 py-2 text-right text-[12px] tabular border-t"
+                  style={{
+                    color: "hsl(var(--brand-navy) / 0.65)",
+                    borderColor: "hsl(var(--brand-navy) / 0.10)",
+                  }}
+                >
+                  {items.length} {items.length === 1 ? "item" : "items"}
+                  {showSum && ` · $${fmtMoney(sumTotal)} BBD`}
+                </div>
+              </>
             );
           })()}
         </SectionWithAction>
