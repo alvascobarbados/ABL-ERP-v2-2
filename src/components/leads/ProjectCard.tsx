@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { MoreVertical, Factory } from "lucide-react";
+import { MoreVertical, Factory, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, formatShippingLabel, getShipment, PIPELINES } from "@/data/pipelines";
 import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
@@ -244,6 +244,12 @@ export const ProjectCard = ({
       },
     });
   };
+  const handleToggleFlag = () => {
+    store.toggleFlag(proj.id);
+    haptics.threshold();
+    toast(proj.flagged ? `Unflagged · ${proj.customer}` : `Flagged · ${proj.customer}`, { duration: 1800 });
+  };
+  const flagged = !!proj.flagged;
 
   return (
     <div
@@ -294,13 +300,24 @@ export const ProjectCard = ({
           transform: `translateX(${dx}px)`,
           transition: snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
           touchAction: "pan-y",
+          ...(flagged ? {
+            borderColor: "hsl(var(--brand-orange))",
+            backgroundColor: "hsl(var(--brand-orange) / 0.05)",
+          } : {}),
         }}
         className={cn(
-          "group w-full text-left relative overflow-hidden rounded-2xl bg-card border border-border/70 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
+          "group w-full text-left relative overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
+          flagged ? "border-[1.5px]" : "border border-border/70",
           !dragging && "hover:-translate-y-0.5",
           pulse && "scale-[1.015]",
         )}
       >
+        {flagged && (
+          <span
+            className="absolute left-0 right-0 top-0 h-[8px] z-[1]"
+            style={{ backgroundColor: "hsl(var(--brand-orange))" }}
+          />
+        )}
         <div
           className="pointer-events-none absolute inset-y-0 right-0 w-1/2 transition-opacity"
           style={{
@@ -317,9 +334,27 @@ export const ProjectCard = ({
         />
         {/* Pipeline accent stripe — slightly thicker (4px) so it registers as a pipeline indicator */}
         <span
-          className="absolute left-0 top-0 bottom-0 w-[4px]"
+          className="absolute left-0 top-0 bottom-0 w-[4px] z-[2]"
           style={{ backgroundColor: pipelineHex, opacity: 0.85 }}
         />
+
+        {/* Flag toggle (always visible, fills orange when flagged) */}
+        <button
+          data-no-drag
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); handleToggleFlag(); }}
+          className="absolute top-3 right-10 z-10 p-1.5 rounded-full hover:bg-muted/60 transition-colors"
+          aria-label={flagged ? "Unflag project" : "Flag project"}
+          title={flagged ? "Unflag" : "Flag"}
+        >
+          <Flag
+            className="h-4 w-4"
+            style={{
+              color: "hsl(var(--brand-orange))",
+              fill: flagged ? "hsl(var(--brand-orange))" : "transparent",
+            }}
+          />
+        </button>
 
         <CardActionsPopover
           open={menuOpen}
@@ -329,6 +364,8 @@ export const ProjectCard = ({
               try { navigator.vibrate(10); } catch { /* noop */ }
             }
           }}
+          flagged={flagged}
+          onToggleFlag={handleToggleFlag}
           trigger={
             <button
               data-no-drag

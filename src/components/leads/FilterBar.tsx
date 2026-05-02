@@ -1,5 +1,6 @@
 // FilterState — used across the app. All multi-select are arrays.
 // urgency is single-select. missingOnly is boolean toggle.
+// flagged: null = any, true = only flagged, false = only unflagged.
 import type { ShippingMode, StageId } from "@/data/pipelines";
 
 export type DeadlineUrgency = "overdue" | "this_week" | "this_month" | "no_deadline" | null;
@@ -13,12 +14,13 @@ export interface FilterState {
   stages: StageId[];            // multi
   urgency: DeadlineUrgency;     // single
   missingOnly: boolean;
+  flagged: boolean | null;      // tri-state: null=any, true=only flagged, false=only unflagged
 }
 
 export const EMPTY_FILTER: FilterState = {
   customers: [], projectNames: [], supplierIds: [],
   shippingModes: [], salesReps: [], stages: [],
-  urgency: null, missingOnly: false,
+  urgency: null, missingOnly: false, flagged: null,
 };
 
 export function filterCount(f: FilterState): number {
@@ -31,5 +33,6 @@ export function filterCount(f: FilterState): number {
   if (f.stages.length) n++;
   if (f.urgency) n++;
   if (f.missingOnly) n++;
+  if (f.flagged !== null) n++;
   return n;
 }

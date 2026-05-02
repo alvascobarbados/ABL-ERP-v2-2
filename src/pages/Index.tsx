@@ -142,19 +142,16 @@ function compareCards(
 function projectMatchesSearch(p: Project, q: string): boolean {
   if (!q) return true;
   const needle = q.toLowerCase();
+  const lineItemText = (p.lineItems ?? []).map((li) => li.description).join(" ");
   const fields = [
     p.customer, p.projectName, p.detailSummary ?? "", p.contactPerson ?? "",
+    p.pointPerson ?? "",
     p.quoteNumber ?? "", p.poNumber ?? "", p.invoiceNumber ?? "", p.trackingRef ?? "",
+    lineItemText,
   ];
   return fields.some((f) => f.toLowerCase().includes(needle));
 }
 
-// "Has missing data" heuristic. Required fields depend on stage:
-// - All stages: needs supplier (real id) + shippingMode beyond Confirming.
-// - Quote stage onward: needs quoteNumber.
-// - Production onward: needs poNumber.
-// - Finance onward: needs invoiceNumber.
-// Earlier stages just check that required-by-then fields are present.
 function projectHasMissingData(p: Project): boolean {
   const stageRank: Record<StageId, number> = {
     proposal: 0, quote: 1, confirming: 2, archive: 0,
@@ -163,12 +160,12 @@ function projectHasMissingData(p: Project): boolean {
     invoice_required: 7, invoiced: 8, paid: 9,
   };
   const r = stageRank[p.stage] ?? 0;
-  if (r >= 1 && !p.quoteNumber) return true;            // Quote+
-  if (r >= 2 && !p.supplierId) return true;             // Confirming+
+  if (r >= 1 && !p.quoteNumber) return true;
+  if (r >= 2 && !p.supplierId) return true;
   if (r >= 2 && !p.shippingMode) return true;
   if (r >= 2 && !p.detailSummary?.trim()) return true;
-  if (r >= 3 && !p.poNumber) return true;               // Production+
-  if (r >= 7 && !p.invoiceNumber) return true;          // Finance+
+  if (r >= 3 && !p.poNumber) return true;
+  if (r >= 7 && !p.invoiceNumber) return true;
   return false;
 }
 
@@ -193,9 +190,11 @@ function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
     if (f.urgency === "overdue" && days >= 0) return false;
     if (f.urgency === "this_week" && (days < 0 || days > 7)) return false;
     if (f.urgency === "this_month" && (days < 0 || days > 30)) return false;
-    if (f.urgency === "no_deadline") return false; // no projects lack deadlines in this dataset
+    if (f.urgency === "no_deadline") return false;
   }
   if (f.missingOnly && !projectHasMissingData(p)) return false;
+  if (f.flagged === true && !p.flagged) return false;
+  if (f.flagged === false && p.flagged) return false;
   return true;
 }
 
