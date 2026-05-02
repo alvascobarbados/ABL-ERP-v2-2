@@ -244,10 +244,26 @@ export const ProjectCard = ({
       },
     });
   };
-  const handleToggleFlag = () => {
+  const handleToggleFlag = (opts?: { burst?: boolean }) => {
+    const wasFlagged = !!proj.flagged;
     store.toggleFlag(proj.id);
-    haptics.threshold();
-    toast(proj.flagged ? `Unflagged · ${proj.customer}` : `Flagged · ${proj.customer}`, { duration: 1800 });
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      try { navigator.vibrate(wasFlagged ? 10 : 20); } catch { /* noop */ }
+    } else {
+      haptics.threshold();
+    }
+    if (opts?.burst && !wasFlagged) {
+      setBurst(true);
+      window.setTimeout(() => setBurst(false), 420);
+    }
+    const label = `${proj.customer} · ${proj.projectName}`;
+    toast(wasFlagged ? `Unflagged · ${label}` : `Flagged · ${label}`, {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => store.toggleFlag(proj.id),
+      },
+    });
   };
   const flagged = !!proj.flagged;
 
