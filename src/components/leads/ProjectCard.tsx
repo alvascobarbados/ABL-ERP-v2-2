@@ -244,6 +244,12 @@ export const ProjectCard = ({
       },
     });
   };
+  const handleToggleFlag = () => {
+    store.toggleFlag(proj.id);
+    haptics.threshold();
+    toast(proj.flagged ? `Unflagged · ${proj.customer}` : `Flagged · ${proj.customer}`, { duration: 1800 });
+  };
+  const flagged = !!proj.flagged;
 
   return (
     <div
