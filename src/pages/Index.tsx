@@ -442,6 +442,7 @@ const Index = () => {
             <Wordmark />
             <SettingsMenu />
           </div>
+          </div>
         </div>
 
         {/* Tier 2: pipeline tabs — always sticky */}
