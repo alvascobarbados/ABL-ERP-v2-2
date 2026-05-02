@@ -205,6 +205,11 @@ export interface Project {
   deletedAt?: Date;
   deletedFromPipeline?: PipelineId;
   deletedFromStage?: StageId;
+  // ── Flag (needs attention) ───────────────────────────────────────────
+  // When true, card receives orange treatment and pins to the top of its
+  // containing view. Toggleable from the card three-dots menu and the
+  // dedicated flag icon on the card.
+  flagged?: boolean;
 }
 
 /** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
