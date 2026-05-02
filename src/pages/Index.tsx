@@ -574,18 +574,27 @@ const Index = () => {
         </p>
       </main>
 
-      {/* Desktop kanban — only at ≥1024px. Mobile main above is hidden at lg. */}
+      {/* Desktop main — Kanban or Table, only at ≥1024px. Mobile main above is hidden at lg. */}
       <div className="hidden lg:flex lg:flex-1 lg:min-h-0">
-        <KanbanBoard
-          activeTab={activeTab}
-          visible={visible}
-          projects={projects}
-          shipments={shipments}
-          onOpenCard={setSelectedCard}
-          onSwipeForward={onSwipeForward}
-          onSwipeBack={onSwipeBack}
-          onOpenPicker={onOpenPicker}
-        />
+        {desktopView === "table" ? (
+          <ProjectTable
+            activeTab={activeTab}
+            visible={visible}
+            onOpenCard={setSelectedCard}
+            onOpenPicker={onOpenPicker}
+          />
+        ) : (
+          <KanbanBoard
+            activeTab={activeTab}
+            visible={visible}
+            projects={projects}
+            shipments={shipments}
+            onOpenCard={setSelectedCard}
+            onSwipeForward={onSwipeForward}
+            onSwipeBack={onSwipeBack}
+            onOpenPicker={onOpenPicker}
+          />
+        )}
       </div>
 
       {/* Sheets / drawers */}
