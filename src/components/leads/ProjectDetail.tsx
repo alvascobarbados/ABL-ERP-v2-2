@@ -225,7 +225,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const showShipment = !!live.shippingMode && live.shippingMode !== "Local";
 
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 z-[200] flex">
       <div className="flex-1 bg-foreground/30 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <aside className="w-full max-w-2xl bg-background border-l border-border shadow-2xl overflow-y-auto animate-slide-in-right">
         {/* Top bar: back + breadcrumb + ⋮ */}
