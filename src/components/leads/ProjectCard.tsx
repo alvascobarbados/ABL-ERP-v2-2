@@ -300,6 +300,10 @@ export const ProjectCard = ({
           transform: `translateX(${dx}px)`,
           transition: snapTransition ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : dragging ? "none" : "transform 200ms ease-out",
           touchAction: "pan-y",
+          ...(flagged ? {
+            borderColor: "hsl(var(--brand-orange))",
+            backgroundColor: "hsl(var(--brand-orange) / 0.05)",
+          } : {}),
         }}
         className={cn(
           "group w-full text-left relative overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-section)]",
@@ -307,12 +311,6 @@ export const ProjectCard = ({
           !dragging && "hover:-translate-y-0.5",
           pulse && "scale-[1.015]",
         )}
-        style={{
-          ...(flagged ? {
-            borderColor: "hsl(var(--brand-orange))",
-            backgroundColor: "hsl(var(--brand-orange) / 0.05)",
-          } : {}),
-        }}
       >
         {flagged && (
           <span
