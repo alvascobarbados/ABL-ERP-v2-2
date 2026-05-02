@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { Settings, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useFriendlyMode } from "@/hooks/useFriendlyMode";
+import { useExpandedCards } from "@/hooks/useExpandedCards";
 
 export const SettingsMenu = () => {
-  const { friendly, setFriendly, resetWalkthrough } = useFriendlyMode();
+  const { resetWalkthrough } = useFriendlyMode();
+  const { expandAll, setExpandAll } = useExpandedCards();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -18,12 +20,12 @@ export const SettingsMenu = () => {
   }, [open]);
 
   const handleToggle = (v: boolean) => {
-    setFriendly(v);
+    setExpandAll(v);
     toast.success(
       v
-        ? "Friendly Mode on — bigger buttons and clearer labels"
-        : "Friendly Mode off — refined view",
-      { duration: friendly ? 5000 : 7000 },
+        ? "Expanded cards on — line items shown by default"
+        : "Expanded cards off — cards collapsed by default",
+      { duration: 4000 },
     );
   };
 
@@ -51,39 +53,37 @@ export const SettingsMenu = () => {
             <button
               type="button"
               role="switch"
-              aria-checked={friendly}
-              onClick={() => handleToggle(!friendly)}
+              aria-checked={expandAll}
+              onClick={() => handleToggle(!expandAll)}
               className="shrink-0 relative inline-flex items-center rounded-full transition-colors"
               style={{
                 width: 44, height: 26,
-                backgroundColor: friendly ? "hsl(var(--brand-orange))" : "hsl(var(--muted-foreground) / 0.4)",
+                backgroundColor: expandAll ? "hsl(var(--brand-orange))" : "hsl(var(--muted-foreground) / 0.4)",
               }}
             >
               <span
                 className="inline-block bg-white rounded-full shadow transition-transform"
                 style={{
                   width: 20, height: 20,
-                  transform: `translateX(${friendly ? 22 : 2}px)`,
+                  transform: `translateX(${expandAll ? 22 : 2}px)`,
                 }}
               />
             </button>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium" style={{ color: "hsl(var(--brand-navy))" }}>Friendly Mode</p>
-              <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-                Larger buttons, clearer labels, and on-screen guidance. Recommended for new users.
+              <p className="text-sm font-medium" style={{ color: "hsl(var(--brand-navy))" }}>Expanded Cards</p>
+              <p className="text-xs leading-snug mt-0.5" style={{ color: "hsl(var(--brand-navy) / 0.65)" }}>
+                Show line items by default on every card. Tap individual chevrons to override.
               </p>
             </div>
           </label>
-          {friendly && (
-            <button
-              onClick={() => { resetWalkthrough(); setOpen(false); }}
-              className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-medium hover:bg-muted/40 transition-colors"
-              style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", color: "hsl(var(--brand-navy))", minHeight: 44 }}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Replay welcome walkthrough
-            </button>
-          )}
+          <button
+            onClick={() => { resetWalkthrough(); setOpen(false); }}
+            className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-medium hover:bg-muted/40 transition-colors"
+            style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", color: "hsl(var(--brand-navy))", minHeight: 44 }}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Replay welcome walkthrough
+          </button>
         </div>
       )}
     </div>

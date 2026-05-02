@@ -8,6 +8,7 @@ import { useEditMode } from "@/hooks/useEditMode";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import { useExpandedCards } from "@/hooks/useExpandedCards";
 import { CardActionsPopover } from "./CardActionsPopover";
 
 
@@ -60,7 +61,8 @@ export const ProjectCard = ({
   const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const expandCtx = useExpandedCards();
+  const expanded = expandCtx.isExpanded(card.id);
   const lineItems = proj.lineItems ?? [];
   const hasLineItems = lineItems.length > 0;
 
@@ -519,7 +521,7 @@ export const ProjectCard = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!hasLineItems) return;
-                  setExpanded((v) => !v);
+                  expandCtx.toggleOverride(card.id);
                   haptics.threshold();
                 }}
                 disabled={!hasLineItems}
