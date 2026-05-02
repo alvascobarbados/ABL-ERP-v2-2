@@ -456,13 +456,19 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tier 2: pipeline tabs — always sticky */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5">
+        {/* Tier 2: pipeline tabs — always sticky, opaque */}
+        <div
+          className="max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 relative"
+          style={{ backgroundColor: "hsl(var(--background))", zIndex: 2 }}
+        >
           <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
         </div>
 
-        {/* Tier 2: filter / sort / search — always sticky */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2">
+        {/* Tier 2: filter / sort / search — always sticky, opaque */}
+        <div
+          className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 relative"
+          style={{ backgroundColor: "hsl(var(--background))", zIndex: 2 }}
+        >
           <TopControls
             filter={filters}
             sort={sort}
