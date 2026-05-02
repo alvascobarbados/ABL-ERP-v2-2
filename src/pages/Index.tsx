@@ -462,15 +462,20 @@ const Index = () => {
 
         {/* Filter row */}
         <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-2">
-            <TopControls
-              filter={filters}
-              sort={sort}
-              search={search}
-              onSearchChange={setSearch}
-              onOpenFilter={() => setFilterSheetOpen(true)}
-              onOpenSort={() => setSortSheetOpen(true)}
-            />
+          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-2 flex items-center gap-3">
+            <div className="hidden lg:block shrink-0">
+              <ViewSwitcher value={desktopView} onChange={setDesktopView} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <TopControls
+                filter={filters}
+                sort={sort}
+                search={search}
+                onSearchChange={setSearch}
+                onOpenFilter={() => setFilterSheetOpen(true)}
+                onOpenSort={() => setSortSheetOpen(true)}
+              />
+            </div>
           </div>
         </div>
       </header>
