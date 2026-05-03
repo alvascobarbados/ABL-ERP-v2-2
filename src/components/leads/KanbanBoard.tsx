@@ -75,6 +75,15 @@ export const KanbanBoard = ({
       <div className="h-full flex gap-4 px-5 py-4 w-full">
         {columns.map((col) => {
           const accentHex = PIPELINE_ACCENT[col.pipeline].hex;
+          const isPaid = col.pipeline === "finance" && col.id === "paid";
+          const dotHex = isPaid ? "#6B8E5A" : accentHex;
+          const headerBg = isPaid ? "rgba(107, 142, 90, 0.10)" : "hsl(var(--card))";
+          const badgeBg = isPaid
+            ? "rgba(107, 142, 90, 0.18)"
+            : col.cards.length ? "hsl(var(--brand-navy) / 0.08)" : "hsl(var(--muted))";
+          const badgeFg = isPaid
+            ? "#3D5A30"
+            : col.cards.length ? "hsl(var(--brand-navy))" : "hsl(var(--muted-foreground))";
           return (
             <div
               key={col.id}
@@ -84,31 +93,19 @@ export const KanbanBoard = ({
               {/* Sticky column header */}
               <div
                 className="sticky top-0 z-10 flex items-center gap-2 px-4 py-3 rounded-t-2xl border-b"
-                style={{
-                  backgroundColor: "hsl(var(--card))",
-                  borderColor: "hsl(var(--border))",
-                }}
+                style={{ backgroundColor: headerBg, borderColor: "hsl(var(--border))" }}
               >
                 <span
                   className="rounded-full shrink-0"
-                  style={{ backgroundColor: accentHex, width: 8, height: 8 }}
+                  style={{ backgroundColor: dotHex, width: 8, height: 8 }}
                 />
-                <h3
-                  className="text-sm font-semibold tracking-tight truncate"
-                  style={{ color: "hsl(var(--brand-navy))" }}
-                >
+                <h3 className="text-sm font-semibold tracking-tight truncate"
+                    style={{ color: "hsl(var(--brand-navy))" }}>
                   {col.title}
                 </h3>
                 <span
                   className="ml-auto text-[11px] tabular font-semibold rounded-full inline-flex items-center justify-center min-w-[22px] h-[22px] px-2"
-                  style={{
-                    backgroundColor: col.cards.length
-                      ? "hsl(var(--brand-navy) / 0.08)"
-                      : "hsl(var(--muted))",
-                    color: col.cards.length
-                      ? "hsl(var(--brand-navy))"
-                      : "hsl(var(--muted-foreground))",
-                  }}
+                  style={{ backgroundColor: badgeBg, color: badgeFg }}
                 >
                   {col.cards.length}
                 </span>
