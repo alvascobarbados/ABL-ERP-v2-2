@@ -8,6 +8,7 @@ import { useColumnWidths } from "@/hooks/useColumnWidths";
 export const SettingsMenu = () => {
   const { resetWalkthrough } = useFriendlyMode();
   const { expandAll, setExpandAll } = useExpandedCards();
+  const { reset: resetColumnWidths } = useColumnWidths();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
