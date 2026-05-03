@@ -7,6 +7,7 @@ import { PipelineStoreProvider } from "@/hooks/usePipelineStore";
 import { FriendlyModeProvider } from "@/hooks/useFriendlyMode";
 import { ExpandedCardsProvider } from "@/hooks/useExpandedCards";
 import { MasterDataProvider } from "@/hooks/useMasterData";
+import { ColumnWidthsProvider } from "@/hooks/useColumnWidths";
 import Index from "./pages/Index.tsx";
 import Spreadsheet from "./pages/Spreadsheet.tsx";
 import MasterList from "./pages/MasterList.tsx";
