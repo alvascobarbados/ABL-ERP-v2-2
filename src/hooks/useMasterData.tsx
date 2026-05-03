@@ -288,10 +288,6 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     if (error) throw error;
     setProducts((prev) => prev.filter((p) => p.id !== id));
   }, []);
-  const deleteProduct = useCallback(async (id: string) => {
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) throw error;
-  }, []);
 
   const value = useMemo<Ctx>(() => ({
     customers, suppliers, teamMembers, products, loading,
