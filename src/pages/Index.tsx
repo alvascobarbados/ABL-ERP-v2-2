@@ -45,7 +45,7 @@ import { useViewMode } from "@/hooks/useViewMode";
 const FILTER_STORAGE = "alvasco.filters.v2";
 const DEFAULT_FILTERS: Record<TabId, FilterState> = {
   all: EMPTY_FILTER, sales: EMPTY_FILTER, operations: EMPTY_FILTER,
-  shipping: EMPTY_FILTER, finance: EMPTY_FILTER,
+  shipping: EMPTY_FILTER, finance: EMPTY_FILTER, completed: EMPTY_FILTER,
 };
 function loadFilters(): Record<TabId, FilterState> {
   try {
