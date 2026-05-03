@@ -22,6 +22,7 @@ interface Props {
   onChange: (id: TabId) => void;
   /** Filtered counts per pipeline — update live as filters change. */
   counts: Record<PipelineId, number>;
+  completedCount?: number;
   pulse?: PipelineId | null;
 }
 
@@ -32,14 +33,16 @@ const BORDER = 1;         // outline thickness in px
 // Uniform chevron silhouette: notched-left + pointed-right (applied to ALL tabs).
 const CHEVRON_CLIP = `polygon(0 0, calc(100% - ${CHEV}px) 0, 100% 50%, calc(100% - ${CHEV}px) 100%, 0 100%, ${CHEV}px 50%)`;
 
-export const ChevronTabs = ({ active, onChange, counts, pulse }: Props) => {
-  const allCount = counts.sales + counts.operations + counts.shipping + counts.finance;
+export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
+  const activeCount = counts.sales + counts.operations + counts.shipping + counts.finance;
   const flowTabs = PIPELINES.map((p) => ({ id: p.id, title: p.title, count: counts[p.id] }));
   const allActive = active === "all";
+  const completedActive = active === "completed";
+  const SAGE = "#6B8E5A";
 
   return (
     <div className="flex items-stretch gap-3 w-full">
-      {/* All pill — separate lens, stays rounded, active = navy (NOT orange) */}
+      {/* Active pill — left bookend, square shape, navy when selected */}
       <button
         onClick={() => onChange("all")}
         className={cn(
@@ -54,9 +57,14 @@ export const ChevronTabs = ({ active, onChange, counts, pulse }: Props) => {
           color: allActive ? "#fff" : "hsl(var(--brand-navy))",
         }}
       >
-        <span className="text-[14px] font-medium leading-tight">All</span>
+        <span className="flex items-center gap-1.5 text-[14px] font-medium leading-tight">
+          {!allActive && (
+            <span className="rounded-full" style={{ backgroundColor: "hsl(var(--brand-navy))", width: 8, height: 8 }} />
+          )}
+          Active
+        </span>
         <span className={cn("text-[18px] font-bold tabular leading-tight", !allActive && "opacity-70")}>
-          {allCount}
+          {activeCount}
         </span>
       </button>
 
@@ -90,61 +98,36 @@ export const ChevronTabs = ({ active, onChange, counts, pulse }: Props) => {
                 outline: isPulsing ? "2px solid hsl(var(--brand-orange))" : "none",
               }}
             >
-              {/* Outer chevron = outline color */}
               <span
                 aria-hidden
                 className="absolute inset-0 transition-colors"
-                style={{
-                  clipPath: CHEVRON_CLIP,
-                  backgroundColor: outline,
-                }}
+                style={{ clipPath: CHEVRON_CLIP, backgroundColor: outline }}
               />
-              {/* Inner chevron = fill color, inset by BORDER on all sides
-                  to leave a hairline outline visible from the outer layer */}
               <span
                 aria-hidden
                 className="absolute transition-colors group-hover:[--hover-wash:hsl(var(--brand-navy)/0.05)]"
                 style={{
-                  top: BORDER,
-                  bottom: BORDER,
-                  left: BORDER,
-                  right: BORDER,
-                  clipPath: CHEVRON_CLIP,
-                  backgroundColor: fill,
+                  top: BORDER, bottom: BORDER, left: BORDER, right: BORDER,
+                  clipPath: CHEVRON_CLIP, backgroundColor: fill,
                   boxShadow: isActive ? "inset 0 0 0 9999px transparent" : undefined,
                 }}
               />
-              {/* Hover wash (inactive only) — paper layer overlay */}
               {!isActive && (
                 <span
                   aria-hidden
                   className="absolute opacity-0 group-hover:opacity-100 transition-opacity"
                   style={{
-                    top: BORDER,
-                    bottom: BORDER,
-                    left: BORDER,
-                    right: BORDER,
-                    clipPath: CHEVRON_CLIP,
-                    backgroundColor: "hsl(var(--brand-navy) / 0.05)",
+                    top: BORDER, bottom: BORDER, left: BORDER, right: BORDER,
+                    clipPath: CHEVRON_CLIP, backgroundColor: "hsl(var(--brand-navy) / 0.05)",
                   }}
                 />
               )}
-              {/* Label + count */}
               <span
                 className="relative flex flex-col items-center justify-center h-full"
-                style={{
-                  color: textColor,
-                  // Pad past notch on the left and past the point on the right
-                  // so text stays clear of the chevron edges.
-                  paddingLeft: CHEV + 6,
-                  paddingRight: CHEV + 6,
-                }}
+                style={{ color: textColor, paddingLeft: CHEV + 6, paddingRight: CHEV + 6 }}
               >
                 <span className="text-[14px] font-medium leading-tight tracking-tight">{t.title}</span>
-                <span
-                  className="text-[18px] font-bold tabular leading-tight"
-                  style={{ opacity: isActive ? 1 : 0.7 }}
-                >
+                <span className="text-[18px] font-bold tabular leading-tight" style={{ opacity: isActive ? 1 : 0.7 }}>
                   {t.count}
                 </span>
               </span>
@@ -152,6 +135,32 @@ export const ChevronTabs = ({ active, onChange, counts, pulse }: Props) => {
           );
         })}
       </div>
+
+      {/* Completed pill — right bookend, square shape, sage green when selected */}
+      <button
+        onClick={() => onChange("completed")}
+        className={cn(
+          "shrink-0 rounded-2xl border transition-colors flex flex-col items-center justify-center px-5",
+          completedActive ? "text-white" : "hover:bg-[#6B8E5A0d]",
+        )}
+        style={{
+          minWidth: 110,
+          height: TAB_H,
+          backgroundColor: completedActive ? SAGE : "hsl(var(--background))",
+          borderColor: completedActive ? SAGE : "hsl(var(--brand-navy) / 0.15)",
+          color: completedActive ? "#fff" : "hsl(var(--brand-navy))",
+        }}
+      >
+        <span className="flex items-center gap-1.5 text-[14px] font-medium leading-tight">
+          {!completedActive && (
+            <span className="rounded-full" style={{ backgroundColor: SAGE, width: 8, height: 8 }} />
+          )}
+          Completed
+        </span>
+        <span className={cn("text-[18px] font-bold tabular leading-tight", !completedActive && "opacity-70")}>
+          {completedCount}
+        </span>
+      </button>
     </div>
   );
 };

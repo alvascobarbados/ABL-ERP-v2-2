@@ -9,6 +9,7 @@ import {
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
+import { ProjectCard } from "@/components/leads/ProjectCard";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
 import { ChevronTabs } from "@/components/leads/ChevronTabs";
 import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
@@ -45,7 +46,7 @@ import { useViewMode } from "@/hooks/useViewMode";
 const FILTER_STORAGE = "alvasco.filters.v2";
 const DEFAULT_FILTERS: Record<TabId, FilterState> = {
   all: EMPTY_FILTER, sales: EMPTY_FILTER, operations: EMPTY_FILTER,
-  shipping: EMPTY_FILTER, finance: EMPTY_FILTER,
+  shipping: EMPTY_FILTER, finance: EMPTY_FILTER, completed: EMPTY_FILTER,
 };
 function loadFilters(): Record<TabId, FilterState> {
   try {
@@ -71,6 +72,7 @@ const DEFAULT_SORTS: Record<TabId, SortState> = {
   operations: { field: "deadline", dir: "asc" },
   shipping: { field: "deadline", dir: "asc" },
   finance: { field: "deadline", dir: "asc" },
+  completed: { field: "updated", dir: "desc" },
 };
 
 function loadSorts(): Record<TabId, SortState> {
@@ -225,8 +227,10 @@ const Index = () => {
   const { projects, shipments, moveCard, pulsePipeline, triggerPulse } = store;
 
   const [activeTab, setActiveTab] = useState<TabId>("sales");
-  const activePipeline: PipelineId = activeTab === "all" ? "sales" : activeTab;
   const isAll = activeTab === "all";
+  const isCompleted = activeTab === "completed";
+  const activePipeline: PipelineId =
+    activeTab === "all" || activeTab === "completed" ? "sales" : activeTab;
   const { view: desktopView, setView: setDesktopView } = useViewMode(activeTab);
 
   // Per-tab filter persistence
@@ -298,34 +302,38 @@ const Index = () => {
     return (id?: string) => (id ? map.get(id) ?? "" : "");
   }, []);
 
-  // Pipeline-facing project list — excludes archived (sales/archive lives only in ArchiveView).
+  // Pipeline-facing project list — excludes archived (sales/archive) AND completed (paid).
   const pipelineProjects = useMemo(
-    () => projects.filter((p) => !(p.pipeline === "sales" && p.stage === "archive")),
+    () => projects.filter((p) =>
+      !(p.pipeline === "sales" && p.stage === "archive") &&
+      !(p.pipeline === "finance" && p.stage === "paid"),
+    ),
+    [projects],
+  );
+
+  const completedProjects = useMemo(
+    () => projects.filter((p) => p.pipeline === "finance" && p.stage === "paid"),
     [projects],
   );
 
   // Build cards list (scope by tab)
   const baseCards = useMemo<PipelineCard[]>(() => {
+    if (isCompleted) return completedProjects.map(buildCard);
     if (isAll) return pipelineProjects.map(buildCard);
     return pipelineProjects.filter((p) => p.pipeline === activePipeline).map(buildCard);
-  }, [activePipeline, isAll, pipelineProjects]);
-
-  // Pipeline counts EXCLUDE Paid — counts communicate operational load.
-  // Paid records still render in the Paid column on Finance tab.
-  const isCountable = (p: Project) => !(p.pipeline === "finance" && p.stage === "paid");
+  }, [activePipeline, isAll, isCompleted, pipelineProjects, completedProjects]);
 
   const counts = useMemo<Record<PipelineId, number>>(() => ({
-    sales: pipelineProjects.filter((p) => p.pipeline === "sales" && isCountable(p)).length,
-    operations: pipelineProjects.filter((p) => p.pipeline === "operations" && isCountable(p)).length,
-    shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && isCountable(p)).length,
-    finance: pipelineProjects.filter((p) => p.pipeline === "finance" && isCountable(p)).length,
+    sales: pipelineProjects.filter((p) => p.pipeline === "sales").length,
+    operations: pipelineProjects.filter((p) => p.pipeline === "operations").length,
+    shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
+    finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
   }), [pipelineProjects]);
 
   // Filtered counts — used by chevron tabs to update live as filters change.
   const filteredCounts = useMemo<Record<PipelineId, number>>(() => {
     const q = search.trim();
     const match = (p: Project) => {
-      if (!isCountable(p)) return false;
       const c = buildCard(p);
       if (!cardMatchesFilter(c, filters)) return false;
       if (q && !projectMatchesSearch(p, q)) return false;
@@ -338,6 +346,8 @@ const Index = () => {
       finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
     };
   }, [pipelineProjects, filters, search]);
+
+  const completedCount = completedProjects.length;
 
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
@@ -409,7 +419,33 @@ const Index = () => {
     });
   };
 
-  const onSwipeForward = (card: PipelineCard) => { const next = nextStage(card); if (next) performMove(card, next); };
+  const markAsPaid = (card: PipelineCard) => {
+    const fromPipeline = card.pipeline;
+    const fromStage = card.stage;
+    const label = `${card.project.customer} · ${card.project.projectName}`;
+    const result = moveCard(card.id, { pipeline: "finance", stage: "paid" });
+    if (!result.ok) return;
+    toast.success(`${label} marked as paid`, {
+      description: "Moved to Completed.",
+      duration: 8000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          moveCard(card.id, { pipeline: fromPipeline, stage: fromStage });
+          toast(`Move undone`, { duration: 2000 });
+        },
+      },
+    });
+  };
+
+  const onSwipeForward = (card: PipelineCard) => {
+    // Special case: Invoiced cards swipe-right → Mark as paid (no modal)
+    if (card.pipeline === "finance" && card.stage === "invoiced") {
+      markAsPaid(card);
+      return;
+    }
+    const next = nextStage(card); if (next) performMove(card, next);
+  };
   const onSwipeBack = (card: PipelineCard) => { const prev = prevStage(card); if (prev) performMove(card, prev); };
   const onOpenPicker = (card: PipelineCard) => setPickerCard(card);
   const handlePickerSelect = (target: { pipeline: PipelineId; stage: StageId }) => {
@@ -431,7 +467,7 @@ const Index = () => {
   };
 
   // Tab swipe gesture (preserved)
-  const TAB_ORDER: TabId[] = ["all", "sales", "operations", "shipping", "finance"];
+  const TAB_ORDER: TabId[] = ["all", "sales", "operations", "shipping", "finance", "completed"];
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; touchStart.current = { x: t.clientX, y: t.clientY }; };
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -491,13 +527,13 @@ const Index = () => {
           {/* Mobile pill tabs */}
           <div className="lg:hidden max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
+              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
           </div>
           {/* Desktop chevron tabs (live filtered counts) + settings */}
           <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center gap-3">
             <div className="flex-1 min-w-0">
-              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} pulse={pulsePipeline} />
+              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
             <SettingsMenu />
           </div>
@@ -575,6 +611,32 @@ const Index = () => {
           });
           const intakeCount = projects.filter((p) => p.pipeline === "shipping" && p.stage === "shipment_required").length;
 
+          if (isCompleted) {
+            return (
+              <section className="rounded-2xl border border-border/60 bg-[#6B8E5A]/[0.04] p-3">
+                {visible.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic px-2 py-6 text-center">
+                    No completed projects yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {visible.map((c) => (
+                      <ProjectCard
+                        key={c.id}
+                        card={c}
+                        showStageLabel
+                        onOpen={() => setSelectedCard(c)}
+                        onSwipeForward={() => onSwipeForward(c)}
+                        onSwipeBack={() => onSwipeBack(c)}
+                        onOpenPicker={() => onOpenPicker(c)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          }
+
           if (isAll) {
             return (
               <AllPipelineView
@@ -650,6 +712,31 @@ const Index = () => {
             onOpenCard={setSelectedCard}
             onOpenPicker={onOpenPicker}
           />
+        ) : isCompleted ? (
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 bg-[#6B8E5A]/[0.04]">
+            {visible.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic px-2 py-12 text-center">
+                No completed projects yet.
+              </p>
+            ) : (
+              <div
+                className="grid gap-3 items-start"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}
+              >
+                {visible.map((c) => (
+                  <ProjectCard
+                    key={c.id}
+                    card={c}
+                    showStageLabel
+                    onOpen={() => setSelectedCard(c)}
+                    onSwipeForward={() => onSwipeForward(c)}
+                    onSwipeBack={() => onSwipeBack(c)}
+                    onOpenPicker={() => onOpenPicker(c)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <KanbanBoard
             activeTab={activeTab}

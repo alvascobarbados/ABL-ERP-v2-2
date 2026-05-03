@@ -1,6 +1,6 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  PencilLine, FolderOpen, ArrowRightLeft, Copy, Archive, Trash2, Flag,
+  PencilLine, FolderOpen, ArrowRightLeft, Copy, Archive, Trash2, Flag, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
@@ -17,6 +17,8 @@ export interface CardActionsPopoverProps {
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  /** Optional — when set, renders a "Mark as paid" row (used on Invoiced cards). */
+  onMarkAsPaid?: () => void;
 }
 
 interface RowProps {
@@ -24,9 +26,10 @@ interface RowProps {
   label: string;
   onClick: () => void;
   destructive?: boolean;
+  accentColor?: string;
 }
 
-const Row = ({ icon: Icon, label, onClick, destructive }: RowProps) => (
+const Row = ({ icon: Icon, label, onClick, destructive, accentColor }: RowProps) => (
   <button
     type="button"
     onClick={onClick}
@@ -35,7 +38,7 @@ const Row = ({ icon: Icon, label, onClick, destructive }: RowProps) => (
       "hover:bg-muted/60",
       destructive ? "text-[hsl(var(--urgent))]/85 hover:text-[hsl(var(--urgent))]" : "text-foreground",
     )}
-    style={{ minHeight: 40 }}
+    style={{ minHeight: 40, ...(accentColor ? { color: accentColor } : {}) }}
   >
     <Icon className="h-4 w-4 shrink-0 opacity-80" />
     <span className="font-medium">{label}</span>
@@ -44,7 +47,7 @@ const Row = ({ icon: Icon, label, onClick, destructive }: RowProps) => (
 
 export const CardActionsPopover = ({
   open, onOpenChange, trigger, flagged, onToggleFlag,
-  onEdit, onOpenProject, onMoveStage, onDuplicate, onArchive, onDelete,
+  onEdit, onOpenProject, onMoveStage, onDuplicate, onArchive, onDelete, onMarkAsPaid,
 }: CardActionsPopoverProps) => {
   const wrap = (fn: () => void) => () => { onOpenChange(false); fn(); };
   return (
@@ -60,6 +63,12 @@ export const CardActionsPopover = ({
       >
         {onToggleFlag && (
           <Row icon={Flag} label={flagged ? "Unflag" : "Flag"} onClick={wrap(onToggleFlag)} />
+        )}
+        {onMarkAsPaid && (
+          <>
+            <Row icon={CheckCircle2} label="Mark as paid" onClick={wrap(onMarkAsPaid)} accentColor="#3D5A30" />
+            <div className="my-1 h-px bg-border/70" />
+          </>
         )}
         <Row icon={PencilLine} label="Edit" onClick={wrap(onEdit)} />
         <Row icon={FolderOpen} label="Open project" onClick={wrap(onOpenProject)} />
