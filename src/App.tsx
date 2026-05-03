@@ -38,6 +38,7 @@ const App = () => (
                   <Route path="/archive" element={<ArchivePage />} />
                   <Route path="/trash" element={<TrashPage />} />
                   <Route path="/shipments" element={<ShipmentsPage />} />
+                  <Route path="/shipments/:mode" element={<ShipmentsModePage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
