@@ -332,7 +332,15 @@ const Index = () => {
     };
   }, [pipelineProjects, filters, search]);
 
-  const completedCount = completedProjects.length;
+  const completedCount = useMemo(() => {
+    const q = search.trim();
+    return completedProjects.filter((p) => {
+      const c = buildCard(p);
+      if (!cardMatchesFilter(c, filters)) return false;
+      if (q && !projectMatchesSearch(p, q)) return false;
+      return true;
+    }).length;
+  }, [completedProjects, filters, search]);
 
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
@@ -512,13 +520,13 @@ const Index = () => {
           {/* Mobile pill tabs */}
           <div className="lg:hidden max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} completedCount={completedCount} pulse={pulsePipeline} />
+              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
           </div>
           {/* Desktop chevron tabs (live filtered counts) + settings */}
           <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center gap-3">
             <div className="flex-1 min-w-0">
-              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={counts} completedCount={completedCount} pulse={pulsePipeline} />
+              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
             <SettingsMenu />
           </div>
