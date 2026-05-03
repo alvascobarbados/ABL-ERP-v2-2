@@ -194,12 +194,15 @@ const GRID_COLS = COLS.map((c) => c.width).join(" ") + " 36px"; // +1 for action
 export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
-  const [sortKey, setSortKey] = useState<SortKey>("deadline");
+  // null = no local override; rows render in the order Index.tsx provides
+  // (which respects the global sort/default for the current scope).
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<PipelineCard | null>(null);
 
   const sorted = useMemo(() => {
+    if (!sortKey) return visible;
     const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId));
     return list;
   }, [visible, sortKey, sortDir, md.getSupplierByAnyId]);
@@ -209,9 +212,11 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: P
     [sorted],
   );
 
+  // Click cycle: asc → desc → cleared (back to default).
   const onHeaderClick = (k: SortKey) => {
-    if (sortKey === k) setSortDir((d) => (d === 1 ? -1 : 1));
-    else { setSortKey(k); setSortDir(1); }
+    if (sortKey !== k) { setSortKey(k); setSortDir(1); return; }
+    if (sortDir === 1) { setSortDir(-1); return; }
+    setSortKey(null); setSortDir(1);
   };
 
   return (
