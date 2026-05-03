@@ -20,7 +20,7 @@ interface Props {
  * Search is always visible; X clears, Esc clears.
  */
 export const TopControls = ({
-  filter, sort, search, onSearchChange, onOpenFilter, onOpenSort,
+  filter, sort, search, onSearchChange, onOpenFilter, onOpenSort, hideFilter,
 }: Props) => {
   const filterCount = computeFilterCount(filter);
   const sortOpt = SORT_OPTIONS.find((o) => o.field === sort.field)!;
