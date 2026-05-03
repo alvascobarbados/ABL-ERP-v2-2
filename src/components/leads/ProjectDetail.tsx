@@ -42,6 +42,14 @@ function getUrgency(date: Date) {
 const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
 const fmtLong = (d: Date) =>
   `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()}`;
+const fmtNoteTs = (d: Date) => {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dd = new Date(d); dd.setHours(0,0,0,0);
+  const t = d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (dd.getTime() === today.getTime()) return `Today · ${t}`;
+  if (today.getTime() - dd.getTime() === 86400000) return `Yesterday · ${t}`;
+  return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })} · ${t}`;
+};
 
 type EditorKind =
   | { kind: "contact" }
