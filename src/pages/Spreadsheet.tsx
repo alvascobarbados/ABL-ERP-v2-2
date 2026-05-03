@@ -340,9 +340,9 @@ export default function Spreadsheet() {
       },
     },
     {
-      id: "detail", label: "Detail", width: 240, defaultHidden: true,
+      id: "detail", label: "Detail", width: 240,
       render: (r) => r.project.detailSummary ?? "",
-      editor: { type: "text", multiline: true },
+      editor: { type: "text" },
       getValue: (r) => r.project.detailSummary ?? "",
       commit: (r, v) => {
         const next = String(v ?? "") || undefined;
