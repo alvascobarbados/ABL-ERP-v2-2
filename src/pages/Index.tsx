@@ -511,6 +511,7 @@ const Index = () => {
               <Menu className="h-4 w-4" />
             </button>
             <Wordmark />
+            <UserMenu />
             <SettingsMenu />
           </div>
         </div>
@@ -528,6 +529,7 @@ const Index = () => {
             <div className="flex-1 min-w-0">
               <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
+            <UserMenu />
             <SettingsMenu />
           </div>
         </div>
