@@ -25,6 +25,13 @@ export const UserMenu = () => {
   const [view, setView] = useState<"main" | "settings">("main");
   const ref = useRef<HTMLDivElement | null>(null);
   const { friendly, setFriendly, resetWalkthrough } = useFriendlyMode();
+  const user = useCurrentUser();
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -38,26 +45,39 @@ export const UserMenu = () => {
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  const firstName = DEFAULT_USER.fullName.split(" ")[0];
-
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="User menu"
-        className="inline-flex items-center gap-2 rounded-full pl-1 pr-2.5 py-0.5 hover:bg-muted/40 transition-colors"
+        className="inline-flex items-center gap-2 rounded-full pl-2 pr-2.5 py-0.5 hover:bg-muted/40 transition-colors"
       >
+        <span
+          className="hidden lg:inline text-[11px] tabular leading-none"
+          style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
+        >
+          {fmtDesktop(now)}
+        </span>
+        <span
+          className="lg:hidden text-[11px] tabular leading-none"
+          style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
+        >
+          {fmtMobile(now)}
+        </span>
+        <span
+          className="text-[12px] font-medium hidden sm:inline"
+          style={{ color: "hsl(var(--brand-navy))" }}
+        >
+          · {user.shortName}
+        </span>
         <span
           className="inline-flex items-center justify-center rounded-full text-[11px] font-semibold tracking-wide text-white"
           style={{
-            width: 28, height: 28,
+            width: 24, height: 24,
             background: "linear-gradient(135deg, hsl(var(--brand-navy)), hsl(var(--brand-orange)))",
           }}
         >
-          {DEFAULT_USER.initials}
-        </span>
-        <span className="text-[13px] font-medium" style={{ color: "hsl(var(--brand-navy))" }}>
-          {firstName}
+          {user.initials}
         </span>
       </button>
       {open && (
