@@ -10,6 +10,8 @@ import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
+import { ChevronTabs } from "@/components/leads/ChevronTabs";
+import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
 import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
 import { ShipmentView } from "@/components/leads/ShipmentView";
@@ -312,6 +314,23 @@ const Index = () => {
     finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
   }), [pipelineProjects]);
 
+  // Filtered counts — used by chevron tabs to update live as filters change.
+  const filteredCounts = useMemo<Record<PipelineId, number>>(() => {
+    const q = search.trim();
+    const match = (p: Project) => {
+      const c = buildCard(p);
+      if (!cardMatchesFilter(c, filters)) return false;
+      if (q && !projectMatchesSearch(p, q)) return false;
+      return true;
+    };
+    return {
+      sales: pipelineProjects.filter((p) => p.pipeline === "sales" && match(p)).length,
+      operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length,
+      shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && match(p)).length,
+      finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
+    };
+  }, [pipelineProjects, filters, search]);
+
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
   const salesRepOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.pointPerson).filter(Boolean))).sort(), [projects]);
@@ -456,24 +475,26 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tabs row — on desktop, also carries SettingsMenu on the right */}
+        {/* Tabs row */}
         <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-1.5 pt-1.5 lg:pt-3 flex items-center gap-3">
+          {/* Mobile pill tabs */}
+          <div className="lg:hidden max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <PipelineTabs active={activeTab} onChange={setActiveTab} counts={counts} pulse={pulsePipeline} />
             </div>
-            <div className="hidden lg:block">
-              <SettingsMenu />
+          </div>
+          {/* Desktop chevron tabs (live filtered counts) + settings */}
+          <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} pulse={pulsePipeline} />
             </div>
+            <SettingsMenu />
           </div>
         </div>
 
-        {/* Filter row */}
-        <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-6xl mx-auto lg:max-w-none px-4 sm:px-6 pb-2 flex items-center gap-3">
-            <div className="hidden lg:block shrink-0">
-              <ViewSwitcher value={desktopView} onChange={setDesktopView} />
-            </div>
+        {/* Mobile filter row (filter pill + search + sort) */}
+        <div className="relative lg:hidden" style={{ backgroundColor: "hsl(var(--background))" }}>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-2 flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <TopControls
                 filter={filters}
@@ -483,6 +504,32 @@ const Index = () => {
                 onOpenFilter={() => setFilterSheetOpen(true)}
                 onOpenSort={() => setSortSheetOpen(true)}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop: always-visible filter chip bar + search/sort/view-switcher */}
+        <div className="hidden lg:block" style={{ backgroundColor: "hsl(var(--background))" }}>
+          <div className="max-w-none px-4 sm:px-6 pb-2 pt-1.5 space-y-2">
+            <DesktopFilterBar
+              value={filters}
+              onChange={setFilters}
+              customers={customerOptions}
+              suppliers={SUPPLIERS}
+              salesReps={salesRepOptions}
+            />
+            <div className="flex items-center gap-3">
+              <ViewSwitcher value={desktopView} onChange={setDesktopView} />
+              <div className="flex-1 min-w-0">
+                <TopControls
+                  filter={filters}
+                  sort={sort}
+                  search={search}
+                  onSearchChange={setSearch}
+                  onOpenFilter={() => setFilterSheetOpen(true)}
+                  onOpenSort={() => setSortSheetOpen(true)}
+                />
+              </div>
             </div>
           </div>
         </div>
