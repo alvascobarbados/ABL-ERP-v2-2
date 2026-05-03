@@ -97,6 +97,7 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
 
 export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
   sales: "Getting new business",
+  design: "Designing & proofing",
   operations: "Making the goods",
   shipping: "Moving the goods",
   finance: "Invoicing and getting paid",
