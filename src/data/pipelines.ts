@@ -259,6 +259,9 @@ export interface Project {
   invoiceNumber?: string;
   lineItems?: LineItem[];
   notes?: ProjectNote[];
+  /** Append-only audit trail. Written via the store middleware whenever
+   *  any canonical mutation happens. Never user-editable. */
+  log?: ProjectLogEntry[];
   // Audit timestamps. createdAt is set when the project first enters the system.
   // updatedAt bumps on every mutation through the store (updateProject, addNote,
   // line-item changes, stage moves). Spreadsheet view sorts/filters by these.
