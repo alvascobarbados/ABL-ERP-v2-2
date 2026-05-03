@@ -181,6 +181,9 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
   const [createOpen, setCreateOpen] = useState(false);
   const [createValues, setCreateValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // Search-select uses a separate type-ahead query so the cell's current value
+  // never filters the master list down to itself.
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     const el = inputRef.current;
@@ -249,8 +252,12 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
   if (editor.type === "search-select") {
     const allOpts = typeof editor.options === "function" ? editor.options(row) : editor.options;
     const pinned = editor.pinned ?? [];
-    const q = value.trim().toLowerCase();
-    const matches = allOpts.filter((o) => !q || o.label.toLowerCase().includes(q));
+    // `value` holds the cell's current committed value; `query` drives the
+    // type-ahead. Always show the FULL master list, filtered only by `query`.
+    const q = query.trim().toLowerCase();
+    const matches = q
+      ? allOpts.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
+      : allOpts;
     const cf = editor.createForm?.(row) ?? null;
 
     const submitCreate = async () => {
@@ -277,8 +284,8 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
       <div style={{ position: "relative" }} data-cell-editor>
         <input
           ref={(el) => { inputRef.current = el; }}
-          value={value}
-          onChange={(e) => { setValue(e.target.value); setPopoverOpen(true); if (error) setError(null); }}
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPopoverOpen(true); if (error) setError(null); }}
           onFocus={() => setPopoverOpen(true)}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); onCancel(); }
@@ -357,7 +364,11 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
                     </>
                   )}
                   {matches.length === 0 ? (
-                    <div style={{ padding: "8px 10px", fontSize: 12, color: navy(0.5), fontStyle: "italic" }}>No matches</div>
+                    <div style={{ padding: "8px 10px", fontSize: 12, color: navy(0.5), fontStyle: "italic" }}>
+                      {allOpts.length === 0 && !q
+                        ? (cf ? `No ${(editor.placeholder ?? "items").toLowerCase()} yet — add one below` : "No items")
+                        : "No matches"}
+                    </div>
                   ) : matches.slice(0, 50).map((o) => (
                     <button
                       key={o.value}
