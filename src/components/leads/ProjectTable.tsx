@@ -246,34 +246,41 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
           <div
             className="sticky top-0 z-10 grid items-center text-[11px] font-semibold uppercase tracking-[0.06em] rounded-t-xl"
             style={{
-              gridTemplateColumns: GRID_COLS,
+              gridTemplateColumns: gridCols,
               backgroundColor: "hsl(var(--background))",
               color: "hsl(var(--brand-navy))",
               borderBottom: "1px solid hsl(var(--brand-navy) / 0.12)",
             }}
           >
             {COLS.map((c) => {
-              // On the Completed scope the stage column is non-sortable —
-              // every row is already in the terminal stage.
               const sortable = !(activeTab === "completed" && c.key === "stage");
               const isActive = sortable && sortKey === c.key;
               const Arrow = isActive ? (sortDir === 1 ? ArrowUp : ArrowDown) : null;
+              const resizable = c.resizable !== false;
               return (
-                <button
-                  key={c.key}
-                  type="button"
-                  onClick={sortable ? () => onHeaderClick(c.key) : undefined}
-                  disabled={!sortable}
-                  className={cn(
-                    "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate",
-                    sortable ? "hover:bg-[hsl(var(--brand-navy)/0.04)] cursor-pointer" : "cursor-default",
-                    c.align === "right" ? "justify-end" : "justify-start",
+                <div key={c.key} className="relative">
+                  <button
+                    type="button"
+                    onClick={sortable ? () => onHeaderClick(c.key) : undefined}
+                    disabled={!sortable}
+                    className={cn(
+                      "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
+                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.04)] cursor-pointer" : "cursor-default",
+                      c.align === "right" ? "justify-end" : "justify-start",
+                    )}
+                    title={c.label}
+                  >
+                    <span className="truncate">{c.label}</span>
+                    {Arrow && <Arrow className="h-3 w-3 shrink-0" />}
+                  </button>
+                  {resizable && (
+                    <ColumnResizeHandle
+                      startWidth={cw.widthFor(c.key, c.defaultPx)}
+                      onChange={(w) => cw.setWidth(c.key, w)}
+                      onReset={() => cw.setWidth(c.key, c.defaultPx)}
+                    />
                   )}
-                  title={c.label}
-                >
-                  <span className="truncate">{c.label}</span>
-                  {Arrow && <Arrow className="h-3 w-3 shrink-0" />}
-                </button>
+                </div>
               );
             })}
             <div className="h-10" />
@@ -281,9 +288,28 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
 
           {/* Rows */}
           {sorted.length === 0 ? (
-            <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-              No projects to show.
-            </div>
+            hasActiveFilter ? (
+              <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                No projects match the current filters.
+                {onClearFilters && (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      onClick={onClearFilters}
+                      className="underline underline-offset-4 hover:text-foreground"
+                      style={{ color: "hsl(var(--brand-navy))" }}
+                    >
+                      Clear filters
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                No projects to show.
+              </div>
+            )
           ) : (
             sorted.map((card, i) => (
               <TableRow
@@ -291,6 +317,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 index={i}
                 card={card}
                 activeTab={activeTab}
+                gridCols={gridCols}
                 isMenuOpen={menuFor === card.id}
                 onMenuOpenChange={(open) => setMenuFor(open ? card.id : null)}
                 onOpen={() => onOpenCard(card)}
