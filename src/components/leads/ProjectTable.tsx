@@ -83,7 +83,10 @@ function repInitials(name?: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function compareCards(a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1): number {
+function compareCards(
+  a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1,
+  lookup?: (id?: string | null) => { name: string } | undefined,
+): number {
   const dl = (c: PipelineCard) => c.deadlineDate?.getTime?.() ?? Number.POSITIVE_INFINITY;
   switch (key) {
     case "flagged":
@@ -96,8 +99,8 @@ function compareCards(a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -
     case "project":
       return dir * a.project.projectName.localeCompare(b.project.projectName);
     case "supplier": {
-      const av = supplierName(a.project.supplierId) || a.project.supplierLabel || "";
-      const bv = supplierName(b.project.supplierId) || b.project.supplierLabel || "";
+      const av = supplierName(a.project.supplierId, lookup) || a.project.supplierLabel || "";
+      const bv = supplierName(b.project.supplierId, lookup) || b.project.supplierLabel || "";
       if (!av && bv) return 1;
       if (av && !bv) return -1;
       return dir * av.localeCompare(bv);
