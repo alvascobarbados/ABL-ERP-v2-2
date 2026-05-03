@@ -12,6 +12,8 @@ import { Flag, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
 } from "@/data/pipelines";
+import { useColumnWidths } from "@/hooks/useColumnWidths";
+import { ColumnResizeHandle } from "./ColumnResizeHandle";
 
 // Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
