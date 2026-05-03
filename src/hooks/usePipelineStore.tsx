@@ -294,6 +294,16 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
           next.invoiceIssuedDateAssumed = true;
         }
       }
+      // Seed the immutable log with a "project created" entry, attributed to
+      // the migration. Real future creations write the same kind of entry.
+      if (!next.log || next.log.length === 0) {
+        next = appendLog(next, {
+          ts: next.createdAt,
+          actor: actorOf(SYSTEM_CURRENT_USER),
+          actionType: "project_created",
+          description: `${SYSTEM_CURRENT_USER.shortName} created this project`,
+        });
+      }
       return next;
     }),
   );
