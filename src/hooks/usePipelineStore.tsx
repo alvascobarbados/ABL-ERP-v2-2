@@ -231,6 +231,17 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       if (target.pipeline === "finance" && !p.invoiceNumber) {
         patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`; // 1040–1060
       }
+      // Auto-track Invoice Required entry timestamp.
+      if (target.pipeline === "finance" && target.stage === "invoice_required"
+          && !p.invoiceRequiredEnteredAt) {
+        patch.invoiceRequiredEnteredAt = new Date();
+      }
+      // Auto-set invoice issued date when entering Invoiced (assumed flag = true).
+      if (target.pipeline === "finance" && target.stage === "invoiced"
+          && !p.invoiceIssuedDate) {
+        patch.invoiceIssuedDate = new Date();
+        patch.invoiceIssuedDateAssumed = true;
+      }
       return touch({ ...p, ...patch });
     }));
     return { ok: true };
