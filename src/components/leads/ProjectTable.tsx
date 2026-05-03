@@ -13,6 +13,7 @@ import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
 } from "@/data/pipelines";
 import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
+import { useMasterData } from "@/hooks/useMasterData";
 import { cn } from "@/lib/utils";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
@@ -67,8 +68,10 @@ function stageLabel(c: PipelineCard, activeTab: TabId): string {
   return getStageTitle(c.pipeline, c.stage);
 }
 
-function supplierName(id?: string): string {
+function supplierName(id: string | undefined, lookup?: (id?: string | null) => { name: string } | undefined): string {
   if (!id) return "";
+  const fromMaster = lookup?.(id)?.name;
+  if (fromMaster) return fromMaster;
   return SUPPLIERS.find((s) => s.id === id)?.name ?? "";
 }
 
@@ -80,7 +83,10 @@ function repInitials(name?: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function compareCards(a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1): number {
+function compareCards(
+  a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1,
+  lookup?: (id?: string | null) => { name: string } | undefined,
+): number {
   const dl = (c: PipelineCard) => c.deadlineDate?.getTime?.() ?? Number.POSITIVE_INFINITY;
   switch (key) {
     case "flagged":
@@ -93,8 +99,8 @@ function compareCards(a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -
     case "project":
       return dir * a.project.projectName.localeCompare(b.project.projectName);
     case "supplier": {
-      const av = supplierName(a.project.supplierId) || a.project.supplierLabel || "";
-      const bv = supplierName(b.project.supplierId) || b.project.supplierLabel || "";
+      const av = supplierName(a.project.supplierId, lookup) || a.project.supplierLabel || "";
+      const bv = supplierName(b.project.supplierId, lookup) || b.project.supplierLabel || "";
       if (!av && bv) return 1;
       if (av && !bv) return -1;
       return dir * av.localeCompare(bv);
@@ -150,15 +156,16 @@ const GRID_COLS = COLS.map((c) => c.width).join(" ") + " 36px"; // +1 for action
 
 export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: Props) => {
   const store = usePipelineStore();
+  const md = useMasterData();
   const [sortKey, setSortKey] = useState<SortKey>("deadline");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<PipelineCard | null>(null);
 
   const sorted = useMemo(() => {
-    const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir));
+    const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId));
     return list;
-  }, [visible, sortKey, sortDir]);
+  }, [visible, sortKey, sortDir, md.getSupplierByAnyId]);
 
   const totalAmount = useMemo(
     () => sorted.reduce((sum, c) => sum + (c.project.value ?? 0), 0),
@@ -277,7 +284,8 @@ const TableRow = ({
   const proj = card.project;
   const flagged = !!proj.flagged;
   const u = urgencyLabel(card.deadlineDate);
-  const supName = supplierName(proj.supplierId) || proj.supplierLabel || "";
+  const md = useMasterData();
+  const supName = supplierName(proj.supplierId, md.getSupplierByAnyId) || proj.supplierLabel || "";
 
   // Long-press / long-click → stage picker
   const longPressTimer = useRef<number | null>(null);
