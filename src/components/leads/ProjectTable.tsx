@@ -179,22 +179,25 @@ function compareCards(
   }
 }
 
-const COLS: { key: SortKey; label: string; width: string; align?: "right" | "left" }[] = [
-  { key: "flagged", label: "", width: "32px" },
-  // Wide enough for "Production · Pre-Production" / "Finance · Invoice Required"
-  // without mid-word truncation at our 13px row font.
-  { key: "stage", label: "Pipeline · Stage", width: "220px" },
-  { key: "customer", label: "Customer", width: "150px" },
-  { key: "project", label: "Project", width: "minmax(220px, 1.6fr)" },
-  { key: "detail", label: "Detail", width: "200px" },
-  { key: "supplier", label: "Supplier", width: "130px" },
-  { key: "quote", label: "Q#", width: "84px" },
-  { key: "amount", label: "Amount", width: "104px", align: "right" },
-  { key: "mode", label: "Mode", width: "76px" },
-  { key: "tracking", label: "Tracking", width: "120px" },
-  { key: "rep", label: "Rep", width: "60px" },
-  { key: "deadline", label: "Deadline", width: "92px" },
-  { key: "urgency", label: "Urgency", width: "100px" },
+// Each entry has a default pixel width AND a flexible flag. The "project"
+// column historically used `minmax(220px, 1.6fr)` to absorb leftover space;
+// now that columns are individually resizable we keep all widths in pixels
+// and let the table grow horizontally if the user widens columns past the
+// viewport (overflow-auto on the wrapper handles it).
+const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
+  { key: "flagged", label: "", defaultPx: 32, resizable: false },
+  { key: "stage", label: "Pipeline · Stage", defaultPx: 220 },
+  { key: "customer", label: "Customer", defaultPx: 150 },
+  { key: "project", label: "Project", defaultPx: 280 },
+  { key: "detail", label: "Detail", defaultPx: 200 },
+  { key: "supplier", label: "Supplier", defaultPx: 130 },
+  { key: "quote", label: "Q#", defaultPx: 84 },
+  { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
+  { key: "mode", label: "Mode", defaultPx: 76 },
+  { key: "tracking", label: "Tracking", defaultPx: 120 },
+  { key: "rep", label: "Rep", defaultPx: 60 },
+  { key: "deadline", label: "Deadline", defaultPx: 92 },
+  { key: "urgency", label: "Urgency", defaultPx: 100 },
 ];
 
 const GRID_COLS = COLS.map((c) => c.width).join(" ") + " 36px"; // +1 for actions
