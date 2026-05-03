@@ -237,15 +237,20 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: P
             }}
           >
             {COLS.map((c) => {
-              const isActive = sortKey === c.key;
+              // On the Completed scope the stage column is non-sortable —
+              // every row is already in the terminal stage.
+              const sortable = !(activeTab === "completed" && c.key === "stage");
+              const isActive = sortable && sortKey === c.key;
               const Arrow = isActive ? (sortDir === 1 ? ArrowUp : ArrowDown) : null;
               return (
                 <button
                   key={c.key}
                   type="button"
-                  onClick={() => onHeaderClick(c.key)}
+                  onClick={sortable ? () => onHeaderClick(c.key) : undefined}
+                  disabled={!sortable}
                   className={cn(
-                    "h-10 px-3 inline-flex items-center gap-1 hover:bg-[hsl(var(--brand-navy)/0.04)] transition-colors text-left truncate",
+                    "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate",
+                    sortable ? "hover:bg-[hsl(var(--brand-navy)/0.04)] cursor-pointer" : "cursor-default",
                     c.align === "right" ? "justify-end" : "justify-start",
                   )}
                   title={c.label}
