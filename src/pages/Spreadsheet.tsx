@@ -17,7 +17,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { useMasterData } from "@/hooks/useMasterData";
-import { PIPELINES, PipelineId, Project, SUPPLIERS, StageId } from "@/data/pipelines";
+import { PIPELINES, PipelineId, Project, ShippingMode, SUPPLIERS, StageId } from "@/data/pipelines";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import {
   SpreadsheetView, SpreadsheetColumn, EditorOption, CreateFormSpec,
@@ -206,9 +206,14 @@ export default function Spreadsheet() {
     fields: [
       { key: "name", label: "Name", required: true },
       { key: "country", label: "Country" },
+      {
+        key: "default_shipping_mode", label: "Default Mode", type: "select", placeholder: "Air",
+        options: [{ value: "Air", label: "Air" }, { value: "Ocean", label: "Ocean" }, { value: "Local", label: "Local" }],
+      },
     ],
     onSubmit: async (v) => {
-      const s = await md.addSupplier({ name: v.name.trim(), country: v.country || undefined });
+      const mode = (v.default_shipping_mode || "Air") as ShippingMode;
+      const s = await md.addSupplier({ name: v.name.trim(), country: v.country || undefined, default_shipping_mode: mode });
       return { value: s.id, label: s.name };
     },
   });
@@ -218,13 +223,14 @@ export default function Spreadsheet() {
     fields: [
       { key: "initials", label: "Initials", required: true, placeholder: "e.g. AV" },
       { key: "full_name", label: "Full name", required: true },
-      { key: "email", label: "Email", type: "email" },
+      { key: "department", label: "Department" },
+      { key: "role", label: "Role" },
     ],
     onSubmit: async (v) => {
       const t = await md.addTeamMember({
         initials: v.initials.trim().toUpperCase(),
         full_name: v.full_name.trim(),
-        email: v.email || undefined,
+        role: (v.role || v.department || undefined) as Parameters<typeof md.addTeamMember>[0]["role"],
       });
       return { value: t.initials, label: `${t.initials} — ${t.full_name}` };
     },
@@ -232,7 +238,12 @@ export default function Spreadsheet() {
   const buyerCreate = (row: Row): CreateFormSpec | null => ({
     title: `Add buyer for ${row.project.customer}`,
     addLabel: "Add new buyer",
-    fields: [{ key: "name", label: "Name", required: true }],
+    fields: [
+      { key: "name", label: "Name", required: true },
+      { key: "email", label: "Email", type: "email" },
+      { key: "phone", label: "Phone", type: "tel" },
+      { key: "role", label: "Role" },
+    ],
     // Buyers are not a separate master table here — the buyer is just stored
     // on the project (contactPerson). Returning the typed value assigns it.
     onSubmit: async (v) => ({ value: v.name.trim(), label: v.name.trim() }),
