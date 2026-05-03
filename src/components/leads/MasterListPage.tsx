@@ -139,12 +139,36 @@ export const MasterListPage = ({ kind }: Props) => {
       setConfirmDelete(null);
       return;
     }
+    const snapshot = rows.find((r) => r.id === confirmDelete.id)?.raw;
+    const label = confirmDelete.label;
     try {
       if (kind === "customer") await md.deleteCustomer(confirmDelete.id);
       else if (kind === "supplier") await md.deleteSupplier(confirmDelete.id);
       else if (kind === "team") await md.deleteTeamMember(confirmDelete.id);
       else await md.deleteProduct(confirmDelete.id);
-      toast.success(`${confirmDelete.label} deleted`);
+
+      const kindLabel =
+        kind === "customer" ? "Customer" :
+        kind === "supplier" ? "Supplier" :
+        kind === "team" ? "Team member" : "Product";
+
+      toast.success(`${kindLabel} "${label}" deleted`, {
+        duration: 8000,
+        action: snapshot ? {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              if (kind === "customer") await md.addCustomer(snapshot);
+              else if (kind === "supplier") await md.addSupplier(snapshot);
+              else if (kind === "team") await md.addTeamMember(snapshot);
+              else await md.addProduct(snapshot);
+              toast.success(`${label} restored`);
+            } catch (err: any) {
+              toast.error(err?.message ?? "Restore failed");
+            }
+          },
+        } : undefined,
+      });
     } catch (err: any) {
       toast.error(err?.message ?? "Delete failed");
     }
