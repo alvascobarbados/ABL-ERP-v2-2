@@ -1,9 +1,110 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from "react";
 import {
   PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
+  ProjectLogEntry, ProjectLogActionType,
   SHIPMENTS as SEED_SHIPMENTS, SUPPLIERS, ShippingMode,
 } from "@/data/pipelines";
 import { ABL_PROJECTS as SEED_PROJECTS } from "@/data/abl-projects";
+import { useCurrentUser, SYSTEM_CURRENT_USER, type CurrentUser } from "./useCurrentUser";
+
+// ─────────── Log helpers ───────────
+function makeLogId() {
+  return `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function appendLog(p: Project, entry: Omit<ProjectLogEntry, "id" | "ts"> & { ts?: Date }): Project {
+  const full: ProjectLogEntry = {
+    id: makeLogId(),
+    ts: entry.ts ?? new Date(),
+    actor: entry.actor,
+    actionType: entry.actionType,
+    description: entry.description,
+    metadata: entry.metadata,
+  };
+  return { ...p, log: [...(p.log ?? []), full] };
+}
+
+function actorOf(u: CurrentUser) {
+  return { userId: u.userId, displayName: u.shortName };
+}
+
+function pipelineStageLabel(pipeline: PipelineId, stage: StageId): string {
+  const p = PIPELINES.find((x) => x.id === pipeline);
+  const s = p?.stages.find((x) => x.id === stage);
+  return `${p?.title ?? pipeline} · ${s?.title ?? stage}`;
+}
+
+const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
+  customer: "customer",
+  projectName: "project name",
+  detailSummary: "detail",
+  supplierId: "supplier",
+  supplierLabel: "supplier",
+  shippingMode: "mode",
+  trackingRef: "tracking",
+  contactPerson: "contact",
+  pointPerson: "sales rep",
+  deadline: "deadline",
+  deadlineDate: "deadline",
+  value: "amount",
+  quoteNumber: "Q#",
+  poNumber: "PO#",
+  invoiceNumber: "INV#",
+  paymentTerms: "payment terms",
+  invoiceIssuedDate: "invoice issued date",
+};
+
+const SUPPRESSED_FIELDS = new Set<keyof Project>([
+  "updatedAt", "createdAt", "log", "notes", "lineItems",
+  "pipeline", "stage", "flagged",
+  "deletedAt", "deletedFromPipeline", "deletedFromStage",
+  "invoiceRequiredEnteredAt", "invoiceIssuedDateAssumed",
+  "paymentTermsInherited", "paymentTermsCustomDays",
+  "paidOnDate", "paymentMethod", "paymentReference",
+  "salesShippingLabel",
+]);
+
+function fmtVal(field: keyof Project, val: unknown, suppliers: Supplier[]): string {
+  if (val == null || val === "") return "—";
+  if (field === "supplierId") {
+    return suppliers.find((s) => s.id === val)?.name ?? String(val);
+  }
+  if (val instanceof Date) {
+    return `${val.getDate()} ${val.toLocaleString("en-US", { month: "short" })} ${val.getFullYear()}`;
+  }
+  if (field === "value" && typeof val === "number") return `$${val.toLocaleString()}`;
+  return String(val);
+}
+
+function buildFieldEditEntries(
+  prev: Project, patch: Partial<Project>, actor: CurrentUser, suppliers: Supplier[],
+): Array<Omit<ProjectLogEntry, "id" | "ts">> {
+  const out: Array<Omit<ProjectLogEntry, "id" | "ts">> = [];
+  const name = actor.shortName;
+  for (const key of Object.keys(patch) as (keyof Project)[]) {
+    if (SUPPRESSED_FIELDS.has(key)) continue;
+    const before = (prev as any)[key];
+    const after = (patch as any)[key];
+    if (before === after) continue;
+    if (before instanceof Date && after instanceof Date && before.getTime() === after.getTime()) continue;
+    const label = FIELD_LABELS[key];
+    if (!label) continue;
+    const fromStr = fmtVal(key, before, suppliers);
+    const toStr = fmtVal(key, after, suppliers);
+    let desc: string;
+    if (before == null || before === "") desc = `${name} set ${label} to ${toStr}`;
+    else if (after == null || after === "") desc = `${name} cleared ${label}`;
+    else desc = `${name} changed ${label} from ${fromStr} to ${toStr}`;
+    out.push({
+      actor: actorOf(actor),
+      actionType: "field_edit",
+      description: desc,
+      metadata: { field: String(key), fromValue: before as any, toValue: after as any },
+    });
+  }
+  return out;
+}
+
 
 // ─────────── Stage helpers ───────────
 export interface StagePos {
@@ -193,11 +294,25 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
           next.invoiceIssuedDateAssumed = true;
         }
       }
+      // Seed the immutable log with a "project created" entry, attributed to
+      // the migration. Real future creations write the same kind of entry.
+      if (!next.log || next.log.length === 0) {
+        next = appendLog(next, {
+          ts: next.createdAt,
+          actor: actorOf(SYSTEM_CURRENT_USER),
+          actionType: "project_created",
+          description: `${SYSTEM_CURRENT_USER.shortName} created this project`,
+        });
+      }
       return next;
     }),
   );
   const [shipments, setShipments] = useState<Shipment[]>(() => SEED_SHIPMENTS.map((s) => ({ ...s })));
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => SUPPLIERS.map((s) => ({ ...s })));
+  const currentUser = useCurrentUser();
+  // Refs so callbacks see the latest values without retriggering.
+  const userRef = useRef(currentUser); userRef.current = currentUser;
+  const suppliersRef = useRef(suppliers); suppliersRef.current = suppliers;
   const [pulsePipeline, setPulsePipeline] = useState<PipelineId | null>(null);
   const pulseTimer = useRef<number | null>(null);
 
@@ -220,56 +335,120 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     setProjects((prev) => prev.map((p) => {
       if (p.id !== cardId) return p;
       const patch: Partial<Project> = { pipeline: target.pipeline, stage: target.stage };
-      // Drop shipment when going back to intake
       if (target.pipeline === "shipping" && target.stage === "shipment_required") {
         patch.shipmentId = undefined;
       }
-      // Auto-assign reference numbers when reaching gates (per spec ranges)
       if (target.stage === "quote" && !p.quoteNumber) {
-        patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`; // 2040–2080
+        patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`;
       }
       if (target.pipeline === "operations" && !p.poNumber) {
-        patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`; // 1080–1110
+        patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`;
       }
       if (target.pipeline === "finance" && !p.invoiceNumber) {
-        patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`; // 1040–1060
+        patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`;
       }
-      // Auto-track Invoice Required entry timestamp.
       if (target.pipeline === "finance" && target.stage === "invoice_required"
           && !p.invoiceRequiredEnteredAt) {
         patch.invoiceRequiredEnteredAt = new Date();
       }
-      // Auto-set invoice issued date when entering Invoiced (assumed flag = true).
       if (target.pipeline === "finance" && target.stage === "invoiced"
           && !p.invoiceIssuedDate) {
         patch.invoiceIssuedDate = new Date();
         patch.invoiceIssuedDateAssumed = true;
       }
-      return touch({ ...p, ...patch });
+      const u = userRef.current;
+      const fromLabel = pipelineStageLabel(p.pipeline, p.stage);
+      const toLabel = pipelineStageLabel(target.pipeline, target.stage);
+      const isPaid = target.pipeline === "finance" && target.stage === "paid";
+      const isArchive = target.pipeline === "sales" && target.stage === "archive";
+      const wasArchive = p.pipeline === "sales" && p.stage === "archive";
+      let next = touch({ ...p, ...patch });
+      if (isPaid) {
+        next = appendLog(next, {
+          actor: actorOf(u), actionType: "mark_paid",
+          description: `${u.shortName} marked this paid`,
+          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: target.pipeline, toStage: target.stage },
+        });
+      } else if (isArchive) {
+        next = appendLog(next, {
+          actor: actorOf(u), actionType: "archive",
+          description: `${u.shortName} archived this`,
+          metadata: { fromPipeline: p.pipeline, fromStage: p.stage },
+        });
+      } else if (wasArchive) {
+        next = appendLog(next, {
+          actor: actorOf(u), actionType: "unarchive",
+          description: `${u.shortName} restored this from archive`,
+          metadata: { toPipeline: target.pipeline, toStage: target.stage },
+        });
+      } else {
+        next = appendLog(next, {
+          actor: actorOf(u), actionType: "stage_change",
+          description: `${u.shortName} moved this from ${fromLabel} to ${toLabel}`,
+          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: target.pipeline, toStage: target.stage },
+        });
+      }
+      return next;
     }));
     return { ok: true };
   }, [projects]);
 
   const updateProject = useCallback((id: string, patch: Partial<Project>) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? touch({ ...p, ...patch }) : p)));
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== id) return p;
+      const u = userRef.current;
+      const entries = buildFieldEditEntries(p, patch, u, suppliersRef.current);
+      let next = touch({ ...p, ...patch });
+      for (const e of entries) next = appendLog(next, e);
+      return next;
+    }));
   }, []);
 
   const renameProject = useCallback((currentName: string, newName: string) => {
     let count = 0;
+    const u = userRef.current;
     setProjects((prev) => prev.map((p) => {
-      if (p.projectName === currentName) { count += 1; return touch({ ...p, projectName: newName }); }
+      if (p.projectName === currentName) {
+        count += 1;
+        return appendLog(touch({ ...p, projectName: newName }), {
+          actor: actorOf(u), actionType: "field_edit",
+          description: `${u.shortName} changed project name from ${currentName} to ${newName}`,
+          metadata: { field: "projectName", fromValue: currentName, toValue: newName },
+        });
+      }
       return p;
     }));
     return { count };
   }, []);
 
-  const addNote = useCallback((projectId: string, text: string, author = "Av") => {
-    const note: ProjectNote = { id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, ts: new Date(), author, text };
-    setProjects((prev) => prev.map((p) => p.id === projectId ? touch({ ...p, notes: [...(p.notes ?? []), note] }) : p));
+  const addNote = useCallback((projectId: string, text: string, _author?: string) => {
+    const u = userRef.current;
+    const note: ProjectNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      ts: new Date(), author: u.fullName, authorUserId: u.userId, text,
+    };
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      let next = touch({ ...p, notes: [...(p.notes ?? []), note] });
+      next = appendLog(next, {
+        actor: actorOf(u), actionType: "note_added",
+        description: `${u.shortName} added a note`,
+      });
+      return next;
+    }));
   }, []);
 
   const addLineItem = useCallback((projectId: string, item: LineItem) => {
-    setProjects((prev) => prev.map((p) => p.id === projectId ? touch({ ...p, lineItems: [...(p.lineItems ?? []), item] }) : p));
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const u = userRef.current;
+      let next = touch({ ...p, lineItems: [...(p.lineItems ?? []), item] });
+      next = appendLog(next, {
+        actor: actorOf(u), actionType: "line_item_change",
+        description: `${u.shortName} added line item ${item.qty} × ${item.description}`,
+      });
+      return next;
+    }));
   }, []);
 
   const updateLineItem = useCallback((projectId: string, index: number, item: LineItem) => {
@@ -278,7 +457,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       const items = [...(p.lineItems ?? [])];
       if (index < 0 || index >= items.length) return p;
       items[index] = item;
-      return touch({ ...p, lineItems: items });
+      const u = userRef.current;
+      let next = touch({ ...p, lineItems: items });
+      next = appendLog(next, {
+        actor: actorOf(u), actionType: "line_item_change",
+        description: `${u.shortName} edited line item ${item.qty} × ${item.description}`,
+      });
+      return next;
     }));
   }, []);
 
@@ -287,33 +472,33 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       if (p.id !== projectId) return p;
       const items = [...(p.lineItems ?? [])];
       if (index < 0 || index >= items.length) return p;
+      const removed = items[index];
       items.splice(index, 1);
-      return touch({ ...p, lineItems: items });
+      const u = userRef.current;
+      let next = touch({ ...p, lineItems: items });
+      next = appendLog(next, {
+        actor: actorOf(u), actionType: "line_item_change",
+        description: `${u.shortName} removed line item ${removed.qty} × ${removed.description}`,
+      });
+      return next;
     }));
   }, []);
 
   const duplicateProject = useCallback((projectId: string): Project | null => {
     const orig = projects.find((p) => p.id === projectId);
     if (!orig) return null;
-    const copy: Project = {
+    const u = userRef.current;
+    let copy: Project = {
       ...orig,
-      // New unique ID — the duplicate is a brand-new record, NOT a clone of
-      // the original ID. This is the integrity invariant the spreadsheet
-      // view depends on.
       id: `prj-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      // Suffix the name so the user can find the duplicate via search.
       projectName: `${orig.projectName} (Copy)`,
-      // Reference numbers are unique per project — clear them so the copy
-      // doesn't trip duplicate-number validators.
       quoteNumber: undefined,
       poNumber: undefined,
       invoiceNumber: undefined,
       shipmentId: undefined,
       notes: undefined,
       lineItems: undefined,
-      // Keep the original pipeline/stage so the duplicate appears next to
-      // the source — sending it back to Sales · Proposal made it invisible
-      // when the user was viewing any other tab.
+      log: undefined,
       pipeline: orig.pipeline,
       stage: orig.stage,
       flagged: false,
@@ -323,12 +508,17 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       createdAt: new Date(),
       updatedAt: undefined,
     };
+    copy = appendLog(copy, {
+      actor: actorOf(u), actionType: "project_created",
+      description: `${u.shortName} duplicated this from ${orig.projectName}`,
+    });
     setProjects((prev) => [copy, ...prev]);
     return copy;
   }, [projects]);
 
   const createProject = useCallback<PipelineStoreCtx["createProject"]>((input) => {
-    const newProj: Project = {
+    const u = userRef.current;
+    let newProj: Project = {
       id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       customer: input.customer,
       projectName: input.projectName,
@@ -345,14 +535,24 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       paymentTerms: "Net 30",
       paymentTermsInherited: true,
     };
+    newProj = appendLog(newProj, {
+      actor: actorOf(u), actionType: "project_created",
+      description: `${u.shortName} created this project`,
+    });
     setProjects((prev) => [newProj, ...prev]);
     return newProj;
   }, []);
 
   const toggleFlag = useCallback<PipelineStoreCtx["toggleFlag"]>((projectId) => {
-    setProjects((prev) => prev.map((p) =>
-      p.id === projectId ? touch({ ...p, flagged: !p.flagged }) : p,
-    ));
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const u = userRef.current;
+      const next = touch({ ...p, flagged: !p.flagged });
+      return appendLog(next, {
+        actor: actorOf(u), actionType: "flag_toggle",
+        description: !p.flagged ? `${u.shortName} flagged this` : `${u.shortName} unflagged this`,
+      });
+    }));
   }, []);
 
   // ── Trash (soft-delete) ────────────────────────────────────────────────
@@ -362,9 +562,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const orig = projects.find((p) => p.id === projectId && !p.deletedAt);
     if (!orig) return null;
     const restoredFrom = { pipeline: orig.pipeline, stage: orig.stage };
+    const u = userRef.current;
     setProjects((prev) => prev.map((p) =>
       p.id === projectId
-        ? { ...p, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage }
+        ? appendLog(
+            { ...p, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage },
+            { actor: actorOf(u), actionType: "trash", description: `${u.shortName} moved this to Trash` },
+          )
         : p,
     ));
     return { restoredFrom };
@@ -373,8 +577,6 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const restoreProject = useCallback<PipelineStoreCtx["restoreProject"]>((projectId) => {
     const orig = projects.find((p) => p.id === projectId && p.deletedAt);
     if (!orig) return null;
-    // Pipelines/stages can change over time. If the original stage is gone,
-    // fall back to a sensible default per pipeline.
     const knownStages: StageId[] = PIPELINES.flatMap((pp) => pp.stages.map((s) => s.id));
     const targetPipeline: PipelineId = orig.deletedFromPipeline ?? orig.pipeline ?? "sales";
     const fallbackStage: Record<PipelineId, StageId> = {
@@ -385,10 +587,14 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       orig.deletedFromStage && knownStages.includes(orig.deletedFromStage)
         ? orig.deletedFromStage
         : fallbackStage[targetPipeline];
+    const u = userRef.current;
     setProjects((prev) => prev.map((p) =>
       p.id === projectId
-        ? { ...p, pipeline: targetPipeline, stage: targetStage,
-            deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined }
+        ? appendLog(
+            { ...p, pipeline: targetPipeline, stage: targetStage,
+              deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined },
+            { actor: actorOf(u), actionType: "restore", description: `${u.shortName} restored this from Trash` },
+          )
         : p,
     ));
     return { pipeline: targetPipeline, stage: targetStage };
@@ -432,9 +638,16 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const assignToShipment = useCallback((projectId: string, shipmentId: string) => {
     const ship = shipments.find((s) => s.id === shipmentId);
     if (!ship) return;
-    setProjects((prev) => prev.map((p) => p.id === projectId
-      ? touch({ ...p, shipmentId, pipeline: "shipping", stage: "shipment_assigned", shippingMode: ship.mode })
-      : p));
+    const u = userRef.current;
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const next = touch({ ...p, shipmentId, pipeline: "shipping" as const, stage: "shipment_assigned" as const, shippingMode: ship.mode });
+      return appendLog(next, {
+        actor: actorOf(u), actionType: "stage_change",
+        description: `${u.shortName} assigned this to shipment ${ship.code}`,
+        metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "shipping", toStage: "shipment_assigned" },
+      });
+    }));
   }, [shipments]);
 
   const createShipment = useCallback((input: NewShipmentInput): Shipment => {
@@ -454,19 +667,23 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const updateShipment = useCallback((id: string, patch: Partial<Shipment>) => {
     setShipments((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-    // Bump updatedAt on all projects assigned to this shipment so the
-    // Spreadsheet "Last Updated" column reflects the change.
     setProjects((prev) => prev.map((p) => (p.shipmentId === id ? touch(p) : p)));
   }, []);
 
   const markShipmentDelivered = useCallback((shipmentId: string) => {
     let count = 0;
+    const u = userRef.current;
     setProjects((prev) => prev.map((p) => {
       if (p.shipmentId === shipmentId && p.pipeline === "shipping") {
         count += 1;
         const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required" };
         if (!p.invoiceNumber) patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
-        return touch({ ...p, ...patch });
+        const next = touch({ ...p, ...patch });
+        return appendLog(next, {
+          actor: actorOf(u), actionType: "stage_change",
+          description: `${u.shortName} marked shipment delivered`,
+          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "finance", toStage: "invoice_required" },
+        });
       }
       return p;
     }));

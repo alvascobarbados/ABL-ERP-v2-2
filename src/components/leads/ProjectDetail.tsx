@@ -1,7 +1,7 @@
 import { ArrowLeft, MoreVertical, Factory, ChevronRight, Plus } from "lucide-react";
 import {
   PipelineCard, PIPELINES, PipelineId, StageId, ShippingMode,
-  SupplierLabelHint, formatShippingLabel, getShipment,
+  SupplierLabelHint, formatShippingLabel, getShipment, ProjectLogEntry, ProjectLogActionType,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
@@ -42,6 +42,14 @@ function getUrgency(date: Date) {
 const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
 const fmtLong = (d: Date) =>
   `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()}`;
+const fmtNoteTs = (d: Date) => {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dd = new Date(d); dd.setHours(0,0,0,0);
+  const t = d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (dd.getTime() === today.getTime()) return `Today · ${t}`;
+  if (today.getTime() - dd.getTime() === 86400000) return `Yesterday · ${t}`;
+  return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })} · ${t}`;
+};
 
 type EditorKind =
   | { kind: "contact" }
@@ -340,26 +348,37 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           })()}
         </SectionWithAction>
 
-        {/* ─── NOTES & HISTORY ─── */}
+        {/* ─── NOTES (append-only, auto-attributed) ─── */}
         <SectionWithAction
-          label="Notes & history"
+          label="Notes"
           actionLabel="Add"
           onAction={() => setEditor({ kind: "addNote" })}
         >
-          {!live.notes || live.notes.length === 0 ? (
-            <div className="px-3 py-3 text-[13px] text-muted-foreground italic">No notes yet</div>
-          ) : (
-            <ul className="space-y-2 px-3 py-2">
-              {[...live.notes].reverse().map((n) => (
-                <li key={n.id} className="text-[13px] leading-snug">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-0.5">
-                    {n.author} · {fmtDate(n.ts)}
-                  </div>
-                  <div className={cn("text-foreground", n.auto && "italic text-muted-foreground")}>{n.text}</div>
-                </li>
-              ))}
-            </ul>
-          )}
+          {(() => {
+            const userNotes = (live.notes ?? []).filter((n) => !n.auto);
+            if (userNotes.length === 0) {
+              return <div className="px-3 py-3 text-[13px] text-muted-foreground italic">No notes yet</div>;
+            }
+            return (
+              <ul className="px-3 py-2 divide-y divide-border/40">
+                {[...userNotes].reverse().map((n) => (
+                  <li key={n.id} className="py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex items-baseline gap-2 mb-0.5">
+                      <span className="text-[13px] font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>
+                        {n.author}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground tabular">
+                        {fmtNoteTs(n.ts)}
+                      </span>
+                    </div>
+                    <div className="text-[13px] leading-snug text-foreground whitespace-pre-wrap">
+                      {n.text}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
         </SectionWithAction>
 
         {/* ─── PROJECT INFO ─── */}
@@ -404,6 +423,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             )}
           </Section>
         )}
+
+        {/* ─── LOG (immutable audit trail — always last) ─── */}
+        <LogSection entries={live.log ?? []} />
 
         <div className="h-10" />
       </aside>

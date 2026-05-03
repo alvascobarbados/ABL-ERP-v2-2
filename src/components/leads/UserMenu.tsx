@@ -1,21 +1,37 @@
 /**
- * Top-right user identity — avatar + first name. Tap opens popover with
- * Profile / Settings / Sign out. Settings (Friendly Mode toggle, replay
- * walkthrough) is reached from this popover instead of a standalone cog.
+ * Persistent identity chip — date/time · short name · avatar.
+ * Reads from `useCurrentUser()` so a future auth swap is one change.
+ * Tap opens popover with Profile / Settings / Sign out (placeholders).
  */
 import { useEffect, useRef, useState } from "react";
 import { LogOut, User as UserIcon, Settings as SettingsIcon, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useFriendlyMode } from "@/hooks/useFriendlyMode";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_USER = { fullName: "Avinash Vaswani", initials: "AV" };
+const fmtDesktop = (d: Date) => {
+  const day = d.toLocaleString("en-US", { weekday: "short" });
+  const dd = d.getDate();
+  const mon = d.toLocaleString("en-US", { month: "short" });
+  const t = d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${day} ${dd} ${mon} · ${t}`;
+};
+const fmtMobile = (d: Date) =>
+  d.toLocaleString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 
 export const UserMenu = () => {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"main" | "settings">("main");
   const ref = useRef<HTMLDivElement | null>(null);
   const { friendly, setFriendly, resetWalkthrough } = useFriendlyMode();
+  const user = useCurrentUser();
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -29,26 +45,39 @@ export const UserMenu = () => {
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  const firstName = DEFAULT_USER.fullName.split(" ")[0];
-
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="User menu"
-        className="inline-flex items-center gap-2 rounded-full pl-1 pr-2.5 py-0.5 hover:bg-muted/40 transition-colors"
+        className="inline-flex items-center gap-2 rounded-full pl-2 pr-2.5 py-0.5 hover:bg-muted/40 transition-colors"
       >
+        <span
+          className="hidden lg:inline text-[11px] tabular leading-none"
+          style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
+        >
+          {fmtDesktop(now)}
+        </span>
+        <span
+          className="lg:hidden text-[11px] tabular leading-none"
+          style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
+        >
+          {fmtMobile(now)}
+        </span>
+        <span
+          className="text-[12px] font-medium hidden sm:inline"
+          style={{ color: "hsl(var(--brand-navy))" }}
+        >
+          · {user.shortName}
+        </span>
         <span
           className="inline-flex items-center justify-center rounded-full text-[11px] font-semibold tracking-wide text-white"
           style={{
-            width: 28, height: 28,
+            width: 24, height: 24,
             background: "linear-gradient(135deg, hsl(var(--brand-navy)), hsl(var(--brand-orange)))",
           }}
         >
-          {DEFAULT_USER.initials}
-        </span>
-        <span className="text-[13px] font-medium" style={{ color: "hsl(var(--brand-navy))" }}>
-          {firstName}
+          {user.initials}
         </span>
       </button>
       {open && (
@@ -66,11 +95,11 @@ export const UserMenu = () => {
                     background: "linear-gradient(135deg, hsl(var(--brand-navy)), hsl(var(--brand-orange)))",
                   }}
                 >
-                  {DEFAULT_USER.initials}
+                  {user.initials}
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: "hsl(var(--brand-navy))" }}>
-                    {DEFAULT_USER.fullName}
+                    {user.fullName}
                   </p>
                   <p className="text-[11px] text-muted-foreground">Operations team</p>
                 </div>
@@ -152,4 +181,4 @@ const Row = ({
   </button>
 );
 
-export const DEFAULT_USER_INITIALS = DEFAULT_USER.initials;
+export const DEFAULT_USER_INITIALS = "AV";

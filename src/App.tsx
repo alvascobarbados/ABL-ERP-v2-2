@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PipelineStoreProvider } from "@/hooks/usePipelineStore";
+import { CurrentUserProvider } from "@/hooks/useCurrentUser";
 import { FriendlyModeProvider } from "@/hooks/useFriendlyMode";
 import { ExpandedCardsProvider } from "@/hooks/useExpandedCards";
 import { MasterDataProvider } from "@/hooks/useMasterData";
@@ -22,6 +23,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <CurrentUserProvider>
       <FriendlyModeProvider>
         <Toaster />
         <Sonner />
@@ -50,6 +52,7 @@ const App = () => (
           </MasterDataProvider>
         </PipelineStoreProvider>
       </FriendlyModeProvider>
+      </CurrentUserProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

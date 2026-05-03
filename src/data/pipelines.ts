@@ -191,9 +191,46 @@ export type SalesShippingLabel =
 export interface ProjectNote {
   id: string;
   ts: Date;
+  /** Snapshot of the author's full name at the time of writing. */
   author: string;
+  /** Stable user id — survives display-name changes. */
+  authorUserId?: string;
   text: string;
+  /** True when the system wrote the note (legacy auto-stage notes). New
+   *  code should write to ProjectLogEntry instead — kept for back-compat. */
   auto?: boolean;
+}
+
+export type ProjectLogActionType =
+  | "stage_change"
+  | "field_edit"
+  | "flag_toggle"
+  | "note_added"
+  | "project_created"
+  | "archive"
+  | "unarchive"
+  | "trash"
+  | "restore"
+  | "mark_paid"
+  | "line_item_change";
+
+export interface ProjectLogEntry {
+  id: string;
+  ts: Date;
+  actor: { userId: string; displayName: string };
+  actionType: ProjectLogActionType;
+  /** Pre-rendered, human-readable sentence (with the actor's name as subject). */
+  description: string;
+  /** Optional structured payload — keeps the door open to future filtering. */
+  metadata?: {
+    field?: string;
+    fromValue?: unknown;
+    toValue?: unknown;
+    fromPipeline?: PipelineId;
+    fromStage?: StageId;
+    toPipeline?: PipelineId;
+    toStage?: StageId;
+  };
 }
 
 export interface Project {
@@ -222,6 +259,9 @@ export interface Project {
   invoiceNumber?: string;
   lineItems?: LineItem[];
   notes?: ProjectNote[];
+  /** Append-only audit trail. Written via the store middleware whenever
+   *  any canonical mutation happens. Never user-editable. */
+  log?: ProjectLogEntry[];
   // Audit timestamps. createdAt is set when the project first enters the system.
   // updatedAt bumps on every mutation through the store (updateProject, addNote,
   // line-item changes, stage moves). Spreadsheet view sorts/filters by these.
