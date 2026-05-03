@@ -1,8 +1,9 @@
 /**
- * Desktop-only always-visible filter chip bar.
- * Toggles ShippingMode, SalesRep, Flagged, Urgency in one click; Customer
- * and Supplier are inline searchable dropdowns. Updates FilterState in place
- * — Index.tsx already wires filtered counts back into the chevron tabs.
+ * Desktop-only horizontal filter strip. Single full-width row that wraps to
+ * additional rows only on overflow, never splitting a category. Each category
+ * renders as: small uppercase label + inline chips, with subtle vertical
+ * dividers between groups. Customer/Supplier are chip-style buttons that open
+ * a searchable dropdown.
  *
  * Hidden on mobile by parent (lg:block wrapper).
  */
@@ -28,6 +29,7 @@ const URGENCY: { id: Exclude<DeadlineUrgency, null>; label: string }[] = [
   { id: "this_month", label: "Future" },
 ];
 
+// ── Pill chip (paper rest / navy active) ──
 const Chip = ({
   active, onClick, children,
 }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
@@ -35,35 +37,47 @@ const Chip = ({
     type="button"
     onClick={onClick}
     className={cn(
-      "h-8 px-3 rounded-full text-[12px] font-medium transition-colors border whitespace-nowrap",
-      active
-        ? "text-white border-transparent"
-        : "bg-card text-foreground/80 hover:border-foreground/30",
+      "h-7 px-2.5 rounded-full text-[12px] font-medium transition-colors border whitespace-nowrap",
+      active ? "text-white border-transparent" : "hover:border-foreground/40",
     )}
     style={{
-      backgroundColor: active ? "hsl(var(--brand-orange))" : undefined,
-      borderColor: active ? "transparent" : "hsl(var(--brand-navy) / 0.15)",
+      backgroundColor: active ? "hsl(var(--brand-navy))" : "hsl(var(--brand-paper, 36 38% 95%))",
+      color: active ? "white" : "hsl(var(--brand-navy))",
+      borderColor: active ? "transparent" : "hsl(var(--brand-navy) / 0.2)",
     }}
   >
     {children}
   </button>
 );
 
-const Label = ({ children }: { children: React.ReactNode }) => (
-  <div
-    className="text-[10px] font-semibold uppercase tracking-wider w-[72px] shrink-0 pt-1.5"
-    style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
+const GroupLabel = ({ children }: { children: React.ReactNode }) => (
+  <span
+    className="text-[10px] font-semibold uppercase mr-2 shrink-0"
+    style={{ color: "hsl(var(--brand-navy) / 0.6)", letterSpacing: "0.05em" }}
   >
     {children}
-  </div>
+  </span>
 );
 
-// ── Searchable dropdown ──
+const Divider = () => (
+  <span
+    aria-hidden
+    className="inline-block shrink-0"
+    style={{
+      width: 1, height: 18,
+      backgroundColor: "hsl(var(--brand-navy) / 0.12)",
+      margin: "0 14px",
+    }}
+  />
+);
+
+// ── Searchable dropdown (chip-style trigger) ──
 function SearchDropdown({
-  label, value, options, onChange,
+  label, value, count, options, onChange,
 }: {
   label: string;
   value: string | null;
+  count: number;
   options: { id: string; label: string }[];
   onChange: (id: string | null) => void;
 }) {
@@ -81,32 +95,46 @@ function SearchDropdown({
   }, [open]);
 
   const selected = options.find((o) => o.id === value);
+  const active = !!selected;
   const filtered = useMemo(
     () => (q ? options.filter((o) => o.label.toLowerCase().includes(q.toLowerCase())) : options),
     [options, q],
   );
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative inline-flex">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "h-8 px-3 pr-2 rounded-full text-[12px] font-medium transition-colors border inline-flex items-center gap-1.5 whitespace-nowrap",
-          selected ? "text-white border-transparent" : "bg-card text-foreground/80 hover:border-foreground/30",
+          "h-7 pl-2.5 pr-1.5 rounded-full text-[12px] font-medium transition-colors border inline-flex items-center gap-1 whitespace-nowrap",
+          active ? "text-white border-transparent" : "hover:border-foreground/40",
         )}
         style={{
-          backgroundColor: selected ? "hsl(var(--brand-orange))" : undefined,
-          borderColor: selected ? "transparent" : "hsl(var(--brand-navy) / 0.15)",
+          minWidth: 110,
+          backgroundColor: active ? "hsl(var(--brand-orange))" : "hsl(var(--brand-paper, 36 38% 95%))",
+          color: active ? "white" : "hsl(var(--brand-navy))",
+          borderColor: active ? "transparent" : "hsl(var(--brand-navy) / 0.2)",
         }}
       >
-        <span className="max-w-[160px] truncate">{selected ? selected.label : label}</span>
-        {selected ? (
+        <span className="max-w-[160px] truncate">{active ? selected!.label : label}</span>
+        {active && count > 1 && (
+          <span
+            className="inline-flex items-center justify-center rounded-full text-[10px] font-bold"
+            style={{
+              minWidth: 16, height: 16, padding: "0 4px",
+              backgroundColor: "white", color: "hsl(var(--brand-navy))",
+            }}
+          >
+            {count}
+          </span>
+        )}
+        {active ? (
           <span
             role="button"
             tabIndex={0}
             onClick={(e) => { e.stopPropagation(); onChange(null); }}
-            className="p-0.5 -mr-1 rounded-full hover:bg-white/20"
+            className="p-0.5 rounded-full hover:bg-white/20"
           >
             <X className="h-3 w-3" />
           </span>
@@ -116,7 +144,7 @@ function SearchDropdown({
       </button>
       {open && (
         <div
-          className="absolute z-50 mt-1 left-0 w-64 bg-popover border rounded-lg shadow-lg overflow-hidden"
+          className="absolute z-50 mt-8 left-0 w-64 bg-popover border rounded-lg shadow-lg overflow-hidden"
           style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}
         >
           <div className="flex items-center gap-1.5 px-2.5 py-2 border-b" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }}>
@@ -152,6 +180,14 @@ function SearchDropdown({
   );
 }
 
+// ── Inline group: label + chips, kept on the same wrap line ──
+const Group = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="inline-flex items-center gap-1.5 shrink-0">
+    <GroupLabel>{label}</GroupLabel>
+    {children}
+  </div>
+);
+
 export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesReps }: Props) => {
   const toggleArr = <T extends string>(arr: T[], item: T): T[] =>
     arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
@@ -164,74 +200,78 @@ export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesR
 
   const customer = value.customers[0] ?? null;
   const supplier = value.supplierIds[0] ?? null;
-
   const count = filterCount(value);
 
   return (
     <div
-      className="rounded-2xl border px-4 py-3"
+      className="rounded-2xl border px-3 py-2.5"
       style={{
         backgroundColor: "hsl(var(--brand-navy) / 0.03)",
         borderColor: "hsl(var(--brand-navy) / 0.1)",
       }}
     >
-      <div className="space-y-2">
-        <Row label="MODE">
-          {MODES.map((m) => (
+      <div className="flex flex-wrap items-center gap-y-2">
+        <Group label="MODE">
+          {MODES.map((m, i) => (
             <Chip key={m} active={value.shippingModes.includes(m)} onClick={() => setMode(m)}>{m}</Chip>
           ))}
-        </Row>
+        </Group>
+
         {salesReps.length > 0 && (
-          <Row label="REP">
-            {salesReps.map((r) => (
-              <Chip key={r} active={value.salesReps.includes(r)} onClick={() => setRep(r)}>{r}</Chip>
-            ))}
-          </Row>
+          <>
+            <Divider />
+            <Group label="REP">
+              {salesReps.map((r) => (
+                <Chip key={r} active={value.salesReps.includes(r)} onClick={() => setRep(r)}>{r}</Chip>
+              ))}
+            </Group>
+          </>
         )}
-        <Row label="FLAG">
+
+        <Divider />
+        <Group label="FLAG">
           <Chip active={value.flagged === true} onClick={toggleFlag}>Flagged</Chip>
-        </Row>
-        <Row label="URGENCY">
+        </Group>
+
+        <Divider />
+        <Group label="URGENCY">
           {URGENCY.map((u) => (
             <Chip key={u.id} active={value.urgency === u.id} onClick={() => setUrgency(u.id)}>{u.label}</Chip>
           ))}
-        </Row>
-        <Row label="CUSTOMER">
+        </Group>
+
+        <Divider />
+        <Group label="CUSTOMER">
           <SearchDropdown
-            label="Select customer"
+            label="Customer"
             value={customer}
+            count={value.customers.length}
             options={customers.map((c) => ({ id: c, label: c }))}
             onChange={(id) => onChange({ ...value, customers: id ? [id] : [] })}
           />
-        </Row>
-        <Row label="SUPPLIER">
+        </Group>
+
+        <Divider />
+        <Group label="SUPPLIER">
           <SearchDropdown
-            label="Select supplier"
+            label="Supplier"
             value={supplier}
+            count={value.supplierIds.length}
             options={[{ id: "__unassigned", label: "Unassigned" }, ...suppliers.map((s) => ({ id: s.id, label: s.name }))]}
             onChange={(id) => onChange({ ...value, supplierIds: id ? [id] : [] })}
           />
-        </Row>
-      </div>
+        </Group>
 
-      {count > 0 && (
-        <div className="flex justify-end mt-2 pt-2 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.08)" }}>
+        {count > 0 && (
           <button
             onClick={() => onChange(EMPTY_FILTER)}
-            className="text-[11px] font-semibold uppercase tracking-wider px-2 py-1 rounded hover:bg-white/60"
-            style={{ color: "hsl(var(--brand-navy))", letterSpacing: "0.08em" }}
+            className="ml-auto text-[12px] font-medium hover:underline underline-offset-2 px-2"
+            style={{ color: "hsl(var(--brand-navy) / 0.7)" }}
           >
-            Reset all ({count})
+            Reset all
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
-
-const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="flex items-start gap-3">
-    <Label>{label}</Label>
-    <div className="flex flex-wrap gap-1.5 items-center flex-1">{children}</div>
-  </div>
-);
