@@ -200,7 +200,10 @@ function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
     const mode = p.shippingMode ?? "Unassigned";
     if (!f.shippingModes.includes(mode as never)) return false;
   }
-  if (f.salesReps.length && !f.salesReps.includes(p.pointPerson)) return false;
+  if (f.salesReps.length) {
+    const reps = (p.pointPerson ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (!f.salesReps.some((r) => reps.includes(r))) return false;
+  }
   if (f.stages.length && !f.stages.includes(p.stage)) return false;
   if (f.urgency) {
     const days = daysToDeadline(c.deadlineDate);
