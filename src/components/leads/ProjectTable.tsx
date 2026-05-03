@@ -73,17 +73,25 @@ function fmtDeadline(date?: Date): string {
 
 function stageLabel(c: PipelineCard, activeTab: TabId): string {
   const pipelineTitle = PIPELINES.find((p) => p.id === c.pipeline)?.title ?? c.pipeline;
-  if (activeTab === "all") {
-    if (c.pipeline === "shipping") {
-      return `${pipelineTitle} · ${c.project.shippingMode ?? "—"}`;
-    }
-    return `${pipelineTitle} · ${getStageTitle(c.pipeline, c.stage)}`;
+  // Shipping has exactly one user-facing stage ("Shipping") — collapse the
+  // pipeline·stage display to just "Shipping" rather than "Shipping · Shipping".
+  // The mode (Air/Ocean/Local) is rendered in the dedicated Mode column, NOT here.
+  if (c.pipeline === "shipping") {
+    return activeTab === "all" ? "Shipping" : "Shipping";
   }
-  if (activeTab === "shipping") {
-    return c.project.shippingMode ?? "—";
-  }
-  return getStageTitle(c.pipeline, c.stage);
+  const stageTitle = displayStageTitle(c.pipeline, c.stage);
+  if (activeTab === "all") return `${pipelineTitle} · ${stageTitle}`;
+  return stageTitle;
 }
+
+// Stage progression rank within each pipeline. Lower = earlier in the flow.
+// Shipping collapses to a single rank (only one user-facing stage).
+const STAGE_RANK: Record<StageId, number> = {
+  proposal: 0, quote: 1, confirming: 2, archive: 99,
+  preproduction: 0, in_production: 1,
+  shipment_required: 0, shipment_assigned: 0,
+  invoice_required: 0, invoiced: 1, paid: 2,
+};
 
 function supplierName(id: string | undefined, lookup?: (id?: string | null) => { name: string } | undefined): string {
   if (!id) return "";
