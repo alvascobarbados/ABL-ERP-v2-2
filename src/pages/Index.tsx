@@ -332,7 +332,15 @@ const Index = () => {
     };
   }, [pipelineProjects, filters, search]);
 
-  const completedCount = completedProjects.length;
+  const completedCount = useMemo(() => {
+    const q = search.trim();
+    return completedProjects.filter((p) => {
+      const c = buildCard(p);
+      if (!cardMatchesFilter(c, filters)) return false;
+      if (q && !projectMatchesSearch(p, q)) return false;
+      return true;
+    }).length;
+  }, [completedProjects, filters, search]);
 
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
