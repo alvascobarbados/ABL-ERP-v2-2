@@ -37,7 +37,7 @@ import { CardEditOverlay } from "./CardEditOverlay";
 import type { TabId } from "./PipelineTabs";
 
 type SortKey =
-  | "flagged" | "stage" | "customer" | "project" | "supplier"
+  | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
   | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline" | "urgency";
 
 interface Props {
