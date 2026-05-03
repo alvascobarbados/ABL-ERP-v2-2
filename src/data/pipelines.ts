@@ -219,6 +219,17 @@ export interface Project {
   // containing view. Toggleable from the card three-dots menu and the
   // dedicated flag icon on the card.
   flagged?: boolean;
+  // ── Payment terms (inherited from customer at create; per-project override) ──
+  paymentTerms?: import("@/lib/paymentTerms").PaymentTermsId;
+  paymentTermsCustomDays?: number;
+  /** True when paymentTerms came from customer default (not user-overridden on this project). */
+  paymentTermsInherited?: boolean;
+  /** Date the invoice was issued. Auto-set on transition to Invoiced; user-editable. */
+  invoiceIssuedDate?: Date;
+  /** True when invoiceIssuedDate is the auto-tracked stage timestamp (not user-edited). */
+  invoiceIssuedDateAssumed?: boolean;
+  /** Auto-set on transition to Invoice Required (system field). */
+  invoiceRequiredEnteredAt?: Date;
 }
 
 /** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
