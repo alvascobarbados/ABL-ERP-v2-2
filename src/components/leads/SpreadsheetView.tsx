@@ -284,8 +284,8 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
       <div style={{ position: "relative" }} data-cell-editor>
         <input
           ref={(el) => { inputRef.current = el; }}
-          value={value}
-          onChange={(e) => { setValue(e.target.value); setPopoverOpen(true); if (error) setError(null); }}
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPopoverOpen(true); if (error) setError(null); }}
           onFocus={() => setPopoverOpen(true)}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); onCancel(); }
