@@ -9,6 +9,7 @@ import { FriendlyModeProvider } from "@/hooks/useFriendlyMode";
 import { ExpandedCardsProvider } from "@/hooks/useExpandedCards";
 import { MasterDataProvider } from "@/hooks/useMasterData";
 import { ColumnWidthsProvider } from "@/hooks/useColumnWidths";
+import { SidebarCollapsedProvider } from "@/hooks/useSidebarCollapsed";
 import Index from "./pages/Index.tsx";
 import Spreadsheet from "./pages/Spreadsheet.tsx";
 import MasterList from "./pages/MasterList.tsx";
@@ -31,6 +32,7 @@ const App = () => (
           <MasterDataProvider>
             <ColumnWidthsProvider>
               <ExpandedCardsProvider>
+                <SidebarCollapsedProvider>
                 <BrowserRouter>
                   <Routes>
                     <Route path="/" element={<Index />} />
@@ -47,6 +49,7 @@ const App = () => (
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </BrowserRouter>
+                </SidebarCollapsedProvider>
               </ExpandedCardsProvider>
             </ColumnWidthsProvider>
           </MasterDataProvider>

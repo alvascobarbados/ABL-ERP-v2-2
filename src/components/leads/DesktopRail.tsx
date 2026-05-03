@@ -5,12 +5,13 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users, Factory, UserCircle2, Package, Ship, Trash2, HelpCircle, LogOut,
-  Table2, Archive, KanbanSquare, ChevronRight, ChevronDown,
+  Table2, Archive, KanbanSquare, ChevronRight, ChevronDown, ChevronLeft,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "./Wordmark";
+import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 
 interface Props {
   trashCount: number;
@@ -120,6 +121,9 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
     );
   };
 
+  const { collapsed, toggle } = useSidebarCollapsed();
+  if (collapsed) return null;
+
   return (
     <aside
       className="hidden lg:flex flex-col shrink-0 h-screen sticky top-0 border-r"
@@ -129,9 +133,18 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
         borderColor: "hsl(var(--brand-navy) / 0.12)",
       }}
     >
-      <div className="px-5 pt-6 pb-5">
+      <div className="px-5 pt-6 pb-5 flex items-center justify-between gap-2">
         <button onClick={() => navigate("/")} className="block" aria-label="Home">
           <Wordmark />
+        </button>
+        <button
+          onClick={toggle}
+          aria-label="Collapse sidebar"
+          title="Collapse sidebar (⌘\\)"
+          className="inline-flex items-center justify-center rounded-md hover:bg-[hsl(var(--brand-navy)/0.08)] transition-colors"
+          style={{ width: 28, height: 28, color: "hsl(var(--brand-navy))" }}
+        >
+          <ChevronLeft className="h-4 w-4" />
         </button>
       </div>
 
