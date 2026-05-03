@@ -10,6 +10,8 @@ import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
+import { ChevronTabs } from "@/components/leads/ChevronTabs";
+import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
 import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
 import { ShipmentView } from "@/components/leads/ShipmentView";
