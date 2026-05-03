@@ -364,7 +364,11 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
                     </>
                   )}
                   {matches.length === 0 ? (
-                    <div style={{ padding: "8px 10px", fontSize: 12, color: navy(0.5), fontStyle: "italic" }}>No matches</div>
+                    <div style={{ padding: "8px 10px", fontSize: 12, color: navy(0.5), fontStyle: "italic" }}>
+                      {allOpts.length === 0 && !q
+                        ? (cf ? `No ${(editor.placeholder ?? "items").toLowerCase()} yet — add one below` : "No items")
+                        : "No matches"}
+                    </div>
                   ) : matches.slice(0, 50).map((o) => (
                     <button
                       key={o.value}
