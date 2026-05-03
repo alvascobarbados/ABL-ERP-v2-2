@@ -314,6 +314,23 @@ const Index = () => {
     finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
   }), [pipelineProjects]);
 
+  // Filtered counts — used by chevron tabs to update live as filters change.
+  const filteredCounts = useMemo<Record<PipelineId, number>>(() => {
+    const q = search.trim();
+    const match = (p: Project) => {
+      const c = buildCard(p);
+      if (!cardMatchesFilter(c, filters)) return false;
+      if (q && !projectMatchesSearch(p, q)) return false;
+      return true;
+    };
+    return {
+      sales: pipelineProjects.filter((p) => p.pipeline === "sales" && match(p)).length,
+      operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length,
+      shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && match(p)).length,
+      finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
+    };
+  }, [pipelineProjects, filters, search]);
+
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
   const salesRepOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.pointPerson).filter(Boolean))).sort(), [projects]);
