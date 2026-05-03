@@ -3,16 +3,16 @@
 // one supplier max, one shipping mode max, line items.
 // Shared "project name" across multiple cards is just a naming convention.
 
-export type StageId = "sales" | "design" | "operations" | "shipping" | "finance";
+export type PipelineId = "sales" | "design" | "operations" | "shipping" | "finance";
 
-export type StateId =
+export type StageId =
   // sales
   | "proposal" | "quote" | "confirming" | "archive"
   // design
   | "design" | "proof"
   // operations (production)
   | "preproduction" | "in_production"
-  // shipping — NOT real states anymore. The Shipping state groups by
+  // shipping — NOT real stages anymore. The Shipping pipeline groups by
   // mode (Air / Ocean) + assignment status. The two values below are
   // routing hints only:
   //   shipment_required → no shipment assigned yet (Awaiting Shipment)
@@ -34,21 +34,21 @@ export type OrderType = "New" | "Re-order";
 export type Priority = "Standard" | "Rush";
 export type CardTag = "Cold" | "Lost" | "Other" | "Customs Pending";
 
-export interface StageConfig {
-  id: StageId;
+export interface PipelineConfig {
+  id: PipelineId;
   title: string;
-  states: { id: StateId; title: string }[];
+  stages: { id: StageId; title: string }[];
 }
 
-export const STATES: StageConfig[] = [
+export const PIPELINES: PipelineConfig[] = [
   {
     id: "sales",
     title: "Sales",
-    // NOTE: "archive" is a valid StateId and projects can still sit in
-    // sales/archive, but Archive is NOT a kanban state anymore — it lives
-    // in the left rail (see ArchiveView). State views, counts, and the
-    // StatePicker hide archived projects entirely.
-    states: [
+    // NOTE: "archive" is a valid StageId and projects can still sit in
+    // sales/archive, but Archive is NOT a kanban stage anymore — it lives
+    // in the left rail (see ArchiveView). Pipeline views, counts, and the
+    // StagePicker hide archived projects entirely.
+    stages: [
       { id: "proposal", title: "Proposal" },
       { id: "quote", title: "Quote" },
       { id: "confirming", title: "Confirming" },
@@ -57,7 +57,7 @@ export const STATES: StageConfig[] = [
   {
     id: "design",
     title: "Design",
-    states: [
+    stages: [
       { id: "design", title: "Design" },
       { id: "proof", title: "Proof" },
     ],
@@ -65,7 +65,7 @@ export const STATES: StageConfig[] = [
   {
     id: "operations",
     title: "Production",
-    states: [
+    stages: [
       { id: "preproduction", title: "Pre-Production" },
       { id: "in_production", title: "In Production" },
     ],
@@ -73,11 +73,11 @@ export const STATES: StageConfig[] = [
   {
     id: "shipping",
     title: "Shipping",
-    // The Shipping state UI does NOT render by state — it groups by
+    // The Shipping pipeline UI does NOT render by stage — it groups by
     // mode (Air / Ocean) and assignment (Awaiting Shipment). These two
-    // entries exist purely so cross-state navigation (next/prev,
+    // entries exist purely so cross-pipeline navigation (next/prev,
     // jiggle picker, friendly labels) still has something to point at.
-    states: [
+    stages: [
       { id: "shipment_required", title: "Awaiting Shipment" },
       { id: "shipment_assigned", title: "On Shipment" },
     ],
@@ -85,12 +85,12 @@ export const STATES: StageConfig[] = [
   {
     id: "finance",
     title: "Finance",
-    // "paid" state still exists in StateId for backward compat and as the
+    // "paid" stage still exists in StageId for backward compat and as the
     // canonical marker that a project is COMPLETED. It is intentionally
-    // NOT listed here so the Finance state kanban renders only two
+    // NOT listed here so the Finance pipeline kanban renders only two
     // columns (Invoice Required → Invoiced). Completed projects surface
     // under the dedicated "Completed" scope tab.
-    states: [
+    stages: [
       { id: "invoice_required", title: "Invoice Required" },
       { id: "invoiced", title: "Invoiced" },
     ],
@@ -98,10 +98,10 @@ export const STATES: StageConfig[] = [
 ];
 
 /** Canonical "this project is completed/paid" check. */
-export const isCompletedProject = (p: { stage: StageId; state: StateId }) =>
-  p.state === "finance" && p.state === "paid";
+export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) =>
+  p.pipeline === "finance" && p.stage === "paid";
 
-export const STATE_ACCENT: Record<StateId, string> = {
+export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
   design: "magenta", proof: "magenta",
   preproduction: "violet", in_production: "orange",
@@ -182,7 +182,7 @@ export interface LineItem {
 /**
  * Sales-only display hints. Once a project moves into Production, these are
  * dropped in favour of the canonical `supplierId` + `shippingMode` fields,
- * which downstream states use for everything (PO, shipment grouping, etc.).
+ * which downstream pipelines use for everything (PO, shipment grouping, etc.).
  */
 export type SupplierLabelHint = "TBD" | "Various";
 export type SalesShippingLabel =
@@ -196,13 +196,13 @@ export interface ProjectNote {
   /** Stable user id — survives display-name changes. */
   authorUserId?: string;
   text: string;
-  /** True when the system wrote the note (legacy auto-state notes). New
+  /** True when the system wrote the note (legacy auto-stage notes). New
    *  code should write to ProjectLogEntry instead — kept for back-compat. */
   auto?: boolean;
 }
 
 export type ProjectLogActionType =
-  | "state_change"
+  | "stage_change"
   | "field_edit"
   | "flag_toggle"
   | "note_added"
@@ -226,10 +226,10 @@ export interface ProjectLogEntry {
     field?: string;
     fromValue?: unknown;
     toValue?: unknown;
-    fromPipeline?: StageId;
-    fromStage?: StateId;
-    toPipeline?: StageId;
-    toStage?: StateId;
+    fromPipeline?: PipelineId;
+    fromStage?: StageId;
+    toPipeline?: PipelineId;
+    toStage?: StageId;
   };
 }
 
@@ -246,8 +246,8 @@ export interface Project {
   salesShippingLabel?: SalesShippingLabel; // Sales-only display string
   shipmentId?: string;          // assigned in Shipping
   trackingRef?: string;         // free-form / FCL- / LCL- / carrier digits
+  pipeline: PipelineId;
   stage: StageId;
-  state: StateId;
   deadline: string;
   deadlineDate: Date;
   value: number;
@@ -264,15 +264,15 @@ export interface Project {
   log?: ProjectLogEntry[];
   // Audit timestamps. createdAt is set when the project first enters the system.
   // updatedAt bumps on every mutation through the store (updateProject, addNote,
-  // line-item changes, state moves). Spreadsheet view sorts/filters by these.
+  // line-item changes, stage moves). Spreadsheet view sorts/filters by these.
   createdAt: Date;
   updatedAt?: Date;
   // ── Trash (soft-delete) ──────────────────────────────────────────────
   // Set when the project is moved to Trash. Filtered out of every
-  // state view, search result, and count. Visible only in TrashView.
+  // pipeline view, search result, and count. Visible only in TrashView.
   deletedAt?: Date;
-  deletedFromPipeline?: StageId;
-  deletedFromStage?: StateId;
+  deletedFromPipeline?: PipelineId;
+  deletedFromStage?: StageId;
   // ── Flag (needs attention) ───────────────────────────────────────────
   // When true, card receives orange treatment and pins to the top of its
   // containing view. Toggleable from the card three-dots menu and the
@@ -285,7 +285,7 @@ export interface Project {
   paymentTermsInherited?: boolean;
   /** Date the invoice was issued. Auto-set on transition to Invoiced; user-editable. */
   invoiceIssuedDate?: Date;
-  /** True when invoiceIssuedDate is the auto-tracked state timestamp (not user-edited). */
+  /** True when invoiceIssuedDate is the auto-tracked stage timestamp (not user-edited). */
   invoiceIssuedDateAssumed?: boolean;
   /** Auto-set on transition to Invoice Required (system field). */
   invoiceRequiredEnteredAt?: Date;
@@ -353,14 +353,14 @@ export function formatShipmentTitle(s: Shipment): string {
   return s.code.toUpperCase();
 }
 
-// ─────────── Unified state card ───────────
-export interface StageCard {
+// ─────────── Unified pipeline card ───────────
+export interface PipelineCard {
   id: string;
   project: Project;
   supplier?: Supplier;
   shipment?: Shipment;
+  pipeline: PipelineId;
   stage: StageId;
-  state: StateId;
   deadline: string;
   deadlineDate: Date;
   shippingMode?: ShippingMode;
@@ -400,7 +400,7 @@ function seededOffset(seed: number, min: number, max: number): number {
 }
 const p = (
   customer: string, pointPerson: string, projectName: string,
-  date: Date, value: number, stage: StageId, state: StateId,
+  date: Date, value: number, pipeline: PipelineId, stage: StageId,
   opts: ProjOpts = {},
 ): Project => {
   // Migration: Ocean FCL/LCL → mode "Ocean" + trackingRef prefix hint
@@ -426,7 +426,7 @@ const p = (
     salesShippingLabel: opts.salesShippingLabel,
     shipmentId: opts.shipmentId,
     trackingRef,
-    state, state,
+    pipeline, stage,
     deadline: fmt(date), deadlineDate: date,
     value,
     orderType: opts.orderType ?? "New",
@@ -674,7 +674,7 @@ const ITEM_POOL: { description: string; qtyMin: number; qtyMax: number }[] = [
   { description: "Table Covers (printed)",  qtyMin: 20,   qtyMax: 150 },
   { description: "Pull-up Banners",         qtyMin: 4,    qtyMax: 30 },
   { description: "Backdrop Walls 3x2m",     qtyMin: 1,    qtyMax: 10 },
-  { description: "Branded State Skirt",     qtyMin: 1,    qtyMax: 8 },
+  { description: "Branded Stage Skirt",     qtyMin: 1,    qtyMax: 8 },
   { description: "Keychains (metal)",       qtyMin: 300,  qtyMax: 3000 },
   { description: "Sticker Sheets A4",       qtyMin: 500,  qtyMax: 5000 },
 ];
@@ -706,19 +706,19 @@ function pickItems(seed: string): LineItem[] {
 
 // Assign quote / PO / invoice numbers deterministically.
 let _qSeq = 2040, _poSeq = 1080, _invSeq = 1040;
-const STATE_ORDER: StateId[] = [
+const STAGE_ORDER: StageId[] = [
   "proposal", "quote", "confirming", "preproduction", "in_production",
   "shipment_required", "shipment_assigned",
   "invoice_required", "invoiced", "paid", "archive",
 ];
-function reachedStage(p: Project, gate: StateId): boolean {
-  if (p.state === "archive") {
+function reachedStage(p: Project, gate: StageId): boolean {
+  if (p.stage === "archive") {
     // For archived sales projects: only got a quote if they reached quote/confirming before archive,
     // which we approximate with: archive WITHOUT "Lost"/"Other" tag means they at least got a quote.
     if (gate === "quote") return p.tag === "Cold";
     return false;
   }
-  return STATE_ORDER.indexOf(p.state) >= STATE_ORDER.indexOf(gate);
+  return STAGE_ORDER.indexOf(p.stage) >= STAGE_ORDER.indexOf(gate);
 }
 
 for (const proj of PROJECTS) {
@@ -786,21 +786,21 @@ if (noQ2) noQ2.quoteNumber = undefined;
 
 // A Production card with no PO yet (still in pre-production, awaiting paperwork)
 const noPO = find("Solo Beverages", "Summer SKUs", "Custom labels");
-if (noPO && noPO.state === "operations") noPO.poNumber = undefined;
+if (noPO && noPO.pipeline === "operations") noPO.poNumber = undefined;
 
 // A Production card with no shipping mode decided yet
 const noMode = find("WIBISCO", "Biscuit Promo", "POS shelf strips");
-if (noMode && noMode.state === "operations") noMode.shippingMode = undefined;
+if (noMode && noMode.pipeline === "operations") noMode.shippingMode = undefined;
 
 // A Production card missing both
 const noBoth = find("Bermudez Group", "Snack Launch", "POS shelf strips");
-if (noBoth && noBoth.state === "operations") {
+if (noBoth && noBoth.pipeline === "operations") {
   noBoth.poNumber = undefined;
   noBoth.shippingMode = undefined;
 }
 
 // ─────────── Payment-terms migration on existing seed projects ───────────
-// All projects default to "Net 30" inherited; finance-state projects get
+// All projects default to "Net 30" inherited; finance-stage projects get
 // sensible default invoice timestamps so the aging UI has data to show.
 const _NOW = new Date();
 const _FIN_AGE: Record<string, number> = {
@@ -812,13 +812,13 @@ for (let i = 0; i < PROJECTS.length; i++) {
   const proj = PROJECTS[i];
   proj.paymentTerms = proj.paymentTerms ?? "Net 30";
   proj.paymentTermsInherited = true;
-  if (proj.state === "finance") {
-    if (proj.state === "invoice_required" && !proj.invoiceRequiredEnteredAt) {
+  if (proj.pipeline === "finance") {
+    if (proj.stage === "invoice_required" && !proj.invoiceRequiredEnteredAt) {
       const offset = (seededOffset(i + 1, 1, 22) || 5);
       proj.invoiceRequiredEnteredAt = new Date(_NOW.getTime() - offset * 86400000);
     }
-    if ((proj.state === "invoiced" || proj.state === "paid") && !proj.invoiceIssuedDate) {
-      const baseOffset = _FIN_AGE[proj.state] ?? 10;
+    if ((proj.stage === "invoiced" || proj.stage === "paid") && !proj.invoiceIssuedDate) {
+      const baseOffset = _FIN_AGE[proj.stage] ?? 10;
       const jitter = seededOffset(i + 100, -4, 25);
       const days = Math.max(1, baseOffset + jitter);
       proj.invoiceIssuedDate = new Date(_NOW.getTime() - days * 86400000);
@@ -842,14 +842,14 @@ export const distinctProjectNames = (): string[] =>
 export const distinctCustomers = (): string[] =>
   Array.from(new Set(PROJECTS.map((p) => p.customer))).sort();
 
-export function buildCard(project: Project): StageCard {
+export function buildCard(project: Project): PipelineCard {
   return {
     id: project.id,
     project,
     supplier: getSupplier(project.supplierId),
     shipment: getShipment(project.shipmentId),
-    stage: project.state,
-    state: project.state,
+    pipeline: project.pipeline,
+    stage: project.stage,
     deadline: project.deadline,
     deadlineDate: project.deadlineDate,
     shippingMode: project.shippingMode,
@@ -859,12 +859,12 @@ export function buildCard(project: Project): StageCard {
   };
 }
 
-export function stageCounts(): Record<StageId, number> {
+export function pipelineCounts(): Record<PipelineId, number> {
   return {
-    sales: PROJECTS.filter((p) => p.state === "sales").length,
-    design: PROJECTS.filter((p) => p.state === "design").length,
-    operations: PROJECTS.filter((p) => p.state === "operations").length,
-    shipping: PROJECTS.filter((p) => p.state === "shipping").length,
-    finance: PROJECTS.filter((p) => p.state === "finance").length,
+    sales: PROJECTS.filter((p) => p.pipeline === "sales").length,
+    design: PROJECTS.filter((p) => p.pipeline === "design").length,
+    operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
+    shipping: PROJECTS.filter((p) => p.pipeline === "shipping").length,
+    finance: PROJECTS.filter((p) => p.pipeline === "finance").length,
   };
 }

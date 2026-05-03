@@ -1,34 +1,34 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { STATES, StageId, StateId } from "@/data/states";
-import { STAGE_ACCENT } from "@/lib/brand";
-import { validateMove } from "@/hooks/useStageStore";
+import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
+import { PIPELINE_ACCENT } from "@/lib/brand";
+import { validateMove } from "@/hooks/usePipelineStore";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 export interface JiggleAnchor {
   /** Bounding rect of the source card at activation time (viewport coords). */
   rect: DOMRect;
-  card: import("@/data/states").StageCard;
+  card: import("@/data/pipelines").PipelineCard;
 }
 
 interface JiggleOverlayProps {
   anchor: JiggleAnchor | null;
   onClose: () => void;
-  onPick: (target: { stage: StageId; state: StateId }) => void;
+  onPick: (target: { pipeline: PipelineId; stage: StageId }) => void;
 }
 
 interface ChipDef {
+  pipeline: PipelineId;
   stage: StageId;
-  state: StateId;
   title: string;
   isCurrent: boolean;
   isInvalid: boolean;
   isSamePipeline: boolean;
-  /** First chip in its state group — render the group label above it. */
+  /** First chip in its pipeline group — render the group label above it. */
   groupStart: boolean;
-  stageTitle: string;
+  pipelineTitle: string;
 }
 
 export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) => {
@@ -67,21 +67,21 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
     if (!anchor) return [];
     const card = anchor.card;
     const out: ChipDef[] = [];
-    for (const p of STATES) {
-      if (card.state === "shipping" && p.id !== "shipping") continue;
+    for (const p of PIPELINES) {
+      if (card.pipeline === "shipping" && p.id !== "shipping") continue;
       let first = true;
-      for (const s of p.states) {
-        const isCurrent = card.state === p.id && card.state === s.id;
-        const v = validateMove(card.project, { stage: p.id, state: s.id });
+      for (const s of p.stages) {
+        const isCurrent = card.pipeline === p.id && card.stage === s.id;
+        const v = validateMove(card.project, { pipeline: p.id, stage: s.id });
         out.push({
-          stage: p.id,
-          state: s.id,
+          pipeline: p.id,
+          stage: s.id,
           title: s.title,
           isCurrent,
           isInvalid: !v.ok,
-          isSamePipeline: p.id === card.state,
+          isSamePipeline: p.id === card.pipeline,
           groupStart: first,
-          stageTitle: p.title,
+          pipelineTitle: p.title,
         });
         first = false;
       }
@@ -133,7 +133,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
     );
   };
 
-  // Initial centering: scroll so the current state chip sits in the middle.
+  // Initial centering: scroll so the current stage chip sits in the middle.
   useLayoutEffect(() => {
     if (!anchor || !mounted) return;
     const scroller = stripScrollRef.current;
@@ -157,7 +157,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
 
   const { rect, card } = anchor;
   const proj = card.project;
-  const stageHex = STAGE_ACCENT[card.state].hex;
+  const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
 
   // ── Fixed picker geometry ──
   // Picker zone always sits at ~42% of viewport height regardless of where the
@@ -207,11 +207,11 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
     }
     if (chip.isInvalid) {
       haptics.nope();
-      onPick({ stage: chip.state, state: chip.state });
+      onPick({ pipeline: chip.pipeline, stage: chip.stage });
       return;
     }
     haptics.commit();
-    onPick({ stage: chip.state, state: chip.state });
+    onPick({ pipeline: chip.pipeline, stage: chip.stage });
   };
 
   const onBackdropPointerDown = (e: React.PointerEvent) => {
@@ -262,7 +262,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
       >
         <span
           className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ backgroundColor: stageHex, opacity: 0.9 }}
+          style={{ backgroundColor: pipelineHex, opacity: 0.9 }}
         />
         <div className="pl-5 pr-5 py-3 flex flex-col justify-center h-full">
           <p className="text-[16px] font-semibold tracking-tight text-foreground leading-tight truncate">
@@ -277,7 +277,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
         </div>
       </div>
 
-      {/* ── Netflix-style state strip (fixed position) ── */}
+      {/* ── Netflix-style stage strip (fixed position) ── */}
       <div
         id="jiggle-strip"
         className="no-select absolute"
@@ -348,13 +348,13 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
           >
             <div className="flex items-end gap-2.5" style={{ minWidth: "min-content" }}>
               {chips.map((c, idx) => {
-                const accent = STAGE_ACCENT[c.state].hex;
+                const accent = PIPELINE_ACCENT[c.pipeline].hex;
                 const isFocused = idx === focusedIdx && !c.isCurrent;
                 const prox = proximities[idx] ?? 0;
 
-                // State emphasis:
-                // - same-state chips: full opacity baseline (1.0)
-                // - other-state chips: 0.55 baseline, brighten toward 1.0 by proximity
+                // Pipeline emphasis:
+                // - same-pipeline chips: full opacity baseline (1.0)
+                // - other-pipeline chips: 0.55 baseline, brighten toward 1.0 by proximity
                 const baseOpacity = c.isSamePipeline
                   ? 1
                   : Math.min(1, 0.55 + prox * 0.45);
@@ -382,15 +382,15 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
                 }
 
                 // Group label emphasis:
-                // - current state label: 0.85 opacity navy
+                // - current pipeline label: 0.85 opacity navy
                 // - other labels: 0.4 baseline, brightening to 0.85 by proximity
                 const labelOpacity = c.isSamePipeline
                   ? 0.85
                   : Math.min(0.85, 0.4 + prox * 0.45);
 
                 return (
-                  <div key={`${c.state}-${c.state}`} className="flex flex-col items-start">
-                    {/* State group label */}
+                  <div key={`${c.pipeline}-${c.stage}`} className="flex flex-col items-start">
+                    {/* Pipeline group label */}
                     <span
                       className="text-[9px] uppercase tracking-[0.22em] font-semibold mb-1.5 pl-1 whitespace-nowrap"
                       style={{
@@ -400,7 +400,7 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
                         transition: "opacity 220ms ease-out",
                       }}
                     >
-                      {c.stageTitle}
+                      {c.pipelineTitle}
                     </span>
                     <button
                       ref={(el) => (chipRefs.current[idx] = el)}

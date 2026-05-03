@@ -47,10 +47,10 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        state: {
-          proposal: "hsl(var(--state-proposal))",
-          quotation: "hsl(var(--state-quotation))",
-          pending: "hsl(var(--state-pending))",
+        stage: {
+          proposal: "hsl(var(--stage-proposal))",
+          quotation: "hsl(var(--stage-quotation))",
+          pending: "hsl(var(--stage-pending))",
           indigo: "hsl(var(--accent-indigo))",
           amber: "hsl(var(--accent-amber))",
           emerald: "hsl(var(--accent-emerald))",

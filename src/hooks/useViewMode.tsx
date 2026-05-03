@@ -1,6 +1,6 @@
 /**
  * Global view-mode (Board vs Table) for the desktop layout.
- * Selection is sticky across all state tabs — switching tabs does not
+ * Selection is sticky across all pipeline tabs — switching tabs does not
  * change the mode. Mobile (<1024px) ignores this entirely.
  */
 import { useCallback, useEffect, useState } from "react";

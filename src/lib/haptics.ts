@@ -80,7 +80,7 @@ export function installHapticsUnlock() {
 export const haptics = {
   /** Long-press activates jiggle mode — single short pulse. */
   pickup: () => vibrate(15),
-  /** State commit (chip tap or successful swipe) — slightly stronger pulse. */
+  /** Stage commit (chip tap or successful swipe) — slightly stronger pulse. */
   commit: () => vibrate(25),
   /** Swipe threshold crossed while dragging. */
   threshold: () => vibrate(10),

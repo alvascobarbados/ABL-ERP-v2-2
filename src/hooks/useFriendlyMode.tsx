@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { StageId, StateId } from "@/data/states";
+import { PipelineId, StageId } from "@/data/pipelines";
 
 const STORAGE_KEY = "alvasco.friendlyMode";
 const DISMISS_PREFIX = "alvasco.tip.dismissed:";
@@ -79,7 +79,7 @@ export const useFriendlyMode = () => {
 };
 
 // ─── Plain-language labels ───
-export const FRIENDLY_STAGE_LABELS: Record<StateId, string> = {
+export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
   proposal: "Proposal — needs writing",
   quote: "Quote — needs pricing",
   confirming: "Waiting for customer to confirm",
@@ -95,7 +95,7 @@ export const FRIENDLY_STAGE_LABELS: Record<StateId, string> = {
   paid: "Paid — complete",
 };
 
-export const FRIENDLY_PIPELINE_SUBTITLES: Record<StageId, string> = {
+export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
   sales: "Getting new business",
   design: "Designing & proofing",
   operations: "Making the goods",
@@ -103,7 +103,7 @@ export const FRIENDLY_PIPELINE_SUBTITLES: Record<StageId, string> = {
   finance: "Invoicing and getting paid",
 };
 
-export const FRIENDLY_STAGE_HELP: Record<StateId, string> = {
+export const FRIENDLY_STAGE_HELP: Record<StageId, string> = {
   proposal: "New enquiries that need a written proposal. Once you've sent the proposal, move forward to Quote.",
   quote: "Projects that need pricing worked out and sent to the customer. Once you've sent the quote, move forward to Confirming.",
   confirming: "Quote sent. Waiting for the customer to say yes. When they confirm, the project splits into items and moves into Production.",

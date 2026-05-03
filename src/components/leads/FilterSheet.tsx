@@ -4,7 +4,7 @@ import {
   Plane, Ship, MapPin, UserCircle2, Layers, Clock, AlertTriangle, Check, Search, Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { STATES, ShippingMode } from "@/data/states";
+import { PIPELINES, ShippingMode } from "@/data/pipelines";
 import type { FilterState, DeadlineUrgency } from "./FilterBar";
 import { EMPTY_FILTER, filterCount } from "./FilterBar";
 
@@ -20,7 +20,7 @@ interface Props {
 }
 
 const ALL_MODES: (ShippingMode | "Unassigned")[] = ["Air", "Ocean", "Local", "Unassigned"];
-const ALL_STAGES = STATES.flatMap((p) => p.states.map((s) => ({ id: s.id, label: s.title, state: p.title })));
+const ALL_STAGES = PIPELINES.flatMap((p) => p.stages.map((s) => ({ id: s.id, label: s.title, pipeline: p.title })));
 const URGENCY_OPTIONS: { id: Exclude<DeadlineUrgency, null>; label: string }[] = [
   { id: "overdue", label: "Overdue" },
   { id: "this_week", label: "Due this week" },
@@ -173,7 +173,7 @@ const SummaryRow = ({
 
 type PickerKind =
   | "customers" | "projectNames" | "supplierIds" | "shippingModes"
-  | "salesReps" | "states" | null;
+  | "salesReps" | "stages" | null;
 
 export const FilterSheet = ({
   open, onClose, value, onChange, customers, projectNames, suppliers, salesReps,
@@ -195,10 +195,10 @@ export const FilterSheet = ({
     if (!value.supplierIds.length) return "Any";
     return value.supplierIds.map((id) => suppliers.find((s) => s.id === id)?.name ?? id).join(", ");
   }, [value.supplierIds, suppliers]);
-  const stateLabel = useMemo(() => {
-    if (!value.states.length) return "Any";
-    return value.states.map((id) => ALL_STAGES.find((s) => s.id === id)?.label ?? id).join(", ");
-  }, [value.states]);
+  const stageLabel = useMemo(() => {
+    if (!value.stages.length) return "Any";
+    return value.stages.map((id) => ALL_STAGES.find((s) => s.id === id)?.label ?? id).join(", ");
+  }, [value.stages]);
   const urgencyLabel = value.urgency
     ? URGENCY_OPTIONS.find((o) => o.id === value.urgency)?.label ?? "Any"
     : "Any";
@@ -261,11 +261,11 @@ export const FilterSheet = ({
               active={value.salesReps.length > 0}
               onClick={() => setPicker("salesReps")}
               onClear={() => onChange({ ...value, salesReps: [] })} />
-            <SummaryRow icon={Layers} label="State"
-              summary={stateLabel}
-              active={value.states.length > 0}
-              onClick={() => setPicker("states")}
-              onClear={() => onChange({ ...value, states: [] })} />
+            <SummaryRow icon={Layers} label="Stage"
+              summary={stageLabel}
+              active={value.stages.length > 0}
+              onClick={() => setPicker("stages")}
+              onClear={() => onChange({ ...value, stages: [] })} />
 
             {/* Urgency — single-select inline */}
             <div className="rounded-xl border p-3" style={{ borderColor: "hsl(var(--brand-navy) / 0.18)" }}>
@@ -416,11 +416,11 @@ export const FilterSheet = ({
         selected={value.salesReps}
         onApply={(next) => onChange({ ...value, salesReps: next })} />
       <MultiPicker<string>
-        open={picker === "states"} onClose={() => setPicker(null)}
-        title="Filter by state" icon={<Layers className="h-4 w-4" />}
-        options={ALL_STAGES.map((s) => ({ id: s.id, label: s.label, sub: s.state }))}
-        selected={value.states as string[]}
-        onApply={(next) => onChange({ ...value, states: next as FilterState["states"] })} />
+        open={picker === "stages"} onClose={() => setPicker(null)}
+        title="Filter by stage" icon={<Layers className="h-4 w-4" />}
+        options={ALL_STAGES.map((s) => ({ id: s.id, label: s.label, sub: s.pipeline }))}
+        selected={value.stages as string[]}
+        onApply={(next) => onChange({ ...value, stages: next as FilterState["stages"] })} />
     </>
   );
 };

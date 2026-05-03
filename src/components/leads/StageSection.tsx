@@ -1,37 +1,37 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { StageCard, StateId, STATES } from "@/data/states";
-import { STAGE_ACCENT } from "@/lib/brand";
+import { PipelineCard, StageId, PIPELINES } from "@/data/pipelines";
+import { PIPELINE_ACCENT } from "@/lib/brand";
 import { ProjectCard } from "./ProjectCard";
 import { cn } from "@/lib/utils";
 
-interface StateSectionProps {
+interface StageSectionProps {
   title: string;
-  state: StateId;
-  cards: StageCard[];
-  onOpenCard: (c: StageCard) => void;
+  stage: StageId;
+  cards: PipelineCard[];
+  onOpenCard: (c: PipelineCard) => void;
   onOpenShipment: (shipmentId: string) => void;
-  onSwipeForward: (c: StageCard) => void;
-  onSwipeBack: (c: StageCard) => void;
-  onOpenPicker: (c: StageCard) => void;
+  onSwipeForward: (c: PipelineCard) => void;
+  onSwipeBack: (c: PipelineCard) => void;
+  onOpenPicker: (c: PipelineCard) => void;
   emptyHint?: string;
 }
 
-function stageForStage(state: StateId) {
-  return STATES.find((p) => p.states.some((s) => s.id === state))!.id;
+function pipelineForStage(stage: StageId) {
+  return PIPELINES.find((p) => p.stages.some((s) => s.id === stage))!.id;
 }
 
-const COLLAPSED_BY_DEFAULT: StateId[] = ["archive"];
+const COLLAPSED_BY_DEFAULT: StageId[] = ["archive"];
 
-export const StateSection = ({
-  title, state, cards, onOpenCard,
+export const StageSection = ({
+  title, stage, cards, onOpenCard,
   onSwipeForward, onSwipeBack, onOpenPicker, emptyHint,
-}: StateSectionProps) => {
-  const collapsedDefault = COLLAPSED_BY_DEFAULT.includes(state);
+}: StageSectionProps) => {
+  const collapsedDefault = COLLAPSED_BY_DEFAULT.includes(stage);
   const [open, setOpen] = useState(!collapsedDefault);
   useEffect(() => { if (collapsedDefault) setOpen(false); }, [collapsedDefault]);
-  const stageId = stageForStage(state);
-  const accentHex = STAGE_ACCENT[stageId].hex;
+  const pipelineId = pipelineForStage(stage);
+  const accentHex = PIPELINE_ACCENT[pipelineId].hex;
 
   return (
     <section className="no-select bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">
@@ -55,7 +55,7 @@ export const StateSection = ({
             <span
               className="text-[11px] tabular font-semibold rounded-full inline-flex items-center justify-center min-w-[22px] h-[22px] px-2"
               style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}
-              title={`${cards.length} in this state`}
+              title={`${cards.length} in this stage`}
             >
               {cards.length}
             </span>

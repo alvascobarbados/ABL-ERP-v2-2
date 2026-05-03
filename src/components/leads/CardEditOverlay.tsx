@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
-import { StageCard, ShippingMode } from "@/data/states";
-import { usePipelineStore } from "@/hooks/useStageStore";
+import { PipelineCard, ShippingMode } from "@/data/pipelines";
+import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { TextEditor, DateEditor, ListPicker, TrackingEditor, ListOption } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
-import { STAGE_ACCENT } from "@/lib/brand";
+import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useMasterData } from "@/hooks/useMasterData";
 
 // ─── Permission scaffolding (future: per-role) ──────────────────────────
@@ -28,7 +28,7 @@ const PERMS = {
 };
 
 interface CardEditOverlayProps {
-  card: StageCard;
+  card: PipelineCard;
   onExit: () => void;
 }
 
@@ -43,7 +43,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   const md = useMasterData();
   const proj = card.project;
   const ship = store.shipments.find((s) => s.id === proj.shipmentId);
-  const accent = STAGE_ACCENT[card.state].hex;
+  const accent = PIPELINE_ACCENT[card.pipeline].hex;
 
   // Sub-editor state
   const [editing, setEditing] = useState<FieldKey | null>(null);
@@ -156,7 +156,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
 
   const pickSupplier = (supplierId: string) => {
     const hasItems = (proj.lineItems?.length ?? 0) > 0 || !!proj.poNumber;
-    if (hasItems && proj.supplierId && supplierId !== proj.supplierId && card.state === "operations") {
+    if (hasItems && proj.supplierId && supplierId !== proj.supplierId && card.pipeline === "operations") {
       setEditing(null);
       setSupplierConfirm({ supplierId });
       return;
@@ -252,7 +252,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
     );
   };
 
-  // ── State-specific field set ────────────────────────────────────────
+  // ── Pipeline-specific field set ────────────────────────────────────────
   const renderFields = () => {
     const supplier = md.getSupplierByAnyId(proj.supplierId);
     const supplierLabel: React.ReactNode = supplier?.name ?? proj.supplierLabel ?? "Unassigned";
@@ -351,7 +351,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
 
     const grid = "grid grid-cols-1 sm:grid-cols-2 gap-2";
 
-    if (card.state === "sales") {
+    if (card.pipeline === "sales") {
       return (
         <div className={grid}>
           {customerField}
@@ -364,7 +364,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         </div>
       );
     }
-    if (card.state === "operations") {
+    if (card.pipeline === "operations") {
       return (
         <div className={grid}>
           {customerField}
@@ -378,7 +378,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         </div>
       );
     }
-    if (card.state === "shipping") {
+    if (card.pipeline === "shipping") {
       return (
         <div className={grid}>
           {customerField}
@@ -466,7 +466,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           Done
         </button>
       </div>
-      {/* accent stripe matching state */}
+      {/* accent stripe matching pipeline */}
       <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: accent, opacity: 0.85 }} />
 
       {/* ── Editors ── */}

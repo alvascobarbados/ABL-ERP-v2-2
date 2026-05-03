@@ -10,13 +10,13 @@ const STEPS = [
   },
   {
     icon: Layers,
-    title: "Four states",
+    title: "Four pipelines",
     body: "Sales, Production, Shipping, Finance. Tap the tabs at the top, or swipe left and right, to move between them.",
   },
   {
     icon: MousePointer2,
     title: "Each card is a project",
-    body: "Tap a card to see details, or use the Move Forward / Back buttons to advance it through states.",
+    body: "Tap a card to see details, or use the Move Forward / Back buttons to advance it through stages.",
   },
   {
     icon: Briefcase,

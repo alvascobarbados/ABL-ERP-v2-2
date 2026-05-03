@@ -1,23 +1,23 @@
 import { Sheet } from "./Sheet";
-import { STATES, StageId, StateId } from "@/data/states";
-import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/useStageStore";
+import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
+import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 
-interface StatePickerProps {
+interface StagePickerProps {
   open: boolean;
   onClose: () => void;
   title: string;
   subtitle: string;
-  current: { stage: StageId; state: StateId } | null;
-  onPick: (target: { stage: StageId; state: StateId }) => void;
+  current: { pipeline: PipelineId; stage: StageId } | null;
+  onPick: (target: { pipeline: PipelineId; stage: StageId }) => void;
 }
 
-export const StatePicker = ({ open, onClose, title, subtitle, current, onPick }: StatePickerProps) => {
-  const next = current ? getNextStage(current.state, current.state) : null;
-  const prev = current ? getPrevStage(current.state, current.state) : null;
-  const isAdjacent = (p: StageId, s: StateId) =>
-    (next && next.state === p && next.state === s) || (prev && prev.state === p && prev.state === s);
+export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }: StagePickerProps) => {
+  const next = current ? getNextStage(current.pipeline, current.stage) : null;
+  const prev = current ? getPrevStage(current.pipeline, current.stage) : null;
+  const isAdjacent = (p: PipelineId, s: StageId) =>
+    (next && next.pipeline === p && next.stage === s) || (prev && prev.pipeline === p && prev.stage === s);
 
   return (
     <Sheet open={open} onClose={onClose} title="Move project">
@@ -27,27 +27,27 @@ export const StatePicker = ({ open, onClose, title, subtitle, current, onPick }:
       </div>
 
       <div className="space-y-5 mt-4">
-        {STATES.map((p) => {
-          // Shipping has exactly one user-facing state ("Shipping"). Mode
+        {PIPELINES.map((p) => {
+          // Shipping has exactly one user-facing stage ("Shipping"). Mode
           // (Air/Ocean/Local) is changed elsewhere — never via the picker.
-          const states = p.id === "shipping"
-            ? [{ id: "shipment_required" as StateId, title: "Shipping" }]
-            : p.states;
+          const stages = p.id === "shipping"
+            ? [{ id: "shipment_required" as StageId, title: "Shipping" }]
+            : p.stages;
           return (
             <div key={p.id}>
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mb-2">
                 {p.title}
               </p>
               <div className="grid grid-cols-1 gap-1.5">
-                {states.map((s) => {
-                  const isCurrent = current?.state === p.id && (
-                    p.id === "shipping" ? true : current?.state === s.id
+                {stages.map((s) => {
+                  const isCurrent = current?.pipeline === p.id && (
+                    p.id === "shipping" ? true : current?.stage === s.id
                   );
                   const adj = isAdjacent(p.id, s.id);
                   return (
                     <button
                       key={s.id}
-                      onClick={() => !isCurrent && onPick({ stage: p.id, state: s.id })}
+                      onClick={() => !isCurrent && onPick({ pipeline: p.id, stage: s.id })}
                       disabled={isCurrent}
                       className={cn(
                         "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-left transition-[var(--transition-smooth)]",
@@ -72,7 +72,7 @@ export const StatePicker = ({ open, onClose, title, subtitle, current, onPick }:
                         </span>
                       ) : adj ? (
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {next?.state === p.id && next?.state === s.id ? "Next" : "Prev"}
+                          {next?.pipeline === p.id && next?.stage === s.id ? "Next" : "Prev"}
                         </span>
                       ) : null}
                     </button>

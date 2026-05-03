@@ -1,23 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { StageCard } from "@/data/states";
+import { PipelineCard } from "@/data/pipelines";
 import { usePipelineStore } from "./usePipelineStore";
 import { CardEditOverlay } from "@/components/leads/CardEditOverlay";
 
 interface EditModeCtx {
   activeId: string | null;
-  enter: (card: StageCard) => void;
+  enter: (card: PipelineCard) => void;
   exit: () => void;
 }
 
 const Ctx = createContext<EditModeCtx | null>(null);
 
 export const EditModeProvider = ({ children }: { children: ReactNode }) => {
-  const [activeCard, setActiveCard] = useState<StageCard | null>(null);
+  const [activeCard, setActiveCard] = useState<PipelineCard | null>(null);
   const store = usePipelineStore();
 
-  const enter = useCallback((card: StageCard) => setActiveCard(card), []);
+  const enter = useCallback((card: PipelineCard) => setActiveCard(card), []);
   const exit = useCallback(() => setActiveCard(null), []);
 
   // If the underlying project changes, refresh the snapshot so the panel reflects edits.

@@ -49,7 +49,7 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
   }, [pathname]);
 
   const projectsItems: Item[] = [
-    { icon: KanbanSquare, label: "State", to: "/" },
+    { icon: KanbanSquare, label: "Pipeline", to: "/" },
     { icon: Table2, label: "Spreadsheet", to: "/spreadsheet" },
   ];
   const shipmentSubItems: { label: string; to: string }[] = [
