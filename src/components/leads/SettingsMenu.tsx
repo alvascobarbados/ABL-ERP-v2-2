@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Settings, RotateCcw } from "lucide-react";
+import { Settings, RotateCcw, Columns3 } from "lucide-react";
 import { toast } from "sonner";
 import { useFriendlyMode } from "@/hooks/useFriendlyMode";
 import { useExpandedCards } from "@/hooks/useExpandedCards";
+import { useColumnWidths } from "@/hooks/useColumnWidths";
 
 export const SettingsMenu = () => {
   const { resetWalkthrough } = useFriendlyMode();
