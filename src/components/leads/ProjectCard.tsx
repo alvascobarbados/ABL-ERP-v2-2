@@ -437,6 +437,11 @@ export const ProjectCard = ({
           onDuplicate={handleDuplicate}
           onArchive={handleArchive}
           onDelete={handleDelete}
+          onMarkAsPaid={
+            card.pipeline === "finance" && card.stage === "invoiced"
+              ? () => onSwipeForward()
+              : undefined
+          }
         />
 
         <div
