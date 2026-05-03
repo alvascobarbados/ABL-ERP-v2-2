@@ -252,8 +252,12 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
   if (editor.type === "search-select") {
     const allOpts = typeof editor.options === "function" ? editor.options(row) : editor.options;
     const pinned = editor.pinned ?? [];
-    const q = value.trim().toLowerCase();
-    const matches = allOpts.filter((o) => !q || o.label.toLowerCase().includes(q));
+    // `value` holds the cell's current committed value; `query` drives the
+    // type-ahead. Always show the FULL master list, filtered only by `query`.
+    const q = query.trim().toLowerCase();
+    const matches = q
+      ? allOpts.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
+      : allOpts;
     const cf = editor.createForm?.(row) ?? null;
 
     const submitCreate = async () => {
