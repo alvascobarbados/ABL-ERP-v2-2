@@ -517,6 +517,14 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Desktop identity strip — skinny, right-aligned, above chevron */}
+        <div className="hidden lg:block border-b border-border/60" style={{ backgroundColor: "hsl(var(--background))" }}>
+          <div className="max-w-none px-4 sm:px-6 h-10 flex items-center justify-end gap-2">
+            <UserMenu />
+            <SettingsMenu />
+          </div>
+        </div>
+
         {/* Tabs row */}
         <div className="relative" style={{ backgroundColor: "hsl(var(--background))" }}>
           {/* Mobile pill tabs */}
@@ -525,13 +533,11 @@ const Index = () => {
               <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
           </div>
-          {/* Desktop chevron tabs (live filtered counts) + settings */}
-          <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center gap-3">
+          {/* Desktop chevron tabs — full width */}
+          <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center">
             <div className="flex-1 min-w-0">
               <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
-            <UserMenu />
-            <SettingsMenu />
           </div>
         </div>
 
