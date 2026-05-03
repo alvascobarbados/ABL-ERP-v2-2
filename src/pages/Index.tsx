@@ -466,7 +466,7 @@ const Index = () => {
   };
 
   // Tab swipe gesture (preserved)
-  const TAB_ORDER: TabId[] = ["all", "sales", "operations", "shipping", "finance"];
+  const TAB_ORDER: TabId[] = ["all", "sales", "operations", "shipping", "finance", "completed"];
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; touchStart.current = { x: t.clientX, y: t.clientY }; };
   const onTouchEnd = (e: React.TouchEvent) => {
