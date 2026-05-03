@@ -226,8 +226,10 @@ const Index = () => {
   const { projects, shipments, moveCard, pulsePipeline, triggerPulse } = store;
 
   const [activeTab, setActiveTab] = useState<TabId>("sales");
-  const activePipeline: PipelineId = activeTab === "all" ? "sales" : activeTab;
   const isAll = activeTab === "all";
+  const isCompleted = activeTab === "completed";
+  const activePipeline: PipelineId =
+    activeTab === "all" || activeTab === "completed" ? "sales" : activeTab;
   const { view: desktopView, setView: setDesktopView } = useViewMode(activeTab);
 
   // Per-tab filter persistence
