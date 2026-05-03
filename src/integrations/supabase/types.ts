@@ -24,6 +24,8 @@ export type Database = {
           industry: string | null
           name: string
           notes: string | null
+          payment_terms: string
+          payment_terms_custom_days: number | null
           phone: string | null
           updated_at: string
         }
@@ -36,6 +38,8 @@ export type Database = {
           industry?: string | null
           name: string
           notes?: string | null
+          payment_terms?: string
+          payment_terms_custom_days?: number | null
           phone?: string | null
           updated_at?: string
         }
@@ -48,6 +52,8 @@ export type Database = {
           industry?: string | null
           name?: string
           notes?: string | null
+          payment_terms?: string
+          payment_terms_custom_days?: number | null
           phone?: string | null
           updated_at?: string
         }
