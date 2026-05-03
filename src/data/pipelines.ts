@@ -103,6 +103,7 @@ export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) 
 
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
+  design: "magenta", proof: "magenta",
   preproduction: "violet", in_production: "orange",
   shipment_required: "amber", shipment_assigned: "sky",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
