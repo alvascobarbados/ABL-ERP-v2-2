@@ -54,6 +54,7 @@ const SORT_STORAGE = "alvasco.sort.v1";
 const DEFAULT_SORTS: Record<TabId, SortState> = {
   all: { field: "deadline", dir: "asc" },
   sales: { field: "deadline", dir: "asc" },
+  design: { field: "deadline", dir: "asc" },
   operations: { field: "deadline", dir: "asc" },
   shipping: { field: "deadline", dir: "asc" },
   finance: { field: "deadline", dir: "asc" },
