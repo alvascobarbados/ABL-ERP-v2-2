@@ -303,6 +303,7 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
         />
         {popoverOpen && cellRect && createPortal(
           <div
+            data-cell-editor
             style={{
               position: "fixed",
               top: cellRect.bottom + 2,
@@ -719,6 +720,7 @@ export function SpreadsheetView<TRow>({
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement;
+      if (t.closest("[data-cell-editor]")) return;
       if (!tableContainerRef.current?.contains(t)) {
         setSelected(null);
         setEditing(null);
