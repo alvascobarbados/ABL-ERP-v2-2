@@ -79,8 +79,16 @@ export const SettingsMenu = () => {
             </div>
           </label>
           <button
-            onClick={() => { resetWalkthrough(); setOpen(false); }}
+            onClick={() => { resetColumnWidths(); toast.success("Column widths reset to defaults", { duration: 3000 }); }}
             className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-medium hover:bg-muted/40 transition-colors"
+            style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", color: "hsl(var(--brand-navy))", minHeight: 44 }}
+          >
+            <Columns3 className="h-3.5 w-3.5" />
+            Reset column widths
+          </button>
+          <button
+            onClick={() => { resetWalkthrough(); setOpen(false); }}
+            className="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-medium hover:bg-muted/40 transition-colors"
             style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", color: "hsl(var(--brand-navy))", minHeight: 44 }}
           >
             <RotateCcw className="h-3.5 w-3.5" />
