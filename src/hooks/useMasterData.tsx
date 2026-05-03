@@ -234,6 +234,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteCustomer = useCallback(async (id: string) => {
     const { error } = await supabase.from("customers").delete().eq("id", id);
     if (error) throw error;
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   const addSupplier = useCallback(async (input: Partial<SupplierRecord> & { name: string }) => {
@@ -249,6 +250,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteSupplier = useCallback(async (id: string) => {
     const { error } = await supabase.from("suppliers").delete().eq("id", id);
     if (error) throw error;
+    setSuppliers((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
   const addTeamMember = useCallback(async (input: { initials: string; full_name: string; role?: TeamMember["role"]; email?: string }) => {
@@ -268,11 +270,13 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteTeamMember = useCallback(async (id: string) => {
     const { error } = await supabase.from("team_members").delete().eq("id", id);
     if (error) throw error;
+    setTeamMembers((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   const addProduct = useCallback(async (input: { name: string; default_unit?: string; notes?: string }) => {
     const { data, error } = await supabase.from("products").insert({ ...input }).select().single();
     if (error) throw error;
+    setProducts((prev) => [...prev.filter((p) => p.id !== data.id), data as ProductRecord].sort((a, b) => a.name.localeCompare(b.name)));
     return data as ProductRecord;
   }, []);
   const updateProduct = useCallback(async (id: string, patch: Partial<ProductRecord>) => {
@@ -282,6 +286,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteProduct = useCallback(async (id: string) => {
     const { error } = await supabase.from("products").delete().eq("id", id);
     if (error) throw error;
+    setProducts((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
   const value = useMemo<Ctx>(() => ({
