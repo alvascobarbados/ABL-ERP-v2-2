@@ -55,6 +55,14 @@ export const PIPELINES: PipelineConfig[] = [
     ],
   },
   {
+    id: "design",
+    title: "Design",
+    stages: [
+      { id: "design", title: "Design" },
+      { id: "proof", title: "Proof" },
+    ],
+  },
+  {
     id: "operations",
     title: "Production",
     stages: [
