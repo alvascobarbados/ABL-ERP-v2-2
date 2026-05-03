@@ -356,6 +356,7 @@ interface RowProps {
   index: number;
   card: PipelineCard;
   activeTab: TabId;
+  gridCols: string;
   isMenuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
@@ -368,7 +369,7 @@ interface RowProps {
 }
 
 const TableRow = ({
-  index, card, activeTab, isMenuOpen, onMenuOpenChange,
+  index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onDuplicate, onArchive, onDelete,
 }: RowProps) => {
   const proj = card.project;
