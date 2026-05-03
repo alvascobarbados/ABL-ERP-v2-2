@@ -335,32 +335,60 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     setProjects((prev) => prev.map((p) => {
       if (p.id !== cardId) return p;
       const patch: Partial<Project> = { pipeline: target.pipeline, stage: target.stage };
-      // Drop shipment when going back to intake
       if (target.pipeline === "shipping" && target.stage === "shipment_required") {
         patch.shipmentId = undefined;
       }
-      // Auto-assign reference numbers when reaching gates (per spec ranges)
       if (target.stage === "quote" && !p.quoteNumber) {
-        patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`; // 2040–2080
+        patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`;
       }
       if (target.pipeline === "operations" && !p.poNumber) {
-        patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`; // 1080–1110
+        patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`;
       }
       if (target.pipeline === "finance" && !p.invoiceNumber) {
-        patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`; // 1040–1060
+        patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`;
       }
-      // Auto-track Invoice Required entry timestamp.
       if (target.pipeline === "finance" && target.stage === "invoice_required"
           && !p.invoiceRequiredEnteredAt) {
         patch.invoiceRequiredEnteredAt = new Date();
       }
-      // Auto-set invoice issued date when entering Invoiced (assumed flag = true).
       if (target.pipeline === "finance" && target.stage === "invoiced"
           && !p.invoiceIssuedDate) {
         patch.invoiceIssuedDate = new Date();
         patch.invoiceIssuedDateAssumed = true;
       }
-      return touch({ ...p, ...patch });
+      const u = userRef.current;
+      const fromLabel = pipelineStageLabel(p.pipeline, p.stage);
+      const toLabel = pipelineStageLabel(target.pipeline, target.stage);
+      const isPaid = target.pipeline === "finance" && target.stage === "paid";
+      const isArchive = target.pipeline === "sales" && target.stage === "archive";
+      const wasArchive = p.pipeline === "sales" && p.stage === "archive";
+      let next = touch({ ...p, ...patch });
+      if (isPaid) {
+        next = appendLog(next, {
+          actor: actorOf(u), actionType: "mark_paid",
+          description: `${u.shortName} marked this paid`,
+          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: target.pipeline, toStage: target.stage },
+        });
+      } else if (isArchive) {
+        next = appendLog(next, {
+          actor: actorOf(u), actionType: "archive",
+          description: `${u.shortName} archived this`,
+          metadata: { fromPipeline: p.pipeline, fromStage: p.stage },
+        });
+      } else if (wasArchive) {
+        next = appendLog(next, {
+          actor: actorOf(u), actionType: "unarchive",
+          description: `${u.shortName} restored this from archive`,
+          metadata: { toPipeline: target.pipeline, toStage: target.stage },
+        });
+      } else {
+        next = appendLog(next, {
+          actor: actorOf(u), actionType: "stage_change",
+          description: `${u.shortName} moved this from ${fromLabel} to ${toLabel}`,
+          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: target.pipeline, toStage: target.stage },
+        });
+      }
+      return next;
     }));
     return { ok: true };
   }, [projects]);
