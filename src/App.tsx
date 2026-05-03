@@ -32,6 +32,7 @@ const App = () => (
           <MasterDataProvider>
             <ColumnWidthsProvider>
               <ExpandedCardsProvider>
+                <SidebarCollapsedProvider>
                 <BrowserRouter>
                   <Routes>
                     <Route path="/" element={<Index />} />
@@ -48,6 +49,7 @@ const App = () => (
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </BrowserRouter>
+                </SidebarCollapsedProvider>
               </ExpandedCardsProvider>
             </ColumnWidthsProvider>
           </MasterDataProvider>
