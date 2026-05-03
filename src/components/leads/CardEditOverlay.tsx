@@ -428,7 +428,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); haptics.tap(); onExit(); }}
+          onClick={(e) => { e.stopPropagation(); haptics.commit(); onExit(); }}
           className="hidden sm:inline-flex items-center justify-center shrink-0 rounded-lg text-white text-[13px] font-semibold tracking-tight transition-transform active:scale-[0.97]"
           style={{
             backgroundColor: "hsl(var(--brand-orange))",
@@ -459,7 +459,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); haptics.tap(); onExit(); }}
+          onClick={(e) => { e.stopPropagation(); haptics.commit(); onExit(); }}
           className="w-full inline-flex items-center justify-center rounded-lg text-white text-[15px] font-semibold tracking-tight active:scale-[0.99] transition-transform"
           style={{ backgroundColor: "hsl(var(--brand-orange))", height: 48 }}
         >
