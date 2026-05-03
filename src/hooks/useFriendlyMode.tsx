@@ -84,6 +84,8 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
   quote: "Quote — needs pricing",
   confirming: "Waiting for customer to confirm",
   archive: "Archive — closed or paused",
+  design: "Design — artwork being created",
+  proof: "Proof — confirmation with customer",
   preproduction: "Pre-Production — getting ready to make",
   in_production: "In Production — being made at the factory",
   shipment_required: "Awaiting shipment assignment",
