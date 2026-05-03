@@ -570,6 +570,8 @@ export function SpreadsheetView<TRow>({
     () => columns.filter((c) => visibility[c.id] !== false),
     [columns, visibility],
   );
+  const cw = useColumnWidths();
+  const effW = (c: SpreadsheetColumn<TRow>) => cw.widthFor(c.id, c.width);
 
   const textOf = (c: SpreadsheetColumn<TRow>, row: TRow): string => {
     if (c.toText) return c.toText(row) ?? "";
