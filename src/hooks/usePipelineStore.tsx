@@ -339,6 +339,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       orderType: "New",
       priority: "Standard",
       createdAt: new Date(),
+      paymentTerms: "Net 30",
+      paymentTermsInherited: true,
     };
     setProjects((prev) => [newProj, ...prev]);
     return newProj;
