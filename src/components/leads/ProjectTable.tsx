@@ -284,7 +284,8 @@ const TableRow = ({
   const proj = card.project;
   const flagged = !!proj.flagged;
   const u = urgencyLabel(card.deadlineDate);
-  const supName = supplierName(proj.supplierId) || proj.supplierLabel || "";
+  const md = useMasterData();
+  const supName = supplierName(proj.supplierId, md.getSupplierByAnyId) || proj.supplierLabel || "";
 
   // Long-press / long-click → stage picker
   const longPressTimer = useRef<number | null>(null);
