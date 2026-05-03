@@ -91,7 +91,7 @@ export const KanbanBoard = ({
             <div
               key={col.id}
               className="flex flex-col rounded-2xl border border-border/60 bg-card/60"
-              style={{ flex: "1 1 0", minWidth: 280, maxWidth: 720, maxHeight: "100%" }}
+              style={{ flex: "1 1 0", minWidth: 280, maxWidth: 1000, maxHeight: "100%" }}
             >
               {/* Sticky column header */}
               <div
@@ -114,18 +114,15 @@ export const KanbanBoard = ({
                 </span>
               </div>
 
-              {/* Independently scrolling card grid — wraps into multiple
-                  cards per row when the column is wide enough. */}
+              {/* Independently scrolling vertical card stack — always one
+                  card per row regardless of column width. */}
               <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
                 {col.cards.length === 0 ? (
                   <p className="text-[12px] text-muted-foreground italic px-2 py-6 text-center">
                     No projects here.
                   </p>
                 ) : (
-                  <div
-                    className="grid gap-3 items-start"
-                    style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}
-                  >
+                  <div className="flex flex-col gap-3">
                     {col.cards.map((c) => (
                       <ProjectCard
                         key={c.id}
