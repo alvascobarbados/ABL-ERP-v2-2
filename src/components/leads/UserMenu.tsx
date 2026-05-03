@@ -181,4 +181,4 @@ const Row = ({
   </button>
 );
 
-export const DEFAULT_USER_INITIALS = DEFAULT_USER.initials;
+export const DEFAULT_USER_INITIALS = "AV";
