@@ -218,14 +218,10 @@ const Index = () => {
     activeTab === "all" || activeTab === "completed" ? "sales" : activeTab;
   const { view: desktopView, setView: setDesktopView } = useViewMode(activeTab);
 
-  // Per-tab filter persistence
-  const [filtersByTab, setFiltersByTab] = useState<Record<TabId, FilterState>>(loadFilters);
-  const filters = filtersByTab[activeTab];
-  const setFilters = (next: FilterState) => {
-    const updated = { ...filtersByTab, [activeTab]: next };
-    setFiltersByTab(updated);
-    try { localStorage.setItem(FILTER_STORAGE, JSON.stringify(updated)); } catch { /* noop */ }
-  };
+  // Single shared filter state — persists across pipeline tab switches and
+  // across the Kanban/Table view toggle. Lives outside any per-tab component
+  // lifecycle so child remounts can never reset it.
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER);
 
   const [selectedCard, setSelectedCard] = useState<PipelineCard | null>(null);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
