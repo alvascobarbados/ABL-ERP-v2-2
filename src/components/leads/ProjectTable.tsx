@@ -12,6 +12,23 @@ import { Flag, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
 } from "@/data/pipelines";
+
+// Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
+const PIPELINE_ORDER: Record<PipelineId, number> = {
+  sales: 0, operations: 1, shipping: 2, finance: 3,
+};
+// Display overrides for stages whose canonical title differs from the
+// PIPELINES config (or that aren't listed there at all). "paid" must
+// render Title Case; both shipping sub-stages collapse to "Shipping"
+// because the Shipping pipeline has only one user-facing stage.
+const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
+  paid: "Paid",
+  shipment_required: "Shipping",
+  shipment_assigned: "Shipping",
+};
+function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
+  return STAGE_DISPLAY[stage] ?? getStageTitle(pipeline, stage);
+}
 import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
 import { useMasterData } from "@/hooks/useMasterData";
 import { cn } from "@/lib/utils";
