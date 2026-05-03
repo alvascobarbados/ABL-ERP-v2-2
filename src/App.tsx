@@ -13,6 +13,7 @@ import MasterList from "./pages/MasterList.tsx";
 import ArchivePage from "./pages/Archive.tsx";
 import TrashPage from "./pages/Trash.tsx";
 import ShipmentsPage from "./pages/Shipments.tsx";
+import ShipmentsModePage from "./pages/ShipmentsMode.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
