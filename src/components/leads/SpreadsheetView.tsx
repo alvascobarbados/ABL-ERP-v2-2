@@ -181,6 +181,9 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
   const [createOpen, setCreateOpen] = useState(false);
   const [createValues, setCreateValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // Search-select uses a separate type-ahead query so the cell's current value
+  // never filters the master list down to itself.
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     const el = inputRef.current;
