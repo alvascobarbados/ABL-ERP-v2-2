@@ -443,7 +443,7 @@ const TableRow = ({
         "hover:bg-[hsl(var(--brand-navy)/0.05)]",
       )}
       style={{
-        gridTemplateColumns: GRID_COLS,
+        gridTemplateColumns: gridCols,
         minHeight: 44,
         backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
         borderBottom: "1px solid hsl(var(--brand-navy) / 0.06)",
