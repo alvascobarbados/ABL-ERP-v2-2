@@ -3,11 +3,13 @@
 // one supplier max, one shipping mode max, line items.
 // Shared "project name" across multiple cards is just a naming convention.
 
-export type PipelineId = "sales" | "operations" | "shipping" | "finance";
+export type PipelineId = "sales" | "design" | "operations" | "shipping" | "finance";
 
 export type StageId =
   // sales
   | "proposal" | "quote" | "confirming" | "archive"
+  // design
+  | "design" | "proof"
   // operations (production)
   | "preproduction" | "in_production"
   // shipping — NOT real stages anymore. The Shipping pipeline groups by
@@ -53,6 +55,14 @@ export const PIPELINES: PipelineConfig[] = [
     ],
   },
   {
+    id: "design",
+    title: "Design",
+    stages: [
+      { id: "design", title: "Design" },
+      { id: "proof", title: "Proof" },
+    ],
+  },
+  {
     id: "operations",
     title: "Production",
     stages: [
@@ -93,6 +103,7 @@ export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) 
 
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
+  design: "magenta", proof: "magenta",
   preproduction: "violet", in_production: "orange",
   shipment_required: "amber", shipment_assigned: "sky",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
@@ -811,6 +822,7 @@ export function buildCard(project: Project): PipelineCard {
 export function pipelineCounts(): Record<PipelineId, number> {
   return {
     sales: PROJECTS.filter((p) => p.pipeline === "sales").length,
+    design: PROJECTS.filter((p) => p.pipeline === "design").length,
     operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
     shipping: PROJECTS.filter((p) => p.pipeline === "shipping").length,
     finance: PROJECTS.filter((p) => p.pipeline === "finance").length,

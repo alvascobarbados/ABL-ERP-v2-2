@@ -54,6 +54,7 @@ const SORT_STORAGE = "alvasco.sort.v1";
 const DEFAULT_SORTS: Record<TabId, SortState> = {
   all: { field: "deadline", dir: "asc" },
   sales: { field: "deadline", dir: "asc" },
+  design: { field: "deadline", dir: "asc" },
   operations: { field: "deadline", dir: "asc" },
   shipping: { field: "deadline", dir: "asc" },
   finance: { field: "deadline", dir: "asc" },
@@ -159,6 +160,7 @@ function projectMatchesSearch(p: Project, q: string): boolean {
 function projectHasMissingData(p: Project): boolean {
   const stageRank: Record<StageId, number> = {
     proposal: 0, quote: 1, confirming: 2, archive: 0,
+    design: 2, proof: 2,
     preproduction: 3, in_production: 4,
     shipment_required: 5, shipment_assigned: 6,
     invoice_required: 7, invoiced: 8, paid: 9,
@@ -306,6 +308,7 @@ const Index = () => {
 
   const counts = useMemo<Record<PipelineId, number>>(() => ({
     sales: pipelineProjects.filter((p) => p.pipeline === "sales").length,
+    design: pipelineProjects.filter((p) => p.pipeline === "design").length,
     operations: pipelineProjects.filter((p) => p.pipeline === "operations").length,
     shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
     finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
@@ -322,6 +325,7 @@ const Index = () => {
     };
     return {
       sales: pipelineProjects.filter((p) => p.pipeline === "sales" && match(p)).length,
+      design: pipelineProjects.filter((p) => p.pipeline === "design" && match(p)).length,
       operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length,
       shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && match(p)).length,
       finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
@@ -448,7 +452,7 @@ const Index = () => {
   };
 
   // Tab swipe gesture (preserved)
-  const TAB_ORDER: TabId[] = ["all", "sales", "operations", "shipping", "finance", "completed"];
+  const TAB_ORDER: TabId[] = ["all", "sales", "design", "operations", "shipping", "finance", "completed"];
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; touchStart.current = { x: t.clientX, y: t.clientY }; };
   const onTouchEnd = (e: React.TouchEvent) => {

@@ -24,12 +24,13 @@ import {
 } from "@/components/leads/SpreadsheetView";
 
 const PIPELINE_LABEL: Record<PipelineId, string> = {
-  sales: "Sales", operations: "Production", shipping: "Shipping", finance: "Finance",
+  sales: "Sales", design: "Design", operations: "Production", shipping: "Shipping", finance: "Finance",
 };
 
 // First valid stage when switching pipelines via the cell editor.
 const FIRST_STAGE: Record<PipelineId, StageId> = {
   sales: "proposal",
+  design: "design",
   operations: "preproduction",
   shipping: "shipment_required",
   finance: "invoice_required",

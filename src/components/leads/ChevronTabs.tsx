@@ -15,6 +15,7 @@
  */
 import { cn } from "@/lib/utils";
 import { PIPELINES, PipelineId } from "@/data/pipelines";
+import { PIPELINE_ACCENT } from "@/lib/brand";
 import type { TabId } from "./PipelineTabs";
 
 interface Props {
@@ -34,7 +35,7 @@ const BORDER = 1;         // outline thickness in px
 const CHEVRON_CLIP = `polygon(0 0, calc(100% - ${CHEV}px) 0, 100% 50%, calc(100% - ${CHEV}px) 100%, 0 100%, ${CHEV}px 50%)`;
 
 export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
-  const activeCount = counts.sales + counts.operations + counts.shipping + counts.finance;
+  const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
   const flowTabs = PIPELINES.map((p) => ({ id: p.id, title: p.title, count: counts[p.id] }));
   const allActive = active === "all";
   const completedActive = active === "completed";
@@ -78,8 +79,9 @@ export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, puls
           // the previous tab's right point — interlocking with zero visual gap.
           const overlap = i === 0 ? 0 : -CHEV;
 
-          const fill = isActive ? "hsl(var(--brand-orange))" : "hsl(var(--background))";
-          const outline = isActive ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy) / 0.15)";
+          const accentHex = PIPELINE_ACCENT[t.id].hex;
+          const fill = isActive ? accentHex : "hsl(var(--background))";
+          const outline = isActive ? accentHex : "hsl(var(--brand-navy) / 0.15)";
           const textColor = isActive ? "#fff" : "hsl(var(--brand-navy))";
 
           return (

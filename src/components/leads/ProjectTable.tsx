@@ -17,12 +17,11 @@ import { ColumnResizeHandle } from "./ColumnResizeHandle";
 
 // Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
-  sales: 0, operations: 1, shipping: 2, finance: 3,
+  sales: 0, design: 1, operations: 2, shipping: 3, finance: 4,
 };
 // Display overrides for stages whose canonical title differs from the
 // PIPELINES config (or that aren't listed there at all). "paid" must
-// render Title Case; both shipping sub-stages collapse to "Shipping"
-// because the Shipping pipeline has only one user-facing stage.
+// render Title Case; both shipping sub-stages render as "Shipping".
 const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
   paid: "Paid",
   shipment_required: "Shipping",
@@ -75,23 +74,20 @@ function fmtDeadline(date?: Date): string {
   return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })}`;
 }
 
-function stageLabel(c: PipelineCard, activeTab: TabId): string {
+function stageLabel(c: PipelineCard, _activeTab: TabId): string {
+  // Always render as "Department · State" — including redundant pairs like
+  // "Shipping · Shipping" or "Design · Design". Department = team owner;
+  // state = work status. Conceptually different even when labels match.
   const pipelineTitle = PIPELINES.find((p) => p.id === c.pipeline)?.title ?? c.pipeline;
-  // Shipping has exactly one user-facing stage ("Shipping") — collapse the
-  // pipeline·stage display to just "Shipping" rather than "Shipping · Shipping".
-  // The mode (Air/Ocean/Local) is rendered in the dedicated Mode column, NOT here.
-  if (c.pipeline === "shipping") {
-    return activeTab === "all" ? "Shipping" : "Shipping";
-  }
   const stageTitle = displayStageTitle(c.pipeline, c.stage);
-  if (activeTab === "all") return `${pipelineTitle} · ${stageTitle}`;
-  return stageTitle;
+  return `${pipelineTitle} · ${stageTitle}`;
 }
 
 // Stage progression rank within each pipeline. Lower = earlier in the flow.
 // Shipping collapses to a single rank (only one user-facing stage).
 const STAGE_RANK: Record<StageId, number> = {
   proposal: 0, quote: 1, confirming: 2, archive: 99,
+  design: 0, proof: 1,
   preproduction: 0, in_production: 1,
   shipment_required: 0, shipment_assigned: 0,
   invoice_required: 0, invoiced: 1, paid: 2,

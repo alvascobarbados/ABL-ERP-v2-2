@@ -84,6 +84,8 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
   quote: "Quote — needs pricing",
   confirming: "Waiting for customer to confirm",
   archive: "Archive — closed or paused",
+  design: "Design — artwork being created",
+  proof: "Proof — confirmation with customer",
   preproduction: "Pre-Production — getting ready to make",
   in_production: "In Production — being made at the factory",
   shipment_required: "Awaiting shipment assignment",
@@ -95,6 +97,7 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
 
 export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
   sales: "Getting new business",
+  design: "Designing & proofing",
   operations: "Making the goods",
   shipping: "Moving the goods",
   finance: "Invoicing and getting paid",
@@ -105,6 +108,8 @@ export const FRIENDLY_STAGE_HELP: Record<StageId, string> = {
   quote: "Projects that need pricing worked out and sent to the customer. Once you've sent the quote, move forward to Confirming.",
   confirming: "Quote sent. Waiting for the customer to say yes. When they confirm, the project splits into items and moves into Production.",
   archive: "Closed or paused projects — cold leads, lost deals, or anything not actively progressing. Tags inside (Cold / Lost / Other) keep the distinction.",
+  design: "Designer is producing artwork from scratch (or modifying customer-supplied files). Move forward to Proof when the artwork is ready.",
+  proof: "Artwork placed on the Alvasco proof document and sent to the customer. Waiting for approval before Production starts.",
   preproduction: "Order is being prepared internally before the factory starts making it — artwork, sign-offs, factory PO, deposit. Move forward when the factory begins producing.",
   in_production: "The factory has the order and is making it. When production finishes, the item moves to Shipping for shipment assignment.",
   shipment_required: "Production is done — the item is waiting to be assigned to a shipment (Air or Ocean). Tap the banner to assign.",

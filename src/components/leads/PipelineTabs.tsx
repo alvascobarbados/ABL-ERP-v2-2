@@ -14,7 +14,7 @@ interface Props {
 
 export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
   const { friendly } = useFriendlyMode();
-  const activeCount = counts.sales + counts.operations + counts.shipping + counts.finance;
+  const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
 
   const tabs: { id: TabId; title: string; count: number; isAll?: boolean; isCompleted?: boolean }[] = [
     { id: "all", title: "Active", count: activeCount, isAll: true },
