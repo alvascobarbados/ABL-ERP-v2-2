@@ -121,7 +121,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
   // ─── State move (used by both action sheet and ⋮ menu) ───
   const openStagePicker = () => setStagePickerOpen(true);
-  const handleStagePick = (target: { state: StageId; state: StateId }) => {
+  const handleStagePick = (target: { stage: StageId; state: StateId }) => {
     const fromPipeline = live.state;
     const fromStage = live.state;
     setStagePickerOpen(false);
@@ -138,7 +138,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(live.id, { state: fromPipeline, state: fromStage });
+          moveCard(live.id, { stage: fromPipeline, state: fromStage });
           toast("Move undone", { duration: 2000 });
         },
       },
@@ -197,13 +197,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       onConfirm: () => {
         const fromPipeline = live.state;
         const fromStage = live.state;
-        moveCard(live.id, { state: "sales", state: "archive" });
+        moveCard(live.id, { stage: "sales", state: "archive" });
         toast.success("Archived", {
           duration: 5000,
           action: {
             label: "Undo",
             onClick: () => {
-              moveCard(live.id, { state: fromPipeline, state: fromStage });
+              moveCard(live.id, { stage: fromPipeline, state: fromStage });
               toast("Archive undone", { duration: 1800 });
             },
           },
@@ -534,7 +534,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setStagePickerOpen(false)}
         title={live.projectName}
         subtitle={live.customer}
-        current={{ state: live.state, state: live.state }}
+        current={{ stage: live.state, state: live.state }}
         onPick={handleStagePick}
       />
 

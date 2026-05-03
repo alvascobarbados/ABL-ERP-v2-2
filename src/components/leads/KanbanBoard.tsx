@@ -22,7 +22,7 @@ import type { TabId } from "./StateTabs";
 interface Column {
   id: string;
   title: string;
-  state: StageId;
+  stage: StageId;
   cards: StageCard[];
 }
 
@@ -55,7 +55,7 @@ function buildColumns(activeTab: TabId, visible: StageCard[]): Column[] {
     return SHIPPING_MODES.map((mode) => ({
       id: mode,
       title: mode,
-      state: "shipping" as StageId,
+      stage: "shipping" as StageId,
       cards: visible.filter((c) => (c.project.shippingMode ?? "Local") === mode),
     }));
   }

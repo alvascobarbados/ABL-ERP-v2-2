@@ -27,7 +27,7 @@ const STATE_DISPLAY: Partial<Record<StateId, string>> = {
   shipment_required: "Shipping",
   shipment_assigned: "Shipping",
 };
-function displayStageTitle(state: StageId, state: StateId): string {
+function displayStageTitle(stage: StageId, state: StateId): string {
   return STATE_DISPLAY[state] ?? getStageTitle(state, state);
 }
 import { getStageTitle, usePipelineStore } from "@/hooks/useStageStore";
@@ -321,7 +321,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 onEdit={() => setEditingCard(card)}
                 onMoveStage={() => onOpenPicker(card)}
                 onDuplicate={() => store.duplicateProject(card.project.id)}
-                onArchive={() => store.moveCard(card.id, { state: "sales", state: "archive" as StateId })}
+                onArchive={() => store.moveCard(card.id, { stage: "sales", state: "archive" as StateId })}
                 onDelete={() => store.deleteProject(card.project.id)}
               />
             ))

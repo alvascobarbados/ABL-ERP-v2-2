@@ -9,8 +9,8 @@ interface StatePickerProps {
   onClose: () => void;
   title: string;
   subtitle: string;
-  current: { state: StageId; state: StateId } | null;
-  onPick: (target: { state: StageId; state: StateId }) => void;
+  current: { stage: StageId; state: StateId } | null;
+  onPick: (target: { stage: StageId; state: StateId }) => void;
 }
 
 export const StatePicker = ({ open, onClose, title, subtitle, current, onPick }: StatePickerProps) => {
@@ -47,7 +47,7 @@ export const StatePicker = ({ open, onClose, title, subtitle, current, onPick }:
                   return (
                     <button
                       key={s.id}
-                      onClick={() => !isCurrent && onPick({ state: p.id, state: s.id })}
+                      onClick={() => !isCurrent && onPick({ stage: p.id, state: s.id })}
                       disabled={isCurrent}
                       className={cn(
                         "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-left transition-[var(--transition-smooth)]",

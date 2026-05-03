@@ -265,7 +265,7 @@ export default function Spreadsheet() {
         const next = String(v ?? "") as StageId;
         if (next === r.project.state) return;
         commitWithUndo(r.project, "State", {
-          state: next,
+          stage: next,
           state: FIRST_STAGE[next],
         });
       },

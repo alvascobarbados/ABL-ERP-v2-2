@@ -243,8 +243,8 @@ const Index = () => {
   const [searchScopeAll, setSearchScopeAll] = useState(false);
 
   const [pickerCard, setPickerCard] = useState<StageCard | null>(null);
-  const [confirmLost, setConfirmLost] = useState<{ card: StageCard; target: { state: StageId; state: StateId } } | null>(null);
-  const [missingFields, setMissingFields] = useState<{ card: StageCard; target: { state: StageId; state: StateId }; missing: string[] } | null>(null);
+  const [confirmLost, setConfirmLost] = useState<{ card: StageCard; target: { stage: StageId; state: StateId } } | null>(null);
+  const [missingFields, setMissingFields] = useState<{ card: StageCard; target: { stage: StageId; state: StateId }; missing: string[] } | null>(null);
   const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
   const [assignOpen, setAssignOpen] = useState(false);
 
@@ -376,7 +376,7 @@ const Index = () => {
   const isSearching = !!search.trim();
 
   // ─── Move logic (preserved) ───
-  const performMove = (card: StageCard, target: { state: StageId; state: StateId }) => {
+  const performMove = (card: StageCard, target: { stage: StageId; state: StateId }) => {
     if (target.state === "archive" && card.state !== "archive") {
       setConfirmLost({ card, target });
       return;
@@ -384,7 +384,7 @@ const Index = () => {
     doMove(card, target);
   };
 
-  const doMove = (card: StageCard, target: { state: StageId; state: StateId }) => {
+  const doMove = (card: StageCard, target: { stage: StageId; state: StateId }) => {
     const v = validateMove(card.project, target);
     if (!v.ok) {
       const labels = v.missing.map((m) =>
@@ -407,7 +407,7 @@ const Index = () => {
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(card.id, { state: fromPipeline, state: fromStage });
+          moveCard(card.id, { stage: fromPipeline, state: fromStage });
           toast(`Move undone`, { duration: 2500 });
         },
       },
@@ -418,7 +418,7 @@ const Index = () => {
     const fromPipeline = card.state;
     const fromStage = card.state;
     const label = `${card.project.customer} · ${card.project.projectName}`;
-    const result = moveCard(card.id, { state: "finance", state: "paid" });
+    const result = moveCard(card.id, { stage: "finance", state: "paid" });
     if (!result.ok) return;
     toast.success(`${label} marked as paid`, {
       description: "Moved to Completed.",
@@ -426,7 +426,7 @@ const Index = () => {
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(card.id, { state: fromPipeline, state: fromStage });
+          moveCard(card.id, { stage: fromPipeline, state: fromStage });
           toast(`Move undone`, { duration: 2000 });
         },
       },
@@ -443,7 +443,7 @@ const Index = () => {
   };
   const onSwipeBack = (card: StageCard) => { const prev = prevStage(card); if (prev) performMove(card, prev); };
   const onOpenPicker = (card: StageCard) => setPickerCard(card);
-  const handlePickerSelect = (target: { state: StageId; state: StateId }) => {
+  const handlePickerSelect = (target: { stage: StageId; state: StateId }) => {
     if (!pickerCard) return;
     const card = pickerCard;
     setPickerCard(null);
@@ -808,7 +808,7 @@ const Index = () => {
         onClose={() => setPickerCard(null)}
         title={pickerCard ? pickerCard.project.projectName : ""}
         subtitle={pickerCard ? pickerCard.project.customer : ""}
-        current={pickerCard ? { state: pickerCard.state, state: pickerCard.state } : null}
+        current={pickerCard ? { stage: pickerCard.state, state: pickerCard.state } : null}
         onPick={handlePickerSelect}
       />
 

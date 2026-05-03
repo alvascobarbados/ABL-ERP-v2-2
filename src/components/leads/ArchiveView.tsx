@@ -74,7 +74,7 @@ export const ArchiveView = ({ open, onClose }: Props) => {
     setSelected(next);
   };
 
-  const handleRestorePick = (target: { state: StageId; state: StateId }) => {
+  const handleRestorePick = (target: { stage: StageId; state: StateId }) => {
     if (!restoreTarget) return;
     const p = restoreTarget;
     setRestoreTarget(null);
@@ -88,7 +88,7 @@ export const ArchiveView = ({ open, onClose }: Props) => {
       duration: 5000,
       action: {
         label: "Undo",
-        onClick: () => { store.moveCard(p.id, { state: "sales", state: "archive" }); toast(`Sent back to Archive`, { duration: 1800 }); },
+        onClick: () => { store.moveCard(p.id, { stage: "sales", state: "archive" }); toast(`Sent back to Archive`, { duration: 1800 }); },
       },
     });
   };
@@ -291,7 +291,7 @@ export const ArchiveView = ({ open, onClose }: Props) => {
       onClose={() => setRestoreTarget(null)}
       title={restoreTarget ? restoreTarget.projectName : ""}
       subtitle={restoreTarget ? `Restore ${restoreTarget.customer} to…` : ""}
-      current={restoreTarget ? { state: restoreTarget.state, state: restoreTarget.state } : null}
+      current={restoreTarget ? { stage: restoreTarget.state, state: restoreTarget.state } : null}
       onPick={handleRestorePick}
     />
     </>

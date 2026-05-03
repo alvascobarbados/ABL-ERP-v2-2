@@ -3,7 +3,7 @@ import { STAGE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 interface Props {
-  state: StageId;
+  stage: StageId;
   className?: string;
 }
 

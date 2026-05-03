@@ -28,7 +28,7 @@ function actorOf(u: CurrentUser) {
   return { userId: u.userId, displayName: u.shortName };
 }
 
-function stageStageLabel(state: StageId, state: StateId): string {
+function stageStageLabel(stage: StageId, state: StateId): string {
   const p = STATES.find((x) => x.id === state);
   const s = p?.states.find((x) => x.id === state);
   return `${p?.title ?? state} · ${s?.title ?? state}`;
@@ -108,36 +108,36 @@ function buildFieldEditEntries(
 
 // ─────────── State helpers ───────────
 export interface StatePos {
-  state: StageId;
+  stage: StageId;
   state: StateId;
   stageIndex: number;
   stateIndex: number;
 }
 
-export const ALL_STAGES: { state: StageId; state: StateId; title: string; stageTitle: string }[] =
-  STATES.flatMap((p) => p.states.map((s) => ({ state: p.id, state: s.id, title: s.title, stageTitle: p.title })));
+export const ALL_STAGES: { stage: StageId; state: StateId; title: string; stageTitle: string }[] =
+  STATES.flatMap((p) => p.states.map((s) => ({ stage: p.id, state: s.id, title: s.title, stageTitle: p.title })));
 
-export function getStagePos(state: StageId, state: StateId): StatePos {
+export function getStagePos(stage: StageId, state: StateId): StatePos {
   const stageIndex = STATES.findIndex((p) => p.id === state);
   const stateIndex = STATES[stageIndex].states.findIndex((s) => s.id === state);
   return { state, state, stageIndex, stateIndex };
 }
 
-export function getStageTitle(state: StageId, state: StateId): string {
+export function getStageTitle(stage: StageId, state: StateId): string {
   return STATES.find((p) => p.id === state)?.states.find((s) => s.id === state)?.title ?? state;
 }
 
-function forwardStages(state: StageId): StateId[] {
+function forwardStages(stage: StageId): StateId[] {
   const p = STATES.find((x) => x.id === state)!;
   if (state === "sales") return p.states.filter((s) => s.id !== "archive").map((s) => s.id);
   if (state === "shipping") return ["shipment_assigned"];
   return p.states.map((s) => s.id);
 }
 
-export function getNextStage(state: StageId, state: StateId): { state: StageId; state: StateId } | null {
+export function getNextStage(stage: StageId, state: StateId): { stage: StageId; state: StateId } | null {
   if (state === "shipping") {
-    if (state === "shipment_required") return { state: "shipping", state: "shipment_assigned" };
-    if (state === "shipment_assigned") return { state: "finance", state: "invoice_required" };
+    if (state === "shipment_required") return { stage: "shipping", state: "shipment_assigned" };
+    if (state === "shipment_assigned") return { stage: "finance", state: "invoice_required" };
     return null;
   }
   const states = forwardStages(state);
@@ -148,16 +148,16 @@ export function getNextStage(state: StageId, state: StateId): { state: StageId; 
   const pi = STATES.findIndex((x) => x.id === state);
   if (pi < STATES.length - 1) {
     const next = STATES[pi + 1];
-    if (next.id === "shipping") return { state: "shipping", state: "shipment_required" };
-    return { state: next.id, state: next.states[0].id };
+    if (next.id === "shipping") return { stage: "shipping", state: "shipment_required" };
+    return { stage: next.id, state: next.states[0].id };
   }
   return null;
 }
 
-export function getPrevStage(state: StageId, state: StateId): { state: StageId; state: StateId } | null {
+export function getPrevStage(stage: StageId, state: StateId): { stage: StageId; state: StateId } | null {
   if (state === "shipping") {
     if (state === "shipment_assigned" || state === "shipment_required") {
-      return { state: "operations", state: "in_production" };
+      return { stage: "operations", state: "in_production" };
     }
     return null;
   }
@@ -167,9 +167,9 @@ export function getPrevStage(state: StageId, state: StateId): { state: StageId; 
   const pi = STATES.findIndex((x) => x.id === state);
   if (pi > 0) {
     const prev = STATES[pi - 1];
-    if (prev.id === "shipping") return { state: "shipping", state: "shipment_assigned" };
+    if (prev.id === "shipping") return { stage: "shipping", state: "shipment_assigned" };
     const prevStages = forwardStages(prev.id);
-    return { state: prev.id, state: prevStages[prevStages.length - 1] };
+    return { stage: prev.id, state: prevStages[prevStages.length - 1] };
   }
   return null;
 }
@@ -181,7 +181,7 @@ export interface MoveValidation {
 }
 
 /** Validates that a project has the required fields to enter `target`. */
-export function validateMove(project: Project, target: { state: StageId; state: StateId }): MoveValidation {
+export function validateMove(project: Project, target: { stage: StageId; state: StateId }): MoveValidation {
   // Anything past Sales/Confirming requires detail summary + supplier + shipping mode.
   const STATE_GATE_ORDER: StateId[] = [
     "proposal", "quote", "confirming",
@@ -228,7 +228,7 @@ interface StageStoreCtx {
   archivedProjects: Project[];
   shipments: Shipment[];
   suppliers: Supplier[];
-  moveCard: (cardId: string, target: { state: StageId; state: StateId }) => MoveResult;
+  moveCard: (cardId: string, target: { stage: StageId; state: StateId }) => MoveResult;
   updateProject: (id: string, patch: Partial<Project>) => void;
   renameProject: (currentName: string, newName: string) => { count: number };
   addNote: (projectId: string, text: string, author?: string) => void;
@@ -241,9 +241,9 @@ interface StageStoreCtx {
   /** Toggle the "needs attention" flag on a project. */
   toggleFlag: (projectId: string) => void;
   /** Soft-delete: send to Trash. */
-  softDeleteProject: (projectId: string) => { restoredFrom: { state: StageId; state: StateId } } | null;
+  softDeleteProject: (projectId: string) => { restoredFrom: { stage: StageId; state: StateId } } | null;
   /** Restore a trashed project to its original state/state. */
-  restoreProject: (projectId: string) => { state: StageId; state: StateId } | null;
+  restoreProject: (projectId: string) => { stage: StageId; state: StateId } | null;
   /** Permanently remove a project from the database. */
   hardDeleteProject: (projectId: string) => void;
   /** @deprecated use softDeleteProject for the trash flow. */
@@ -272,7 +272,7 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
       let next: Project = { ...p };
       if (p.state === "shipping" &&
           s !== "shipment_required" && s !== "shipment_assigned") {
-        next = { ...next, state: "finance" as const, state: "invoice_required" as const };
+        next = { ...next, stage: "finance" as const, state: "invoice_required" as const };
       }
       // ── Payment-terms / invoice-tracking defaults for seed data ──
       if (!next.paymentTerms) {
@@ -334,7 +334,7 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
 
     setProjects((prev) => prev.map((p) => {
       if (p.id !== cardId) return p;
-      const patch: Partial<Project> = { state: target.state, state: target.state };
+      const patch: Partial<Project> = { stage: target.state, state: target.state };
       if (target.state === "shipping" && target.state === "shipment_required") {
         patch.shipmentId = undefined;
       }
@@ -367,25 +367,25 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
         next = appendLog(next, {
           actor: actorOf(u), actionType: "mark_paid",
           description: `${u.shortName} marked this paid`,
-          metadata: { fromPipeline: p.state, fromStage: p.state, toPipeline: target.state, toStage: target.state },
+          metadata: { fromPipeline: p.stage, fromStage: p.state, toPipeline: target.stage, toStage: target.state },
         });
       } else if (isArchive) {
         next = appendLog(next, {
           actor: actorOf(u), actionType: "archive",
           description: `${u.shortName} archived this`,
-          metadata: { fromPipeline: p.state, fromStage: p.state },
+          metadata: { fromPipeline: p.stage, fromStage: p.state },
         });
       } else if (wasArchive) {
         next = appendLog(next, {
           actor: actorOf(u), actionType: "unarchive",
           description: `${u.shortName} restored this from archive`,
-          metadata: { toPipeline: target.state, toStage: target.state },
+          metadata: { toPipeline: target.stage, toStage: target.state },
         });
       } else {
         next = appendLog(next, {
           actor: actorOf(u), actionType: "state_change",
           description: `${u.shortName} moved this from ${fromLabel} to ${toLabel}`,
-          metadata: { fromPipeline: p.state, fromStage: p.state, toPipeline: target.state, toStage: target.state },
+          metadata: { fromPipeline: p.stage, fromStage: p.state, toPipeline: target.stage, toStage: target.state },
         });
       }
       return next;
@@ -499,7 +499,7 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
       notes: undefined,
       lineItems: undefined,
       log: undefined,
-      state: orig.state,
+      stage: orig.state,
       state: orig.state,
       flagged: false,
       deletedAt: undefined,
@@ -524,7 +524,7 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
       projectName: input.projectName,
       detailSummary: input.detailSummary,
       pointPerson: input.pointPerson ?? "AV",
-      state: "sales",
+      stage: "sales",
       state: "proposal",
       deadline: "—",
       deadlineDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -561,7 +561,7 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
   const softDeleteProject = useCallback<StageStoreCtx["softDeleteProject"]>((projectId) => {
     const orig = projects.find((p) => p.id === projectId && !p.deletedAt);
     if (!orig) return null;
-    const restoredFrom = { state: orig.state, state: orig.state };
+    const restoredFrom = { stage: orig.state, state: orig.state };
     const u = userRef.current;
     setProjects((prev) => prev.map((p) =>
       p.id === projectId
@@ -591,13 +591,13 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
     setProjects((prev) => prev.map((p) =>
       p.id === projectId
         ? appendLog(
-            { ...p, state: targetPipeline, state: targetStage,
+            { ...p, stage: targetPipeline, state: targetStage,
               deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined },
             { actor: actorOf(u), actionType: "restore", description: `${u.shortName} restored this from Trash` },
           )
         : p,
     ));
-    return { state: targetPipeline, state: targetStage };
+    return { stage: targetPipeline, state: targetStage };
   }, [projects]);
 
   const hardDeleteProject = useCallback((projectId: string) => {
@@ -641,11 +641,11 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
     const u = userRef.current;
     setProjects((prev) => prev.map((p) => {
       if (p.id !== projectId) return p;
-      const next = touch({ ...p, shipmentId, state: "shipping" as const, state: "shipment_assigned" as const, shippingMode: ship.mode });
+      const next = touch({ ...p, shipmentId, stage: "shipping" as const, state: "shipment_assigned" as const, shippingMode: ship.mode });
       return appendLog(next, {
         actor: actorOf(u), actionType: "state_change",
         description: `${u.shortName} assigned this to shipment ${ship.code}`,
-        metadata: { fromPipeline: p.state, fromStage: p.state, toPipeline: "shipping", toStage: "shipment_assigned" },
+        metadata: { fromPipeline: p.stage, fromStage: p.state, toPipeline: "shipping", toStage: "shipment_assigned" },
       });
     }));
   }, [shipments]);
@@ -676,13 +676,13 @@ export const StageStoreProvider = ({ children }: { children: ReactNode }) => {
     setProjects((prev) => prev.map((p) => {
       if (p.shipmentId === shipmentId && p.state === "shipping") {
         count += 1;
-        const patch: Partial<Project> = { state: "finance", state: "invoice_required" };
+        const patch: Partial<Project> = { stage: "finance", state: "invoice_required" };
         if (!p.invoiceNumber) patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
         const next = touch({ ...p, ...patch });
         return appendLog(next, {
           actor: actorOf(u), actionType: "state_change",
           description: `${u.shortName} marked shipment delivered`,
-          metadata: { fromPipeline: p.state, fromStage: p.state, toPipeline: "finance", toStage: "invoice_required" },
+          metadata: { fromPipeline: p.stage, fromStage: p.state, toPipeline: "finance", toStage: "invoice_required" },
         });
       }
       return p;

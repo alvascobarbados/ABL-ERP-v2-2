@@ -259,13 +259,13 @@ export const ProjectCard = ({
   const handleArchive = () => {
     const fromPipeline = card.state;
     const fromStage = card.state;
-    store.moveCard(card.id, { state: "sales", state: "archive" });
+    store.moveCard(card.id, { stage: "sales", state: "archive" });
     toast.success(`${proj.customer} · ${proj.projectName} archived`, {
       duration: 5000,
       action: {
         label: "Undo",
         onClick: () => {
-          store.moveCard(card.id, { state: fromPipeline, state: fromStage });
+          store.moveCard(card.id, { stage: fromPipeline, state: fromStage });
           toast("Archive undone", { duration: 1800 });
         },
       },

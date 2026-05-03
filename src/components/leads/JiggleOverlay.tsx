@@ -16,11 +16,11 @@ export interface JiggleAnchor {
 interface JiggleOverlayProps {
   anchor: JiggleAnchor | null;
   onClose: () => void;
-  onPick: (target: { state: StageId; state: StateId }) => void;
+  onPick: (target: { stage: StageId; state: StateId }) => void;
 }
 
 interface ChipDef {
-  state: StageId;
+  stage: StageId;
   state: StateId;
   title: string;
   isCurrent: boolean;
@@ -72,9 +72,9 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
       let first = true;
       for (const s of p.states) {
         const isCurrent = card.state === p.id && card.state === s.id;
-        const v = validateMove(card.project, { state: p.id, state: s.id });
+        const v = validateMove(card.project, { stage: p.id, state: s.id });
         out.push({
-          state: p.id,
+          stage: p.id,
           state: s.id,
           title: s.title,
           isCurrent,
@@ -207,11 +207,11 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
     }
     if (chip.isInvalid) {
       haptics.nope();
-      onPick({ state: chip.state, state: chip.state });
+      onPick({ stage: chip.state, state: chip.state });
       return;
     }
     haptics.commit();
-    onPick({ state: chip.state, state: chip.state });
+    onPick({ stage: chip.state, state: chip.state });
   };
 
   const onBackdropPointerDown = (e: React.PointerEvent) => {

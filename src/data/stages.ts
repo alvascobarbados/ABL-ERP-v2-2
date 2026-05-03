@@ -98,7 +98,7 @@ export const STATES: StageConfig[] = [
 ];
 
 /** Canonical "this project is completed/paid" check. */
-export const isCompletedProject = (p: { state: StageId; state: StateId }) =>
+export const isCompletedProject = (p: { stage: StageId; state: StateId }) =>
   p.state === "finance" && p.state === "paid";
 
 export const STATE_ACCENT: Record<StateId, string> = {
@@ -246,7 +246,7 @@ export interface Project {
   salesShippingLabel?: SalesShippingLabel; // Sales-only display string
   shipmentId?: string;          // assigned in Shipping
   trackingRef?: string;         // free-form / FCL- / LCL- / carrier digits
-  state: StageId;
+  stage: StageId;
   state: StateId;
   deadline: string;
   deadlineDate: Date;
@@ -359,7 +359,7 @@ export interface StageCard {
   project: Project;
   supplier?: Supplier;
   shipment?: Shipment;
-  state: StageId;
+  stage: StageId;
   state: StateId;
   deadline: string;
   deadlineDate: Date;
@@ -400,7 +400,7 @@ function seededOffset(seed: number, min: number, max: number): number {
 }
 const p = (
   customer: string, pointPerson: string, projectName: string,
-  date: Date, value: number, state: StageId, state: StateId,
+  date: Date, value: number, stage: StageId, state: StateId,
   opts: ProjOpts = {},
 ): Project => {
   // Migration: Ocean FCL/LCL → mode "Ocean" + trackingRef prefix hint
@@ -848,7 +848,7 @@ export function buildCard(project: Project): StageCard {
     project,
     supplier: getSupplier(project.supplierId),
     shipment: getShipment(project.shipmentId),
-    state: project.state,
+    stage: project.state,
     state: project.state,
     deadline: project.deadline,
     deadlineDate: project.deadlineDate,

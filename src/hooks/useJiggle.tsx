@@ -16,7 +16,7 @@ const Ctx = createContext<JiggleCtx | null>(null);
 interface ProviderProps {
   children: ReactNode;
   /** Called when the user taps a chip to commit a state move. */
-  onPick: (card: StageCard, target: { state: StageId; state: StateId }) => void;
+  onPick: (card: StageCard, target: { stage: StageId; state: StateId }) => void;
 }
 
 export const JiggleProvider = ({ children, onPick }: ProviderProps) => {
@@ -29,7 +29,7 @@ export const JiggleProvider = ({ children, onPick }: ProviderProps) => {
   const dismiss = useCallback(() => setAnchor(null), []);
 
   const handlePick = useCallback(
-    (target: { state: StageId; state: StateId }) => {
+    (target: { stage: StageId; state: StateId }) => {
       if (!anchor) return;
       const card = anchor.card;
       setAnchor(null);
