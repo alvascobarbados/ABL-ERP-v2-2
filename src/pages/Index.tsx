@@ -418,7 +418,33 @@ const Index = () => {
     });
   };
 
-  const onSwipeForward = (card: PipelineCard) => { const next = nextStage(card); if (next) performMove(card, next); };
+  const markAsPaid = (card: PipelineCard) => {
+    const fromPipeline = card.pipeline;
+    const fromStage = card.stage;
+    const label = `${card.project.customer} · ${card.project.projectName}`;
+    const result = moveCard(card.id, { pipeline: "finance", stage: "paid" });
+    if (!result.ok) return;
+    toast.success(`${label} marked as paid`, {
+      description: "Moved to Completed.",
+      duration: 8000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          moveCard(card.id, { pipeline: fromPipeline, stage: fromStage });
+          toast(`Move undone`, { duration: 2000 });
+        },
+      },
+    });
+  };
+
+  const onSwipeForward = (card: PipelineCard) => {
+    // Special case: Invoiced cards swipe-right → Mark as paid (no modal)
+    if (card.pipeline === "finance" && card.stage === "invoiced") {
+      markAsPaid(card);
+      return;
+    }
+    const next = nextStage(card); if (next) performMove(card, next);
+  };
   const onSwipeBack = (card: PipelineCard) => { const prev = prevStage(card); if (prev) performMove(card, prev); };
   const onOpenPicker = (card: PipelineCard) => setPickerCard(card);
   const handlePickerSelect = (target: { pipeline: PipelineId; stage: StageId }) => {
