@@ -82,12 +82,20 @@ function loadSorts(): Record<TabId, SortState> {
   }
 }
 
-const TODAY = new Date(2026, 4, 8);
 const DAY_MS = 86400000;
 const MODE_ORDER: Record<string, number> = { Air: 0, Ocean: 1, Local: 2 };
 
+function startOfToday() {
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  return t;
+}
+function startOfDay(d: Date) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return x;
+}
 function daysToDeadline(d: Date) {
-  return Math.ceil((d.getTime() - TODAY.getTime()) / DAY_MS);
+  return Math.round((startOfDay(d).getTime() - startOfToday().getTime()) / DAY_MS);
 }
 
 function compareCards(

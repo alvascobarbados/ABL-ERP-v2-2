@@ -26,11 +26,13 @@ interface Props {
   onOpenPicker?: (card: PipelineCard) => void;
 }
 
-const TODAY = new Date(2026, 4, 8);
 const DAY = 86400000;
 
 function getUrgency(date: Date) {
-  const diff = Math.ceil((date.getTime() - TODAY.getTime()) / DAY);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.round((d.getTime() - today.getTime()) / DAY);
+  if (diff === 0) return { label: "due today", color: "hsl(var(--brand-orange))" };
   if (diff < 0)  return { label: `${Math.abs(diff)}d overdue`, color: "hsl(var(--urgent))" };
   if (diff <= 7) return { label: `in ${diff}d`,                color: "hsl(var(--urgent))" };
   if (diff <= 14) return { label: `in ${diff}d`,               color: "hsl(var(--brand-orange))" };
