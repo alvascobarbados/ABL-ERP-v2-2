@@ -200,7 +200,8 @@ export default function Spreadsheet() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <DesktopAppShell contentScroll={false}>
+    <div className="min-h-screen lg:h-screen lg:min-h-0 bg-background flex flex-col w-full">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-background border-b" style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}>
         <div className="px-3 sm:px-5 pt-[max(env(safe-area-inset-top),10px)] pb-2 flex items-center gap-3">
@@ -418,5 +419,6 @@ export default function Spreadsheet() {
       {/* Hidden link kept for accessibility — react-router prefetch is fine */}
       <Link to="/" className="sr-only">Back to pipelines</Link>
     </div>
+    </DesktopAppShell>
   );
 }
