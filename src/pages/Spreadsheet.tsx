@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowDown, ArrowUp, Columns3, Download, Search, X } from "lu
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINES, PipelineId, Project, SUPPLIERS } from "@/data/pipelines";
 import { cn } from "@/lib/utils";
+import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 
 // ─────────── Column model ───────────
 type ColumnId =
