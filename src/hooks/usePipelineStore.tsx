@@ -394,25 +394,61 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   }, [projects]);
 
   const updateProject = useCallback((id: string, patch: Partial<Project>) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? touch({ ...p, ...patch }) : p)));
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== id) return p;
+      const u = userRef.current;
+      const entries = buildFieldEditEntries(p, patch, u, suppliersRef.current);
+      let next = touch({ ...p, ...patch });
+      for (const e of entries) next = appendLog(next, e);
+      return next;
+    }));
   }, []);
 
   const renameProject = useCallback((currentName: string, newName: string) => {
     let count = 0;
+    const u = userRef.current;
     setProjects((prev) => prev.map((p) => {
-      if (p.projectName === currentName) { count += 1; return touch({ ...p, projectName: newName }); }
+      if (p.projectName === currentName) {
+        count += 1;
+        return appendLog(touch({ ...p, projectName: newName }), {
+          actor: actorOf(u), actionType: "field_edit",
+          description: `${u.shortName} changed project name from ${currentName} to ${newName}`,
+          metadata: { field: "projectName", fromValue: currentName, toValue: newName },
+        });
+      }
       return p;
     }));
     return { count };
   }, []);
 
-  const addNote = useCallback((projectId: string, text: string, author = "Av") => {
-    const note: ProjectNote = { id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, ts: new Date(), author, text };
-    setProjects((prev) => prev.map((p) => p.id === projectId ? touch({ ...p, notes: [...(p.notes ?? []), note] }) : p));
+  const addNote = useCallback((projectId: string, text: string, _author?: string) => {
+    const u = userRef.current;
+    const note: ProjectNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      ts: new Date(), author: u.fullName, authorUserId: u.userId, text,
+    };
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      let next = touch({ ...p, notes: [...(p.notes ?? []), note] });
+      next = appendLog(next, {
+        actor: actorOf(u), actionType: "note_added",
+        description: `${u.shortName} added a note`,
+      });
+      return next;
+    }));
   }, []);
 
   const addLineItem = useCallback((projectId: string, item: LineItem) => {
-    setProjects((prev) => prev.map((p) => p.id === projectId ? touch({ ...p, lineItems: [...(p.lineItems ?? []), item] }) : p));
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const u = userRef.current;
+      let next = touch({ ...p, lineItems: [...(p.lineItems ?? []), item] });
+      next = appendLog(next, {
+        actor: actorOf(u), actionType: "line_item_change",
+        description: `${u.shortName} added line item ${item.qty} × ${item.description}`,
+      });
+      return next;
+    }));
   }, []);
 
   const updateLineItem = useCallback((projectId: string, index: number, item: LineItem) => {
@@ -421,7 +457,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       const items = [...(p.lineItems ?? [])];
       if (index < 0 || index >= items.length) return p;
       items[index] = item;
-      return touch({ ...p, lineItems: items });
+      const u = userRef.current;
+      let next = touch({ ...p, lineItems: items });
+      next = appendLog(next, {
+        actor: actorOf(u), actionType: "line_item_change",
+        description: `${u.shortName} edited line item ${item.qty} × ${item.description}`,
+      });
+      return next;
     }));
   }, []);
 
@@ -430,8 +472,15 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       if (p.id !== projectId) return p;
       const items = [...(p.lineItems ?? [])];
       if (index < 0 || index >= items.length) return p;
+      const removed = items[index];
       items.splice(index, 1);
-      return touch({ ...p, lineItems: items });
+      const u = userRef.current;
+      let next = touch({ ...p, lineItems: items });
+      next = appendLog(next, {
+        actor: actorOf(u), actionType: "line_item_change",
+        description: `${u.shortName} removed line item ${removed.qty} × ${removed.description}`,
+      });
+      return next;
     }));
   }, []);
 
