@@ -638,9 +638,16 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const assignToShipment = useCallback((projectId: string, shipmentId: string) => {
     const ship = shipments.find((s) => s.id === shipmentId);
     if (!ship) return;
-    setProjects((prev) => prev.map((p) => p.id === projectId
-      ? touch({ ...p, shipmentId, pipeline: "shipping", stage: "shipment_assigned", shippingMode: ship.mode })
-      : p));
+    const u = userRef.current;
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const next = touch({ ...p, shipmentId, pipeline: "shipping" as const, stage: "shipment_assigned" as const, shippingMode: ship.mode });
+      return appendLog(next, {
+        actor: actorOf(u), actionType: "stage_change",
+        description: `${u.shortName} assigned this to shipment ${ship.code}`,
+        metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "shipping", toStage: "shipment_assigned" },
+      });
+    }));
   }, [shipments]);
 
   const createShipment = useCallback((input: NewShipmentInput): Shipment => {
@@ -660,19 +667,23 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const updateShipment = useCallback((id: string, patch: Partial<Shipment>) => {
     setShipments((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-    // Bump updatedAt on all projects assigned to this shipment so the
-    // Spreadsheet "Last Updated" column reflects the change.
     setProjects((prev) => prev.map((p) => (p.shipmentId === id ? touch(p) : p)));
   }, []);
 
   const markShipmentDelivered = useCallback((shipmentId: string) => {
     let count = 0;
+    const u = userRef.current;
     setProjects((prev) => prev.map((p) => {
       if (p.shipmentId === shipmentId && p.pipeline === "shipping") {
         count += 1;
         const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required" };
         if (!p.invoiceNumber) patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
-        return touch({ ...p, ...patch });
+        const next = touch({ ...p, ...patch });
+        return appendLog(next, {
+          actor: actorOf(u), actionType: "stage_change",
+          description: `${u.shortName} marked shipment delivered`,
+          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "finance", toStage: "invoice_required" },
+        });
       }
       return p;
     }));
