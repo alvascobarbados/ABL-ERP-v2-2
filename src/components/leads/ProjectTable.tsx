@@ -204,11 +204,12 @@ const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | 
   { key: "urgency", label: "Urgency", defaultPx: 100 },
 ];
 
-const GRID_COLS = COLS.map((c) => c.width).join(" ") + " 36px"; // +1 for actions
-
-export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: Props) => {
+export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
+  const cw = useColumnWidths();
+  const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
+  const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
   // null = no local override; rows render in the order Index.tsx provides
   // (which respects the global sort/default for the current scope).
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
