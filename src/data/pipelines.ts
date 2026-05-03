@@ -75,13 +75,21 @@ export const PIPELINES: PipelineConfig[] = [
   {
     id: "finance",
     title: "Finance",
+    // "paid" stage still exists in StageId for backward compat and as the
+    // canonical marker that a project is COMPLETED. It is intentionally
+    // NOT listed here so the Finance pipeline kanban renders only two
+    // columns (Invoice Required → Invoiced). Completed projects surface
+    // under the dedicated "Completed" scope tab.
     stages: [
       { id: "invoice_required", title: "Invoice Required" },
       { id: "invoiced", title: "Invoiced" },
-      { id: "paid", title: "Paid" },
     ],
   },
 ];
+
+/** Canonical "this project is completed/paid" check. */
+export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) =>
+  p.pipeline === "finance" && p.stage === "paid";
 
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
