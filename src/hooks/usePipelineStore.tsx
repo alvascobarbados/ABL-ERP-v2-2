@@ -163,13 +163,34 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     // Defensive migration: any project lingering on the retired
     // "shipment_delivered" stage (or any other unknown shipping stage)
     // moves to Finance · Invoice Required. Shipping no longer has stages.
-    SEED_PROJECTS.map((p) => {
+    SEED_PROJECTS.map((p, i) => {
       const s = p.stage as string;
+      let next: Project = { ...p };
       if (p.pipeline === "shipping" &&
           s !== "shipment_required" && s !== "shipment_assigned") {
-        return { ...p, pipeline: "finance" as const, stage: "invoice_required" as const };
+        next = { ...next, pipeline: "finance" as const, stage: "invoice_required" as const };
       }
-      return { ...p };
+      // ── Payment-terms / invoice-tracking defaults for seed data ──
+      if (!next.paymentTerms) {
+        next.paymentTerms = "Net 30";
+        next.paymentTermsInherited = true;
+      }
+      if (next.pipeline === "finance") {
+        const now = Date.now();
+        if (next.stage === "invoice_required" && !next.invoiceRequiredEnteredAt) {
+          // 1–22d ago, deterministic per-index
+          const off = ((i * 13 + 5) % 22) + 1;
+          next.invoiceRequiredEnteredAt = new Date(now - off * 86400000);
+        }
+        if ((next.stage === "invoiced" || next.stage === "paid") && !next.invoiceIssuedDate) {
+          const base = next.stage === "paid" ? 30 : 12;
+          const jitter = ((i * 7 + 3) % 18) - 4;
+          const days = Math.max(1, base + jitter);
+          next.invoiceIssuedDate = new Date(now - days * 86400000);
+          next.invoiceIssuedDateAssumed = true;
+        }
+      }
+      return next;
     }),
   );
   const [shipments, setShipments] = useState<Shipment[]>(() => SEED_SHIPMENTS.map((s) => ({ ...s })));
@@ -209,6 +230,17 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       }
       if (target.pipeline === "finance" && !p.invoiceNumber) {
         patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`; // 1040–1060
+      }
+      // Auto-track Invoice Required entry timestamp.
+      if (target.pipeline === "finance" && target.stage === "invoice_required"
+          && !p.invoiceRequiredEnteredAt) {
+        patch.invoiceRequiredEnteredAt = new Date();
+      }
+      // Auto-set invoice issued date when entering Invoiced (assumed flag = true).
+      if (target.pipeline === "finance" && target.stage === "invoiced"
+          && !p.invoiceIssuedDate) {
+        patch.invoiceIssuedDate = new Date();
+        patch.invoiceIssuedDateAssumed = true;
       }
       return touch({ ...p, ...patch });
     }));
@@ -307,6 +339,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       orderType: "New",
       priority: "Standard",
       createdAt: new Date(),
+      paymentTerms: "Net 30",
+      paymentTermsInherited: true,
     };
     setProjects((prev) => [newProj, ...prev]);
     return newProj;

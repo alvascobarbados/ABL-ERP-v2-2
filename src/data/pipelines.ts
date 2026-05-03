@@ -219,6 +219,17 @@ export interface Project {
   // containing view. Toggleable from the card three-dots menu and the
   // dedicated flag icon on the card.
   flagged?: boolean;
+  // ── Payment terms (inherited from customer at create; per-project override) ──
+  paymentTerms?: import("@/lib/paymentTerms").PaymentTermsId;
+  paymentTermsCustomDays?: number;
+  /** True when paymentTerms came from customer default (not user-overridden on this project). */
+  paymentTermsInherited?: boolean;
+  /** Date the invoice was issued. Auto-set on transition to Invoiced; user-editable. */
+  invoiceIssuedDate?: Date;
+  /** True when invoiceIssuedDate is the auto-tracked stage timestamp (not user-edited). */
+  invoiceIssuedDateAssumed?: boolean;
+  /** Auto-set on transition to Invoice Required (system field). */
+  invoiceRequiredEnteredAt?: Date;
 }
 
 /** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
@@ -723,6 +734,34 @@ const noBoth = find("Bermudez Group", "Snack Launch", "POS shelf strips");
 if (noBoth && noBoth.pipeline === "operations") {
   noBoth.poNumber = undefined;
   noBoth.shippingMode = undefined;
+}
+
+// ─────────── Payment-terms migration on existing seed projects ───────────
+// All projects default to "Net 30" inherited; finance-stage projects get
+// sensible default invoice timestamps so the aging UI has data to show.
+const _NOW = new Date();
+const _FIN_AGE: Record<string, number> = {
+  invoice_required: 5,
+  invoiced: 12,
+  paid: 30,
+};
+for (let i = 0; i < PROJECTS.length; i++) {
+  const proj = PROJECTS[i];
+  proj.paymentTerms = proj.paymentTerms ?? "Net 30";
+  proj.paymentTermsInherited = true;
+  if (proj.pipeline === "finance") {
+    if (proj.stage === "invoice_required" && !proj.invoiceRequiredEnteredAt) {
+      const offset = (seededOffset(i + 1, 1, 22) || 5);
+      proj.invoiceRequiredEnteredAt = new Date(_NOW.getTime() - offset * 86400000);
+    }
+    if ((proj.stage === "invoiced" || proj.stage === "paid") && !proj.invoiceIssuedDate) {
+      const baseOffset = _FIN_AGE[proj.stage] ?? 10;
+      const jitter = seededOffset(i + 100, -4, 25);
+      const days = Math.max(1, baseOffset + jitter);
+      proj.invoiceIssuedDate = new Date(_NOW.getTime() - days * 86400000);
+      proj.invoiceIssuedDateAssumed = true;
+    }
+  }
 }
 
 // ─────────── Lookups ───────────

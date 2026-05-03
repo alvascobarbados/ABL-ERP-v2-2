@@ -310,17 +310,22 @@ const Index = () => {
     return pipelineProjects.filter((p) => p.pipeline === activePipeline).map(buildCard);
   }, [activePipeline, isAll, pipelineProjects]);
 
+  // Pipeline counts EXCLUDE Paid — counts communicate operational load.
+  // Paid records still render in the Paid column on Finance tab.
+  const isCountable = (p: Project) => !(p.pipeline === "finance" && p.stage === "paid");
+
   const counts = useMemo<Record<PipelineId, number>>(() => ({
-    sales: pipelineProjects.filter((p) => p.pipeline === "sales").length,
-    operations: pipelineProjects.filter((p) => p.pipeline === "operations").length,
-    shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
-    finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
+    sales: pipelineProjects.filter((p) => p.pipeline === "sales" && isCountable(p)).length,
+    operations: pipelineProjects.filter((p) => p.pipeline === "operations" && isCountable(p)).length,
+    shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && isCountable(p)).length,
+    finance: pipelineProjects.filter((p) => p.pipeline === "finance" && isCountable(p)).length,
   }), [pipelineProjects]);
 
   // Filtered counts — used by chevron tabs to update live as filters change.
   const filteredCounts = useMemo<Record<PipelineId, number>>(() => {
     const q = search.trim();
     const match = (p: Project) => {
+      if (!isCountable(p)) return false;
       const c = buildCard(p);
       if (!cardMatchesFilter(c, filters)) return false;
       if (q && !projectMatchesSearch(p, q)) return false;
