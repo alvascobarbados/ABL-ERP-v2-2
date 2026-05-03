@@ -2,22 +2,24 @@ import { cn } from "@/lib/utils";
 import { PIPELINES, PipelineId } from "@/data/pipelines";
 import { useFriendlyMode } from "@/hooks/useFriendlyMode";
 
-export type TabId = PipelineId | "all";
+export type TabId = PipelineId | "all" | "completed";
 
 interface Props {
   active: TabId;
   onChange: (id: TabId) => void;
   counts: Record<PipelineId, number>;
+  completedCount?: number;
   pulse?: PipelineId | null;
 }
 
-export const PipelineTabs = ({ active, onChange, counts, pulse }: Props) => {
+export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
   const { friendly } = useFriendlyMode();
-  const allCount = counts.sales + counts.operations + counts.shipping + counts.finance;
+  const activeCount = counts.sales + counts.operations + counts.shipping + counts.finance;
 
-  const tabs: { id: TabId; title: string; count: number; isAll?: boolean }[] = [
-    { id: "all", title: "All", count: allCount, isAll: true },
+  const tabs: { id: TabId; title: string; count: number; isAll?: boolean; isCompleted?: boolean }[] = [
+    { id: "all", title: "Active", count: activeCount, isAll: true },
     ...PIPELINES.map((p) => ({ id: p.id as TabId, title: p.title, count: counts[p.id] })),
+    { id: "completed", title: "Completed", count: completedCount, isCompleted: true },
   ];
 
   return (
@@ -30,8 +32,8 @@ export const PipelineTabs = ({ active, onChange, counts, pulse }: Props) => {
     >
       {tabs.map((p) => {
         const isActive = p.id === active;
-        const isPulsing = !p.isAll && pulse === p.id;
-        const activeBg = p.isAll ? "hsl(var(--foreground))" : "hsl(var(--brand-navy))";
+        const isPulsing = !p.isAll && !p.isCompleted && pulse === p.id;
+        const activeBg = p.isCompleted ? "#6B8E5A" : p.isAll ? "hsl(var(--foreground))" : "hsl(var(--brand-navy))";
         return (
           <button
             key={p.id}
@@ -56,7 +58,14 @@ export const PipelineTabs = ({ active, onChange, counts, pulse }: Props) => {
                 isActive
                   ? { backgroundColor: "rgba(255,255,255,0.2)", color: "#fff" }
                   : p.count > 0
-                    ? { backgroundColor: p.isAll ? "hsl(var(--foreground))" : "hsl(var(--brand-orange))", color: "#fff" }
+                    ? {
+                        backgroundColor: p.isCompleted
+                          ? "#6B8E5A"
+                          : p.isAll
+                            ? "hsl(var(--foreground))"
+                            : "hsl(var(--brand-orange))",
+                        color: "#fff",
+                      }
                     : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
               }
             >
