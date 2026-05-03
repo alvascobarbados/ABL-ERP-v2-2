@@ -174,7 +174,9 @@ function compareCards(
 
 const COLS: { key: SortKey; label: string; width: string; align?: "right" | "left" }[] = [
   { key: "flagged", label: "", width: "32px" },
-  { key: "stage", label: "Pipeline · Stage", width: "150px" },
+  // Wide enough for "Production · Pre-Production" / "Finance · Invoice Required"
+  // without mid-word truncation at our 13px row font.
+  { key: "stage", label: "Pipeline · Stage", width: "220px" },
   { key: "customer", label: "Customer", width: "150px" },
   { key: "project", label: "Project", width: "minmax(220px, 1.6fr)" },
   { key: "supplier", label: "Supplier", width: "130px" },
