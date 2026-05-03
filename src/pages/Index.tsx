@@ -692,6 +692,8 @@ const Index = () => {
             visible={visible}
             onOpenCard={setSelectedCard}
             onOpenPicker={onOpenPicker}
+            hasActiveFilter={hasActiveFilter || isSearching}
+            onClearFilters={() => { setFilters(EMPTY_FILTER); setSearch(""); }}
           />
         ) : isCompleted ? (
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 bg-[#6B8E5A]/[0.04]">
