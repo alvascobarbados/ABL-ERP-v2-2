@@ -531,13 +531,14 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <ViewSwitcher value={desktopView} onChange={setDesktopView} />
               <div className="flex-1 min-w-0">
-                <TopControls
+              <TopControls
                   filter={filters}
                   sort={sort}
                   search={search}
                   onSearchChange={setSearch}
                   onOpenFilter={() => setFilterSheetOpen(true)}
                   onOpenSort={() => setSortSheetOpen(true)}
+                  hideFilter
                 />
               </div>
             </div>
