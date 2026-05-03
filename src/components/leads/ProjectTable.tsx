@@ -12,6 +12,23 @@ import { Flag, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
 } from "@/data/pipelines";
+
+// Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
+const PIPELINE_ORDER: Record<PipelineId, number> = {
+  sales: 0, operations: 1, shipping: 2, finance: 3,
+};
+// Display overrides for stages whose canonical title differs from the
+// PIPELINES config (or that aren't listed there at all). "paid" must
+// render Title Case; both shipping sub-stages collapse to "Shipping"
+// because the Shipping pipeline has only one user-facing stage.
+const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
+  paid: "Paid",
+  shipment_required: "Shipping",
+  shipment_assigned: "Shipping",
+};
+function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
+  return STAGE_DISPLAY[stage] ?? getStageTitle(pipeline, stage);
+}
 import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
 import { useMasterData } from "@/hooks/useMasterData";
 import { cn } from "@/lib/utils";
@@ -56,17 +73,25 @@ function fmtDeadline(date?: Date): string {
 
 function stageLabel(c: PipelineCard, activeTab: TabId): string {
   const pipelineTitle = PIPELINES.find((p) => p.id === c.pipeline)?.title ?? c.pipeline;
-  if (activeTab === "all") {
-    if (c.pipeline === "shipping") {
-      return `${pipelineTitle} · ${c.project.shippingMode ?? "—"}`;
-    }
-    return `${pipelineTitle} · ${getStageTitle(c.pipeline, c.stage)}`;
+  // Shipping has exactly one user-facing stage ("Shipping") — collapse the
+  // pipeline·stage display to just "Shipping" rather than "Shipping · Shipping".
+  // The mode (Air/Ocean/Local) is rendered in the dedicated Mode column, NOT here.
+  if (c.pipeline === "shipping") {
+    return activeTab === "all" ? "Shipping" : "Shipping";
   }
-  if (activeTab === "shipping") {
-    return c.project.shippingMode ?? "—";
-  }
-  return getStageTitle(c.pipeline, c.stage);
+  const stageTitle = displayStageTitle(c.pipeline, c.stage);
+  if (activeTab === "all") return `${pipelineTitle} · ${stageTitle}`;
+  return stageTitle;
 }
+
+// Stage progression rank within each pipeline. Lower = earlier in the flow.
+// Shipping collapses to a single rank (only one user-facing stage).
+const STAGE_RANK: Record<StageId, number> = {
+  proposal: 0, quote: 1, confirming: 2, archive: 99,
+  preproduction: 0, in_production: 1,
+  shipment_required: 0, shipment_assigned: 0,
+  invoice_required: 0, invoiced: 1, paid: 2,
+};
 
 function supplierName(id: string | undefined, lookup?: (id?: string | null) => { name: string } | undefined): string {
   if (!id) return "";
@@ -92,8 +117,18 @@ function compareCards(
     case "flagged":
       // flagged first when asc
       return dir * (Number(!!b.project.flagged) - Number(!!a.project.flagged));
-    case "stage":
-      return dir * (`${a.pipeline}-${a.stage}`).localeCompare(`${b.pipeline}-${b.stage}`);
+    case "stage": {
+      // Sort by pipeline order (Sales→Production→Shipping→Finance), then by
+      // stage progression rank within pipeline (NOT alphabetical). Within
+      // Shipping (single stage) tie-break alphabetically by Customer.
+      const ap = PIPELINE_ORDER[a.pipeline] ?? 99;
+      const bp = PIPELINE_ORDER[b.pipeline] ?? 99;
+      if (ap !== bp) return dir * (ap - bp);
+      const ar = STAGE_RANK[a.stage] ?? 99;
+      const br = STAGE_RANK[b.stage] ?? 99;
+      if (ar !== br) return dir * (ar - br);
+      return dir * a.project.customer.localeCompare(b.project.customer);
+    }
     case "customer":
       return dir * a.project.customer.localeCompare(b.project.customer);
     case "project":
@@ -139,7 +174,9 @@ function compareCards(
 
 const COLS: { key: SortKey; label: string; width: string; align?: "right" | "left" }[] = [
   { key: "flagged", label: "", width: "32px" },
-  { key: "stage", label: "Pipeline · Stage", width: "150px" },
+  // Wide enough for "Production · Pre-Production" / "Finance · Invoice Required"
+  // without mid-word truncation at our 13px row font.
+  { key: "stage", label: "Pipeline · Stage", width: "220px" },
   { key: "customer", label: "Customer", width: "150px" },
   { key: "project", label: "Project", width: "minmax(220px, 1.6fr)" },
   { key: "supplier", label: "Supplier", width: "130px" },
@@ -157,12 +194,15 @@ const GRID_COLS = COLS.map((c) => c.width).join(" ") + " 36px"; // +1 for action
 export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
-  const [sortKey, setSortKey] = useState<SortKey>("deadline");
+  // null = no local override; rows render in the order Index.tsx provides
+  // (which respects the global sort/default for the current scope).
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<PipelineCard | null>(null);
 
   const sorted = useMemo(() => {
+    if (!sortKey) return visible;
     const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId));
     return list;
   }, [visible, sortKey, sortDir, md.getSupplierByAnyId]);
@@ -172,9 +212,11 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: P
     [sorted],
   );
 
+  // Click cycle: asc → desc → cleared (back to default).
   const onHeaderClick = (k: SortKey) => {
-    if (sortKey === k) setSortDir((d) => (d === 1 ? -1 : 1));
-    else { setSortKey(k); setSortDir(1); }
+    if (sortKey !== k) { setSortKey(k); setSortDir(1); return; }
+    if (sortDir === 1) { setSortDir(-1); return; }
+    setSortKey(null); setSortDir(1);
   };
 
   return (
@@ -195,15 +237,20 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: P
             }}
           >
             {COLS.map((c) => {
-              const isActive = sortKey === c.key;
+              // On the Completed scope the stage column is non-sortable —
+              // every row is already in the terminal stage.
+              const sortable = !(activeTab === "completed" && c.key === "stage");
+              const isActive = sortable && sortKey === c.key;
               const Arrow = isActive ? (sortDir === 1 ? ArrowUp : ArrowDown) : null;
               return (
                 <button
                   key={c.key}
                   type="button"
-                  onClick={() => onHeaderClick(c.key)}
+                  onClick={sortable ? () => onHeaderClick(c.key) : undefined}
+                  disabled={!sortable}
                   className={cn(
-                    "h-10 px-3 inline-flex items-center gap-1 hover:bg-[hsl(var(--brand-navy)/0.04)] transition-colors text-left truncate",
+                    "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate",
+                    sortable ? "hover:bg-[hsl(var(--brand-navy)/0.04)] cursor-pointer" : "cursor-default",
                     c.align === "right" ? "justify-end" : "justify-start",
                   )}
                   title={c.label}

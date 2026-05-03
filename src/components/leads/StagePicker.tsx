@@ -27,52 +27,61 @@ export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }:
       </div>
 
       <div className="space-y-5 mt-4">
-        {PIPELINES.map((p) => (
-          <div key={p.id}>
-            <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mb-2">
-              {p.title}
-            </p>
-            <div className="grid grid-cols-1 gap-1.5">
-              {p.stages.map((s) => {
-                const isCurrent = current?.pipeline === p.id && current?.stage === s.id;
-                const adj = isAdjacent(p.id, s.id);
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => !isCurrent && onPick({ pipeline: p.id, stage: s.id })}
-                    disabled={isCurrent}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-left transition-[var(--transition-smooth)]",
-                      isCurrent
-                        ? "cursor-default"
-                        : adj
-                          ? "bg-card hover:bg-muted/40 font-medium"
-                          : "bg-card/60 border-border/60 hover:bg-muted/40",
-                    )}
-                    style={
-                      isCurrent
-                        ? { backgroundColor: "hsl(var(--brand-navy) / 0.06)", borderColor: "hsl(var(--brand-navy) / 0.4)", boxShadow: "0 0 0 1px hsl(var(--brand-navy) / 0.25)" }
-                        : adj
-                          ? { borderColor: "hsl(var(--brand-navy) / 0.35)" }
-                          : undefined
-                    }
-                  >
-                    <span className="text-sm text-foreground">{s.title}</span>
-                    {isCurrent ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                        <Check className="h-3 w-3" /> Current
-                      </span>
-                    ) : adj ? (
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {next?.pipeline === p.id && next?.stage === s.id ? "Next" : "Prev"}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
+        {PIPELINES.map((p) => {
+          // Shipping has exactly one user-facing stage ("Shipping"). Mode
+          // (Air/Ocean/Local) is changed elsewhere — never via the picker.
+          const stages = p.id === "shipping"
+            ? [{ id: "shipment_required" as StageId, title: "Shipping" }]
+            : p.stages;
+          return (
+            <div key={p.id}>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mb-2">
+                {p.title}
+              </p>
+              <div className="grid grid-cols-1 gap-1.5">
+                {stages.map((s) => {
+                  const isCurrent = current?.pipeline === p.id && (
+                    p.id === "shipping" ? true : current?.stage === s.id
+                  );
+                  const adj = isAdjacent(p.id, s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => !isCurrent && onPick({ pipeline: p.id, stage: s.id })}
+                      disabled={isCurrent}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-left transition-[var(--transition-smooth)]",
+                        isCurrent
+                          ? "cursor-default"
+                          : adj
+                            ? "bg-card hover:bg-muted/40 font-medium"
+                            : "bg-card/60 border-border/60 hover:bg-muted/40",
+                      )}
+                      style={
+                        isCurrent
+                          ? { backgroundColor: "hsl(var(--brand-navy) / 0.06)", borderColor: "hsl(var(--brand-navy) / 0.4)", boxShadow: "0 0 0 1px hsl(var(--brand-navy) / 0.25)" }
+                          : adj
+                            ? { borderColor: "hsl(var(--brand-navy) / 0.35)" }
+                            : undefined
+                      }
+                    >
+                      <span className="text-sm text-foreground">{s.title}</span>
+                      {isCurrent ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <Check className="h-3 w-3" /> Current
+                        </span>
+                      ) : adj ? (
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {next?.pipeline === p.id && next?.stage === s.id ? "Next" : "Prev"}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="pt-4 mt-4 border-t border-border/60">

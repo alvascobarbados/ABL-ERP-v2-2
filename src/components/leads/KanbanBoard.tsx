@@ -49,6 +49,9 @@ function buildColumns(activeTab: TabId, visible: PipelineCard[]): Column[] {
     }));
   }
   if (activeTab === "shipping") {
+    // Shipping has one stage ("Shipping"). The kanban groups by mode
+    // (Air/Ocean/Local) as a UX exception — mode is NOT a stage. Do not
+    // propagate this grouping into the data model.
     return SHIPPING_MODES.map((mode) => ({
       id: mode,
       title: mode,

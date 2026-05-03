@@ -242,7 +242,11 @@ export const ProjectCard = ({
   );
   const u = getUrgency(card.deadlineDate);
 
-  const stageLabel = `${pipelineTitle(card.pipeline)} · ${getStageTitle(card.pipeline, card.stage)}`;
+  // Shipping has one user-facing stage. Display "Shipping · Shipping"
+  // collapses to just "Shipping". "paid" is forced to Title Case "Paid".
+  const stageLabel = card.pipeline === "shipping"
+    ? "Shipping"
+    : `${pipelineTitle(card.pipeline)} · ${card.stage === "paid" ? "Paid" : getStageTitle(card.pipeline, card.stage)}`;
 
   // Action menu handlers
   const handleEdit = () => { haptics.pickup(); editMode.enter(card); };
