@@ -22,6 +22,7 @@ interface Props {
   onChange: (id: TabId) => void;
   /** Filtered counts per pipeline — update live as filters change. */
   counts: Record<PipelineId, number>;
+  completedCount?: number;
   pulse?: PipelineId | null;
 }
 
@@ -32,10 +33,12 @@ const BORDER = 1;         // outline thickness in px
 // Uniform chevron silhouette: notched-left + pointed-right (applied to ALL tabs).
 const CHEVRON_CLIP = `polygon(0 0, calc(100% - ${CHEV}px) 0, 100% 50%, calc(100% - ${CHEV}px) 100%, 0 100%, ${CHEV}px 50%)`;
 
-export const ChevronTabs = ({ active, onChange, counts, pulse }: Props) => {
-  const allCount = counts.sales + counts.operations + counts.shipping + counts.finance;
+export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
+  const activeCount = counts.sales + counts.operations + counts.shipping + counts.finance;
   const flowTabs = PIPELINES.map((p) => ({ id: p.id, title: p.title, count: counts[p.id] }));
   const allActive = active === "all";
+  const completedActive = active === "completed";
+  const SAGE = "#6B8E5A";
 
   return (
     <div className="flex items-stretch gap-3 w-full">
