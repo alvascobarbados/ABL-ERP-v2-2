@@ -238,6 +238,10 @@ export interface Project {
   invoiceIssuedDateAssumed?: boolean;
   /** Auto-set on transition to Invoice Required (system field). */
   invoiceRequiredEnteredAt?: Date;
+  // ── Phase-2 paid-capture fields (nullable; no UI yet) ──
+  paidOnDate?: Date | null;
+  paymentMethod?: string | null;
+  paymentReference?: string | null;
 }
 
 /** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
