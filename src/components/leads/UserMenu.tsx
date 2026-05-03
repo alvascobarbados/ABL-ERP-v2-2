@@ -95,11 +95,11 @@ export const UserMenu = () => {
                     background: "linear-gradient(135deg, hsl(var(--brand-navy)), hsl(var(--brand-orange)))",
                   }}
                 >
-                  {DEFAULT_USER.initials}
+                  {user.initials}
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: "hsl(var(--brand-navy))" }}>
-                    {DEFAULT_USER.fullName}
+                    {user.fullName}
                   </p>
                   <p className="text-[11px] text-muted-foreground">Operations team</p>
                 </div>
