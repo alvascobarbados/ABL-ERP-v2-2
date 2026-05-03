@@ -3,9 +3,9 @@ import { Archive as ArchiveIcon, RotateCcw, X, Search, ArrowDownNarrowWide, Arro
 import { toast } from "sonner";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { StagePicker } from "./StagePicker";
+import { StagePicker } from "./StatePicker";
 import { Project, PipelineId, StageId } from "@/data/stages";
-import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
+import { usePipelineStore, getStageTitle } from "@/hooks/useStageStore";
 import { cn } from "@/lib/utils";
 
 interface Props {

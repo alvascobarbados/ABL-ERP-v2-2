@@ -16,7 +16,7 @@
 import { cn } from "@/lib/utils";
 import { STAGES, PipelineId } from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
-import type { TabId } from "./PipelineTabs";
+import type { TabId } from "./StageTabs";
 
 interface Props {
   active: TabId;

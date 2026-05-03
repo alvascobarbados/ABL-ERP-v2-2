@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
+import { usePipelineStore, getStageTitle } from "@/hooks/useStageStore";
 import { useMasterData } from "@/hooks/useMasterData";
 import { STAGES, PipelineId, Project, ShippingMode, SUPPLIERS, StageId } from "@/data/stages";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";

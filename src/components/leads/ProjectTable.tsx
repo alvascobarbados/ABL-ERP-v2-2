@@ -30,12 +30,12 @@ const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
 function displayStageTitle(stage: PipelineId, state: StageId): string {
   return STAGE_DISPLAY[state] ?? getStageTitle(stage, state);
 }
-import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
+import { getStageTitle, usePipelineStore } from "@/hooks/useStageStore";
 import { useMasterData } from "@/hooks/useMasterData";
 import { cn } from "@/lib/utils";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
-import type { TabId } from "./PipelineTabs";
+import type { TabId } from "./StageTabs";
 
 type SortKey =
   | "flagged" | "state" | "customer" | "project" | "detail" | "supplier"

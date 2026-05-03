@@ -17,7 +17,7 @@ import {
 } from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { ProjectCard } from "./ProjectCard";
-import type { TabId } from "./PipelineTabs";
+import type { TabId } from "./StageTabs";
 
 interface Column {
   id: string;

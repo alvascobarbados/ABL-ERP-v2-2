@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Project, STAGES } from "@/data/stages";
-import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
+import { usePipelineStore, getStageTitle } from "@/hooks/useStageStore";
 import { cn } from "@/lib/utils";
 
 interface Props {

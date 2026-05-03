@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { STAGES, PipelineId, StageId } from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
-import { validateMove } from "@/hooks/usePipelineStore";
+import { validateMove } from "@/hooks/useStageStore";
 import { haptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 

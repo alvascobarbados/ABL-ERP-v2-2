@@ -1,6 +1,6 @@
 import { Sheet } from "./Sheet";
 import { STAGES, PipelineId, StageId } from "@/data/stages";
-import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
+import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/useStageStore";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 

@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { MoreVertical, Factory, Flag, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, formatShippingLabel, getShipment, STAGES } from "@/data/stages";
-import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
+import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/useStageStore";
 import { useJiggle } from "@/hooks/useJiggle";
 import { useEditMode } from "@/hooks/useEditMode";
 import { PIPELINE_ACCENT } from "@/lib/brand";

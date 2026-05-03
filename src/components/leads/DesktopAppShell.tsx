@@ -6,7 +6,7 @@
 import { ReactNode } from "react";
 import { DesktopRail } from "./DesktopRail";
 import { DesktopSidebarReopen } from "./DesktopSidebarReopen";
-import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { usePipelineStore } from "@/hooks/useStageStore";
 
 interface Props {
   children: ReactNode;

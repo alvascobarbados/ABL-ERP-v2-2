@@ -7,7 +7,7 @@ import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
 import { ShippingIcon } from "./ShippingIcon";
 import { SupplierChip } from "./StatusPill";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { usePipelineStore } from "@/hooks/useStageStore";
 
 interface Props {
   shipment: Shipment | null;

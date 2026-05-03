@@ -7,7 +7,7 @@ import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
+import { usePipelineStore, getStageTitle } from "@/hooks/useStageStore";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
   TextEditor, DateEditor, ListPicker, ListOption, BottomSheet,
@@ -16,7 +16,7 @@ import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
 import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { StagePicker } from "./StagePicker";
+import { StagePicker } from "./StatePicker";
 
 interface Props {
   card: PipelineCard | null;

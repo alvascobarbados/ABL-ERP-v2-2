@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { ShipmentsView } from "@/components/leads/ShipmentsView";
 import { ShipmentView } from "@/components/leads/ShipmentView";
-import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { usePipelineStore } from "@/hooks/useStageStore";
 import type { Shipment } from "@/data/stages";
 
 export default function ShipmentsPage() {

@@ -7,10 +7,10 @@ import {
   SUPPLIERS, buildCard, Project,
 } from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
-import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/usePipelineStore";
-import { StageSection } from "@/components/leads/StageSection";
+import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/useStageStore";
+import { StageSection } from "@/components/leads/StateSection";
 import { ProjectCard } from "@/components/leads/ProjectCard";
-import { PipelineTabs } from "@/components/leads/PipelineTabs";
+import { PipelineTabs } from "@/components/leads/StageTabs";
 import { ChevronTabs } from "@/components/leads/ChevronTabs";
 import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
 import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
@@ -25,16 +25,16 @@ import { HamburgerDrawer } from "@/components/leads/HamburgerDrawer";
 import { TopControls } from "@/components/leads/TopControls";
 import { FilterSheet } from "@/components/leads/FilterSheet";
 import { SortSheet, SortState, DEFAULT_DIR, SortField } from "@/components/leads/SortSheet";
-import { StagePicker } from "@/components/leads/StagePicker";
+import { StagePicker } from "@/components/leads/StatePicker";
 import { SettingsMenu } from "@/components/leads/SettingsMenu";
 import { Walkthrough } from "@/components/leads/Walkthrough";
 import { Wordmark } from "@/components/leads/Wordmark";
 import { UserMenu } from "@/components/leads/UserMenu";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
-import { ShippingPipelineView, ShippingFilter } from "@/components/leads/ShippingPipelineView";
-import { AllPipelineView } from "@/components/leads/AllPipelineView";
+import { ShippingPipelineView, ShippingFilter } from "@/components/leads/ShippingStageView";
+import { AllPipelineView } from "@/components/leads/AllStageView";
 import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
-import type { TabId } from "@/components/leads/PipelineTabs";
+import type { TabId } from "@/components/leads/StageTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
@@ -862,7 +862,7 @@ const Index = () => {
   );
 };
 
-import { getNextStage as nextS, getPrevStage as prevS } from "@/hooks/usePipelineStore";
+import { getNextStage as nextS, getPrevStage as prevS } from "@/hooks/useStageStore";
 function nextStage(card: PipelineCard) { return nextS(card.stage, card.state); }
 function prevStage(card: PipelineCard) { return prevS(card.stage, card.state); }
 

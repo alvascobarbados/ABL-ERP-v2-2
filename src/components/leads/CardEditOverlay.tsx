@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, ShippingMode } from "@/data/stages";
-import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { usePipelineStore } from "@/hooks/useStageStore";
 import { TextEditor, DateEditor, ListPicker, TrackingEditor, ListOption } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
