@@ -27,24 +27,26 @@ const App = () => (
         <Sonner />
         <PipelineStoreProvider>
           <MasterDataProvider>
-            <ExpandedCardsProvider>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/spreadsheet" element={<Spreadsheet />} />
-                  <Route path="/customers" element={<MasterList kind="customer" />} />
-                  <Route path="/suppliers" element={<MasterList kind="supplier" />} />
-                  <Route path="/team" element={<MasterList kind="team" />} />
-                  <Route path="/products" element={<MasterList kind="product" />} />
-                  <Route path="/archive" element={<ArchivePage />} />
-                  <Route path="/trash" element={<TrashPage />} />
-                  <Route path="/shipments" element={<ShipmentsPage />} />
-                  <Route path="/shipments/:mode" element={<ShipmentsModePage />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </ExpandedCardsProvider>
+            <ColumnWidthsProvider>
+              <ExpandedCardsProvider>
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/spreadsheet" element={<Spreadsheet />} />
+                    <Route path="/customers" element={<MasterList kind="customer" />} />
+                    <Route path="/suppliers" element={<MasterList kind="supplier" />} />
+                    <Route path="/team" element={<MasterList kind="team" />} />
+                    <Route path="/products" element={<MasterList kind="product" />} />
+                    <Route path="/archive" element={<ArchivePage />} />
+                    <Route path="/trash" element={<TrashPage />} />
+                    <Route path="/shipments" element={<ShipmentsPage />} />
+                    <Route path="/shipments/:mode" element={<ShipmentsModePage />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </ExpandedCardsProvider>
+            </ColumnWidthsProvider>
           </MasterDataProvider>
         </PipelineStoreProvider>
       </FriendlyModeProvider>
