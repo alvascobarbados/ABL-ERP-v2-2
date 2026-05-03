@@ -144,7 +144,7 @@ export default function Spreadsheet() {
         rowKey={(r) => r.project.id}
         columns={columns}
         data={rows}
-        onRowClick={(r) => navigate(`/?project=${encodeURIComponent(r.project.project ? r.project.project : r.project.id)}`)}
+        onRowClick={(r) => navigate(`/?project=${encodeURIComponent(r.project.id)}`)}
         aggregate={<>Total: BBD {fmtBBD(totalBBD)}</>}
         filters={[{
           key: "pipeline",
