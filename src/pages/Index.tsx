@@ -610,6 +610,32 @@ const Index = () => {
           });
           const intakeCount = projects.filter((p) => p.pipeline === "shipping" && p.stage === "shipment_required").length;
 
+          if (isCompleted) {
+            return (
+              <section className="rounded-2xl border border-border/60 bg-[#6B8E5A]/[0.04] p-3">
+                {visible.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic px-2 py-6 text-center">
+                    No completed projects yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {visible.map((c) => (
+                      <ProjectCard
+                        key={c.id}
+                        card={c}
+                        showStageLabel
+                        onOpen={() => setSelectedCard(c)}
+                        onSwipeForward={() => onSwipeForward(c)}
+                        onSwipeBack={() => onSwipeBack(c)}
+                        onOpenPicker={() => onOpenPicker(c)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          }
+
           if (isAll) {
             return (
               <AllPipelineView
