@@ -308,6 +308,7 @@ const Index = () => {
 
   const counts = useMemo<Record<PipelineId, number>>(() => ({
     sales: pipelineProjects.filter((p) => p.pipeline === "sales").length,
+    design: pipelineProjects.filter((p) => p.pipeline === "design").length,
     operations: pipelineProjects.filter((p) => p.pipeline === "operations").length,
     shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
     finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
@@ -324,6 +325,7 @@ const Index = () => {
     };
     return {
       sales: pipelineProjects.filter((p) => p.pipeline === "sales" && match(p)).length,
+      design: pipelineProjects.filter((p) => p.pipeline === "design" && match(p)).length,
       operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length,
       shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && match(p)).length,
       finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
