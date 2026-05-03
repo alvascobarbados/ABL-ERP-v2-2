@@ -133,6 +133,13 @@ function compareCards(
       return dir * a.project.customer.localeCompare(b.project.customer);
     case "project":
       return dir * a.project.projectName.localeCompare(b.project.projectName);
+    case "detail": {
+      const av = a.project.detailSummary?.trim() ?? "";
+      const bv = b.project.detailSummary?.trim() ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv);
+    }
     case "supplier": {
       const av = supplierName(a.project.supplierId, lookup) || a.project.supplierLabel || "";
       const bv = supplierName(b.project.supplierId, lookup) || b.project.supplierLabel || "";
