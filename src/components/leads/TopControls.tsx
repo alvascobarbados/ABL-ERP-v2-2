@@ -12,6 +12,7 @@ interface Props {
   onSearchChange: (q: string) => void;
   onOpenFilter: () => void;
   onOpenSort: () => void;
+  hideFilter?: boolean;
 }
 
 /**
