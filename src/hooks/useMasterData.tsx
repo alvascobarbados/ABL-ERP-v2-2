@@ -250,6 +250,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteSupplier = useCallback(async (id: string) => {
     const { error } = await supabase.from("suppliers").delete().eq("id", id);
     if (error) throw error;
+    setSuppliers((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
   const addTeamMember = useCallback(async (input: { initials: string; full_name: string; role?: TeamMember["role"]; email?: string }) => {
