@@ -117,8 +117,18 @@ function compareCards(
     case "flagged":
       // flagged first when asc
       return dir * (Number(!!b.project.flagged) - Number(!!a.project.flagged));
-    case "stage":
-      return dir * (`${a.pipeline}-${a.stage}`).localeCompare(`${b.pipeline}-${b.stage}`);
+    case "stage": {
+      // Sort by pipeline order (Sales→Production→Shipping→Finance), then by
+      // stage progression rank within pipeline (NOT alphabetical). Within
+      // Shipping (single stage) tie-break alphabetically by Customer.
+      const ap = PIPELINE_ORDER[a.pipeline] ?? 99;
+      const bp = PIPELINE_ORDER[b.pipeline] ?? 99;
+      if (ap !== bp) return dir * (ap - bp);
+      const ar = STAGE_RANK[a.stage] ?? 99;
+      const br = STAGE_RANK[b.stage] ?? 99;
+      if (ar !== br) return dir * (ar - br);
+      return dir * a.project.customer.localeCompare(b.project.customer);
+    }
     case "customer":
       return dir * a.project.customer.localeCompare(b.project.customer);
     case "project":
