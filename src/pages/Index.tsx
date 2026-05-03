@@ -160,6 +160,7 @@ function projectMatchesSearch(p: Project, q: string): boolean {
 function projectHasMissingData(p: Project): boolean {
   const stageRank: Record<StageId, number> = {
     proposal: 0, quote: 1, confirming: 2, archive: 0,
+    design: 2, proof: 2,
     preproduction: 3, in_production: 4,
     shipment_required: 5, shipment_assigned: 6,
     invoice_required: 7, invoiced: 8, paid: 9,
