@@ -1,9 +1,110 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from "react";
 import {
   PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
+  ProjectLogEntry, ProjectLogActionType,
   SHIPMENTS as SEED_SHIPMENTS, SUPPLIERS, ShippingMode,
 } from "@/data/pipelines";
 import { ABL_PROJECTS as SEED_PROJECTS } from "@/data/abl-projects";
+import { useCurrentUser, SYSTEM_CURRENT_USER, type CurrentUser } from "./useCurrentUser";
+
+// ─────────── Log helpers ───────────
+function makeLogId() {
+  return `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function appendLog(p: Project, entry: Omit<ProjectLogEntry, "id" | "ts"> & { ts?: Date }): Project {
+  const full: ProjectLogEntry = {
+    id: makeLogId(),
+    ts: entry.ts ?? new Date(),
+    actor: entry.actor,
+    actionType: entry.actionType,
+    description: entry.description,
+    metadata: entry.metadata,
+  };
+  return { ...p, log: [...(p.log ?? []), full] };
+}
+
+function actorOf(u: CurrentUser) {
+  return { userId: u.userId, displayName: u.shortName };
+}
+
+function pipelineStageLabel(pipeline: PipelineId, stage: StageId): string {
+  const p = PIPELINES.find((x) => x.id === pipeline);
+  const s = p?.stages.find((x) => x.id === stage);
+  return `${p?.title ?? pipeline} · ${s?.title ?? stage}`;
+}
+
+const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
+  customer: "customer",
+  projectName: "project name",
+  detailSummary: "detail",
+  supplierId: "supplier",
+  supplierLabel: "supplier",
+  shippingMode: "mode",
+  trackingRef: "tracking",
+  contactPerson: "contact",
+  pointPerson: "sales rep",
+  deadline: "deadline",
+  deadlineDate: "deadline",
+  value: "amount",
+  quoteNumber: "Q#",
+  poNumber: "PO#",
+  invoiceNumber: "INV#",
+  paymentTerms: "payment terms",
+  invoiceIssuedDate: "invoice issued date",
+};
+
+const SUPPRESSED_FIELDS = new Set<keyof Project>([
+  "updatedAt", "createdAt", "log", "notes", "lineItems",
+  "pipeline", "stage", "flagged",
+  "deletedAt", "deletedFromPipeline", "deletedFromStage",
+  "invoiceRequiredEnteredAt", "invoiceIssuedDateAssumed",
+  "paymentTermsInherited", "paymentTermsCustomDays",
+  "paidOnDate", "paymentMethod", "paymentReference",
+  "salesShippingLabel",
+]);
+
+function fmtVal(field: keyof Project, val: unknown, suppliers: Supplier[]): string {
+  if (val == null || val === "") return "—";
+  if (field === "supplierId") {
+    return suppliers.find((s) => s.id === val)?.name ?? String(val);
+  }
+  if (val instanceof Date) {
+    return `${val.getDate()} ${val.toLocaleString("en-US", { month: "short" })} ${val.getFullYear()}`;
+  }
+  if (field === "value" && typeof val === "number") return `$${val.toLocaleString()}`;
+  return String(val);
+}
+
+function buildFieldEditEntries(
+  prev: Project, patch: Partial<Project>, actor: CurrentUser, suppliers: Supplier[],
+): Array<Omit<ProjectLogEntry, "id" | "ts">> {
+  const out: Array<Omit<ProjectLogEntry, "id" | "ts">> = [];
+  const name = actor.shortName;
+  for (const key of Object.keys(patch) as (keyof Project)[]) {
+    if (SUPPRESSED_FIELDS.has(key)) continue;
+    const before = (prev as any)[key];
+    const after = (patch as any)[key];
+    if (before === after) continue;
+    if (before instanceof Date && after instanceof Date && before.getTime() === after.getTime()) continue;
+    const label = FIELD_LABELS[key];
+    if (!label) continue;
+    const fromStr = fmtVal(key, before, suppliers);
+    const toStr = fmtVal(key, after, suppliers);
+    let desc: string;
+    if (before == null || before === "") desc = `${name} set ${label} to ${toStr}`;
+    else if (after == null || after === "") desc = `${name} cleared ${label}`;
+    else desc = `${name} changed ${label} from ${fromStr} to ${toStr}`;
+    out.push({
+      actor: actorOf(actor),
+      actionType: "field_edit",
+      description: desc,
+      metadata: { field: String(key), fromValue: before as any, toValue: after as any },
+    });
+  }
+  return out;
+}
+
 
 // ─────────── Stage helpers ───────────
 export interface StagePos {
