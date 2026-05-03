@@ -84,6 +84,7 @@ export function validateMove(project: Project, target: { pipeline: PipelineId; s
   // Anything past Sales/Confirming requires detail summary + supplier + shipping mode.
   const STAGE_GATE_ORDER: StageId[] = [
     "proposal", "quote", "confirming",
+    "design", "proof",
     "preproduction", "in_production",
     "shipment_required", "shipment_assigned",
     "invoice_required", "invoiced", "paid",
