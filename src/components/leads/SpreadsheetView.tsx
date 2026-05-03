@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useColumnWidths } from "@/hooks/useColumnWidths";
+import { ColumnResizeHandle } from "./ColumnResizeHandle";
 
 // ─── Editor descriptors ────────────────────────────────────────────────────
 export type EditorOption = { value: string; label: string };
@@ -568,6 +570,8 @@ export function SpreadsheetView<TRow>({
     () => columns.filter((c) => visibility[c.id] !== false),
     [columns, visibility],
   );
+  const cw = useColumnWidths();
+  const effW = (c: SpreadsheetColumn<TRow>) => cw.widthFor(c.id, c.width);
 
   const textOf = (c: SpreadsheetColumn<TRow>, row: TRow): string => {
     if (c.toText) return c.toText(row) ?? "";
@@ -857,17 +861,18 @@ export function SpreadsheetView<TRow>({
               {visibleColumns.map((c, i) => {
                 const isFirst = i === 0;
                 const sortedHere = sort?.col === c.id;
+                const w = effW(c);
                 return (
                   <th
                     key={c.id}
                     onClick={() => cycleSort(c.id)}
                     className={cn(
-                      "px-4 py-2.5 border-b border-r select-none whitespace-nowrap",
+                      "px-4 py-2.5 border-b border-r select-none whitespace-nowrap relative",
                       "text-[10px] uppercase font-semibold",
                       editMode ? "cursor-default" : "cursor-pointer",
                     )}
                     style={{
-                      width: c.width, minWidth: c.width, maxWidth: c.width,
+                      width: w, minWidth: w, maxWidth: w,
                       borderColor: navy(0.12),
                       backgroundColor: sortedHere ? "hsl(var(--brand-navy) / 0.06)" : "hsl(var(--background))",
                       color: navy(0.6),
@@ -882,6 +887,11 @@ export function SpreadsheetView<TRow>({
                       {c.label}
                       {sortedHere && (sort!.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
                     </span>
+                    <ColumnResizeHandle
+                      startWidth={w}
+                      onChange={(px) => cw.setWidth(c.id, px)}
+                      onReset={() => cw.setWidth(c.id, c.width)}
+                    />
                   </th>
                 );
               })}
@@ -953,7 +963,7 @@ export function SpreadsheetView<TRow>({
                             isShaking && "animate-pulse",
                           )}
                           style={{
-                            width: c.width, minWidth: c.width, maxWidth: c.width,
+                            width: effW(c), minWidth: effW(c), maxWidth: effW(c),
                             borderRight: `1px solid ${navy(0.06)}`,
                             borderBottom: `1px solid ${navy(0.06)}`,
                             outline: isSelectedThis || isEditingThis || isPulsing

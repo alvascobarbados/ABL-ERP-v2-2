@@ -42,27 +42,12 @@ import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { ProjectTable } from "@/components/leads/ProjectTable";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
 import { useViewMode } from "@/hooks/useViewMode";
-// ─── Filter persistence per-tab ───
-const FILTER_STORAGE = "alvasco.filters.v2";
-const DEFAULT_FILTERS: Record<TabId, FilterState> = {
-  all: EMPTY_FILTER, sales: EMPTY_FILTER, operations: EMPTY_FILTER,
-  shipping: EMPTY_FILTER, finance: EMPTY_FILTER, completed: EMPTY_FILTER,
-};
-function loadFilters(): Record<TabId, FilterState> {
-  try {
-    const raw = localStorage.getItem(FILTER_STORAGE);
-    if (!raw) return DEFAULT_FILTERS;
-    const parsed = JSON.parse(raw);
-    // Merge each tab to ensure new fields default cleanly
-    const out = { ...DEFAULT_FILTERS } as Record<TabId, FilterState>;
-    for (const k of Object.keys(out) as TabId[]) {
-      out[k] = { ...EMPTY_FILTER, ...(parsed?.[k] ?? {}) };
-    }
-    return out;
-  } catch {
-    return DEFAULT_FILTERS;
-  }
-}
+// ─── Filter persistence (single shared filter across all tabs) ───
+// Filters live above the per-tab component lifecycle so switching tabs
+// preserves the active selection. They reset on full app reload — we
+// intentionally do NOT persist to localStorage so a fresh session starts
+// clean.
+const DEFAULT_FILTER: FilterState = EMPTY_FILTER;
 
 // ─── Sort persistence per-tab ───
 const SORT_STORAGE = "alvasco.sort.v1";
@@ -233,14 +218,10 @@ const Index = () => {
     activeTab === "all" || activeTab === "completed" ? "sales" : activeTab;
   const { view: desktopView, setView: setDesktopView } = useViewMode(activeTab);
 
-  // Per-tab filter persistence
-  const [filtersByTab, setFiltersByTab] = useState<Record<TabId, FilterState>>(loadFilters);
-  const filters = filtersByTab[activeTab];
-  const setFilters = (next: FilterState) => {
-    const updated = { ...filtersByTab, [activeTab]: next };
-    setFiltersByTab(updated);
-    try { localStorage.setItem(FILTER_STORAGE, JSON.stringify(updated)); } catch { /* noop */ }
-  };
+  // Single shared filter state — persists across pipeline tab switches and
+  // across the Kanban/Table view toggle. Lives outside any per-tab component
+  // lifecycle so child remounts can never reset it.
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER);
 
   const [selectedCard, setSelectedCard] = useState<PipelineCard | null>(null);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
@@ -533,7 +514,7 @@ const Index = () => {
           {/* Desktop chevron tabs (live filtered counts) + settings */}
           <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center gap-3">
             <div className="flex-1 min-w-0">
-              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
+              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={counts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
             <SettingsMenu />
           </div>
@@ -711,6 +692,8 @@ const Index = () => {
             visible={visible}
             onOpenCard={setSelectedCard}
             onOpenPicker={onOpenPicker}
+            hasActiveFilter={hasActiveFilter || isSearching}
+            onClearFilters={() => { setFilters(EMPTY_FILTER); setSearch(""); }}
           />
         ) : isCompleted ? (
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 bg-[#6B8E5A]/[0.04]">
