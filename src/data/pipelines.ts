@@ -822,6 +822,7 @@ export function buildCard(project: Project): PipelineCard {
 export function pipelineCounts(): Record<PipelineId, number> {
   return {
     sales: PROJECTS.filter((p) => p.pipeline === "sales").length,
+    design: PROJECTS.filter((p) => p.pipeline === "design").length,
     operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
     shipping: PROJECTS.filter((p) => p.pipeline === "shipping").length,
     finance: PROJECTS.filter((p) => p.pipeline === "finance").length,
