@@ -456,10 +456,6 @@ const Index = () => {
       <DesktopRail
         trashCount={store.trashedProjects.length}
         archiveCount={store.archivedProjects.length}
-        onOpenShipments={() => setShipmentsListOpen(true)}
-        onOpenTrash={() => setTrashOpen(true)}
-        onOpenArchive={() => setArchiveOpen(true)}
-        onOpenSpreadsheet={() => navigate("/spreadsheet")}
       />
       <div className="contents lg:flex lg:flex-1 lg:min-w-0 lg:flex-col lg:h-screen lg:overflow-hidden">
       <header

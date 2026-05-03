@@ -1,12 +1,12 @@
 /**
- * Persistent left navigation rail — desktop only (rendered inside an
- * `hidden lg:flex` wrapper by parents). Width 240px, paper background.
- *
- * Replaces the hamburger drawer at ≥1024px. Mobile (<1024px) keeps the
- * existing HamburgerDrawer untouched.
+ * Persistent left navigation rail — desktop only.
+ * Sections: PROJECTS / MASTER DATA / (unlabeled: Archive, Trash) / Footer.
  */
 import { useNavigate, useLocation } from "react-router-dom";
-import { Users, Factory, UserCircle2, Package, Ship, Trash2, HelpCircle, LogOut, Table2, Archive } from "lucide-react";
+import {
+  Users, Factory, UserCircle2, Package, Ship, Trash2, HelpCircle, LogOut,
+  Table2, Archive, KanbanSquare,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "./Wordmark";
@@ -14,10 +14,6 @@ import { Wordmark } from "./Wordmark";
 interface Props {
   trashCount: number;
   archiveCount: number;
-  onOpenShipments?: () => void;
-  onOpenTrash?: () => void;
-  onOpenArchive?: () => void;
-  onOpenSpreadsheet?: () => void;
 }
 
 interface Item {
@@ -27,26 +23,37 @@ interface Item {
   onClick?: () => void;
   badge?: number;
   dim?: boolean;
-  active?: boolean;
 }
 
-export const DesktopRail = ({ trashCount, archiveCount, onOpenShipments, onOpenTrash, onOpenArchive, onOpenSpreadsheet }: Props) => {
+const SectionLabel = ({ children }: { children: string }) => (
+  <div
+    className="px-3 pt-3 pb-1 text-[10px] uppercase font-semibold"
+    style={{ color: "hsl(var(--brand-navy))", opacity: 0.5, letterSpacing: "0.05em" }}
+  >
+    {children}
+  </div>
+);
+
+export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const isActive = (path: string) =>
+    path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(path + "/");
 
-  const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
-
-  const masterItems: Item[] = [
-    { icon: Users, label: "Customers", to: "/customers", active: isActive("/customers") },
-    { icon: Factory, label: "Suppliers", to: "/suppliers", active: isActive("/suppliers") },
-    { icon: UserCircle2, label: "Team", to: "/team", active: isActive("/team") },
-    { icon: Package, label: "Products", to: "/products", active: isActive("/products") },
+  const projectsItems: Item[] = [
+    { icon: KanbanSquare, label: "Pipeline", to: "/" },
+    { icon: Table2, label: "Spreadsheet", to: "/spreadsheet" },
+    { icon: Ship, label: "Shipments", to: "/shipments" },
   ];
-  const utilityItems: Item[] = [
-    { icon: Table2, label: "Spreadsheet", onClick: () => onOpenSpreadsheet ? onOpenSpreadsheet() : navigate("/spreadsheet"), active: isActive("/spreadsheet") },
-    { icon: Ship, label: "Shipments", onClick: () => onOpenShipments?.() },
-    { icon: Archive, label: "Archive", onClick: () => onOpenArchive?.(), badge: archiveCount },
-    { icon: Trash2, label: "Trash", onClick: () => onOpenTrash?.(), badge: trashCount },
+  const masterItems: Item[] = [
+    { icon: Users, label: "Customers", to: "/customers" },
+    { icon: Factory, label: "Suppliers", to: "/suppliers" },
+    { icon: UserCircle2, label: "Team", to: "/team" },
+    { icon: Package, label: "Products", to: "/products" },
+  ];
+  const archiveTrashItems: Item[] = [
+    { icon: Archive, label: "Archive", to: "/archive", badge: archiveCount },
+    { icon: Trash2, label: "Trash", to: "/trash", badge: trashCount },
   ];
   const footerItems: Item[] = [
     { icon: HelpCircle, label: "Help", onClick: () => toast("Help docs coming soon") },
@@ -54,6 +61,7 @@ export const DesktopRail = ({ trashCount, archiveCount, onOpenShipments, onOpenT
   ];
 
   const renderItem = (item: Item, key: string) => {
+    const active = item.to ? isActive(item.to) : false;
     const handleClick = () => {
       if (item.to) navigate(item.to);
       else item.onClick?.();
@@ -64,7 +72,7 @@ export const DesktopRail = ({ trashCount, archiveCount, onOpenShipments, onOpenT
         onClick={handleClick}
         className={cn(
           "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-colors",
-          item.active
+          active
             ? "bg-[hsl(var(--brand-navy)/0.08)]"
             : "hover:bg-[hsl(var(--brand-navy)/0.05)]",
         )}
@@ -77,7 +85,7 @@ export const DesktopRail = ({ trashCount, archiveCount, onOpenShipments, onOpenT
           className="text-[14px] flex-1 truncate"
           style={{
             color: item.dim ? "hsl(var(--muted-foreground))" : "hsl(var(--brand-navy))",
-            fontWeight: item.active ? 600 : 500,
+            fontWeight: active ? 600 : 500,
           }}
         >
           {item.label}
@@ -104,11 +112,10 @@ export const DesktopRail = ({ trashCount, archiveCount, onOpenShipments, onOpenT
       className="hidden lg:flex flex-col shrink-0 h-screen sticky top-0 border-r"
       style={{
         width: 240,
-        backgroundColor: "hsl(36 28% 92%)", /* slightly darker than paper */
+        backgroundColor: "hsl(36 28% 92%)",
         borderColor: "hsl(var(--brand-navy) / 0.12)",
       }}
     >
-      {/* Brand */}
       <div className="px-5 pt-6 pb-5">
         <button onClick={() => navigate("/")} className="block" aria-label="Home">
           <Wordmark />
@@ -117,16 +124,15 @@ export const DesktopRail = ({ trashCount, archiveCount, onOpenShipments, onOpenT
 
       <div className="border-t mx-3" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
 
-      {/* Master data */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-        <div className="px-3 pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70 font-medium">
-          Master data
-        </div>
+      <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
+        <SectionLabel>Projects</SectionLabel>
+        {projectsItems.map((it, i) => renderItem(it, "p" + i))}
+
+        <SectionLabel>Master Data</SectionLabel>
         {masterItems.map((it, i) => renderItem(it, "m" + i))}
 
-        <div className="my-3 mx-2 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
-
-        {utilityItems.map((it, i) => renderItem(it, "u" + i))}
+        <div className="my-2 mx-2 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
+        {archiveTrashItems.map((it, i) => renderItem(it, "a" + i))}
       </nav>
 
       <div className="border-t mx-3" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
