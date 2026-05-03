@@ -156,15 +156,16 @@ const GRID_COLS = COLS.map((c) => c.width).join(" ") + " 36px"; // +1 for action
 
 export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker }: Props) => {
   const store = usePipelineStore();
+  const md = useMasterData();
   const [sortKey, setSortKey] = useState<SortKey>("deadline");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<PipelineCard | null>(null);
 
   const sorted = useMemo(() => {
-    const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir));
+    const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId));
     return list;
-  }, [visible, sortKey, sortDir]);
+  }, [visible, sortKey, sortDir, md.getSupplierByAnyId]);
 
   const totalAmount = useMemo(
     () => sorted.reduce((sum, c) => sum + (c.project.value ?? 0), 0),
