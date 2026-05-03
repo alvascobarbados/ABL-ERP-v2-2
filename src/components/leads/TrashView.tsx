@@ -3,8 +3,8 @@ import { Trash2, RotateCcw, X, Search, ArrowDownNarrowWide, ArrowUpNarrowWide, C
 import { toast } from "sonner";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { Project, PIPELINES } from "@/data/pipelines";
-import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
+import { Project, STATES } from "@/data/states";
+import { usePipelineStore, getStageTitle } from "@/hooks/useStageStore";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -35,7 +35,7 @@ const fmtRemaining = (deletedAt: Date): string => {
   return `auto-deletes in ${days}d`;
 };
 
-const pipelineLabel = (id: string) => PIPELINES.find((p) => p.id === id)?.title ?? id;
+const stageLabel = (id: string) => STATES.find((p) => p.id === id)?.title ?? id;
 
 export const TrashView = ({ open, onClose }: Props) => {
   const store = usePipelineStore();
@@ -74,7 +74,7 @@ export const TrashView = ({ open, onClose }: Props) => {
   const restoreOne = (p: Project) => {
     const result = store.restoreProject(p.id);
     if (!result) return;
-    const where = `${pipelineLabel(result.pipeline)} / ${getStageTitle(result.pipeline, result.stage)}`;
+    const where = `${stageLabel(result.state)} / ${getStageTitle(result.state, result.state)}`;
     toast.success(`${p.customer} · ${p.projectName} restored to ${where}`, {
       duration: 5000,
       action: {
@@ -177,7 +177,7 @@ export const TrashView = ({ open, onClose }: Props) => {
             const isSel = selected.has(p.id);
             const ageLabel = `Deleted ${fmtAgo(p.deletedAt!)} · ${fmtRemaining(p.deletedAt!)}`;
             const wasIn = p.deletedFromPipeline && p.deletedFromStage
-              ? `${pipelineLabel(p.deletedFromPipeline)} / ${getStageTitle(p.deletedFromPipeline, p.deletedFromStage)}`
+              ? `${stageLabel(p.deletedFromPipeline)} / ${getStageTitle(p.deletedFromPipeline, p.deletedFromStage)}`
               : "Unknown";
             return (
               <li key={p.id}>

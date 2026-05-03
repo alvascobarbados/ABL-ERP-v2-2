@@ -1,11 +1,11 @@
-import { PipelineCard, Project, Shipment } from "@/data/pipelines";
+import { StageCard, Project, Shipment } from "@/data/states";
 import { ProjectCard } from "./ProjectCard";
 
 interface Props {
   projects: Project[];
   shipments: Shipment[];
   /** Already globally filter-applied AND sorted. */
-  cards: PipelineCard[];
+  cards: StageCard[];
   perPipelineCounts: Record<string, number>;
   hasActiveFilter: boolean;
   // Shipping-specific props are accepted for API back-compat but unused
@@ -15,18 +15,18 @@ interface Props {
   intakeCount: number;
   onOpenIntake: () => void;
   onOpenShipment: (shipmentId: string) => void;
-  onOpenCard: (c: PipelineCard) => void;
-  onSwipeForward: (c: PipelineCard) => void;
-  onSwipeBack: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
+  onOpenCard: (c: StageCard) => void;
+  onSwipeForward: (c: StageCard) => void;
+  onSwipeBack: (c: StageCard) => void;
+  onOpenPicker: (c: StageCard) => void;
   shippingSubs: Project[];
 }
 
 /**
- * Flat All view. No stage section headers, no collapsible groups.
+ * Flat All view. No state section headers, no collapsible groups.
  * Cards render as one continuous list in active-sort order.
- * Each card carries a quiet "Pipeline · Stage" label so the user
- * always knows what stage a card is in, even without a header.
+ * Each card carries a quiet "State · State" label so the user
+ * always knows what state a card is in, even without a header.
  */
 export const AllPipelineView = ({
   cards, hasActiveFilter, onOpenCard, onSwipeForward, onSwipeBack, onOpenPicker,

@@ -13,8 +13,8 @@ import { toast } from "sonner";
 import { BottomSheet } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { usePipelineStore } from "@/hooks/usePipelineStore";
-import { Project } from "@/data/pipelines";
+import { usePipelineStore } from "@/hooks/useStageStore";
+import { Project } from "@/data/states";
 import { DEFAULT_USER_INITIALS } from "./UserMenu";
 
 interface Props {

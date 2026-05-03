@@ -1,26 +1,26 @@
-import { PIPELINES, PipelineId } from "@/data/pipelines";
-import { PIPELINE_ACCENT } from "@/lib/brand";
+import { STATES, StageId } from "@/data/states";
+import { STAGE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 interface Props {
-  pipeline: PipelineId;
+  stage: StageId;
   className?: string;
 }
 
-const ORDER: PipelineId[] = ["sales", "operations", "shipping", "finance"];
+const ORDER: StageId[] = ["sales", "operations", "shipping", "finance"];
 
 /**
  * Tiny 3-segment bar showing where in the whole business journey a project sits.
  * Sales → Operations → Finance.
  */
-export const MiniJourneyBar = ({ pipeline, className }: Props) => {
-  const idx = ORDER.indexOf(pipeline);
-  const accent = PIPELINE_ACCENT[pipeline].hex;
+export const MiniJourneyBar = ({ state, className }: Props) => {
+  const idx = ORDER.indexOf(state);
+  const accent = STAGE_ACCENT[state].hex;
   return (
-    <div className={cn("flex items-center gap-1", className)} aria-label={`Journey: ${pipeline}`}>
+    <div className={cn("flex items-center gap-1", className)} aria-label={`Journey: ${state}`}>
       {ORDER.map((p, i) => {
         const state = i < idx ? "done" : i === idx ? "current" : "future";
-        const title = PIPELINES.find((x) => x.id === p)?.title ?? p;
+        const title = STATES.find((x) => x.id === p)?.title ?? p;
         return (
           <span
             key={p}

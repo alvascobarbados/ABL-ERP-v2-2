@@ -1,70 +1,70 @@
 /**
- * Desktop Kanban board — renders one column per stage/group, each column
+ * Desktop Kanban board — renders one column per state/group, each column
  * scrolls independently. Reuses the existing ProjectCard so all gestures,
  * detail view, edit mode, and visual treatments stay identical.
  *
  * Mobile (<1024px) does NOT render this — Index.tsx branches on a media
- * query and continues to render the existing vertical StageSection list.
+ * query and continues to render the existing vertical StateSection list.
  *
  * Drag-and-drop is intentionally NOT implemented (deferred to a follow-up).
- * Stage changes still flow through the existing long-press picker, three-
+ * State changes still flow through the existing long-press picker, three-
  * dots menu, and chevron-driven flows.
  */
 import { useMemo } from "react";
 import {
-  PIPELINES, PipelineId, PipelineCard, Project, Shipment, StageId, ShippingMode,
+  STATES, StageId, StageCard, Project, Shipment, StateId, ShippingMode,
   buildCard,
-} from "@/data/pipelines";
-import { PIPELINE_ACCENT } from "@/lib/brand";
+} from "@/data/states";
+import { STAGE_ACCENT } from "@/lib/brand";
 import { ProjectCard } from "./ProjectCard";
-import type { TabId } from "./PipelineTabs";
+import type { TabId } from "./StateTabs";
 
 interface Column {
   id: string;
   title: string;
-  pipeline: PipelineId;
-  cards: PipelineCard[];
+  stage: StageId;
+  cards: StageCard[];
 }
 
 interface Props {
   activeTab: TabId;
-  visible: PipelineCard[];        // already filtered + sorted
+  visible: StageCard[];        // already filtered + sorted
   projects: Project[];            // for shipping grouping
   shipments: Shipment[];          // unused for now, kept for future
-  onOpenCard: (c: PipelineCard) => void;
-  onSwipeForward: (c: PipelineCard) => void;
-  onSwipeBack: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
+  onOpenCard: (c: StageCard) => void;
+  onSwipeForward: (c: StageCard) => void;
+  onSwipeBack: (c: StageCard) => void;
+  onOpenPicker: (c: StageCard) => void;
 }
 
 const SHIPPING_MODES: ShippingMode[] = ["Air", "Ocean", "Local"];
 
-function buildColumns(activeTab: TabId, visible: PipelineCard[]): Column[] {
+function buildColumns(activeTab: TabId, visible: StageCard[]): Column[] {
   if (activeTab === "all") {
-    return PIPELINES.map((p) => ({
+    return STATES.map((p) => ({
       id: p.id,
       title: p.title,
-      pipeline: p.id,
-      cards: visible.filter((c) => c.pipeline === p.id),
+      state: p.id,
+      cards: visible.filter((c) => c.state === p.id),
     }));
   }
   if (activeTab === "shipping") {
-    // Shipping has one stage ("Shipping"). The kanban groups by mode
-    // (Air/Ocean/Local) as a UX exception — mode is NOT a stage. Do not
+    // Shipping has one state ("Shipping"). The kanban groups by mode
+    // (Air/Ocean/Local) as a UX exception — mode is NOT a state. Do not
     // propagate this grouping into the data model.
     return SHIPPING_MODES.map((mode) => ({
       id: mode,
       title: mode,
-      pipeline: "shipping" as PipelineId,
+      stage: "shipping" as StageId,
       cards: visible.filter((c) => (c.project.shippingMode ?? "Local") === mode),
     }));
   }
-  const cfg = PIPELINES.find((p) => p.id === activeTab)!;
-  return cfg.stages.map((s) => ({
+  const cfg = STATES.find((p) => p.id === activeTab)!;
+  return cfg.states.map((s) => ({
     id: s.id,
     title: s.title,
-    pipeline: cfg.id,
-    cards: visible.filter((c) => c.stage === s.id),
+    state: cfg.id,
+    cards: visible.filter((c) => c.state === s.id),
   }));
 }
 
@@ -77,8 +77,8 @@ export const KanbanBoard = ({
     <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
       <div className="h-full flex gap-4 px-5 py-4 w-full">
         {columns.map((col) => {
-          const accentHex = PIPELINE_ACCENT[col.pipeline].hex;
-          const isPaid = col.pipeline === "finance" && col.id === "paid";
+          const accentHex = STAGE_ACCENT[col.state].hex;
+          const isPaid = col.state === "finance" && col.id === "paid";
           const dotHex = isPaid ? "#6B8E5A" : accentHex;
           const headerBg = isPaid ? "rgba(107, 142, 90, 0.10)" : "hsl(var(--card))";
           const badgeBg = isPaid

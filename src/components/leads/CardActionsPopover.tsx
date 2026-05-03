@@ -72,7 +72,7 @@ export const CardActionsPopover = ({
         )}
         <Row icon={PencilLine} label="Edit" onClick={wrap(onEdit)} />
         <Row icon={FolderOpen} label="Open project" onClick={wrap(onOpenProject)} />
-        <Row icon={ArrowRightLeft} label="Move to stage…" onClick={wrap(onMoveStage)} />
+        <Row icon={ArrowRightLeft} label="Move to state…" onClick={wrap(onMoveStage)} />
         <Row icon={Copy} label="Duplicate" onClick={wrap(onDuplicate)} />
         <div className="my-1 h-px bg-border/70" />
         <Row icon={Archive} label="Archive" onClick={wrap(onArchive)} destructive />

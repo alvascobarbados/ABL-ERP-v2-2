@@ -1,7 +1,7 @@
 /**
  * Desktop Table view — dense, sortable data grid alternative to the
  * Kanban board. Same projects, same gestures (click=open, double-click=flag,
- * long-click=stage picker). Reuses the existing CardActionsPopover for
+ * long-click=state picker). Reuses the existing CardActionsPopover for
  * the per-row three-dots menu.
  *
  * Mobile (<1024px) never renders this — Index.tsx hides the view switcher
@@ -10,42 +10,42 @@
 import { useMemo, useState, useRef, MouseEvent as ReactMouseEvent } from "react";
 import { Flag, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 import {
-  PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
-} from "@/data/pipelines";
+  STATES, StageCard, StageId, StateId, SUPPLIERS,
+} from "@/data/states";
 import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
 
-// Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
-const PIPELINE_ORDER: Record<PipelineId, number> = {
+// State order matches the chevron flow (Sales → Production → Shipping → Finance).
+const STAGE_ORDER: Record<StageId, number> = {
   sales: 0, design: 1, operations: 2, shipping: 3, finance: 4,
 };
-// Display overrides for stages whose canonical title differs from the
-// PIPELINES config (or that aren't listed there at all). "paid" must
-// render Title Case; both shipping sub-stages render as "Shipping".
-const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
+// Display overrides for states whose canonical title differs from the
+// STATES config (or that aren't listed there at all). "paid" must
+// render Title Case; both shipping sub-states render as "Shipping".
+const STATE_DISPLAY: Partial<Record<StateId, string>> = {
   paid: "Paid",
   shipment_required: "Shipping",
   shipment_assigned: "Shipping",
 };
-function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
-  return STAGE_DISPLAY[stage] ?? getStageTitle(pipeline, stage);
+function displayStageTitle(stage: StageId, state: StateId): string {
+  return STATE_DISPLAY[state] ?? getStageTitle(state, state);
 }
-import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
+import { getStageTitle, usePipelineStore } from "@/hooks/useStageStore";
 import { useMasterData } from "@/hooks/useMasterData";
 import { cn } from "@/lib/utils";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
-import type { TabId } from "./PipelineTabs";
+import type { TabId } from "./StateTabs";
 
 type SortKey =
-  | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
+  | "flagged" | "state" | "customer" | "project" | "detail" | "supplier"
   | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline" | "urgency";
 
 interface Props {
   activeTab: TabId;
-  visible: PipelineCard[];
-  onOpenCard: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
+  visible: StageCard[];
+  onOpenCard: (c: StageCard) => void;
+  onOpenPicker: (c: StageCard) => void;
   hasActiveFilter?: boolean;
   onClearFilters?: () => void;
 }
@@ -74,18 +74,18 @@ function fmtDeadline(date?: Date): string {
   return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })}`;
 }
 
-function stageLabel(c: PipelineCard, _activeTab: TabId): string {
+function stateLabel(c: StageCard, _activeTab: TabId): string {
   // Always render as "Department · State" — including redundant pairs like
   // "Shipping · Shipping" or "Design · Design". Department = team owner;
   // state = work status. Conceptually different even when labels match.
-  const pipelineTitle = PIPELINES.find((p) => p.id === c.pipeline)?.title ?? c.pipeline;
-  const stageTitle = displayStageTitle(c.pipeline, c.stage);
-  return `${pipelineTitle} · ${stageTitle}`;
+  const stageTitle = STATES.find((p) => p.id === c.state)?.title ?? c.state;
+  const stateTitle = displayStageTitle(c.state, c.state);
+  return `${stageTitle} · ${stateTitle}`;
 }
 
-// Stage progression rank within each pipeline. Lower = earlier in the flow.
-// Shipping collapses to a single rank (only one user-facing stage).
-const STAGE_RANK: Record<StageId, number> = {
+// State progression rank within each state. Lower = earlier in the flow.
+// Shipping collapses to a single rank (only one user-facing state).
+const STATE_RANK: Record<StateId, number> = {
   proposal: 0, quote: 1, confirming: 2, archive: 99,
   design: 0, proof: 1,
   preproduction: 0, in_production: 1,
@@ -109,23 +109,23 @@ function repInitials(name?: string): string {
 }
 
 function compareCards(
-  a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1,
+  a: StageCard, b: StageCard, key: SortKey, dir: 1 | -1,
   lookup?: (id?: string | null) => { name: string } | undefined,
 ): number {
-  const dl = (c: PipelineCard) => c.deadlineDate?.getTime?.() ?? Number.POSITIVE_INFINITY;
+  const dl = (c: StageCard) => c.deadlineDate?.getTime?.() ?? Number.POSITIVE_INFINITY;
   switch (key) {
     case "flagged":
       // flagged first when asc
       return dir * (Number(!!b.project.flagged) - Number(!!a.project.flagged));
-    case "stage": {
-      // Sort by pipeline order (Sales→Production→Shipping→Finance), then by
-      // stage progression rank within pipeline (NOT alphabetical). Within
-      // Shipping (single stage) tie-break alphabetically by Customer.
-      const ap = PIPELINE_ORDER[a.pipeline] ?? 99;
-      const bp = PIPELINE_ORDER[b.pipeline] ?? 99;
+    case "state": {
+      // Sort by state order (Sales→Production→Shipping→Finance), then by
+      // state progression rank within state (NOT alphabetical). Within
+      // Shipping (single state) tie-break alphabetically by Customer.
+      const ap = STAGE_ORDER[a.state] ?? 99;
+      const bp = STAGE_ORDER[b.state] ?? 99;
       if (ap !== bp) return dir * (ap - bp);
-      const ar = STAGE_RANK[a.stage] ?? 99;
-      const br = STAGE_RANK[b.stage] ?? 99;
+      const ar = STATE_RANK[a.state] ?? 99;
+      const br = STATE_RANK[b.state] ?? 99;
       if (ar !== br) return dir * (ar - br);
       return dir * a.project.customer.localeCompare(b.project.customer);
     }
@@ -186,7 +186,7 @@ function compareCards(
 // viewport (overflow-auto on the wrapper handles it).
 const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
-  { key: "stage", label: "Pipeline · Stage", defaultPx: 220 },
+  { key: "state", label: "State · State", defaultPx: 220 },
   { key: "customer", label: "Customer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 200 },
@@ -211,7 +211,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [editingCard, setEditingCard] = useState<PipelineCard | null>(null);
+  const [editingCard, setEditingCard] = useState<StageCard | null>(null);
 
   const sorted = useMemo(() => {
     if (!sortKey) return visible;
@@ -249,7 +249,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
             }}
           >
             {COLS.map((c) => {
-              const sortable = !(activeTab === "completed" && c.key === "stage");
+              const sortable = !(activeTab === "completed" && c.key === "state");
               const isActive = sortable && sortKey === c.key;
               const Arrow = isActive ? (sortDir === 1 ? ArrowUp : ArrowDown) : null;
               const resizable = c.resizable !== false;
@@ -321,7 +321,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 onEdit={() => setEditingCard(card)}
                 onMoveStage={() => onOpenPicker(card)}
                 onDuplicate={() => store.duplicateProject(card.project.id)}
-                onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
+                onArchive={() => store.moveCard(card.id, { stage: "sales", state: "archive" as StateId })}
                 onDelete={() => store.deleteProject(card.project.id)}
               />
             ))
@@ -350,7 +350,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
 
 interface RowProps {
   index: number;
-  card: PipelineCard;
+  card: StageCard;
   activeTab: TabId;
   gridCols: string;
   isMenuOpen: boolean;
@@ -374,7 +374,7 @@ const TableRow = ({
   const md = useMasterData();
   const supName = supplierName(proj.supplierId, md.getSupplierByAnyId) || proj.supplierLabel || "";
 
-  // Long-press / long-click → stage picker
+  // Long-press / long-click → state picker
   const longPressTimer = useRef<number | null>(null);
   const longPressed = useRef(false);
   // Single vs double click discrimination
@@ -453,9 +453,9 @@ const TableRow = ({
           <Flag className="h-3.5 w-3.5 fill-current" style={{ color: "hsl(var(--brand-orange))" }} />
         ) : null}
       </div>
-      {/* Pipeline · Stage */}
-      <Cell title={stageLabel(card, activeTab)}>
-        <span className="font-medium">{stageLabel(card, activeTab)}</span>
+      {/* State · State */}
+      <Cell title={stateLabel(card, activeTab)}>
+        <span className="font-medium">{stateLabel(card, activeTab)}</span>
       </Cell>
       <Cell title={proj.customer}>{proj.customer}</Cell>
       <Cell title={proj.projectName}>{proj.projectName}</Cell>

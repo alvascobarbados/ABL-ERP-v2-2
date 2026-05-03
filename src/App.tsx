@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PipelineStoreProvider } from "@/hooks/usePipelineStore";
+import { StageStoreProvider } from "@/hooks/useStageStore";
 import { CurrentUserProvider } from "@/hooks/useCurrentUser";
 import { FriendlyModeProvider } from "@/hooks/useFriendlyMode";
 import { ExpandedCardsProvider } from "@/hooks/useExpandedCards";
@@ -28,7 +28,7 @@ const App = () => (
       <FriendlyModeProvider>
         <Toaster />
         <Sonner />
-        <PipelineStoreProvider>
+        <StageStoreProvider>
           <MasterDataProvider>
             <ColumnWidthsProvider>
               <ExpandedCardsProvider>
@@ -53,7 +53,7 @@ const App = () => (
               </ExpandedCardsProvider>
             </ColumnWidthsProvider>
           </MasterDataProvider>
-        </PipelineStoreProvider>
+        </StageStoreProvider>
       </FriendlyModeProvider>
       </CurrentUserProvider>
     </TooltipProvider>

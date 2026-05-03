@@ -1,24 +1,24 @@
 import { cn } from "@/lib/utils";
-import { PIPELINES, PipelineId } from "@/data/pipelines";
+import { STATES, StageId } from "@/data/states";
 import { useFriendlyMode } from "@/hooks/useFriendlyMode";
 
-export type TabId = PipelineId | "all" | "completed";
+export type TabId = StageId | "all" | "completed";
 
 interface Props {
   active: TabId;
   onChange: (id: TabId) => void;
-  counts: Record<PipelineId, number>;
+  counts: Record<StageId, number>;
   completedCount?: number;
-  pulse?: PipelineId | null;
+  pulse?: StageId | null;
 }
 
-export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
+export const StageTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
   const { friendly } = useFriendlyMode();
   const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
 
   const tabs: { id: TabId; title: string; count: number; isAll?: boolean; isCompleted?: boolean }[] = [
     { id: "all", title: "Active", count: activeCount, isAll: true },
-    ...PIPELINES.map((p) => ({ id: p.id as TabId, title: p.title, count: counts[p.id] })),
+    ...STATES.map((p) => ({ id: p.id as TabId, title: p.title, count: counts[p.id] })),
     { id: "completed", title: "Completed", count: completedCount, isCompleted: true },
   ];
 

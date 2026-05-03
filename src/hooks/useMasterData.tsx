@@ -18,8 +18,8 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { usePipelineStore } from "@/hooks/usePipelineStore";
-import type { ShippingMode } from "@/data/pipelines";
+import { usePipelineStore } from "@/hooks/useStageStore";
+import type { ShippingMode } from "@/data/states";
 
 // ─── Entity shapes ────────────────────────────────────────────────────────
 export interface Customer {

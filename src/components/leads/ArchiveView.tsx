@@ -3,9 +3,9 @@ import { Archive as ArchiveIcon, RotateCcw, X, Search, ArrowDownNarrowWide, Arro
 import { toast } from "sonner";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { StagePicker } from "./StagePicker";
-import { Project, PipelineId, StageId } from "@/data/pipelines";
-import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
+import { StatePicker } from "./StatePicker";
+import { Project, StageId, StateId } from "@/data/states";
+import { usePipelineStore, getStageTitle } from "@/hooks/useStageStore";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -35,7 +35,7 @@ const fmtAgo = (d: Date): string => {
  *
  * Differences from TrashView:
  *   • No auto-purge — archived projects stay forever until manually deleted.
- *   • Restore opens the StagePicker so the user chooses where it should land.
+ *   • Restore opens the StatePicker so the user chooses where it should land.
  *   • Three-dots menu on archived cards is just the row-level Restore /
  *     Delete forever buttons (kept simple, mirrors Trash row layout).
  */
@@ -74,7 +74,7 @@ export const ArchiveView = ({ open, onClose }: Props) => {
     setSelected(next);
   };
 
-  const handleRestorePick = (target: { pipeline: PipelineId; stage: StageId }) => {
+  const handleRestorePick = (target: { stage: StageId; state: StateId }) => {
     if (!restoreTarget) return;
     const p = restoreTarget;
     setRestoreTarget(null);
@@ -83,12 +83,12 @@ export const ArchiveView = ({ open, onClose }: Props) => {
       toast.error("Can't restore — missing required fields. Open the project to fill them in.");
       return;
     }
-    const where = `${target.pipeline === "sales" ? "Sales" : target.pipeline === "operations" ? "Production" : target.pipeline === "shipping" ? "Shipping" : "Finance"} / ${getStageTitle(target.pipeline, target.stage)}`;
+    const where = `${target.state === "sales" ? "Sales" : target.state === "operations" ? "Production" : target.state === "shipping" ? "Shipping" : "Finance"} / ${getStageTitle(target.state, target.state)}`;
     toast.success(`${p.customer} · ${p.projectName} restored to ${where}`, {
       duration: 5000,
       action: {
         label: "Undo",
-        onClick: () => { store.moveCard(p.id, { pipeline: "sales", stage: "archive" }); toast(`Sent back to Archive`, { duration: 1800 }); },
+        onClick: () => { store.moveCard(p.id, { stage: "sales", state: "archive" }); toast(`Sent back to Archive`, { duration: 1800 }); },
       },
     });
   };
@@ -286,12 +286,12 @@ export const ArchiveView = ({ open, onClose }: Props) => {
       />
     </Sheet>
 
-    <StagePicker
+    <StatePicker
       open={!!restoreTarget}
       onClose={() => setRestoreTarget(null)}
       title={restoreTarget ? restoreTarget.projectName : ""}
       subtitle={restoreTarget ? `Restore ${restoreTarget.customer} to…` : ""}
-      current={restoreTarget ? { pipeline: restoreTarget.pipeline, stage: restoreTarget.stage } : null}
+      current={restoreTarget ? { stage: restoreTarget.state, state: restoreTarget.state } : null}
       onPick={handleRestorePick}
     />
     </>
