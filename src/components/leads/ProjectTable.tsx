@@ -17,7 +17,7 @@ import { ColumnResizeHandle } from "./ColumnResizeHandle";
 
 // Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
-  sales: 0, operations: 1, shipping: 2, finance: 3,
+  sales: 0, design: 1, operations: 2, shipping: 3, finance: 4,
 };
 // Display overrides for stages whose canonical title differs from the
 // PIPELINES config (or that aren't listed there at all). "paid" must
