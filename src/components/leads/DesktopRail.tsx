@@ -5,12 +5,13 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users, Factory, UserCircle2, Package, Ship, Trash2, HelpCircle, LogOut,
-  Table2, Archive, KanbanSquare, ChevronRight, ChevronDown,
+  Table2, Archive, KanbanSquare, ChevronRight, ChevronDown, ChevronLeft,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "./Wordmark";
+import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 
 interface Props {
   trashCount: number;
