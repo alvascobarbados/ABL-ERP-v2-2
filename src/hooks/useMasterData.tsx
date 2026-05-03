@@ -224,6 +224,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
       .select()
       .single();
     if (error) throw error;
+    setCustomers((prev) => [...prev.filter((c) => c.id !== data.id), data as Customer].sort((a, b) => a.name.localeCompare(b.name)));
     return data as Customer;
   }, []);
   const updateCustomer = useCallback(async (id: string, patch: Partial<Customer>) => {
@@ -238,6 +239,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const addSupplier = useCallback(async (input: Partial<SupplierRecord> & { name: string }) => {
     const { data, error } = await supabase.from("suppliers").insert({ ...input }).select().single();
     if (error) throw error;
+    setSuppliers((prev) => [...prev.filter((s) => s.id !== data.id), data as SupplierRecord].sort((a, b) => a.name.localeCompare(b.name)));
     return data as SupplierRecord;
   }, []);
   const updateSupplier = useCallback(async (id: string, patch: Partial<SupplierRecord>) => {
@@ -255,6 +257,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
       .insert({ ...input, initials: input.initials.toUpperCase() })
       .select().single();
     if (error) throw error;
+    setTeamMembers((prev) => [...prev.filter((t) => t.id !== data.id), data as TeamMember].sort((a, b) => a.initials.localeCompare(b.initials)));
     return data as TeamMember;
   }, []);
   const updateTeamMember = useCallback(async (id: string, patch: Partial<TeamMember>) => {
