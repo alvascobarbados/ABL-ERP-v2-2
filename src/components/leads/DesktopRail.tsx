@@ -5,8 +5,9 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users, Factory, UserCircle2, Package, Ship, Trash2, HelpCircle, LogOut,
-  Table2, Archive, KanbanSquare,
+  Table2, Archive, KanbanSquare, ChevronRight, ChevronDown,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "./Wordmark";
@@ -40,10 +41,22 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
   const isActive = (path: string) =>
     path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(path + "/");
 
+  const shipmentsExpandedDefault = pathname.startsWith("/shipments");
+  const [shipmentsOpen, setShipmentsOpen] = useState(shipmentsExpandedDefault);
+  useEffect(() => {
+    if (pathname.startsWith("/shipments")) setShipmentsOpen(true);
+  }, [pathname]);
+
   const projectsItems: Item[] = [
     { icon: KanbanSquare, label: "Pipeline", to: "/" },
     { icon: Table2, label: "Spreadsheet", to: "/spreadsheet" },
-    { icon: Ship, label: "Shipments", to: "/shipments" },
+  ];
+  const shipmentSubItems: { label: string; to: string }[] = [
+    { label: "All", to: "/shipments" },
+    { label: "FCL", to: "/shipments/fcl" },
+    { label: "LCL", to: "/shipments/lcl" },
+    { label: "DHL", to: "/shipments/dhl" },
+    { label: "AF",  to: "/shipments/af"  },
   ];
   const masterItems: Item[] = [
     { icon: Users, label: "Customers", to: "/customers" },
@@ -127,6 +140,60 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         <SectionLabel>Projects</SectionLabel>
         {projectsItems.map((it, i) => renderItem(it, "p" + i))}
+
+        {/* Shipments parent (toggle) + sub-items */}
+        <button
+          onClick={() => setShipmentsOpen((o) => !o)}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-colors",
+            pathname.startsWith("/shipments")
+              ? "bg-[hsl(var(--brand-navy)/0.08)]"
+              : "hover:bg-[hsl(var(--brand-navy)/0.05)]",
+          )}
+          aria-expanded={shipmentsOpen}
+        >
+          <Ship className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy))" }} />
+          <span
+            className="text-[14px] flex-1 truncate"
+            style={{
+              color: "hsl(var(--brand-navy))",
+              fontWeight: pathname.startsWith("/shipments") ? 600 : 500,
+            }}
+          >
+            Shipments
+          </span>
+          {shipmentsOpen
+            ? <ChevronDown className="h-3.5 w-3.5" style={{ color: "hsl(var(--brand-navy) / 0.6)" }} />
+            : <ChevronRight className="h-3.5 w-3.5" style={{ color: "hsl(var(--brand-navy) / 0.6)" }} />}
+        </button>
+        {shipmentsOpen && (
+          <div
+            className="ml-5 pl-3 border-l space-y-0.5"
+            style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}
+          >
+            {shipmentSubItems.map((sub) => {
+              const active = pathname === sub.to;
+              return (
+                <button
+                  key={sub.to}
+                  onClick={() => navigate(sub.to)}
+                  className={cn(
+                    "w-full text-left px-2.5 py-1.5 rounded-md transition-colors text-[13px]",
+                    active
+                      ? "bg-[hsl(var(--brand-navy)/0.08)]"
+                      : "hover:bg-[hsl(var(--brand-navy)/0.04)]",
+                  )}
+                  style={{
+                    color: "hsl(var(--brand-navy))",
+                    fontWeight: active ? 600 : 500,
+                  }}
+                >
+                  {sub.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <SectionLabel>Master Data</SectionLabel>
         {masterItems.map((it, i) => renderItem(it, "m" + i))}

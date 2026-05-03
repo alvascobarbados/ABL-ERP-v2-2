@@ -13,6 +13,7 @@ import MasterList from "./pages/MasterList.tsx";
 import ArchivePage from "./pages/Archive.tsx";
 import TrashPage from "./pages/Trash.tsx";
 import ShipmentsPage from "./pages/Shipments.tsx";
+import ShipmentsModePage from "./pages/ShipmentsMode.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
                   <Route path="/archive" element={<ArchivePage />} />
                   <Route path="/trash" element={<TrashPage />} />
                   <Route path="/shipments" element={<ShipmentsPage />} />
+                  <Route path="/shipments/:mode" element={<ShipmentsModePage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
