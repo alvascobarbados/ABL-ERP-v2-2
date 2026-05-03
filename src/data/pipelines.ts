@@ -3,11 +3,13 @@
 // one supplier max, one shipping mode max, line items.
 // Shared "project name" across multiple cards is just a naming convention.
 
-export type PipelineId = "sales" | "operations" | "shipping" | "finance";
+export type PipelineId = "sales" | "design" | "operations" | "shipping" | "finance";
 
 export type StageId =
   // sales
   | "proposal" | "quote" | "confirming" | "archive"
+  // design
+  | "design" | "proof"
   // operations (production)
   | "preproduction" | "in_production"
   // shipping — NOT real stages anymore. The Shipping pipeline groups by
