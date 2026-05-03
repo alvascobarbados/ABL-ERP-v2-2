@@ -68,8 +68,10 @@ function stageLabel(c: PipelineCard, activeTab: TabId): string {
   return getStageTitle(c.pipeline, c.stage);
 }
 
-function supplierName(id?: string): string {
+function supplierName(id: string | undefined, lookup?: (id?: string | null) => { name: string } | undefined): string {
   if (!id) return "";
+  const fromMaster = lookup?.(id)?.name;
+  if (fromMaster) return fromMaster;
   return SUPPLIERS.find((s) => s.id === id)?.name ?? "";
 }
 
