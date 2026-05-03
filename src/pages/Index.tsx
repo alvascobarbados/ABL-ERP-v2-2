@@ -164,7 +164,7 @@ function projectMatchesSearch(p: Project, q: string): boolean {
     p.quoteNumber ?? "", p.poNumber ?? "", p.invoiceNumber ?? "", p.trackingRef ?? "",
     lineItemText,
   ];
-  return fields.some((f) => f.toLowerCase().includes(needle));
+  return fields.some((f) => (f ?? "").toLowerCase().includes(needle));
 }
 
 function projectHasMissingData(p: Project): boolean {
