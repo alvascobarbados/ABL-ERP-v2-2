@@ -562,9 +562,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const orig = projects.find((p) => p.id === projectId && !p.deletedAt);
     if (!orig) return null;
     const restoredFrom = { pipeline: orig.pipeline, stage: orig.stage };
+    const u = userRef.current;
     setProjects((prev) => prev.map((p) =>
       p.id === projectId
-        ? { ...p, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage }
+        ? appendLog(
+            { ...p, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage },
+            { actor: actorOf(u), actionType: "trash", description: `${u.shortName} moved this to Trash` },
+          )
         : p,
     ));
     return { restoredFrom };
@@ -573,8 +577,6 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const restoreProject = useCallback<PipelineStoreCtx["restoreProject"]>((projectId) => {
     const orig = projects.find((p) => p.id === projectId && p.deletedAt);
     if (!orig) return null;
-    // Pipelines/stages can change over time. If the original stage is gone,
-    // fall back to a sensible default per pipeline.
     const knownStages: StageId[] = PIPELINES.flatMap((pp) => pp.stages.map((s) => s.id));
     const targetPipeline: PipelineId = orig.deletedFromPipeline ?? orig.pipeline ?? "sales";
     const fallbackStage: Record<PipelineId, StageId> = {
@@ -585,10 +587,14 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       orig.deletedFromStage && knownStages.includes(orig.deletedFromStage)
         ? orig.deletedFromStage
         : fallbackStage[targetPipeline];
+    const u = userRef.current;
     setProjects((prev) => prev.map((p) =>
       p.id === projectId
-        ? { ...p, pipeline: targetPipeline, stage: targetStage,
-            deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined }
+        ? appendLog(
+            { ...p, pipeline: targetPipeline, stage: targetStage,
+              deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined },
+            { actor: actorOf(u), actionType: "restore", description: `${u.shortName} restored this from Trash` },
+          )
         : p,
     ));
     return { pipeline: targetPipeline, stage: targetStage };
