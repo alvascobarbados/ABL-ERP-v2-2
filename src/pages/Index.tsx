@@ -492,7 +492,8 @@ const Index = () => {
         trashCount={store.trashedProjects.length}
         archiveCount={store.archivedProjects.length}
       />
-      <div className="contents lg:flex lg:flex-1 lg:min-w-0 lg:flex-col lg:h-screen lg:overflow-hidden">
+      <div className="contents lg:flex lg:flex-1 lg:min-w-0 lg:flex-col lg:h-screen lg:overflow-hidden lg:relative">
+      <DesktopSidebarReopen />
       <header
         className="sticky top-0 border-b border-border/70"
         style={{
