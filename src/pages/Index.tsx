@@ -71,6 +71,7 @@ const DEFAULT_SORTS: Record<TabId, SortState> = {
   operations: { field: "deadline", dir: "asc" },
   shipping: { field: "deadline", dir: "asc" },
   finance: { field: "deadline", dir: "asc" },
+  completed: { field: "updated", dir: "desc" },
 };
 
 function loadSorts(): Record<TabId, SortState> {
