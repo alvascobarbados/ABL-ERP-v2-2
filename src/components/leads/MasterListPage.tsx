@@ -295,7 +295,8 @@ export const MasterListPage = ({ kind }: Props) => {
         onConfirm={handleDelete}
       />
       </div>
-    </div>
+      </div>
+    </DesktopAppShell>
   );
 };
 
