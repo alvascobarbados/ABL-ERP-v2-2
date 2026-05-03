@@ -103,7 +103,8 @@ export default function Spreadsheet() {
     (project: Project, fieldLabel: string, patch: Partial<Project>, extraPatches: FieldPatch[] = []) => {
       const before: Partial<Project> = {};
       for (const k of Object.keys(patch) as (keyof Project)[]) {
-        before[k] = project[k] as Project[keyof Project];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (before as any)[k] = project[k];
       }
       const entry: UndoEntry = {
         fieldLabel,
