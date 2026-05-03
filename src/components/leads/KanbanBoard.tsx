@@ -91,7 +91,7 @@ export const KanbanBoard = ({
             <div
               key={col.id}
               className="flex flex-col rounded-2xl border border-border/60 bg-card/60"
-              style={{ flex: "1 1 0", minWidth: 280, maxWidth: 480, maxHeight: "100%" }}
+              style={{ flex: "1 1 0", minWidth: 280, maxWidth: 720, maxHeight: "100%" }}
             >
               {/* Sticky column header */}
               <div
