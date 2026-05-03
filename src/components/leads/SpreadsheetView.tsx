@@ -746,8 +746,10 @@ export function SpreadsheetView<TRow>({
     try {
       await col.commit?.(row, value);
       pulse(rowKey(row), col.id);
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save");
+      return false;
     }
   }, [rowKey]);
 
