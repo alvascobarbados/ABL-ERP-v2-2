@@ -487,25 +487,18 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const duplicateProject = useCallback((projectId: string): Project | null => {
     const orig = projects.find((p) => p.id === projectId);
     if (!orig) return null;
-    const copy: Project = {
+    const u = userRef.current;
+    let copy: Project = {
       ...orig,
-      // New unique ID — the duplicate is a brand-new record, NOT a clone of
-      // the original ID. This is the integrity invariant the spreadsheet
-      // view depends on.
       id: `prj-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      // Suffix the name so the user can find the duplicate via search.
       projectName: `${orig.projectName} (Copy)`,
-      // Reference numbers are unique per project — clear them so the copy
-      // doesn't trip duplicate-number validators.
       quoteNumber: undefined,
       poNumber: undefined,
       invoiceNumber: undefined,
       shipmentId: undefined,
       notes: undefined,
       lineItems: undefined,
-      // Keep the original pipeline/stage so the duplicate appears next to
-      // the source — sending it back to Sales · Proposal made it invisible
-      // when the user was viewing any other tab.
+      log: undefined,
       pipeline: orig.pipeline,
       stage: orig.stage,
       flagged: false,
@@ -515,12 +508,17 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       createdAt: new Date(),
       updatedAt: undefined,
     };
+    copy = appendLog(copy, {
+      actor: actorOf(u), actionType: "project_created",
+      description: `${u.shortName} duplicated this from ${orig.projectName}`,
+    });
     setProjects((prev) => [copy, ...prev]);
     return copy;
   }, [projects]);
 
   const createProject = useCallback<PipelineStoreCtx["createProject"]>((input) => {
-    const newProj: Project = {
+    const u = userRef.current;
+    let newProj: Project = {
       id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       customer: input.customer,
       projectName: input.projectName,
@@ -537,14 +535,24 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       paymentTerms: "Net 30",
       paymentTermsInherited: true,
     };
+    newProj = appendLog(newProj, {
+      actor: actorOf(u), actionType: "project_created",
+      description: `${u.shortName} created this project`,
+    });
     setProjects((prev) => [newProj, ...prev]);
     return newProj;
   }, []);
 
   const toggleFlag = useCallback<PipelineStoreCtx["toggleFlag"]>((projectId) => {
-    setProjects((prev) => prev.map((p) =>
-      p.id === projectId ? touch({ ...p, flagged: !p.flagged }) : p,
-    ));
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const u = userRef.current;
+      const next = touch({ ...p, flagged: !p.flagged });
+      return appendLog(next, {
+        actor: actorOf(u), actionType: "flag_toggle",
+        description: !p.flagged ? `${u.shortName} flagged this` : `${u.shortName} unflagged this`,
+      });
+    }));
   }, []);
 
   // ── Trash (soft-delete) ────────────────────────────────────────────────
