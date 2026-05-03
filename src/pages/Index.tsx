@@ -712,6 +712,31 @@ const Index = () => {
             onOpenCard={setSelectedCard}
             onOpenPicker={onOpenPicker}
           />
+        ) : isCompleted ? (
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 bg-[#6B8E5A]/[0.04]">
+            {visible.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic px-2 py-12 text-center">
+                No completed projects yet.
+              </p>
+            ) : (
+              <div
+                className="grid gap-3 items-start"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}
+              >
+                {visible.map((c) => (
+                  <ProjectCard
+                    key={c.id}
+                    card={c}
+                    showStageLabel
+                    onOpen={() => setSelectedCard(c)}
+                    onSwipeForward={() => onSwipeForward(c)}
+                    onSwipeBack={() => onSwipeBack(c)}
+                    onOpenPicker={() => onOpenPicker(c)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <KanbanBoard
             activeTab={activeTab}
