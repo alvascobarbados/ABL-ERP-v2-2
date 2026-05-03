@@ -5,6 +5,7 @@
  */
 import { ReactNode } from "react";
 import { DesktopRail } from "./DesktopRail";
+import { DesktopSidebarReopen } from "./DesktopSidebarReopen";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 
 interface Props {
@@ -23,9 +24,10 @@ export const DesktopAppShell = ({ children, contentScroll = true }: Props) => {
       />
       <div className={
         contentScroll
-          ? "lg:flex-1 lg:min-w-0 lg:h-screen lg:overflow-auto"
+          ? "lg:flex-1 lg:min-w-0 lg:h-screen lg:overflow-auto relative"
           : "contents lg:flex lg:flex-1 lg:min-w-0 lg:flex-col lg:h-screen lg:overflow-hidden"
       }>
+        <DesktopSidebarReopen />
         {children}
       </div>
     </div>
