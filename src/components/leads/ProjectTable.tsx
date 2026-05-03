@@ -37,7 +37,7 @@ import { CardEditOverlay } from "./CardEditOverlay";
 import type { TabId } from "./PipelineTabs";
 
 type SortKey =
-  | "flagged" | "stage" | "customer" | "project" | "supplier"
+  | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
   | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline" | "urgency";
 
 interface Props {
@@ -133,6 +133,13 @@ function compareCards(
       return dir * a.project.customer.localeCompare(b.project.customer);
     case "project":
       return dir * a.project.projectName.localeCompare(b.project.projectName);
+    case "detail": {
+      const av = a.project.detailSummary?.trim() ?? "";
+      const bv = b.project.detailSummary?.trim() ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv);
+    }
     case "supplier": {
       const av = supplierName(a.project.supplierId, lookup) || a.project.supplierLabel || "";
       const bv = supplierName(b.project.supplierId, lookup) || b.project.supplierLabel || "";
@@ -179,6 +186,7 @@ const COLS: { key: SortKey; label: string; width: string; align?: "right" | "lef
   { key: "stage", label: "Pipeline · Stage", width: "220px" },
   { key: "customer", label: "Customer", width: "150px" },
   { key: "project", label: "Project", width: "minmax(220px, 1.6fr)" },
+  { key: "detail", label: "Detail", width: "200px" },
   { key: "supplier", label: "Supplier", width: "130px" },
   { key: "quote", label: "Q#", width: "84px" },
   { key: "amount", label: "Amount", width: "104px", align: "right" },
@@ -419,6 +427,9 @@ const TableRow = ({
       </Cell>
       <Cell title={proj.customer}>{proj.customer}</Cell>
       <Cell title={proj.projectName}>{proj.projectName}</Cell>
+      <Cell title={proj.detailSummary?.trim() || undefined} muted={!proj.detailSummary?.trim()}>
+        {proj.detailSummary?.trim() || "—"}
+      </Cell>
       <Cell title={supName} muted={!supName}>{supName || "—"}</Cell>
       <Cell title={proj.quoteNumber ?? ""} muted={!proj.quoteNumber}>
         <span className="tabular">{proj.quoteNumber ?? "—"}</span>
