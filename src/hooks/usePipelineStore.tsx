@@ -90,9 +90,11 @@ export function validateMove(project: Project, target: { pipeline: PipelineId; s
     "invoice_required", "invoiced", "paid",
   ];
   const targetIdx = STAGE_GATE_ORDER.indexOf(target.stage);
-  const confirmingIdx = STAGE_GATE_ORDER.indexOf("confirming");
+  // Design + Proof are pre-production handoff stages; treat them like
+  // Confirming for validation purposes (no supplier/shipping requirement).
+  const gateIdx = STAGE_GATE_ORDER.indexOf("proof");
   if (target.stage === "archive") return { ok: true, missing: [] };
-  if (targetIdx <= confirmingIdx) return { ok: true, missing: [] };
+  if (targetIdx <= gateIdx) return { ok: true, missing: [] };
 
   const missing: MoveValidation["missing"] = [];
   if (!project.detailSummary || !project.detailSummary.trim()) missing.push("detailSummary");
