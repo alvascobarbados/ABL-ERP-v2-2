@@ -963,7 +963,7 @@ export function SpreadsheetView<TRow>({
                             isShaking && "animate-pulse",
                           )}
                           style={{
-                            width: c.width, minWidth: c.width, maxWidth: c.width,
+                            width: effW(c), minWidth: effW(c), maxWidth: effW(c),
                             borderRight: `1px solid ${navy(0.06)}`,
                             borderBottom: `1px solid ${navy(0.06)}`,
                             outline: isSelectedThis || isEditingThis || isPulsing
