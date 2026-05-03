@@ -39,6 +39,7 @@ import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
 import { DesktopRail } from "@/components/leads/DesktopRail";
+import { DesktopSidebarReopen } from "@/components/leads/DesktopSidebarReopen";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { ProjectTable } from "@/components/leads/ProjectTable";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
