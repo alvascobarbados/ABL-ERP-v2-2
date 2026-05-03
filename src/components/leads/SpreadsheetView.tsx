@@ -36,7 +36,8 @@ export type EditorOption = { value: string; label: string };
 export interface CreateFormField {
   key: string;
   label: string;
-  type?: "text" | "email" | "tel";
+  type?: "text" | "email" | "tel" | "select";
+  options?: EditorOption[];
   required?: boolean;
   placeholder?: string;
 }
@@ -159,7 +160,7 @@ interface CellEditorProps<TRow> {
   column: SpreadsheetColumn<TRow>;
   initial: string | number | Date | null | undefined;
   cellRect: DOMRect | null;
-  onCommit: (next: string | number | Date | null) => void;
+  onCommit: (next: string | number | Date | null) => boolean | Promise<boolean>;
   onCancel: () => void;
   onAdvance: (dir: "down" | "right" | "left") => void;
 }
@@ -219,14 +220,19 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
     return { ok: true, value: raw };
   }, [editor]);
 
-  const tryCommit = useCallback((advance?: "down" | "right" | "left", overrideValue?: string) => {
+  const tryCommit = useCallback(async (advance?: "down" | "right" | "left", overrideValue?: string, closeOnSuccess = false) => {
     const raw = overrideValue ?? value;
     const parsed = parse(raw);
     if (!parsed.ok) { setError(parsed.error ?? "Invalid"); return false; }
     const validationErr = column.validate?.(row, parsed.value);
     if (validationErr) { setError(validationErr); return false; }
-    onCommit(parsed.value);
+    const ok = await onCommit(parsed.value);
+    if (ok === false) return false;
     if (advance) onAdvance(advance);
+    else if (closeOnSuccess) {
+      setPopoverOpen(false);
+      onCancel();
+    }
     return true;
   }, [parse, value, column, row, onCommit, onAdvance]);
 
@@ -270,7 +276,8 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
       try {
         const created = await cf.onSubmit(createValues);
         if (created) {
-          tryCommit(undefined, created.value);
+          const ok = await tryCommit(undefined, created.value, true);
+          if (!ok) setBusy(false);
         } else {
           setBusy(false);
         }
@@ -310,24 +317,41 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
               overflow: "hidden",
               display: "flex", flexDirection: "column",
             }}
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
             {createOpen && cf ? (
               <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: navy() }}>{cf.title}</div>
                 {cf.fields.map((f) => (
-                  <input
-                    key={f.key}
-                    type={f.type ?? "text"}
-                    value={createValues[f.key] ?? ""}
-                    placeholder={f.placeholder ?? f.label}
-                    onChange={(e) => setCreateValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                    style={{
-                      height: 30, padding: "0 8px", borderRadius: 4,
-                      border: `1px solid ${navy(0.2)}`, fontSize: 13, color: navy(), outline: "none",
-                    }}
-                    autoFocus={f === cf.fields[0]}
-                  />
+                  f.type === "select" ? (
+                    <select
+                      key={f.key}
+                      value={createValues[f.key] ?? ""}
+                      onChange={(e) => setCreateValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                      style={{
+                        height: 30, padding: "0 8px", borderRadius: 4,
+                        border: `1px solid ${navy(0.2)}`, fontSize: 13, color: navy(), outline: "none",
+                        background: "white",
+                      }}
+                      autoFocus={f === cf.fields[0]}
+                    >
+                      <option value="">{f.placeholder ?? f.label}</option>
+                      {(f.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      key={f.key}
+                      type={f.type ?? "text"}
+                      value={createValues[f.key] ?? ""}
+                      placeholder={f.placeholder ?? f.label}
+                      onChange={(e) => setCreateValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                      style={{
+                        height: 30, padding: "0 8px", borderRadius: 4,
+                        border: `1px solid ${navy(0.2)}`, fontSize: 13, color: navy(), outline: "none",
+                      }}
+                      autoFocus={f === cf.fields[0]}
+                    />
+                  )
                 ))}
                 {error && <div style={{ fontSize: 11, color: "hsl(var(--destructive))" }}>{error}</div>}
                 <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
@@ -350,7 +374,7 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
                       {pinned.map((o) => (
                         <button
                           key={`p-${o.value}`}
-                          onClick={() => tryCommit(undefined, o.value)}
+                          onClick={() => { void tryCommit(undefined, o.value, true); }}
                           style={{
                             display: "block", width: "100%", textAlign: "left",
                             padding: "6px 10px", fontSize: 13, color: navy(0.7),
@@ -372,7 +396,7 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
                   ) : matches.slice(0, 50).map((o) => (
                     <button
                       key={o.value}
-                      onClick={() => tryCommit(undefined, o.value)}
+                      onClick={() => { void tryCommit(undefined, o.value, true); }}
                       style={{
                         display: "block", width: "100%", textAlign: "left",
                         padding: "6px 10px", fontSize: 13, color: navy(),
