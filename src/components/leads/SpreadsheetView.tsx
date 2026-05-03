@@ -234,7 +234,7 @@ function CellEditor<TRow>({ row, column, initial, cellRect, onCommit, onCancel, 
       onCancel();
     }
     return true;
-  }, [parse, value, column, row, onCommit, onAdvance]);
+  }, [parse, value, column, row, onCommit, onAdvance, onCancel]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !(editor.type === "text" && (editor as { multiline?: boolean }).multiline && e.shiftKey)) {
