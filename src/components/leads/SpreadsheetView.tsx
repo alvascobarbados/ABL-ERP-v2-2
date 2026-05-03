@@ -1,36 +1,60 @@
 /**
  * SpreadsheetView — shared list-of-records grammar.
  *
- * Used by /spreadsheet today; will be reused by Customers, Suppliers, Team,
- * Products and Shipments sub-pages in subsequent slices. Mobile (<lg) is
- * intentionally minimally styled — these pages are desktop-first.
+ * Supports an optional inline-edit mode controlled by the caller via
+ * `editMode` + `onToggleEditMode`. Columns opt-in via `editor`, which describes
+ * the input type and how to commit the value (the caller routes commits through
+ * its store, e.g. `usePipelineStore.updateProject`).
  *
- * Visual contract (Alvasco brand):
- *   - Header zone: Raleway SemiBold 22px navy title + 14px navy/60% subtitle
- *   - Right controls: Columns · CSV · (optional) Add (orange filled)
- *   - Search row + optional secondary <select> filters
- *   - Sticky thead + sticky first column on horizontal scroll
- *   - 56px row height, alternating paper / 2%-navy stripes, 4% navy hover
- *   - Cell font Raleway 14px navy, em-dash placeholder at 40% opacity
- *   - Footer: "X of Y records" left, optional aggregate right
+ * Keyboard model (when editing a cell):
+ *   Enter      → commit, advance DOWN within the same column
+ *   Tab        → commit, advance RIGHT to the next editable visible column
+ *   Shift+Tab  → commit, advance LEFT to the previous editable visible column
+ *   Escape     → cancel, exit editor
+ *   Click out  → commit, exit editor (no advance)
  */
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Columns3, Download, Plus, Search, X } from "lucide-react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowDown, ArrowUp, Columns3, Download, Lock, LockOpen, Plus, Search, X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+// ─── Editor descriptors ────────────────────────────────────────────────────
+export type EditorOption = { value: string; label: string };
+
+export type SpreadsheetEditor<TRow> =
+  | { type: "text" }
+  | { type: "number"; min?: number; max?: number; step?: number; format?: (n: number) => string }
+  | { type: "date" }
+  | {
+      type: "select";
+      /** Static options or computed per-row (e.g. cascading Buyer→Customer). */
+      options: EditorOption[] | ((row: TRow) => EditorOption[]);
+      /** Allow free-text? Defaults to false (constrained). */
+      allowFree?: boolean;
+    };
 
 export interface SpreadsheetColumn<TRow> {
   id: string;
   label: string;
   width: number;
   align?: "left" | "right";
-  /** Render the cell (string, number, or custom node). Return undefined/null → em-dash. */
   render: (row: TRow) => ReactNode;
-  /** Plain string used for global search + CSV export. Defaults to render() coerced. */
   toText?: (row: TRow) => string;
-  /** Sort key — string or number. Defaults to toText(). */
   sortKey?: (row: TRow) => string | number;
-  /** Hide from default visibility (user can re-enable in Columns popover). */
   defaultHidden?: boolean;
+  /** Inline-edit configuration. Cells without `editor` stay read-only. */
+  editor?: SpreadsheetEditor<TRow>;
+  /** Current raw value (for editor initial state). Falls back to toText/render. */
+  getValue?: (row: TRow) => string | number | Date | null | undefined;
+  /** Commit handler — called when user presses Enter / Tab / clicks away.
+   *  Should perform the mutation (sync or async). Throw / reject to surface error. */
+  commit?: (row: TRow, nextValue: string | number | Date | null) => void | Promise<void>;
+  /** Optional in-line validation. Return error message string to block commit. */
+  validate?: (row: TRow, nextValue: string | number | Date | null) => string | null;
+  /** Hard-disable editor on certain rows (e.g. computed rows). */
+  isEditable?: (row: TRow) => boolean;
 }
 
 export interface SpreadsheetFilter {
@@ -42,31 +66,23 @@ export interface SpreadsheetFilter {
 }
 
 interface Props<TRow> {
-  /** Page title — Raleway SemiBold 22px navy. */
   title: string;
-  /** "79 customers · all-time". */
   subtitle?: string;
-  /** Stable per-page key for sort + visibility persistence (visibility persists, sort session-only). */
   storageKey: string;
-  /** Optional Add button (only on master-data pages). */
   onAdd?: () => void;
   addLabel?: string;
-  /** Aggregate string rendered right side of the footer. */
   aggregate?: ReactNode;
-  /** Secondary dropdown filters (rendered right of search). */
   filters?: SpreadsheetFilter[];
-  /** Row identity (for React key). */
   rowKey: (row: TRow) => string;
-  /** Click row → open detail. */
   onRowClick?: (row: TRow) => void;
-  /** Three-dots row menu (renders icon if provided). */
   rowActions?: (row: TRow) => ReactNode;
   columns: SpreadsheetColumn<TRow>[];
   data: TRow[];
-  /** CSV filename stem (date suffix appended). */
   csvName: string;
-  /** Optional empty state. */
   emptyHint?: string;
+  /** Inline-edit mode (controlled). When true, editable cells become clickable inputs. */
+  editMode?: boolean;
+  onToggleEditMode?: () => void;
 }
 
 const navy = (a = 1) => `hsl(var(--brand-navy) / ${a})`;
@@ -94,10 +110,136 @@ function downloadCsv(filename: string, rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
+function fmtDateInput(d: Date | string | number | null | undefined): string {
+  if (!d) return "";
+  const dd = d instanceof Date ? d : new Date(d);
+  if (isNaN(dd.getTime())) return "";
+  return `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`;
+}
+
+// ─── Inline cell editor ────────────────────────────────────────────────────
+interface CellEditorProps<TRow> {
+  row: TRow;
+  column: SpreadsheetColumn<TRow>;
+  initial: string | number | Date | null | undefined;
+  onCommit: (next: string | number | Date | null) => void;
+  onCancel: () => void;
+  onAdvance: (dir: "down" | "right" | "left") => void;
+}
+
+function CellEditor<TRow>({ row, column, initial, onCommit, onCancel, onAdvance }: CellEditorProps<TRow>) {
+  const editor = column.editor!;
+  const [value, setValue] = useState<string>(() => {
+    if (initial == null) return "";
+    if (initial instanceof Date) return fmtDateInput(initial);
+    return String(initial);
+  });
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    if (el instanceof HTMLInputElement) el.select();
+  }, []);
+
+  const parse = useCallback((raw: string): { ok: boolean; value: string | number | Date | null; error?: string } => {
+    if (editor.type === "number") {
+      const trimmed = raw.replace(/,/g, "").trim();
+      if (trimmed === "") return { ok: true, value: 0 };
+      const n = Number(trimmed);
+      if (!Number.isFinite(n)) return { ok: false, value: null, error: "Must be a number" };
+      if (editor.min != null && n < editor.min) return { ok: false, value: null, error: `Must be ≥ ${editor.min}` };
+      return { ok: true, value: n };
+    }
+    if (editor.type === "date") {
+      if (!raw) return { ok: true, value: null };
+      const d = new Date(raw + "T00:00:00");
+      if (isNaN(d.getTime())) return { ok: false, value: null, error: "Invalid date" };
+      return { ok: true, value: d };
+    }
+    return { ok: true, value: raw };
+  }, [editor]);
+
+  const tryCommit = useCallback((advance?: "down" | "right" | "left") => {
+    const parsed = parse(value);
+    if (!parsed.ok) { setError(parsed.error ?? "Invalid"); return false; }
+    const validationErr = column.validate?.(row, parsed.value);
+    if (validationErr) { setError(validationErr); return false; }
+    onCommit(parsed.value);
+    if (advance) onAdvance(advance);
+    return true;
+  }, [parse, value, column, row, onCommit, onAdvance]);
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") { e.preventDefault(); tryCommit("down"); }
+    else if (e.key === "Tab") { e.preventDefault(); tryCommit(e.shiftKey ? "left" : "right"); }
+    else if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+  };
+
+  const baseStyle: React.CSSProperties = {
+    width: "100%", height: 32, padding: "0 6px", borderRadius: 4,
+    border: `1.5px solid ${error ? "hsl(var(--destructive))" : "hsl(var(--brand-orange))"}`,
+    background: "white", color: navy(), font: "inherit", outline: "none",
+  };
+
+  let control: ReactNode;
+  if (editor.type === "select") {
+    const opts = typeof editor.options === "function" ? editor.options(row) : editor.options;
+    control = (
+      <select
+        ref={(el) => { inputRef.current = el; }}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => tryCommit()}
+        onKeyDown={onKeyDown}
+        style={baseStyle}
+      >
+        {!opts.find((o) => o.value === value) && <option value={value}>{value || "—"}</option>}
+        {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    );
+  } else {
+    control = (
+      <input
+        ref={(el) => { inputRef.current = el; }}
+        type={editor.type === "number" ? "text" : editor.type === "date" ? "date" : "text"}
+        inputMode={editor.type === "number" ? "decimal" : undefined}
+        value={value}
+        placeholder="—"
+        onChange={(e) => { setValue(e.target.value); if (error) setError(null); }}
+        onBlur={() => tryCommit()}
+        onKeyDown={onKeyDown}
+        style={{ ...baseStyle, textAlign: column.align ?? "left" }}
+      />
+    );
+  }
+
+  return (
+    <div style={{ position: "relative" }}>
+      {control}
+      {error && (
+        <div
+          style={{
+            position: "absolute", top: "100%", left: 0, marginTop: 2,
+            background: "hsl(var(--destructive))", color: "white",
+            padding: "2px 6px", borderRadius: 3, fontSize: 11, whiteSpace: "nowrap", zIndex: 30,
+          }}
+        >
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main view ─────────────────────────────────────────────────────────────
 export function SpreadsheetView<TRow>({
   title, subtitle, storageKey, onAdd, addLabel = "Add",
   aggregate, filters, rowKey, onRowClick, rowActions,
   columns, data, csvName, emptyHint,
+  editMode = false, onToggleEditMode,
 }: Props<TRow>) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ col: string; dir: "asc" | "desc" } | null>(null);
@@ -105,10 +247,24 @@ export function SpreadsheetView<TRow>({
     () => loadVisibility(storageKey, columns as SpreadsheetColumn<unknown>[]),
   );
   const [columnsOpen, setColumnsOpen] = useState(false);
+  const [editing, setEditing] = useState<{ rowKey: string; colId: string } | null>(null);
+  const [savedPulse, setSavedPulse] = useState<{ rowKey: string; colId: string } | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [, forceTick] = useState(0);
+
+  // Live "Saved Xs ago" counter
+  useEffect(() => {
+    if (!lastSavedAt) return;
+    const t = setInterval(() => forceTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [lastSavedAt]);
 
   useEffect(() => {
     try { localStorage.setItem(`alvasco.spreadsheet.${storageKey}.cols.v1`, JSON.stringify(visibility)); } catch { /* noop */ }
   }, [storageKey, visibility]);
+
+  // Exit any open editor when the user toggles edit mode off.
+  useEffect(() => { if (!editMode) setEditing(null); }, [editMode]);
 
   const visibleColumns = useMemo(
     () => columns.filter((c) => visibility[c.id] !== false),
@@ -147,6 +303,7 @@ export function SpreadsheetView<TRow>({
   }, [filtered, sort, columns]);
 
   const cycleSort = (id: string) => {
+    if (editMode) return; // sorting disabled while editing to avoid row reshuffles
     setSort((s) => (s && s.col === id ? { col: id, dir: s.dir === "asc" ? "desc" : "asc" } : { col: id, dir: "asc" }));
   };
 
@@ -155,6 +312,57 @@ export function SpreadsheetView<TRow>({
     const body = sorted.map((r) => visibleColumns.map((c) => textOf(c, r)));
     downloadCsv(`${csvName}-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
   };
+
+  // ── Edit-mode helpers ────────────────────────────────────────────────────
+  const editableColIds = useMemo(
+    () => visibleColumns.filter((c) => c.editor && c.commit).map((c) => c.id),
+    [visibleColumns],
+  );
+
+  const advance = useCallback((dir: "down" | "right" | "left") => {
+    if (!editing) return;
+    const rIdx = sorted.findIndex((r) => rowKey(r) === editing.rowKey);
+    const cIdx = editableColIds.indexOf(editing.colId);
+    if (rIdx < 0 || cIdx < 0) { setEditing(null); return; }
+    if (dir === "down") {
+      const nextR = sorted[rIdx + 1];
+      if (nextR) setEditing({ rowKey: rowKey(nextR), colId: editing.colId });
+      else setEditing(null);
+    } else if (dir === "right") {
+      const nextCol = editableColIds[cIdx + 1];
+      if (nextCol) setEditing({ rowKey: editing.rowKey, colId: nextCol });
+      else setEditing(null);
+    } else {
+      const prevCol = editableColIds[cIdx - 1];
+      if (prevCol) setEditing({ rowKey: editing.rowKey, colId: prevCol });
+      else setEditing(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, editableColIds, sorted]);
+
+  const commitCell = useCallback(async (
+    row: TRow, col: SpreadsheetColumn<TRow>, value: string | number | Date | null,
+  ) => {
+    try {
+      await col.commit?.(row, value);
+      const k = rowKey(row);
+      setSavedPulse({ rowKey: k, colId: col.id });
+      setLastSavedAt(Date.now());
+      window.setTimeout(() => {
+        setSavedPulse((s) => (s && s.rowKey === k && s.colId === col.id ? null : s));
+      }, 700);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+    }
+  }, [rowKey]);
+
+  const savedAgo = (() => {
+    if (!lastSavedAt) return null;
+    const s = Math.max(0, Math.round((Date.now() - lastSavedAt) / 1000));
+    if (s < 60) return `Saved ${s}s ago`;
+    const m = Math.round(s / 60);
+    return `Saved ${m}m ago`;
+  })();
 
   return (
     <div className="h-full lg:h-screen flex flex-col" style={{ backgroundColor: "hsl(var(--background))" }}>
@@ -177,6 +385,26 @@ export function SpreadsheetView<TRow>({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {onToggleEditMode && (
+            <button
+              onClick={onToggleEditMode}
+              title={editMode ? "Edit mode active — click cells to edit" : "Click to enable inline editing"}
+              aria-label={editMode ? "Lock spreadsheet" : "Unlock spreadsheet"}
+              aria-pressed={editMode}
+              className={cn(
+                "inline-flex items-center justify-center rounded-lg border transition-all",
+                editMode && "animate-pulse-once",
+              )}
+              style={{
+                width: 36, height: 36,
+                background: editMode ? "hsl(var(--brand-orange))" : "hsl(var(--background))",
+                borderColor: editMode ? "hsl(var(--brand-orange))" : navy(0.2),
+                color: editMode ? "white" : navy(),
+              }}
+            >
+              {editMode ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+            </button>
+          )}
           <button
             onClick={() => setColumnsOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[13px] font-medium hover:bg-[hsl(var(--brand-navy)/0.04)] transition-colors"
@@ -246,6 +474,15 @@ export function SpreadsheetView<TRow>({
         ))}
       </div>
 
+      {/* Edit-mode accent strip */}
+      {editMode && (
+        <div
+          className="shrink-0"
+          style={{ height: 2, background: "hsl(var(--brand-orange))" }}
+          aria-hidden
+        />
+      )}
+
       {/* Table */}
       <div className="flex-1 overflow-auto" style={{ WebkitOverflowScrolling: "touch" }}>
         <table className="border-collapse text-[14px]" style={{ tableLayout: "fixed", borderSpacing: 0 }}>
@@ -259,8 +496,9 @@ export function SpreadsheetView<TRow>({
                     key={c.id}
                     onClick={() => cycleSort(c.id)}
                     className={cn(
-                      "px-4 py-2.5 border-b border-r select-none cursor-pointer whitespace-nowrap",
+                      "px-4 py-2.5 border-b border-r select-none whitespace-nowrap",
                       "text-[10px] uppercase font-semibold",
+                      editMode ? "cursor-default" : "cursor-pointer",
                     )}
                     style={{
                       width: c.width, minWidth: c.width, maxWidth: c.width,
@@ -312,13 +550,19 @@ export function SpreadsheetView<TRow>({
                 const stripe = idx % 2 === 0
                   ? "hsl(var(--background))"
                   : "hsl(var(--brand-navy) / 0.02)";
+                const rk = rowKey(row);
                 return (
                   <tr
-                    key={rowKey(row)}
-                    onClick={() => onRowClick?.(row)}
+                    key={rk}
+                    onClick={(e) => {
+                      if (editMode) return; // suppress row navigation while editing
+                      // Don't navigate if user is interacting with a cell editor.
+                      if ((e.target as HTMLElement).closest("[data-cell-editor]")) return;
+                      onRowClick?.(row);
+                    }}
                     className={cn(
                       "group transition-colors",
-                      onRowClick && "cursor-pointer",
+                      onRowClick && !editMode && "cursor-pointer",
                     )}
                     style={{ height: 56 }}
                   >
@@ -326,26 +570,52 @@ export function SpreadsheetView<TRow>({
                       const isFirst = i === 0;
                       const v = c.render(row);
                       const isEmpty = v === null || v === undefined || v === "" || v === "—";
+                      const cellEditable =
+                        editMode && !!c.editor && !!c.commit && (c.isEditable ? c.isEditable(row) : true);
+                      const isEditingThis = editing?.rowKey === rk && editing?.colId === c.id;
+                      const isPulsing = savedPulse?.rowKey === rk && savedPulse?.colId === c.id;
                       return (
                         <td
                           key={c.id}
+                          onClick={(e) => {
+                            if (cellEditable) {
+                              e.stopPropagation();
+                              setEditing({ rowKey: rk, colId: c.id });
+                            }
+                          }}
+                          data-cell-editor={isEditingThis ? "1" : undefined}
                           className={cn(
-                            "px-4 py-3 border-b border-r whitespace-nowrap overflow-hidden text-ellipsis group-hover:bg-[hsl(var(--brand-navy)/0.04)]",
+                            "px-4 py-3 border-b border-r whitespace-nowrap overflow-hidden text-ellipsis",
+                            !editMode && "group-hover:bg-[hsl(var(--brand-navy)/0.04)]",
                             isFirst && "font-medium",
+                            cellEditable && "hover:bg-[hsl(var(--brand-navy)/0.05)] cursor-text",
                           )}
                           style={{
                             width: c.width, minWidth: c.width, maxWidth: c.width,
-                            borderColor: navy(0.06),
-                            backgroundColor: isFirst ? stripe : stripe,
+                            borderColor: isPulsing ? "hsl(var(--brand-orange))" : navy(0.06),
+                            backgroundColor: stripe,
                             color: isEmpty ? navy(0.4) : navy(),
                             textAlign: c.align ?? "left",
                             position: isFirst ? "sticky" : undefined,
                             left: isFirst ? 0 : undefined,
                             zIndex: isFirst ? 11 : undefined,
+                            transition: "border-color 600ms ease",
+                            padding: isEditingThis ? "4px 6px" : undefined,
                           }}
-                          title={typeof v === "string" || typeof v === "number" ? String(v) : undefined}
+                          title={!isEditingThis && (typeof v === "string" || typeof v === "number") ? String(v) : undefined}
                         >
-                          {isEmpty ? "—" : v}
+                          {isEditingThis ? (
+                            <CellEditor
+                              row={row}
+                              column={c}
+                              initial={c.getValue ? c.getValue(row) : (typeof v === "string" || typeof v === "number" ? v : textOf(c, row))}
+                              onCommit={(val) => commitCell(row, c, val)}
+                              onCancel={() => setEditing(null)}
+                              onAdvance={advance}
+                            />
+                          ) : (
+                            isEmpty ? "—" : v
+                          )}
                         </td>
                       );
                     })}
@@ -374,7 +644,9 @@ export function SpreadsheetView<TRow>({
         <span className="tabular">
           {sorted.length} of {data.length} {data.length === 1 ? "record" : "records"}
         </span>
-        {aggregate && <span className="tabular font-medium" style={{ color: navy(0.8) }}>{aggregate}</span>}
+        <span className="tabular font-medium" style={{ color: navy(0.8) }}>
+          {savedAgo ?? aggregate}
+        </span>
       </footer>
 
       {/* Columns popover */}
