@@ -1,15 +1,24 @@
 /**
- * Top-right user identity — avatar + first name. Tap opens popover with
- * Profile / Settings / Sign out. Settings (Friendly Mode toggle, replay
- * walkthrough) is reached from this popover instead of a standalone cog.
+ * Persistent identity chip — date/time · short name · avatar.
+ * Reads from `useCurrentUser()` so a future auth swap is one change.
+ * Tap opens popover with Profile / Settings / Sign out (placeholders).
  */
 import { useEffect, useRef, useState } from "react";
 import { LogOut, User as UserIcon, Settings as SettingsIcon, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useFriendlyMode } from "@/hooks/useFriendlyMode";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_USER = { fullName: "Avinash Vaswani", initials: "AV" };
+const fmtDesktop = (d: Date) => {
+  const day = d.toLocaleString("en-US", { weekday: "short" });
+  const dd = d.getDate();
+  const mon = d.toLocaleString("en-US", { month: "short" });
+  const t = d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${day} ${dd} ${mon} · ${t}`;
+};
+const fmtMobile = (d: Date) =>
+  d.toLocaleString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 
 export const UserMenu = () => {
   const [open, setOpen] = useState(false);
