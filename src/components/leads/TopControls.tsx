@@ -12,6 +12,7 @@ interface Props {
   onSearchChange: (q: string) => void;
   onOpenFilter: () => void;
   onOpenSort: () => void;
+  hideFilter?: boolean;
 }
 
 /**
@@ -19,7 +20,7 @@ interface Props {
  * Search is always visible; X clears, Esc clears.
  */
 export const TopControls = ({
-  filter, sort, search, onSearchChange, onOpenFilter, onOpenSort,
+  filter, sort, search, onSearchChange, onOpenFilter, onOpenSort, hideFilter,
 }: Props) => {
   const filterCount = computeFilterCount(filter);
   const sortOpt = SORT_OPTIONS.find((o) => o.field === sort.field)!;
@@ -27,32 +28,34 @@ export const TopControls = ({
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={onOpenFilter}
-        aria-label="Filter"
-        className={cn(
-          "no-select inline-flex items-center justify-center rounded-full border transition-colors shrink-0 relative",
-          filterCount > 0
-            ? "bg-foreground text-background border-foreground"
-            : "bg-card/60 text-foreground/80 border-border hover:border-foreground/30 hover:text-foreground",
-        )}
-        style={{ width: 36, height: 36 }}
-        title="Filter"
-      >
-        <FilterIcon className="h-4 w-4" />
-        {filterCount > 0 && (
-          <span
-            className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full text-[9px] font-bold tabular text-white"
-            style={{
-              minWidth: 16, height: 16, padding: "0 4px",
-              backgroundColor: "hsl(var(--brand-orange))",
-            }}
-          >
-            {filterCount}
-          </span>
-        )}
-      </button>
+      {!hideFilter && (
+        <button
+          type="button"
+          onClick={onOpenFilter}
+          aria-label="Filter"
+          className={cn(
+            "no-select inline-flex items-center justify-center rounded-full border transition-colors shrink-0 relative",
+            filterCount > 0
+              ? "bg-foreground text-background border-foreground"
+              : "bg-card/60 text-foreground/80 border-border hover:border-foreground/30 hover:text-foreground",
+          )}
+          style={{ width: 36, height: 36 }}
+          title="Filter"
+        >
+          <FilterIcon className="h-4 w-4" />
+          {filterCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full text-[9px] font-bold tabular text-white"
+              style={{
+                minWidth: 16, height: 16, padding: "0 4px",
+                backgroundColor: "hsl(var(--brand-orange))",
+              }}
+            >
+              {filterCount}
+            </span>
+          )}
+        </button>
+      )}
 
       <button
         type="button"

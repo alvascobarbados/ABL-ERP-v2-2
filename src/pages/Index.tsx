@@ -200,7 +200,10 @@ function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
     const mode = p.shippingMode ?? "Unassigned";
     if (!f.shippingModes.includes(mode as never)) return false;
   }
-  if (f.salesReps.length && !f.salesReps.includes(p.pointPerson)) return false;
+  if (f.salesReps.length) {
+    const reps = (p.pointPerson ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (!f.salesReps.some((r) => reps.includes(r))) return false;
+  }
   if (f.stages.length && !f.stages.includes(p.stage)) return false;
   if (f.urgency) {
     const days = daysToDeadline(c.deadlineDate);
@@ -333,7 +336,14 @@ const Index = () => {
 
   const customerOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.customer))).sort(), [projects]);
   const projectNameOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.projectName))).sort(), [projects]);
-  const salesRepOptions = useMemo<string[]>(() => Array.from(new Set(projects.map((p) => p.pointPerson).filter(Boolean))).sort(), [projects]);
+  // Split multi-rep strings ("AV, CB") into individual reps and dedupe.
+  const salesRepOptions = useMemo<string[]>(() => {
+    const set = new Set<string>();
+    projects.forEach((p) => {
+      (p.pointPerson ?? "").split(",").map((s) => s.trim()).filter(Boolean).forEach((r) => set.add(r));
+    });
+    return Array.from(set).sort();
+  }, [projects]);
 
   // Apply filters + search, then sort
   const visible = useMemo(() => {
@@ -521,13 +531,14 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <ViewSwitcher value={desktopView} onChange={setDesktopView} />
               <div className="flex-1 min-w-0">
-                <TopControls
+              <TopControls
                   filter={filters}
                   sort={sort}
                   search={search}
                   onSearchChange={setSearch}
                   onOpenFilter={() => setFilterSheetOpen(true)}
                   onOpenSort={() => setSortSheetOpen(true)}
+                  hideFilter
                 />
               </div>
             </div>
