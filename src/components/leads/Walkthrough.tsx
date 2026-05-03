@@ -10,7 +10,7 @@ const STEPS = [
   },
   {
     icon: Layers,
-    title: "Four stages",
+    title: "Four states",
     body: "Sales, Production, Shipping, Finance. Tap the tabs at the top, or swipe left and right, to move between them.",
   },
   {

@@ -4,7 +4,7 @@ import {
   Plane, Ship, MapPin, UserCircle2, Layers, Clock, AlertTriangle, Check, Search, Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { STAGES, ShippingMode } from "@/data/stages";
+import { STATES, ShippingMode } from "@/data/states";
 import type { FilterState, DeadlineUrgency } from "./FilterBar";
 import { EMPTY_FILTER, filterCount } from "./FilterBar";
 
@@ -20,7 +20,7 @@ interface Props {
 }
 
 const ALL_MODES: (ShippingMode | "Unassigned")[] = ["Air", "Ocean", "Local", "Unassigned"];
-const ALL_STAGES = STAGES.flatMap((p) => p.states.map((s) => ({ id: s.id, label: s.title, stage: p.title })));
+const ALL_STAGES = STATES.flatMap((p) => p.states.map((s) => ({ id: s.id, label: s.title, state: p.title })));
 const URGENCY_OPTIONS: { id: Exclude<DeadlineUrgency, null>; label: string }[] = [
   { id: "overdue", label: "Overdue" },
   { id: "this_week", label: "Due this week" },
@@ -195,7 +195,7 @@ export const FilterSheet = ({
     if (!value.supplierIds.length) return "Any";
     return value.supplierIds.map((id) => suppliers.find((s) => s.id === id)?.name ?? id).join(", ");
   }, [value.supplierIds, suppliers]);
-  const stageLabel = useMemo(() => {
+  const stateLabel = useMemo(() => {
     if (!value.states.length) return "Any";
     return value.states.map((id) => ALL_STAGES.find((s) => s.id === id)?.label ?? id).join(", ");
   }, [value.states]);
@@ -262,7 +262,7 @@ export const FilterSheet = ({
               onClick={() => setPicker("salesReps")}
               onClear={() => onChange({ ...value, salesReps: [] })} />
             <SummaryRow icon={Layers} label="State"
-              summary={stageLabel}
+              summary={stateLabel}
               active={value.states.length > 0}
               onClick={() => setPicker("states")}
               onClear={() => onChange({ ...value, states: [] })} />
@@ -418,7 +418,7 @@ export const FilterSheet = ({
       <MultiPicker<string>
         open={picker === "states"} onClose={() => setPicker(null)}
         title="Filter by state" icon={<Layers className="h-4 w-4" />}
-        options={ALL_STAGES.map((s) => ({ id: s.id, label: s.label, sub: s.stage }))}
+        options={ALL_STAGES.map((s) => ({ id: s.id, label: s.label, sub: s.state }))}
         selected={value.states as string[]}
         onApply={(next) => onChange({ ...value, states: next as FilterState["states"] })} />
     </>

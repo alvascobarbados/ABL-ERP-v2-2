@@ -1,7 +1,7 @@
 // FilterState — used across the app. All multi-select are arrays.
 // urgency is single-select. missingOnly is boolean toggle.
 // flagged: null = any, true = only flagged, false = only unflagged.
-import type { ShippingMode, StageId } from "@/data/stages";
+import type { ShippingMode, StateId } from "@/data/states";
 
 export type DeadlineUrgency = "overdue" | "this_week" | "this_month" | "no_deadline" | null;
 
@@ -11,7 +11,7 @@ export interface FilterState {
   supplierIds: string[];        // multi (supports "__unassigned" sentinel)
   shippingModes: (ShippingMode | "Unassigned")[]; // multi
   salesReps: string[];          // multi
-  states: StageId[];            // multi
+  states: StateId[];            // multi
   urgency: DeadlineUrgency;     // single
   missingOnly: boolean;
   flagged: boolean | null;      // tri-state: null=any, true=only flagged, false=only unflagged

@@ -1,37 +1,37 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { PipelineCard, StageId, STAGES } from "@/data/stages";
-import { PIPELINE_ACCENT } from "@/lib/brand";
+import { StageCard, StateId, STATES } from "@/data/states";
+import { STAGE_ACCENT } from "@/lib/brand";
 import { ProjectCard } from "./ProjectCard";
 import { cn } from "@/lib/utils";
 
-interface StageSectionProps {
+interface StateSectionProps {
   title: string;
-  state: StageId;
-  cards: PipelineCard[];
-  onOpenCard: (c: PipelineCard) => void;
+  state: StateId;
+  cards: StageCard[];
+  onOpenCard: (c: StageCard) => void;
   onOpenShipment: (shipmentId: string) => void;
-  onSwipeForward: (c: PipelineCard) => void;
-  onSwipeBack: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
+  onSwipeForward: (c: StageCard) => void;
+  onSwipeBack: (c: StageCard) => void;
+  onOpenPicker: (c: StageCard) => void;
   emptyHint?: string;
 }
 
-function pipelineForStage(state: StageId) {
-  return STAGES.find((p) => p.states.some((s) => s.id === state))!.id;
+function stageForStage(state: StateId) {
+  return STATES.find((p) => p.states.some((s) => s.id === state))!.id;
 }
 
-const COLLAPSED_BY_DEFAULT: StageId[] = ["archive"];
+const COLLAPSED_BY_DEFAULT: StateId[] = ["archive"];
 
-export const StageSection = ({
+export const StateSection = ({
   title, state, cards, onOpenCard,
   onSwipeForward, onSwipeBack, onOpenPicker, emptyHint,
-}: StageSectionProps) => {
+}: StateSectionProps) => {
   const collapsedDefault = COLLAPSED_BY_DEFAULT.includes(state);
   const [open, setOpen] = useState(!collapsedDefault);
   useEffect(() => { if (collapsedDefault) setOpen(false); }, [collapsedDefault]);
-  const pipelineId = pipelineForStage(state);
-  const accentHex = PIPELINE_ACCENT[pipelineId].hex;
+  const stageId = stageForStage(state);
+  const accentHex = STAGE_ACCENT[stageId].hex;
 
   return (
     <section className="no-select bg-card/80 backdrop-blur-sm rounded-2xl shadow-[var(--shadow-card)] border border-border/60 overflow-hidden">

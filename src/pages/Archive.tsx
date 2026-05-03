@@ -3,7 +3,7 @@
  * DesktopAppShell so the persistent rail remains visible. Mobile preserves
  * the existing sheet UX.
  *
- * NOTE: Full stage-grammar parity (chevron tabs + filter strip + card list
+ * NOTE: Full state-grammar parity (chevron tabs + filter strip + card list
  * scoped to archived data) is a separate, larger refactor — this page renders
  * the existing Archive list inline so navigation & rail visibility work today.
  */

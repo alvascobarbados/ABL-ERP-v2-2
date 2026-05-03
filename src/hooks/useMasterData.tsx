@@ -19,7 +19,7 @@ import {
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePipelineStore } from "@/hooks/useStageStore";
-import type { ShippingMode } from "@/data/stages";
+import type { ShippingMode } from "@/data/states";
 
 // ─── Entity shapes ────────────────────────────────────────────────────────
 export interface Customer {

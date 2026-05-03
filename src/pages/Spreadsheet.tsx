@@ -17,18 +17,18 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { usePipelineStore, getStageTitle } from "@/hooks/useStageStore";
 import { useMasterData } from "@/hooks/useMasterData";
-import { STAGES, PipelineId, Project, ShippingMode, SUPPLIERS, StageId } from "@/data/stages";
+import { STATES, StageId, Project, ShippingMode, SUPPLIERS, StateId } from "@/data/states";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import {
   SpreadsheetView, SpreadsheetColumn, EditorOption, CreateFormSpec,
 } from "@/components/leads/SpreadsheetView";
 
-const PIPELINE_LABEL: Record<PipelineId, string> = {
+const STAGE_LABEL: Record<StageId, string> = {
   sales: "Sales", design: "Design", operations: "Production", shipping: "Shipping", finance: "Finance",
 };
 
-// First valid state when switching stages via the cell editor.
-const FIRST_STAGE: Record<PipelineId, StageId> = {
+// First valid state when switching states via the cell editor.
+const FIRST_STAGE: Record<StageId, StateId> = {
   sales: "proposal",
   design: "design",
   operations: "preproduction",
@@ -60,7 +60,7 @@ export default function Spreadsheet() {
   const location = useLocation();
   const { projects, updateProject } = usePipelineStore();
   const md = useMasterData();
-  const [pipelineFilter, setPipelineFilter] = useState<PipelineId | "all">("all");
+  const [stageFilter, setPipelineFilter] = useState<StageId | "all">("all");
   const [editMode, setEditMode] = useState(false);
 
   // Undo / redo session stacks (refs to avoid re-render churn).
@@ -72,13 +72,13 @@ export default function Spreadsheet() {
 
   const rows = useMemo<Row[]>(() => {
     return projects
-      .filter((p) => pipelineFilter === "all" || p.stage === pipelineFilter)
+      .filter((p) => stageFilter === "all" || p.state === stageFilter)
       .map((p) => {
         const m = /(\d+)$/.exec(p.id);
         const displayId = m ? String(m[1]).padStart(4, "0") : p.id.slice(-4);
         return { project: p, displayId };
       });
-  }, [projects, pipelineFilter]);
+  }, [projects, stageFilter]);
 
   const supplierName = (id?: string, fallback?: string) => {
     if (!id) return fallback ?? "";
@@ -257,32 +257,32 @@ export default function Spreadsheet() {
       sortKey: (r) => r.displayId,
     },
     {
-      id: "stage", label: "Stage", width: 120,
-      render: (r) => PIPELINE_LABEL[r.project.stage],
-      editor: { type: "select", options: STAGES.map((p) => ({ value: p.id, label: p.title })) },
-      getValue: (r) => r.project.stage,
+      id: "state", label: "State", width: 120,
+      render: (r) => STAGE_LABEL[r.project.state],
+      editor: { type: "select", options: STATES.map((p) => ({ value: p.id, label: p.title })) },
+      getValue: (r) => r.project.state,
       commit: (r, v) => {
-        const next = String(v ?? "") as PipelineId;
-        if (next === r.project.stage) return;
-        commitWithUndo(r.project, "Stage", {
-          stage: next,
+        const next = String(v ?? "") as StageId;
+        if (next === r.project.state) return;
+        commitWithUndo(r.project, "State", {
+          state: next,
           state: FIRST_STAGE[next],
         });
       },
     },
     {
       id: "state", label: "State", width: 160,
-      render: (r) => getStageTitle(r.project.stage, r.project.state),
+      render: (r) => getStageTitle(r.project.state, r.project.state),
       editor: {
         type: "select",
         options: (r) => {
-          const cfg = STAGES.find((p) => p.id === r.project.stage);
+          const cfg = STATES.find((p) => p.id === r.project.state);
           return cfg?.states.map((s) => ({ value: s.id, label: s.title })) ?? [];
         },
       },
       getValue: (r) => r.project.state,
       commit: (r, v) => {
-        const next = String(v ?? "") as StageId;
+        const next = String(v ?? "") as StateId;
         if (next === r.project.state) return;
         commitWithUndo(r.project, "State", { state: next });
       },
@@ -505,13 +505,13 @@ export default function Spreadsheet() {
         editMode={editMode}
         onToggleEditMode={() => setEditMode((v) => !v)}
         filters={[{
-          key: "stage",
-          label: "Stage",
-          value: pipelineFilter,
-          onChange: (v) => setPipelineFilter(v as PipelineId | "all"),
+          key: "state",
+          label: "State",
+          value: stageFilter,
+          onChange: (v) => setPipelineFilter(v as StageId | "all"),
           options: [
-            { value: "all", label: "All stages" },
-            ...STAGES.map((p) => ({ value: p.id, label: p.title })),
+            { value: "all", label: "All states" },
+            ...STATES.map((p) => ({ value: p.id, label: p.title })),
           ],
         }]}
       />

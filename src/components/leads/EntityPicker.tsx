@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BottomSheet } from "./EditorSheets";
 import { useMasterData, EntityKind, parseInitials } from "@/hooks/useMasterData";
-import type { ShippingMode } from "@/data/stages";
+import type { ShippingMode } from "@/data/states";
 
 // ─── Single-select picker ────────────────────────────────────────────────
 interface SingleProps {

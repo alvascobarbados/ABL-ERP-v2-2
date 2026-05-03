@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Plane, Ship } from "lucide-react";
-import { Shipment, Project, PipelineCard, buildCard, getShipment } from "@/data/stages";
-import { PIPELINE_ACCENT } from "@/lib/brand";
+import { Shipment, Project, StageCard, buildCard, getShipment } from "@/data/states";
+import { STAGE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { ProjectCard } from "./ProjectCard";
 
@@ -15,10 +15,10 @@ interface Props {
   intakeCount: number;
   onOpenIntake: () => void;
   onOpenShipment: (shipmentId: string) => void;
-  onOpenCard: (c: PipelineCard) => void;
-  onSwipeForward: (c: PipelineCard) => void;
-  onSwipeBack: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
+  onOpenCard: (c: StageCard) => void;
+  onSwipeForward: (c: StageCard) => void;
+  onSwipeBack: (c: StageCard) => void;
+  onOpenPicker: (c: StageCard) => void;
 }
 
 function uniqueProjectLabels(projs: Project[]): string[] {
@@ -38,16 +38,16 @@ interface GroupProps {
   title: "Air" | "Ocean";
   shipments: Shipment[];
   subs: Project[];
-  onOpenCard: (c: PipelineCard) => void;
-  onSwipeForward: (c: PipelineCard) => void;
-  onSwipeBack: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
+  onOpenCard: (c: StageCard) => void;
+  onSwipeForward: (c: StageCard) => void;
+  onSwipeBack: (c: StageCard) => void;
+  onOpenPicker: (c: StageCard) => void;
 }
 
 const Group = ({ title, shipments, subs, onOpenCard, onSwipeForward, onSwipeBack, onOpenPicker }: GroupProps) => {
   const [open, setOpen] = useState(true);
   const Icon = title === "Air" ? Plane : Ship;
-  const accent = PIPELINE_ACCENT.shipping.hex;
+  const accent = STAGE_ACCENT.shipping.hex;
 
   // Subs that belong to one of these shipments (clustered & ordered by shipment list order)
   const groupSubs: Project[] = shipments.flatMap((sh) =>
@@ -130,10 +130,10 @@ const Group = ({ title, shipments, subs, onOpenCard, onSwipeForward, onSwipeBack
 interface IntakeProps {
   count: number;
   intakeSubs: Project[];
-  onOpenCard: (c: PipelineCard) => void;
-  onSwipeForward: (c: PipelineCard) => void;
-  onSwipeBack: (c: PipelineCard) => void;
-  onOpenPicker: (c: PipelineCard) => void;
+  onOpenCard: (c: StageCard) => void;
+  onSwipeForward: (c: StageCard) => void;
+  onSwipeBack: (c: StageCard) => void;
+  onOpenPicker: (c: StageCard) => void;
   onOpenIntake: () => void;
 }
 

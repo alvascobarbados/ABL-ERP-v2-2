@@ -14,7 +14,7 @@
     --brand-orange:      24 81% 54%;      /* #E97B2C */
     --brand-orange-soft: 26 86% 68%;      /* #F4A468 */
     --brand-gold:        35 43% 51%;      /* #B8884D */
-    --brand-teal:        190 38% 38%;     /* #3D7B86 — shipping stage */
+    --brand-teal:        190 38% 38%;     /* #3D7B86 — shipping state */
 
     /* Surfaces & text */
     --background: 41 33% 95%;             /* #F7F4ED warm paper */
@@ -48,7 +48,7 @@
     --radius: 0.85rem;
 
     /* State accents — kept for backward refs in legacy components.
-       Per the new system, state dots come from stage accent (see brand.ts). */
+       Per the new system, state dots come from state accent (see brand.ts). */
     --state-proposal: var(--brand-orange);
     --state-quotation: var(--brand-orange);
     --state-pending: var(--brand-navy);

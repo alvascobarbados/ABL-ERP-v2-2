@@ -1,9 +1,9 @@
 import { ArrowLeft, MoreVertical, Factory, ChevronRight, Plus } from "lucide-react";
 import {
-  PipelineCard, STAGES, PipelineId, StageId, ShippingMode,
+  StageCard, STATES, StageId, StateId, ShippingMode,
   SupplierLabelHint, formatShippingLabel, getShipment, ProjectLogEntry, ProjectLogActionType,
-} from "@/data/stages";
-import { PIPELINE_ACCENT } from "@/lib/brand";
+} from "@/data/states";
+import { STAGE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -16,14 +16,14 @@ import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
 import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { StagePicker } from "./StatePicker";
+import { StatePicker } from "./StatePicker";
 
 interface Props {
-  card: PipelineCard | null;
+  card: StageCard | null;
   onClose: () => void;
   onOpenShipment: (id: string) => void;
-  onAdvance?: (card: PipelineCard) => void;
-  onOpenPicker?: (card: PipelineCard) => void;
+  onAdvance?: (card: StageCard) => void;
+  onOpenPicker?: (card: StageCard) => void;
 }
 
 const DAY = 86400000;
@@ -84,7 +84,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
   const [editor, setEditor] = useState<EditorKind>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [stagePickerOpen, setStagePickerOpen] = useState(false);
+  const [statePickerOpen, setStagePickerOpen] = useState(false);
   const [confirm, setConfirm] = useState<null | {
     title: string; description: string; confirmLabel: string; destructive?: boolean; onConfirm: () => void;
   }>(null);
@@ -108,21 +108,21 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     return n?.ts;
   }, [live?.notes]);
   const completedAt = useMemo(() => {
-    if (!live || live.stage !== "finance" || live.state !== "paid") return undefined;
+    if (!live || live.state !== "finance" || live.state !== "paid") return undefined;
     const n = [...(live.notes ?? [])].reverse().find((x) => x.auto && /→\s*Paid/i.test(x.text));
     return n?.ts ?? live.updatedAt;
-  }, [live?.notes, live?.stage, live?.state, live?.updatedAt, live]);
+  }, [live?.notes, live?.state, live?.state, live?.updatedAt, live]);
 
   if (!card || !live) return null;
 
-  const stage = STAGES.find((p) => p.id === live.stage)!;
-  const accentHex = PIPELINE_ACCENT[live.stage].hex;
+  const state = STATES.find((p) => p.id === live.state)!;
+  const accentHex = STAGE_ACCENT[live.state].hex;
   const supplier = md.getSupplierByAnyId(live.supplierId);
 
   // ─── State move (used by both action sheet and ⋮ menu) ───
   const openStagePicker = () => setStagePickerOpen(true);
-  const handleStagePick = (target: { stage: PipelineId; state: StageId }) => {
-    const fromPipeline = live.stage;
+  const handleStagePick = (target: { state: StageId; state: StateId }) => {
+    const fromPipeline = live.state;
     const fromStage = live.state;
     setStagePickerOpen(false);
     const result = moveCard(live.id, target);
@@ -130,15 +130,15 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       toast.error("Can't move yet — fill in the missing details first.");
       return;
     }
-    if (target.stage !== fromPipeline) triggerPulse(target.stage);
-    addNote(live.id, `State moved from ${getStageTitle(fromPipeline, fromStage)} → ${getStageTitle(target.stage, target.state)}`, "Av");
-    toast.success(`Moved to ${getStageTitle(target.stage, target.state)}`, {
+    if (target.state !== fromPipeline) triggerPulse(target.state);
+    addNote(live.id, `State moved from ${getStageTitle(fromPipeline, fromStage)} → ${getStageTitle(target.state, target.state)}`, "Av");
+    toast.success(`Moved to ${getStageTitle(target.state, target.state)}`, {
       description: "Tap Undo to reverse.",
       duration: 5000,
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(live.id, { stage: fromPipeline, state: fromStage });
+          moveCard(live.id, { state: fromPipeline, state: fromStage });
           toast("Move undone", { duration: 2000 });
         },
       },
@@ -195,15 +195,15 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       description: "Archive holds closed-but-not-deleted projects. You can move it back later.",
       confirmLabel: "Archive",
       onConfirm: () => {
-        const fromPipeline = live.stage;
+        const fromPipeline = live.state;
         const fromStage = live.state;
-        moveCard(live.id, { stage: "sales", state: "archive" });
+        moveCard(live.id, { state: "sales", state: "archive" });
         toast.success("Archived", {
           duration: 5000,
           action: {
             label: "Undo",
             onClick: () => {
-              moveCard(live.id, { stage: fromPipeline, state: fromStage });
+              moveCard(live.id, { state: fromPipeline, state: fromStage });
               toast("Archive undone", { duration: 1800 });
             },
           },
@@ -273,7 +273,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           />
         </div>
 
-        {/* ─── MINI CARD: replica of stage-view card (non-interactive) ─── */}
+        {/* ─── MINI CARD: replica of state-view card (non-interactive) ─── */}
         <div className="px-4 sm:px-5 pt-5">
           <MiniProjectCard card={card} live={live} supplierName={supplier?.name} accentHex={accentHex} />
         </div>
@@ -529,12 +529,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       />
 
       {/* ─── State picker ─── */}
-      <StagePicker
-        open={stagePickerOpen}
+      <StatePicker
+        open={statePickerOpen}
         onClose={() => setStagePickerOpen(false)}
         title={live.projectName}
         subtitle={live.customer}
-        current={{ stage: live.stage, state: live.state }}
+        current={{ state: live.state, state: live.state }}
         onPick={handleStagePick}
       />
 
@@ -557,8 +557,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 // Mirrors src/components/leads/ProjectCard.tsx layout exactly: same paddings,
 // font sizes, colors, accent stripe, divider. No gestures, no menu, no taps.
 interface MiniProjectCardProps {
-  card: PipelineCard;
-  live: PipelineCard["project"];
+  card: StageCard;
+  live: StageCard["project"];
   supplierName?: string;
   accentHex: string;
 }
@@ -585,7 +585,7 @@ const MiniProjectCard = ({ card, live, supplierName, accentHex }: MiniProjectCar
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-card border border-border/70 shadow-[var(--shadow-card)]">
-      {/* Stage accent stripe — matches ProjectCard (4px, 0.85 opacity) */}
+      {/* State accent stripe — matches ProjectCard (4px, 0.85 opacity) */}
       <span
         className="absolute left-0 top-0 bottom-0 w-[4px]"
         style={{ backgroundColor: accentHex, opacity: 0.85 }}
@@ -718,7 +718,7 @@ const MiniProjectCard = ({ card, live, supplierName, accentHex }: MiniProjectCar
 
 // ─────────── Layout primitives ───────────
 const LOG_DOT: Record<ProjectLogActionType, string> = {
-  stage_change: "hsl(var(--brand-orange))",
+  state_change: "hsl(var(--brand-orange))",
   field_edit: "hsl(var(--muted-foreground))",
   flag_toggle: "hsl(var(--brand-orange))",
   note_added: "hsl(var(--brand-teal))",

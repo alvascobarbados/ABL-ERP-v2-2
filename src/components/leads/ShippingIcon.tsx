@@ -1,5 +1,5 @@
 import { Plane, Ship, Truck } from "lucide-react";
-import { ShippingMode } from "@/data/stages";
+import { ShippingMode } from "@/data/states";
 import { cn } from "@/lib/utils";
 
 interface Props {

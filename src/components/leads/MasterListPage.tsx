@@ -24,7 +24,7 @@ import { InlineAdd } from "@/components/leads/EntityPicker";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 import { BottomSheet } from "@/components/leads/EditorSheets";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
-import type { ShippingMode } from "@/data/stages";
+import type { ShippingMode } from "@/data/states";
 
 interface Column { key: string; label: string; align?: "left" | "right" }
 interface Row { id: string; cells: (string | number)[]; usage: number; raw: any }

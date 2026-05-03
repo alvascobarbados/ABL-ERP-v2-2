@@ -1,10 +1,10 @@
 /**
- * Desktop-only chevron stage tabs.
+ * Desktop-only chevron state tabs.
  *
  * The chevron silhouette (notched-left + pointed-right) is structural and
- * always present on every stage tab regardless of state. State is
+ * always present on every state tab regardless of state. State is
  * communicated by FILL COLOR only:
- *   - Active   → orange (current segment of the stage process)
+ *   - Active   → orange (current segment of the state process)
  *   - Inactive → paper background with a 1px navy-15% outline
  *
  * Outline trick: each tab is a 1px-thick navy-15% chevron with a slightly
@@ -14,17 +14,17 @@
  * "All" stays a rounded pill — it's a lens, not a state in the flow.
  */
 import { cn } from "@/lib/utils";
-import { STAGES, PipelineId } from "@/data/stages";
-import { PIPELINE_ACCENT } from "@/lib/brand";
-import type { TabId } from "./StageTabs";
+import { STATES, StageId } from "@/data/states";
+import { STAGE_ACCENT } from "@/lib/brand";
+import type { TabId } from "./StateTabs";
 
 interface Props {
   active: TabId;
   onChange: (id: TabId) => void;
-  /** Filtered counts per stage — update live as filters change. */
-  counts: Record<PipelineId, number>;
+  /** Filtered counts per state — update live as filters change. */
+  counts: Record<StageId, number>;
   completedCount?: number;
-  pulse?: PipelineId | null;
+  pulse?: StageId | null;
 }
 
 const CHEV = 16;          // chevron point depth in px
@@ -36,7 +36,7 @@ const CHEVRON_CLIP = `polygon(0 0, calc(100% - ${CHEV}px) 0, 100% 50%, calc(100%
 
 export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
   const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
-  const flowTabs = STAGES.map((p) => ({ id: p.id, title: p.title, count: counts[p.id] }));
+  const flowTabs = STATES.map((p) => ({ id: p.id, title: p.title, count: counts[p.id] }));
   const allActive = active === "all";
   const completedActive = active === "completed";
   const SAGE = "#6B8E5A";
@@ -79,7 +79,7 @@ export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, puls
           // the previous tab's right point — interlocking with zero visual gap.
           const overlap = i === 0 ? 0 : -CHEV;
 
-          const accentHex = PIPELINE_ACCENT[t.id].hex;
+          const accentHex = STAGE_ACCENT[t.id].hex;
           const fill = isActive ? accentHex : "hsl(var(--background))";
           const outline = isActive ? accentHex : "hsl(var(--brand-navy) / 0.15)";
           const textColor = isActive ? "#fff" : "hsl(var(--brand-navy))";

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Factory, Search, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Supplier, ShippingMode } from "@/data/stages";
+import { Supplier, ShippingMode } from "@/data/states";
 
 // ─────────── Generic bottom sheet ───────────
 interface BottomSheetProps {

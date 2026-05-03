@@ -1,8 +1,8 @@
-// Centralized brand & stage + supplier color tokens.
+// Centralized brand & state + supplier color tokens.
 // Hex values map to the Alvasco identity defined in index.css.
-import { PipelineId } from "@/data/stages";
+import { StageId } from "@/data/states";
 
-export const PIPELINE_ACCENT: Record<PipelineId, { hex: string; name: string }> = {
+export const STAGE_ACCENT: Record<StageId, { hex: string; name: string }> = {
   sales:      { hex: "#E97B2C", name: "orange" },   // Alvasco Orange — getting new business
   design:     { hex: "#8B3A62", name: "magenta" },  // Deep magenta — design & proofing
   operations: { hex: "#1B2A4E", name: "navy" },     // Alvasco Navy — making
@@ -23,4 +23,4 @@ export const SUPPLIER_COLOR: Record<string, string> = {
 export const supplierColor = (id?: string) =>
   (id && SUPPLIER_COLOR[id]) || "#A8A29E";
 
-export const pipelineAccent = (id: PipelineId) => PIPELINE_ACCENT[id].hex;
+export const stageAccent = (id: StageId) => STAGE_ACCENT[id].hex;

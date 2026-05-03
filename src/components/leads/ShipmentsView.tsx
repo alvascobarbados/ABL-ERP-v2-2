@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { Plane, Ship } from "lucide-react";
 import { Sheet } from "./Sheet";
-import { Shipment, Project, formatShipmentTitle } from "@/data/stages";
-import { PIPELINE_ACCENT } from "@/lib/brand";
+import { Shipment, Project, formatShipmentTitle } from "@/data/states";
+import { STAGE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -15,7 +15,7 @@ interface Props {
 
 const STATUS_COLOR: Record<Shipment["status"], string> = {
   Booked: "hsl(var(--muted-foreground))",
-  "In Transit": PIPELINE_ACCENT.shipping.hex,
+  "In Transit": STAGE_ACCENT.shipping.hex,
   Customs: "hsl(var(--brand-orange))",
   Delayed: "hsl(var(--brand-orange))",
   Delivered: "hsl(142 71% 45%)",
@@ -35,7 +35,7 @@ export const ShipmentsView = ({ open, onClose, shipments, projects, onOpenShipme
     return (
       <section>
         <div className="flex items-center gap-2 mb-2">
-          <Icon className="h-4 w-4" style={{ color: PIPELINE_ACCENT.shipping.hex }} />
+          <Icon className="h-4 w-4" style={{ color: STAGE_ACCENT.shipping.hex }} />
           <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "hsl(var(--brand-navy))" }}>
             {title}
           </h3>

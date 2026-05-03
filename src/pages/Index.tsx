@@ -3,14 +3,14 @@ import { Menu } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  STAGES, PipelineId, PipelineCard, Shipment, StageId,
+  STATES, StageId, StageCard, Shipment, StateId,
   SUPPLIERS, buildCard, Project,
-} from "@/data/stages";
-import { PIPELINE_ACCENT } from "@/lib/brand";
+} from "@/data/states";
+import { STAGE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/useStageStore";
-import { StageSection } from "@/components/leads/StateSection";
+import { StateSection } from "@/components/leads/StateSection";
 import { ProjectCard } from "@/components/leads/ProjectCard";
-import { PipelineTabs } from "@/components/leads/StageTabs";
+import { StageTabs } from "@/components/leads/StateTabs";
 import { ChevronTabs } from "@/components/leads/ChevronTabs";
 import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
 import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
@@ -25,7 +25,7 @@ import { HamburgerDrawer } from "@/components/leads/HamburgerDrawer";
 import { TopControls } from "@/components/leads/TopControls";
 import { FilterSheet } from "@/components/leads/FilterSheet";
 import { SortSheet, SortState, DEFAULT_DIR, SortField } from "@/components/leads/SortSheet";
-import { StagePicker } from "@/components/leads/StatePicker";
+import { StatePicker } from "@/components/leads/StatePicker";
 import { SettingsMenu } from "@/components/leads/SettingsMenu";
 import { Walkthrough } from "@/components/leads/Walkthrough";
 import { Wordmark } from "@/components/leads/Wordmark";
@@ -34,7 +34,7 @@ import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 import { ShippingPipelineView, ShippingFilter } from "@/components/leads/ShippingStageView";
 import { AllPipelineView } from "@/components/leads/AllStageView";
 import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
-import type { TabId } from "@/components/leads/StageTabs";
+import type { TabId } from "@/components/leads/StateTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
 import { haptics } from "@/lib/haptics";
@@ -91,7 +91,7 @@ function daysToDeadline(d: Date) {
 }
 
 function compareCards(
-  a: PipelineCard, b: PipelineCard, sort: SortState,
+  a: StageCard, b: StageCard, sort: SortState,
   idIndex: Map<string, number>, supplierName: (id?: string) => string,
 ): number {
   const dir = sort.dir === "asc" ? 1 : -1;
@@ -160,14 +160,14 @@ function projectMatchesSearch(p: Project, q: string): boolean {
 }
 
 function projectHasMissingData(p: Project): boolean {
-  const stageRank: Record<StageId, number> = {
+  const stateRank: Record<StateId, number> = {
     proposal: 0, quote: 1, confirming: 2, archive: 0,
     design: 2, proof: 2,
     preproduction: 3, in_production: 4,
     shipment_required: 5, shipment_assigned: 6,
     invoice_required: 7, invoiced: 8, paid: 9,
   };
-  const r = stageRank[p.state] ?? 0;
+  const r = stateRank[p.state] ?? 0;
   if (r >= 1 && !p.quoteNumber) return true;
   if (r >= 2 && !p.supplierId) return true;
   if (r >= 2 && !p.shippingMode) return true;
@@ -177,7 +177,7 @@ function projectHasMissingData(p: Project): boolean {
   return false;
 }
 
-function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
+function cardMatchesFilter(c: StageCard, f: FilterState): boolean {
   const p = c.project;
   if (f.customers.length && !f.customers.includes(p.customer)) return false;
   if (f.projectNames.length && !f.projectNames.includes(p.projectName)) return false;
@@ -218,16 +218,16 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("sales");
   const isAll = activeTab === "all";
   const isCompleted = activeTab === "completed";
-  const activePipeline: PipelineId =
+  const activePipeline: StageId =
     activeTab === "all" || activeTab === "completed" ? "sales" : activeTab;
   const { view: desktopView, setView: setDesktopView } = useViewMode(activeTab);
 
-  // Single shared filter state — persists across stage tab switches and
+  // Single shared filter state — persists across state tab switches and
   // across the Kanban/Table view toggle. Lives outside any per-tab component
   // lifecycle so child remounts can never reset it.
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER);
 
-  const [selectedCard, setSelectedCard] = useState<PipelineCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<StageCard | null>(null);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
 
   const [hamburgerOpen, setHamburgerOpen] = useState(false);
@@ -242,9 +242,9 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [searchScopeAll, setSearchScopeAll] = useState(false);
 
-  const [pickerCard, setPickerCard] = useState<PipelineCard | null>(null);
-  const [confirmLost, setConfirmLost] = useState<{ card: PipelineCard; target: { stage: PipelineId; state: StageId } } | null>(null);
-  const [missingFields, setMissingFields] = useState<{ card: PipelineCard; target: { stage: PipelineId; state: StageId }; missing: string[] } | null>(null);
+  const [pickerCard, setPickerCard] = useState<StageCard | null>(null);
+  const [confirmLost, setConfirmLost] = useState<{ card: StageCard; target: { state: StageId; state: StateId } } | null>(null);
+  const [missingFields, setMissingFields] = useState<{ card: StageCard; target: { state: StageId; state: StateId }; missing: string[] } | null>(null);
   const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
   const [assignOpen, setAssignOpen] = useState(false);
 
@@ -266,7 +266,7 @@ const Index = () => {
     if (!id) return;
     const proj = projects.find((p) => p.id === id);
     if (proj) {
-      setActiveTab(proj.stage);
+      setActiveTab(proj.state);
       setTimeout(() => { setSelectedCard(buildCard(proj)); setSelectedShipment(null); }, 0);
     }
     const next = new URLSearchParams(searchParams);
@@ -287,37 +287,37 @@ const Index = () => {
     return (id?: string) => (id ? map.get(id) ?? "" : "");
   }, []);
 
-  // Stage-facing project list — excludes archived (sales/archive) AND completed (paid).
-  const pipelineProjects = useMemo(
+  // State-facing project list — excludes archived (sales/archive) AND completed (paid).
+  const stageProjects = useMemo(
     () => projects.filter((p) =>
-      !(p.stage === "sales" && p.state === "archive") &&
-      !(p.stage === "finance" && p.state === "paid"),
+      !(p.state === "sales" && p.state === "archive") &&
+      !(p.state === "finance" && p.state === "paid"),
     ),
     [projects],
   );
 
   const completedProjects = useMemo(
-    () => projects.filter((p) => p.stage === "finance" && p.state === "paid"),
+    () => projects.filter((p) => p.state === "finance" && p.state === "paid"),
     [projects],
   );
 
   // Build cards list (scope by tab)
-  const baseCards = useMemo<PipelineCard[]>(() => {
+  const baseCards = useMemo<StageCard[]>(() => {
     if (isCompleted) return completedProjects.map(buildCard);
-    if (isAll) return pipelineProjects.map(buildCard);
-    return pipelineProjects.filter((p) => p.stage === activePipeline).map(buildCard);
-  }, [activePipeline, isAll, isCompleted, pipelineProjects, completedProjects]);
+    if (isAll) return stageProjects.map(buildCard);
+    return stageProjects.filter((p) => p.state === activePipeline).map(buildCard);
+  }, [activePipeline, isAll, isCompleted, stageProjects, completedProjects]);
 
-  const counts = useMemo<Record<PipelineId, number>>(() => ({
-    sales: pipelineProjects.filter((p) => p.stage === "sales").length,
-    design: pipelineProjects.filter((p) => p.stage === "design").length,
-    operations: pipelineProjects.filter((p) => p.stage === "operations").length,
-    shipping: pipelineProjects.filter((p) => p.stage === "shipping").length,
-    finance: pipelineProjects.filter((p) => p.stage === "finance").length,
-  }), [pipelineProjects]);
+  const counts = useMemo<Record<StageId, number>>(() => ({
+    sales: stageProjects.filter((p) => p.state === "sales").length,
+    design: stageProjects.filter((p) => p.state === "design").length,
+    operations: stageProjects.filter((p) => p.state === "operations").length,
+    shipping: stageProjects.filter((p) => p.state === "shipping").length,
+    finance: stageProjects.filter((p) => p.state === "finance").length,
+  }), [stageProjects]);
 
   // Filtered counts — used by chevron tabs to update live as filters change.
-  const filteredCounts = useMemo<Record<PipelineId, number>>(() => {
+  const filteredCounts = useMemo<Record<StageId, number>>(() => {
     const q = search.trim();
     const match = (p: Project) => {
       const c = buildCard(p);
@@ -326,13 +326,13 @@ const Index = () => {
       return true;
     };
     return {
-      sales: pipelineProjects.filter((p) => p.stage === "sales" && match(p)).length,
-      design: pipelineProjects.filter((p) => p.stage === "design" && match(p)).length,
-      operations: pipelineProjects.filter((p) => p.stage === "operations" && match(p)).length,
-      shipping: pipelineProjects.filter((p) => p.stage === "shipping" && match(p)).length,
-      finance: pipelineProjects.filter((p) => p.stage === "finance" && match(p)).length,
+      sales: stageProjects.filter((p) => p.state === "sales" && match(p)).length,
+      design: stageProjects.filter((p) => p.state === "design" && match(p)).length,
+      operations: stageProjects.filter((p) => p.state === "operations" && match(p)).length,
+      shipping: stageProjects.filter((p) => p.state === "shipping" && match(p)).length,
+      finance: stageProjects.filter((p) => p.state === "finance" && match(p)).length,
     };
-  }, [pipelineProjects, filters, search]);
+  }, [stageProjects, filters, search]);
 
   const completedCount = useMemo(() => {
     const q = search.trim();
@@ -360,7 +360,7 @@ const Index = () => {
     const searchActive = !!search.trim();
     let pool = baseCards;
     if (searchActive && searchScopeAll && !isAll) {
-      pool = pipelineProjects.map(buildCard);
+      pool = stageProjects.map(buildCard);
     }
     return pool
       .filter((c) => {
@@ -369,14 +369,14 @@ const Index = () => {
         return true;
       })
       .sort((a, b) => compareCards(a, b, sort, idIndex, supplierName));
-  }, [baseCards, pipelineProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
+  }, [baseCards, stageProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
 
-  const stage = STAGES.find((p) => p.id === activePipeline)!;
+  const state = STATES.find((p) => p.id === activePipeline)!;
   const hasActiveFilter = filterCount(filters) > 0;
   const isSearching = !!search.trim();
 
   // ─── Move logic (preserved) ───
-  const performMove = (card: PipelineCard, target: { stage: PipelineId; state: StageId }) => {
+  const performMove = (card: StageCard, target: { state: StageId; state: StateId }) => {
     if (target.state === "archive" && card.state !== "archive") {
       setConfirmLost({ card, target });
       return;
@@ -384,7 +384,7 @@ const Index = () => {
     doMove(card, target);
   };
 
-  const doMove = (card: PipelineCard, target: { stage: PipelineId; state: StageId }) => {
+  const doMove = (card: StageCard, target: { state: StageId; state: StateId }) => {
     const v = validateMove(card.project, target);
     if (!v.ok) {
       const labels = v.missing.map((m) =>
@@ -394,31 +394,31 @@ const Index = () => {
       setMissingFields({ card, target, missing: labels });
       return;
     }
-    const fromPipeline = card.stage;
+    const fromPipeline = card.state;
     const fromStage = card.state;
     const label = `${card.project.customer} · ${card.project.projectName}`;
     const result = moveCard(card.id, target);
     if (!result.ok) return;
-    if (target.stage !== fromPipeline) triggerPulse(target.stage);
+    if (target.state !== fromPipeline) triggerPulse(target.state);
 
-    toast.success(`${label} moved to ${getStageTitle(target.stage, target.state)}`, {
+    toast.success(`${label} moved to ${getStageTitle(target.state, target.state)}`, {
       description: `From ${getStageTitle(fromPipeline, fromStage)}. Tap Undo to reverse.`,
       duration: 5000,
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(card.id, { stage: fromPipeline, state: fromStage });
+          moveCard(card.id, { state: fromPipeline, state: fromStage });
           toast(`Move undone`, { duration: 2500 });
         },
       },
     });
   };
 
-  const markAsPaid = (card: PipelineCard) => {
-    const fromPipeline = card.stage;
+  const markAsPaid = (card: StageCard) => {
+    const fromPipeline = card.state;
     const fromStage = card.state;
     const label = `${card.project.customer} · ${card.project.projectName}`;
-    const result = moveCard(card.id, { stage: "finance", state: "paid" });
+    const result = moveCard(card.id, { state: "finance", state: "paid" });
     if (!result.ok) return;
     toast.success(`${label} marked as paid`, {
       description: "Moved to Completed.",
@@ -426,24 +426,24 @@ const Index = () => {
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(card.id, { stage: fromPipeline, state: fromStage });
+          moveCard(card.id, { state: fromPipeline, state: fromStage });
           toast(`Move undone`, { duration: 2000 });
         },
       },
     });
   };
 
-  const onSwipeForward = (card: PipelineCard) => {
+  const onSwipeForward = (card: StageCard) => {
     // Special case: Invoiced cards swipe-right → Mark as paid (no modal)
-    if (card.stage === "finance" && card.state === "invoiced") {
+    if (card.state === "finance" && card.state === "invoiced") {
       markAsPaid(card);
       return;
     }
     const next = nextStage(card); if (next) performMove(card, next);
   };
-  const onSwipeBack = (card: PipelineCard) => { const prev = prevStage(card); if (prev) performMove(card, prev); };
-  const onOpenPicker = (card: PipelineCard) => setPickerCard(card);
-  const handlePickerSelect = (target: { stage: PipelineId; state: StageId }) => {
+  const onSwipeBack = (card: StageCard) => { const prev = prevStage(card); if (prev) performMove(card, prev); };
+  const onOpenPicker = (card: StageCard) => setPickerCard(card);
+  const handlePickerSelect = (target: { state: StageId; state: StateId }) => {
     if (!pickerCard) return;
     const card = pickerCard;
     setPickerCard(null);
@@ -457,7 +457,7 @@ const Index = () => {
   const openProjectById = (id: string) => {
     const proj = projects.find((p) => p.id === id);
     if (!proj) return;
-    setActiveTab(proj.stage);
+    setActiveTab(proj.state);
     setTimeout(() => { setSelectedCard(buildCard(proj)); setSelectedShipment(null); }, 0);
   };
 
@@ -477,13 +477,13 @@ const Index = () => {
     if (dx > 0 && idx > 0) setActiveTab(TAB_ORDER[idx - 1]);
   };
 
-  const accentHex = isAll ? "transparent" : PIPELINE_ACCENT[activePipeline].hex;
+  const accentHex = isAll ? "transparent" : STAGE_ACCENT[activePipeline].hex;
   const showSearchScopeToggle = isSearching && !isAll;
 
-  // What stage label to show in the search results header
+  // What state label to show in the search results header
   const searchScopeLabel = isAll
-    ? "all stages"
-    : (searchScopeAll ? "all stages" : stage.title);
+    ? "all states"
+    : (searchScopeAll ? "all states" : state.title);
 
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
@@ -532,7 +532,7 @@ const Index = () => {
           {/* Mobile pill tabs */}
           <div className="lg:hidden max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
+              <StageTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
             </div>
           </div>
           {/* Desktop chevron tabs — full width */}
@@ -600,7 +600,7 @@ const Index = () => {
                 className="text-xs font-medium underline underline-offset-4"
                 style={{ color: "hsl(var(--brand-navy))" }}
               >
-                {searchScopeAll ? `Search only ${stage.title}` : "Search all stages"}
+                {searchScopeAll ? `Search only ${state.title}` : "Search all states"}
               </button>
             )}
           </div>
@@ -608,12 +608,12 @@ const Index = () => {
 
         {(() => {
           const shippingProjectsFiltered = projects.filter((p) => {
-            if (p.stage !== "shipping") return false;
+            if (p.state !== "shipping") return false;
             if (!cardMatchesFilter(buildCard(p), filters)) return false;
             if (isSearching && !projectMatchesSearch(p, search.trim())) return false;
             return true;
           });
-          const intakeCount = projects.filter((p) => p.stage === "shipping" && p.state === "shipment_required").length;
+          const intakeCount = projects.filter((p) => p.state === "shipping" && p.state === "shipment_required").length;
 
           if (isCompleted) {
             return (
@@ -681,8 +681,8 @@ const Index = () => {
             );
           }
 
-          return stage.states.map((state) => (
-            <StageSection
+          return state.states.map((state) => (
+            <StateSection
               key={state.id}
               title={state.title}
               state={state.id}
@@ -803,12 +803,12 @@ const Index = () => {
         onOpenShipment={openShipmentById}
       />
 
-      <StagePicker
+      <StatePicker
         open={!!pickerCard}
         onClose={() => setPickerCard(null)}
         title={pickerCard ? pickerCard.project.projectName : ""}
         subtitle={pickerCard ? pickerCard.project.customer : ""}
-        current={pickerCard ? { stage: pickerCard.stage, state: pickerCard.state } : null}
+        current={pickerCard ? { state: pickerCard.state, state: pickerCard.state } : null}
         onPick={handlePickerSelect}
       />
 
@@ -850,7 +850,7 @@ const Index = () => {
       <AssignShipmentSheet
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
-        intakeSubs={projects.filter((p) => p.stage === "shipping" && p.state === "shipment_required")}
+        intakeSubs={projects.filter((p) => p.state === "shipping" && p.state === "shipment_required")}
         shipments={shipments}
       />
 
@@ -863,7 +863,7 @@ const Index = () => {
 };
 
 import { getNextStage as nextS, getPrevStage as prevS } from "@/hooks/useStageStore";
-function nextStage(card: PipelineCard) { return nextS(card.stage, card.state); }
-function prevStage(card: PipelineCard) { return prevS(card.stage, card.state); }
+function nextStage(card: StageCard) { return nextS(card.state, card.state); }
+function prevStage(card: StageCard) { return prevS(card.state, card.state); }
 
 export default Index;
