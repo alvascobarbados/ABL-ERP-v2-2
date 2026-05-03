@@ -418,13 +418,26 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       onClick={(e) => e.stopPropagation()}
     >
       {/* Top header bar */}
-      <div className="shrink-0 flex items-center justify-between px-4 pt-3.5 pb-2 pr-14">
-        <div className="min-w-0">
+      <div className="shrink-0 flex items-start justify-between gap-3 px-4 pt-3.5 pb-2">
+        <div className="min-w-0 flex-1">
           <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">Editing</div>
           <div className="text-[15px] font-semibold tracking-tight truncate" style={{ color: "hsl(var(--brand-navy))" }}>
             {proj.customer} · {proj.projectName}
           </div>
         </div>
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); haptics.tap(); onExit(); }}
+          className="hidden sm:inline-flex items-center justify-center shrink-0 rounded-lg text-white text-[13px] font-semibold tracking-tight transition-transform active:scale-[0.97]"
+          style={{
+            backgroundColor: "hsl(var(--brand-orange))",
+            height: 36, padding: "0 16px",
+            boxShadow: "0 2px 8px -2px hsl(var(--brand-orange) / 0.5)",
+          }}
+        >
+          Done
+        </button>
       </div>
       <div className="shrink-0 h-px w-full" style={{ backgroundColor: "hsl(var(--brand-navy) / 0.1)" }} />
       <div
@@ -433,6 +446,25 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       >
         {renderFields()}
         <div className="h-2" />
+      </div>
+      {/* Mobile sticky Done */}
+      <div
+        className="sm:hidden shrink-0 px-4 pt-2 pb-3 border-t"
+        style={{
+          borderColor: "hsl(var(--brand-navy) / 0.1)",
+          backgroundColor: "hsl(var(--card))",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+        }}
+      >
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); haptics.tap(); onExit(); }}
+          className="w-full inline-flex items-center justify-center rounded-lg text-white text-[15px] font-semibold tracking-tight active:scale-[0.99] transition-transform"
+          style={{ backgroundColor: "hsl(var(--brand-orange))", height: 48 }}
+        >
+          Done
+        </button>
       </div>
       {/* accent stripe matching pipeline */}
       <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: accent, opacity: 0.85 }} />
