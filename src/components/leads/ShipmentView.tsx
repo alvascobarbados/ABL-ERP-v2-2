@@ -2,7 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Container, Factory, CalendarDays, CheckCircle2 } from "lucide-react";
 import { Sheet } from "./Sheet";
-import { Shipment, getSupplier, PIPELINES, formatShipmentTitle } from "@/data/pipelines";
+import { Shipment, getSupplier, STAGES, formatShipmentTitle } from "@/data/stages";
 import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
 import { ShippingIcon } from "./ShippingIcon";
 import { SupplierChip } from "./StatusPill";
@@ -26,7 +26,7 @@ export const ShipmentView = ({ shipment, onClose, onOpenProject }: Props) => {
   const subs = projects.filter((p) => p.shipmentId === shipment.id);
   const totalValue = subs.reduce((a, s) => a + s.value, 0);
   const isDelivered = shipment.status === "Delivered";
-  const inShippingCount = subs.filter((s) => s.pipeline === "shipping").length;
+  const inShippingCount = subs.filter((s) => s.stage === "shipping").length;
 
   const title = formatShipmentTitle(shipment);
   const onConfirmDeliver = () => {
@@ -75,7 +75,7 @@ export const ShipmentView = ({ shipment, onClose, onOpenProject }: Props) => {
 
         <div className="space-y-2">
           {subs.map((s) => {
-            const stageInfo = PIPELINES.flatMap((p) => p.stages).find((x) => x.id === s.stage);
+            const stageInfo = STAGES.flatMap((p) => p.states).find((x) => x.id === s.state);
             return (
               <div key={s.id} className="rounded-xl border border-border bg-card p-3">
                 <button onClick={() => onOpenProject(s.id)} className="w-full text-left">
@@ -94,7 +94,7 @@ export const ShipmentView = ({ shipment, onClose, onOpenProject }: Props) => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PIPELINE_ACCENT[s.pipeline].hex }} />
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PIPELINE_ACCENT[s.stage].hex }} />
                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{stageInfo?.title}</span>
                     </div>
                   </div>

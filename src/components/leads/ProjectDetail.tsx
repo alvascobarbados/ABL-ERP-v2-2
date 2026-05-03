@@ -1,8 +1,8 @@
 import { ArrowLeft, MoreVertical, Factory, ChevronRight, Plus } from "lucide-react";
 import {
-  PipelineCard, PIPELINES, PipelineId, StageId, ShippingMode,
+  PipelineCard, STAGES, PipelineId, StageId, ShippingMode,
   SupplierLabelHint, formatShippingLabel, getShipment, ProjectLogEntry, ProjectLogActionType,
-} from "@/data/pipelines";
+} from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -99,7 +99,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   // Re-derive the live project from the store so edits reflect immediately.
   const live = useMemo(() => card ? projects.find((p) => p.id === card.id) ?? null : null, [card, projects]);
 
-  // Derive Confirmed/Completed timestamps from the auto stage-move notes.
+  // Derive Confirmed/Completed timestamps from the auto state-move notes.
   // NOTE: these hooks must run on every render, so they sit above the early
   // return guard below — otherwise React sees a different hook count when
   // the card opens/closes and throws "Rendered more hooks than…".
@@ -108,37 +108,37 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     return n?.ts;
   }, [live?.notes]);
   const completedAt = useMemo(() => {
-    if (!live || live.pipeline !== "finance" || live.stage !== "paid") return undefined;
+    if (!live || live.stage !== "finance" || live.state !== "paid") return undefined;
     const n = [...(live.notes ?? [])].reverse().find((x) => x.auto && /→\s*Paid/i.test(x.text));
     return n?.ts ?? live.updatedAt;
-  }, [live?.notes, live?.pipeline, live?.stage, live?.updatedAt, live]);
+  }, [live?.notes, live?.stage, live?.state, live?.updatedAt, live]);
 
   if (!card || !live) return null;
 
-  const pipeline = PIPELINES.find((p) => p.id === live.pipeline)!;
-  const accentHex = PIPELINE_ACCENT[live.pipeline].hex;
+  const stage = STAGES.find((p) => p.id === live.stage)!;
+  const accentHex = PIPELINE_ACCENT[live.stage].hex;
   const supplier = md.getSupplierByAnyId(live.supplierId);
 
-  // ─── Stage move (used by both action sheet and ⋮ menu) ───
+  // ─── State move (used by both action sheet and ⋮ menu) ───
   const openStagePicker = () => setStagePickerOpen(true);
-  const handleStagePick = (target: { pipeline: PipelineId; stage: StageId }) => {
-    const fromPipeline = live.pipeline;
-    const fromStage = live.stage;
+  const handleStagePick = (target: { stage: PipelineId; state: StageId }) => {
+    const fromPipeline = live.stage;
+    const fromStage = live.state;
     setStagePickerOpen(false);
     const result = moveCard(live.id, target);
     if (!result.ok) {
       toast.error("Can't move yet — fill in the missing details first.");
       return;
     }
-    if (target.pipeline !== fromPipeline) triggerPulse(target.pipeline);
-    addNote(live.id, `Stage moved from ${getStageTitle(fromPipeline, fromStage)} → ${getStageTitle(target.pipeline, target.stage)}`, "Av");
-    toast.success(`Moved to ${getStageTitle(target.pipeline, target.stage)}`, {
+    if (target.stage !== fromPipeline) triggerPulse(target.stage);
+    addNote(live.id, `State moved from ${getStageTitle(fromPipeline, fromStage)} → ${getStageTitle(target.stage, target.state)}`, "Av");
+    toast.success(`Moved to ${getStageTitle(target.stage, target.state)}`, {
       description: "Tap Undo to reverse.",
       duration: 5000,
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(live.id, { pipeline: fromPipeline, stage: fromStage });
+          moveCard(live.id, { stage: fromPipeline, state: fromStage });
           toast("Move undone", { duration: 2000 });
         },
       },
@@ -195,15 +195,15 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       description: "Archive holds closed-but-not-deleted projects. You can move it back later.",
       confirmLabel: "Archive",
       onConfirm: () => {
-        const fromPipeline = live.pipeline;
-        const fromStage = live.stage;
-        moveCard(live.id, { pipeline: "sales", stage: "archive" });
+        const fromPipeline = live.stage;
+        const fromStage = live.state;
+        moveCard(live.id, { stage: "sales", state: "archive" });
         toast.success("Archived", {
           duration: 5000,
           action: {
             label: "Undo",
             onClick: () => {
-              moveCard(live.id, { pipeline: fromPipeline, stage: fromStage });
+              moveCard(live.id, { stage: fromPipeline, state: fromStage });
               toast("Archive undone", { duration: 1800 });
             },
           },
@@ -273,7 +273,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           />
         </div>
 
-        {/* ─── MINI CARD: replica of pipeline-view card (non-interactive) ─── */}
+        {/* ─── MINI CARD: replica of stage-view card (non-interactive) ─── */}
         <div className="px-4 sm:px-5 pt-5">
           <MiniProjectCard card={card} live={live} supplierName={supplier?.name} accentHex={accentHex} />
         </div>
@@ -528,13 +528,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onPick={handlePickShippingMode}
       />
 
-      {/* ─── Stage picker ─── */}
+      {/* ─── State picker ─── */}
       <StagePicker
         open={stagePickerOpen}
         onClose={() => setStagePickerOpen(false)}
         title={live.projectName}
         subtitle={live.customer}
-        current={{ pipeline: live.pipeline, stage: live.stage }}
+        current={{ stage: live.stage, state: live.state }}
         onPick={handleStagePick}
       />
 
@@ -585,7 +585,7 @@ const MiniProjectCard = ({ card, live, supplierName, accentHex }: MiniProjectCar
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-card border border-border/70 shadow-[var(--shadow-card)]">
-      {/* Pipeline accent stripe — matches ProjectCard (4px, 0.85 opacity) */}
+      {/* Stage accent stripe — matches ProjectCard (4px, 0.85 opacity) */}
       <span
         className="absolute left-0 top-0 bottom-0 w-[4px]"
         style={{ backgroundColor: accentHex, opacity: 0.85 }}

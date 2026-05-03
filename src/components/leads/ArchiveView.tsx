@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StagePicker } from "./StagePicker";
-import { Project, PipelineId, StageId } from "@/data/pipelines";
+import { Project, PipelineId, StageId } from "@/data/stages";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +74,7 @@ export const ArchiveView = ({ open, onClose }: Props) => {
     setSelected(next);
   };
 
-  const handleRestorePick = (target: { pipeline: PipelineId; stage: StageId }) => {
+  const handleRestorePick = (target: { stage: PipelineId; state: StageId }) => {
     if (!restoreTarget) return;
     const p = restoreTarget;
     setRestoreTarget(null);
@@ -83,12 +83,12 @@ export const ArchiveView = ({ open, onClose }: Props) => {
       toast.error("Can't restore — missing required fields. Open the project to fill them in.");
       return;
     }
-    const where = `${target.pipeline === "sales" ? "Sales" : target.pipeline === "operations" ? "Production" : target.pipeline === "shipping" ? "Shipping" : "Finance"} / ${getStageTitle(target.pipeline, target.stage)}`;
+    const where = `${target.stage === "sales" ? "Sales" : target.stage === "operations" ? "Production" : target.stage === "shipping" ? "Shipping" : "Finance"} / ${getStageTitle(target.stage, target.state)}`;
     toast.success(`${p.customer} · ${p.projectName} restored to ${where}`, {
       duration: 5000,
       action: {
         label: "Undo",
-        onClick: () => { store.moveCard(p.id, { pipeline: "sales", stage: "archive" }); toast(`Sent back to Archive`, { duration: 1800 }); },
+        onClick: () => { store.moveCard(p.id, { stage: "sales", state: "archive" }); toast(`Sent back to Archive`, { duration: 1800 }); },
       },
     });
   };
@@ -291,7 +291,7 @@ export const ArchiveView = ({ open, onClose }: Props) => {
       onClose={() => setRestoreTarget(null)}
       title={restoreTarget ? restoreTarget.projectName : ""}
       subtitle={restoreTarget ? `Restore ${restoreTarget.customer} to…` : ""}
-      current={restoreTarget ? { pipeline: restoreTarget.pipeline, stage: restoreTarget.stage } : null}
+      current={restoreTarget ? { stage: restoreTarget.stage, state: restoreTarget.state } : null}
       onPick={handleRestorePick}
     />
     </>

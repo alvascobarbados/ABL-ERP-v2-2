@@ -12,7 +12,7 @@ import { ChevronDown, Search, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FilterState, DeadlineUrgency } from "./FilterBar";
 import { EMPTY_FILTER, filterCount } from "./FilterBar";
-import type { ShippingMode } from "@/data/pipelines";
+import type { ShippingMode } from "@/data/stages";
 
 interface Props {
   value: FilterState;

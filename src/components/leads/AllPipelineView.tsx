@@ -1,4 +1,4 @@
-import { PipelineCard, Project, Shipment } from "@/data/pipelines";
+import { PipelineCard, Project, Shipment } from "@/data/stages";
 import { ProjectCard } from "./ProjectCard";
 
 interface Props {
@@ -23,10 +23,10 @@ interface Props {
 }
 
 /**
- * Flat All view. No stage section headers, no collapsible groups.
+ * Flat All view. No state section headers, no collapsible groups.
  * Cards render as one continuous list in active-sort order.
- * Each card carries a quiet "Pipeline · Stage" label so the user
- * always knows what stage a card is in, even without a header.
+ * Each card carries a quiet "Stage · State" label so the user
+ * always knows what state a card is in, even without a header.
  */
 export const AllPipelineView = ({
   cards, hasActiveFilter, onOpenCard, onSwipeForward, onSwipeBack, onOpenPicker,

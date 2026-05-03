@@ -17,7 +17,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { useMasterData } from "@/hooks/useMasterData";
-import { PIPELINES, PipelineId, Project, ShippingMode, SUPPLIERS, StageId } from "@/data/pipelines";
+import { STAGES, PipelineId, Project, ShippingMode, SUPPLIERS, StageId } from "@/data/stages";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import {
   SpreadsheetView, SpreadsheetColumn, EditorOption, CreateFormSpec,
@@ -27,7 +27,7 @@ const PIPELINE_LABEL: Record<PipelineId, string> = {
   sales: "Sales", design: "Design", operations: "Production", shipping: "Shipping", finance: "Finance",
 };
 
-// First valid stage when switching pipelines via the cell editor.
+// First valid state when switching stages via the cell editor.
 const FIRST_STAGE: Record<PipelineId, StageId> = {
   sales: "proposal",
   design: "design",
@@ -72,7 +72,7 @@ export default function Spreadsheet() {
 
   const rows = useMemo<Row[]>(() => {
     return projects
-      .filter((p) => pipelineFilter === "all" || p.pipeline === pipelineFilter)
+      .filter((p) => pipelineFilter === "all" || p.stage === pipelineFilter)
       .map((p) => {
         const m = /(\d+)$/.exec(p.id);
         const displayId = m ? String(m[1]).padStart(4, "0") : p.id.slice(-4);
@@ -257,34 +257,34 @@ export default function Spreadsheet() {
       sortKey: (r) => r.displayId,
     },
     {
-      id: "pipeline", label: "Pipeline", width: 120,
-      render: (r) => PIPELINE_LABEL[r.project.pipeline],
-      editor: { type: "select", options: PIPELINES.map((p) => ({ value: p.id, label: p.title })) },
-      getValue: (r) => r.project.pipeline,
+      id: "stage", label: "Stage", width: 120,
+      render: (r) => PIPELINE_LABEL[r.project.stage],
+      editor: { type: "select", options: STAGES.map((p) => ({ value: p.id, label: p.title })) },
+      getValue: (r) => r.project.stage,
       commit: (r, v) => {
         const next = String(v ?? "") as PipelineId;
-        if (next === r.project.pipeline) return;
-        commitWithUndo(r.project, "Pipeline", {
-          pipeline: next,
-          stage: FIRST_STAGE[next],
+        if (next === r.project.stage) return;
+        commitWithUndo(r.project, "Stage", {
+          stage: next,
+          state: FIRST_STAGE[next],
         });
       },
     },
     {
-      id: "stage", label: "Stage", width: 160,
-      render: (r) => getStageTitle(r.project.pipeline, r.project.stage),
+      id: "state", label: "State", width: 160,
+      render: (r) => getStageTitle(r.project.stage, r.project.state),
       editor: {
         type: "select",
         options: (r) => {
-          const cfg = PIPELINES.find((p) => p.id === r.project.pipeline);
-          return cfg?.stages.map((s) => ({ value: s.id, label: s.title })) ?? [];
+          const cfg = STAGES.find((p) => p.id === r.project.stage);
+          return cfg?.states.map((s) => ({ value: s.id, label: s.title })) ?? [];
         },
       },
-      getValue: (r) => r.project.stage,
+      getValue: (r) => r.project.state,
       commit: (r, v) => {
         const next = String(v ?? "") as StageId;
-        if (next === r.project.stage) return;
-        commitWithUndo(r.project, "Stage", { stage: next });
+        if (next === r.project.state) return;
+        commitWithUndo(r.project, "State", { state: next });
       },
     },
     {
@@ -505,13 +505,13 @@ export default function Spreadsheet() {
         editMode={editMode}
         onToggleEditMode={() => setEditMode((v) => !v)}
         filters={[{
-          key: "pipeline",
-          label: "Pipeline",
+          key: "stage",
+          label: "Stage",
           value: pipelineFilter,
           onChange: (v) => setPipelineFilter(v as PipelineId | "all"),
           options: [
-            { value: "all", label: "All pipelines" },
-            ...PIPELINES.map((p) => ({ value: p.id, label: p.title })),
+            { value: "all", label: "All stages" },
+            ...STAGES.map((p) => ({ value: p.id, label: p.title })),
           ],
         }]}
       />

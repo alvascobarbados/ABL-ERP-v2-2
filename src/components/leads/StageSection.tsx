@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { PipelineCard, StageId, PIPELINES } from "@/data/pipelines";
+import { PipelineCard, StageId, STAGES } from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { ProjectCard } from "./ProjectCard";
 import { cn } from "@/lib/utils";
 
 interface StageSectionProps {
   title: string;
-  stage: StageId;
+  state: StageId;
   cards: PipelineCard[];
   onOpenCard: (c: PipelineCard) => void;
   onOpenShipment: (shipmentId: string) => void;
@@ -17,20 +17,20 @@ interface StageSectionProps {
   emptyHint?: string;
 }
 
-function pipelineForStage(stage: StageId) {
-  return PIPELINES.find((p) => p.stages.some((s) => s.id === stage))!.id;
+function pipelineForStage(state: StageId) {
+  return STAGES.find((p) => p.states.some((s) => s.id === state))!.id;
 }
 
 const COLLAPSED_BY_DEFAULT: StageId[] = ["archive"];
 
 export const StageSection = ({
-  title, stage, cards, onOpenCard,
+  title, state, cards, onOpenCard,
   onSwipeForward, onSwipeBack, onOpenPicker, emptyHint,
 }: StageSectionProps) => {
-  const collapsedDefault = COLLAPSED_BY_DEFAULT.includes(stage);
+  const collapsedDefault = COLLAPSED_BY_DEFAULT.includes(state);
   const [open, setOpen] = useState(!collapsedDefault);
   useEffect(() => { if (collapsedDefault) setOpen(false); }, [collapsedDefault]);
-  const pipelineId = pipelineForStage(stage);
+  const pipelineId = pipelineForStage(state);
   const accentHex = PIPELINE_ACCENT[pipelineId].hex;
 
   return (
@@ -55,7 +55,7 @@ export const StageSection = ({
             <span
               className="text-[11px] tabular font-semibold rounded-full inline-flex items-center justify-center min-w-[22px] h-[22px] px-2"
               style={{ backgroundColor: "hsl(var(--brand-navy) / 0.08)", color: "hsl(var(--brand-navy))" }}
-              title={`${cards.length} in this stage`}
+              title={`${cards.length} in this state`}
             >
               {cards.length}
             </span>

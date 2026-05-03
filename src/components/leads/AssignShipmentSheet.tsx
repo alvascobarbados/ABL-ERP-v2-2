@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Sheet } from "./Sheet";
-import { Project, Shipment, ShippingMode, getSupplier, formatShipmentTitle } from "@/data/pipelines";
+import { Project, Shipment, ShippingMode, getSupplier, formatShipmentTitle } from "@/data/stages";
 import { usePipelineStore, NewShipmentInput } from "@/hooks/usePipelineStore";
 import { Plus, ArrowRight, Plane, Ship } from "lucide-react";
 import { supplierColor } from "@/lib/brand";

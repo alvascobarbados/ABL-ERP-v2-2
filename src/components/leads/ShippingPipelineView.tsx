@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, Plane, Ship } from "lucide-react";
-import { Shipment, Project, PipelineCard, buildCard, getShipment } from "@/data/pipelines";
+import { Shipment, Project, PipelineCard, buildCard, getShipment } from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { ProjectCard } from "./ProjectCard";
@@ -210,8 +210,8 @@ export const ShippingPipelineView = ({
   onOpenCard, onSwipeForward, onSwipeBack, onOpenPicker,
 }: Props) => {
   const visibleShipments = shipments.filter((s) => s.status !== "Delivered");
-  const assignedSubs = subs.filter((s) => s.stage === "shipment_assigned");
-  const intakeSubs = subs.filter((s) => s.stage === "shipment_required");
+  const assignedSubs = subs.filter((s) => s.state === "shipment_assigned");
+  const intakeSubs = subs.filter((s) => s.state === "shipment_required");
 
   const air = visibleShipments.filter((s) => s.mode === "Air");
   const ocean = visibleShipments.filter((s) => s.mode !== "Air");

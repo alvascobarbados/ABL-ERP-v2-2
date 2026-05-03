@@ -1,6 +1,6 @@
 import { Factory, MapPin, User2 } from "lucide-react";
 import { Sheet } from "./Sheet";
-import { SUPPLIERS, getProjectsForSupplier, PIPELINES } from "@/data/pipelines";
+import { SUPPLIERS, getProjectsForSupplier, STAGES } from "@/data/stages";
 import { PIPELINE_ACCENT, supplierColor } from "@/lib/brand";
 import { SupplierChip } from "./StatusPill";
 
@@ -23,7 +23,7 @@ export const SuppliersView = ({ open, onClose, onOpenProject }: Props) => {
       <div className="space-y-6">
         {SUPPLIERS.map((sup) => {
           const subs = getProjectsForSupplier(sup.id);
-          const active = subs.filter((s) => s.pipeline !== "finance" || s.stage !== "paid");
+          const active = subs.filter((s) => s.stage !== "finance" || s.state !== "paid");
           return (
             <section key={sup.id}>
               <div className="flex items-start justify-between gap-3 mb-2">
@@ -54,7 +54,7 @@ export const SuppliersView = ({ open, onClose, onOpenProject }: Props) => {
               ) : (
                 <div className="space-y-2">
                   {active.map((s) => {
-                    const stageInfo = PIPELINES.flatMap((p) => p.stages.map((st) => ({ ...st, pipelineTitle: p.title }))).find((x) => x.id === s.stage);
+                    const stageInfo = STAGES.flatMap((p) => p.states.map((st) => ({ ...st, pipelineTitle: p.title }))).find((x) => x.id === s.state);
                     return (
                       <button
                         key={s.id}
@@ -73,7 +73,7 @@ export const SuppliersView = ({ open, onClose, onOpenProject }: Props) => {
                             <div className="text-xs text-muted-foreground mt-1">Due {s.deadline} · {s.shippingMode ?? "—"}</div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PIPELINE_ACCENT[s.pipeline].hex }} />
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PIPELINE_ACCENT[s.stage].hex }} />
                             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                               {stageInfo?.pipelineTitle} · {stageInfo?.title}
                             </span>

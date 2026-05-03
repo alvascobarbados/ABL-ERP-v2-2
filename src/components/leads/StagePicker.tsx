@@ -1,5 +1,5 @@
 import { Sheet } from "./Sheet";
-import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
+import { STAGES, PipelineId, StageId } from "@/data/stages";
 import { getNextStage, getPrevStage, getStageTitle } from "@/hooks/usePipelineStore";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
@@ -9,15 +9,15 @@ interface StagePickerProps {
   onClose: () => void;
   title: string;
   subtitle: string;
-  current: { pipeline: PipelineId; stage: StageId } | null;
-  onPick: (target: { pipeline: PipelineId; stage: StageId }) => void;
+  current: { stage: PipelineId; state: StageId } | null;
+  onPick: (target: { stage: PipelineId; state: StageId }) => void;
 }
 
 export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }: StagePickerProps) => {
-  const next = current ? getNextStage(current.pipeline, current.stage) : null;
-  const prev = current ? getPrevStage(current.pipeline, current.stage) : null;
+  const next = current ? getNextStage(current.stage, current.state) : null;
+  const prev = current ? getPrevStage(current.stage, current.state) : null;
   const isAdjacent = (p: PipelineId, s: StageId) =>
-    (next && next.pipeline === p && next.stage === s) || (prev && prev.pipeline === p && prev.stage === s);
+    (next && next.stage === p && next.state === s) || (prev && prev.stage === p && prev.state === s);
 
   return (
     <Sheet open={open} onClose={onClose} title="Move project">
@@ -27,27 +27,27 @@ export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }:
       </div>
 
       <div className="space-y-5 mt-4">
-        {PIPELINES.map((p) => {
-          // Shipping has exactly one user-facing stage ("Shipping"). Mode
+        {STAGES.map((p) => {
+          // Shipping has exactly one user-facing state ("Shipping"). Mode
           // (Air/Ocean/Local) is changed elsewhere — never via the picker.
-          const stages = p.id === "shipping"
+          const states = p.id === "shipping"
             ? [{ id: "shipment_required" as StageId, title: "Shipping" }]
-            : p.stages;
+            : p.states;
           return (
             <div key={p.id}>
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mb-2">
                 {p.title}
               </p>
               <div className="grid grid-cols-1 gap-1.5">
-                {stages.map((s) => {
-                  const isCurrent = current?.pipeline === p.id && (
-                    p.id === "shipping" ? true : current?.stage === s.id
+                {states.map((s) => {
+                  const isCurrent = current?.stage === p.id && (
+                    p.id === "shipping" ? true : current?.state === s.id
                   );
                   const adj = isAdjacent(p.id, s.id);
                   return (
                     <button
                       key={s.id}
-                      onClick={() => !isCurrent && onPick({ pipeline: p.id, stage: s.id })}
+                      onClick={() => !isCurrent && onPick({ stage: p.id, state: s.id })}
                       disabled={isCurrent}
                       className={cn(
                         "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-left transition-[var(--transition-smooth)]",
@@ -72,7 +72,7 @@ export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }:
                         </span>
                       ) : adj ? (
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {next?.pipeline === p.id && next?.stage === s.id ? "Next" : "Prev"}
+                          {next?.stage === p.id && next?.state === s.id ? "Next" : "Prev"}
                         </span>
                       ) : null}
                     </button>

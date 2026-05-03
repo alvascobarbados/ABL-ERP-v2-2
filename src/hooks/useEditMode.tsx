@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { PipelineCard } from "@/data/pipelines";
+import { PipelineCard } from "@/data/stages";
 import { usePipelineStore } from "./usePipelineStore";
 import { CardEditOverlay } from "@/components/leads/CardEditOverlay";
 

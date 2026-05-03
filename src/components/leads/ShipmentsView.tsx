@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Plane, Ship } from "lucide-react";
 import { Sheet } from "./Sheet";
-import { Shipment, Project, formatShipmentTitle } from "@/data/pipelines";
+import { Shipment, Project, formatShipmentTitle } from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 

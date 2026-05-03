@@ -14,7 +14,7 @@ import { BottomSheet } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
-import { Project } from "@/data/pipelines";
+import { Project } from "@/data/stages";
 import { DEFAULT_USER_INITIALS } from "./UserMenu";
 
 interface Props {

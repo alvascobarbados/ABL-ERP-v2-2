@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
-import { PipelineCard, ShippingMode } from "@/data/pipelines";
+import { PipelineCard, ShippingMode } from "@/data/stages";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { TextEditor, DateEditor, ListPicker, TrackingEditor, ListOption } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
@@ -43,7 +43,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
   const md = useMasterData();
   const proj = card.project;
   const ship = store.shipments.find((s) => s.id === proj.shipmentId);
-  const accent = PIPELINE_ACCENT[card.pipeline].hex;
+  const accent = PIPELINE_ACCENT[card.stage].hex;
 
   // Sub-editor state
   const [editing, setEditing] = useState<FieldKey | null>(null);
@@ -156,7 +156,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
 
   const pickSupplier = (supplierId: string) => {
     const hasItems = (proj.lineItems?.length ?? 0) > 0 || !!proj.poNumber;
-    if (hasItems && proj.supplierId && supplierId !== proj.supplierId && card.pipeline === "operations") {
+    if (hasItems && proj.supplierId && supplierId !== proj.supplierId && card.stage === "operations") {
       setEditing(null);
       setSupplierConfirm({ supplierId });
       return;
@@ -252,7 +252,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
     );
   };
 
-  // ── Pipeline-specific field set ────────────────────────────────────────
+  // ── Stage-specific field set ────────────────────────────────────────
   const renderFields = () => {
     const supplier = md.getSupplierByAnyId(proj.supplierId);
     const supplierLabel: React.ReactNode = supplier?.name ?? proj.supplierLabel ?? "Unassigned";
@@ -351,7 +351,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
 
     const grid = "grid grid-cols-1 sm:grid-cols-2 gap-2";
 
-    if (card.pipeline === "sales") {
+    if (card.stage === "sales") {
       return (
         <div className={grid}>
           {customerField}
@@ -364,7 +364,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         </div>
       );
     }
-    if (card.pipeline === "operations") {
+    if (card.stage === "operations") {
       return (
         <div className={grid}>
           {customerField}
@@ -378,7 +378,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         </div>
       );
     }
-    if (card.pipeline === "shipping") {
+    if (card.stage === "shipping") {
       return (
         <div className={grid}>
           {customerField}
@@ -466,7 +466,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           Done
         </button>
       </div>
-      {/* accent stripe matching pipeline */}
+      {/* accent stripe matching stage */}
       <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: accent, opacity: 0.85 }} />
 
       {/* ── Editors ── */}

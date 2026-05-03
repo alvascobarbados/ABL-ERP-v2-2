@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from "react";
 import {
-  PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
+  STAGES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
   ProjectLogEntry, ProjectLogActionType,
   SHIPMENTS as SEED_SHIPMENTS, SUPPLIERS, ShippingMode,
-} from "@/data/pipelines";
+} from "@/data/stages";
 import { ABL_PROJECTS as SEED_PROJECTS } from "@/data/abl-projects";
 import { useCurrentUser, SYSTEM_CURRENT_USER, type CurrentUser } from "./useCurrentUser";
 
@@ -28,10 +28,10 @@ function actorOf(u: CurrentUser) {
   return { userId: u.userId, displayName: u.shortName };
 }
 
-function pipelineStageLabel(pipeline: PipelineId, stage: StageId): string {
-  const p = PIPELINES.find((x) => x.id === pipeline);
-  const s = p?.stages.find((x) => x.id === stage);
-  return `${p?.title ?? pipeline} · ${s?.title ?? stage}`;
+function pipelineStageLabel(stage: PipelineId, state: StageId): string {
+  const p = STAGES.find((x) => x.id === stage);
+  const s = p?.states.find((x) => x.id === state);
+  return `${p?.title ?? stage} · ${s?.title ?? state}`;
 }
 
 const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
@@ -56,7 +56,7 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
 
 const SUPPRESSED_FIELDS = new Set<keyof Project>([
   "updatedAt", "createdAt", "log", "notes", "lineItems",
-  "pipeline", "stage", "flagged",
+  "stage", "state", "flagged",
   "deletedAt", "deletedFromPipeline", "deletedFromStage",
   "invoiceRequiredEnteredAt", "invoiceIssuedDateAssumed",
   "paymentTermsInherited", "paymentTermsCustomDays",
@@ -106,70 +106,70 @@ function buildFieldEditEntries(
 }
 
 
-// ─────────── Stage helpers ───────────
+// ─────────── State helpers ───────────
 export interface StagePos {
-  pipeline: PipelineId;
-  stage: StageId;
+  stage: PipelineId;
+  state: StageId;
   pipelineIndex: number;
   stageIndex: number;
 }
 
-export const ALL_STAGES: { pipeline: PipelineId; stage: StageId; title: string; pipelineTitle: string }[] =
-  PIPELINES.flatMap((p) => p.stages.map((s) => ({ pipeline: p.id, stage: s.id, title: s.title, pipelineTitle: p.title })));
+export const ALL_STAGES: { stage: PipelineId; state: StageId; title: string; pipelineTitle: string }[] =
+  STAGES.flatMap((p) => p.states.map((s) => ({ stage: p.id, state: s.id, title: s.title, pipelineTitle: p.title })));
 
-export function getStagePos(pipeline: PipelineId, stage: StageId): StagePos {
-  const pipelineIndex = PIPELINES.findIndex((p) => p.id === pipeline);
-  const stageIndex = PIPELINES[pipelineIndex].stages.findIndex((s) => s.id === stage);
-  return { pipeline, stage, pipelineIndex, stageIndex };
+export function getStagePos(stage: PipelineId, state: StageId): StagePos {
+  const pipelineIndex = STAGES.findIndex((p) => p.id === stage);
+  const stageIndex = STAGES[pipelineIndex].states.findIndex((s) => s.id === state);
+  return { stage, state, pipelineIndex, stageIndex };
 }
 
-export function getStageTitle(pipeline: PipelineId, stage: StageId): string {
-  return PIPELINES.find((p) => p.id === pipeline)?.stages.find((s) => s.id === stage)?.title ?? stage;
+export function getStageTitle(stage: PipelineId, state: StageId): string {
+  return STAGES.find((p) => p.id === stage)?.states.find((s) => s.id === state)?.title ?? state;
 }
 
-function forwardStages(pipeline: PipelineId): StageId[] {
-  const p = PIPELINES.find((x) => x.id === pipeline)!;
-  if (pipeline === "sales") return p.stages.filter((s) => s.id !== "archive").map((s) => s.id);
-  if (pipeline === "shipping") return ["shipment_assigned"];
-  return p.stages.map((s) => s.id);
+function forwardStages(stage: PipelineId): StageId[] {
+  const p = STAGES.find((x) => x.id === stage)!;
+  if (stage === "sales") return p.states.filter((s) => s.id !== "archive").map((s) => s.id);
+  if (stage === "shipping") return ["shipment_assigned"];
+  return p.states.map((s) => s.id);
 }
 
-export function getNextStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
-  if (pipeline === "shipping") {
-    if (stage === "shipment_required") return { pipeline: "shipping", stage: "shipment_assigned" };
-    if (stage === "shipment_assigned") return { pipeline: "finance", stage: "invoice_required" };
+export function getNextStage(stage: PipelineId, state: StageId): { stage: PipelineId; state: StageId } | null {
+  if (stage === "shipping") {
+    if (state === "shipment_required") return { stage: "shipping", state: "shipment_assigned" };
+    if (state === "shipment_assigned") return { stage: "finance", state: "invoice_required" };
     return null;
   }
-  const stages = forwardStages(pipeline);
-  const idx = stages.indexOf(stage);
-  if (idx >= 0 && idx < stages.length - 1) {
-    return { pipeline, stage: stages[idx + 1] };
+  const states = forwardStages(stage);
+  const idx = states.indexOf(state);
+  if (idx >= 0 && idx < states.length - 1) {
+    return { stage, state: states[idx + 1] };
   }
-  const pi = PIPELINES.findIndex((x) => x.id === pipeline);
-  if (pi < PIPELINES.length - 1) {
-    const next = PIPELINES[pi + 1];
-    if (next.id === "shipping") return { pipeline: "shipping", stage: "shipment_required" };
-    return { pipeline: next.id, stage: next.stages[0].id };
+  const pi = STAGES.findIndex((x) => x.id === stage);
+  if (pi < STAGES.length - 1) {
+    const next = STAGES[pi + 1];
+    if (next.id === "shipping") return { stage: "shipping", state: "shipment_required" };
+    return { stage: next.id, state: next.states[0].id };
   }
   return null;
 }
 
-export function getPrevStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
-  if (pipeline === "shipping") {
-    if (stage === "shipment_assigned" || stage === "shipment_required") {
-      return { pipeline: "operations", stage: "in_production" };
+export function getPrevStage(stage: PipelineId, state: StageId): { stage: PipelineId; state: StageId } | null {
+  if (stage === "shipping") {
+    if (state === "shipment_assigned" || state === "shipment_required") {
+      return { stage: "operations", state: "in_production" };
     }
     return null;
   }
-  const stages = forwardStages(pipeline);
-  const idx = stages.indexOf(stage);
-  if (idx > 0) return { pipeline, stage: stages[idx - 1] };
-  const pi = PIPELINES.findIndex((x) => x.id === pipeline);
+  const states = forwardStages(stage);
+  const idx = states.indexOf(state);
+  if (idx > 0) return { stage, state: states[idx - 1] };
+  const pi = STAGES.findIndex((x) => x.id === stage);
   if (pi > 0) {
-    const prev = PIPELINES[pi - 1];
-    if (prev.id === "shipping") return { pipeline: "shipping", stage: "shipment_assigned" };
+    const prev = STAGES[pi - 1];
+    if (prev.id === "shipping") return { stage: "shipping", state: "shipment_assigned" };
     const prevStages = forwardStages(prev.id);
-    return { pipeline: prev.id, stage: prevStages[prevStages.length - 1] };
+    return { stage: prev.id, state: prevStages[prevStages.length - 1] };
   }
   return null;
 }
@@ -181,7 +181,7 @@ export interface MoveValidation {
 }
 
 /** Validates that a project has the required fields to enter `target`. */
-export function validateMove(project: Project, target: { pipeline: PipelineId; stage: StageId }): MoveValidation {
+export function validateMove(project: Project, target: { stage: PipelineId; state: StageId }): MoveValidation {
   // Anything past Sales/Confirming requires detail summary + supplier + shipping mode.
   const STAGE_GATE_ORDER: StageId[] = [
     "proposal", "quote", "confirming",
@@ -190,11 +190,11 @@ export function validateMove(project: Project, target: { pipeline: PipelineId; s
     "shipment_required", "shipment_assigned",
     "invoice_required", "invoiced", "paid",
   ];
-  const targetIdx = STAGE_GATE_ORDER.indexOf(target.stage);
-  // Design + Proof are pre-production handoff stages; treat them like
+  const targetIdx = STAGE_GATE_ORDER.indexOf(target.state);
+  // Design + Proof are pre-production handoff states; treat them like
   // Confirming for validation purposes (no supplier/shipping requirement).
   const gateIdx = STAGE_GATE_ORDER.indexOf("proof");
-  if (target.stage === "archive") return { ok: true, missing: [] };
+  if (target.state === "archive") return { ok: true, missing: [] };
   if (targetIdx <= gateIdx) return { ok: true, missing: [] };
 
   const missing: MoveValidation["missing"] = [];
@@ -224,11 +224,11 @@ interface PipelineStoreCtx {
   projects: Project[];
   /** Soft-deleted projects (in Trash). */
   trashedProjects: Project[];
-  /** Projects sitting in sales/archive — excluded from pipeline views/counts; surfaced in ArchiveView. */
+  /** Projects sitting in sales/archive — excluded from stage views/counts; surfaced in ArchiveView. */
   archivedProjects: Project[];
   shipments: Shipment[];
   suppliers: Supplier[];
-  moveCard: (cardId: string, target: { pipeline: PipelineId; stage: StageId }) => MoveResult;
+  moveCard: (cardId: string, target: { stage: PipelineId; state: StageId }) => MoveResult;
   updateProject: (id: string, patch: Partial<Project>) => void;
   renameProject: (currentName: string, newName: string) => { count: number };
   addNote: (projectId: string, text: string, author?: string) => void;
@@ -241,9 +241,9 @@ interface PipelineStoreCtx {
   /** Toggle the "needs attention" flag on a project. */
   toggleFlag: (projectId: string) => void;
   /** Soft-delete: send to Trash. */
-  softDeleteProject: (projectId: string) => { restoredFrom: { pipeline: PipelineId; stage: StageId } } | null;
-  /** Restore a trashed project to its original pipeline/stage. */
-  restoreProject: (projectId: string) => { pipeline: PipelineId; stage: StageId } | null;
+  softDeleteProject: (projectId: string) => { restoredFrom: { stage: PipelineId; state: StageId } } | null;
+  /** Restore a trashed project to its original stage/state. */
+  restoreProject: (projectId: string) => { stage: PipelineId; state: StageId } | null;
   /** Permanently remove a project from the database. */
   hardDeleteProject: (projectId: string) => void;
   /** @deprecated use softDeleteProject for the trash flow. */
@@ -265,29 +265,29 @@ const Ctx = createContext<PipelineStoreCtx | null>(null);
 export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>(() =>
     // Defensive migration: any project lingering on the retired
-    // "shipment_delivered" stage (or any other unknown shipping stage)
-    // moves to Finance · Invoice Required. Shipping no longer has stages.
+    // "shipment_delivered" state (or any other unknown shipping state)
+    // moves to Finance · Invoice Required. Shipping no longer has states.
     SEED_PROJECTS.map((p, i) => {
-      const s = p.stage as string;
+      const s = p.state as string;
       let next: Project = { ...p };
-      if (p.pipeline === "shipping" &&
+      if (p.stage === "shipping" &&
           s !== "shipment_required" && s !== "shipment_assigned") {
-        next = { ...next, pipeline: "finance" as const, stage: "invoice_required" as const };
+        next = { ...next, stage: "finance" as const, state: "invoice_required" as const };
       }
       // ── Payment-terms / invoice-tracking defaults for seed data ──
       if (!next.paymentTerms) {
         next.paymentTerms = "Net 30";
         next.paymentTermsInherited = true;
       }
-      if (next.pipeline === "finance") {
+      if (next.stage === "finance") {
         const now = Date.now();
-        if (next.stage === "invoice_required" && !next.invoiceRequiredEnteredAt) {
+        if (next.state === "invoice_required" && !next.invoiceRequiredEnteredAt) {
           // 1–22d ago, deterministic per-index
           const off = ((i * 13 + 5) % 22) + 1;
           next.invoiceRequiredEnteredAt = new Date(now - off * 86400000);
         }
-        if ((next.stage === "invoiced" || next.stage === "paid") && !next.invoiceIssuedDate) {
-          const base = next.stage === "paid" ? 30 : 12;
+        if ((next.state === "invoiced" || next.state === "paid") && !next.invoiceIssuedDate) {
+          const base = next.state === "paid" ? 30 : 12;
           const jitter = ((i * 7 + 3) % 18) - 4;
           const days = Math.max(1, base + jitter);
           next.invoiceIssuedDate = new Date(now - days * 86400000);
@@ -334,58 +334,58 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
     setProjects((prev) => prev.map((p) => {
       if (p.id !== cardId) return p;
-      const patch: Partial<Project> = { pipeline: target.pipeline, stage: target.stage };
-      if (target.pipeline === "shipping" && target.stage === "shipment_required") {
+      const patch: Partial<Project> = { stage: target.stage, state: target.state };
+      if (target.stage === "shipping" && target.state === "shipment_required") {
         patch.shipmentId = undefined;
       }
-      if (target.stage === "quote" && !p.quoteNumber) {
+      if (target.state === "quote" && !p.quoteNumber) {
         patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`;
       }
-      if (target.pipeline === "operations" && !p.poNumber) {
+      if (target.stage === "operations" && !p.poNumber) {
         patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`;
       }
-      if (target.pipeline === "finance" && !p.invoiceNumber) {
+      if (target.stage === "finance" && !p.invoiceNumber) {
         patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`;
       }
-      if (target.pipeline === "finance" && target.stage === "invoice_required"
+      if (target.stage === "finance" && target.state === "invoice_required"
           && !p.invoiceRequiredEnteredAt) {
         patch.invoiceRequiredEnteredAt = new Date();
       }
-      if (target.pipeline === "finance" && target.stage === "invoiced"
+      if (target.stage === "finance" && target.state === "invoiced"
           && !p.invoiceIssuedDate) {
         patch.invoiceIssuedDate = new Date();
         patch.invoiceIssuedDateAssumed = true;
       }
       const u = userRef.current;
-      const fromLabel = pipelineStageLabel(p.pipeline, p.stage);
-      const toLabel = pipelineStageLabel(target.pipeline, target.stage);
-      const isPaid = target.pipeline === "finance" && target.stage === "paid";
-      const isArchive = target.pipeline === "sales" && target.stage === "archive";
-      const wasArchive = p.pipeline === "sales" && p.stage === "archive";
+      const fromLabel = pipelineStageLabel(p.stage, p.state);
+      const toLabel = pipelineStageLabel(target.stage, target.state);
+      const isPaid = target.stage === "finance" && target.state === "paid";
+      const isArchive = target.stage === "sales" && target.state === "archive";
+      const wasArchive = p.stage === "sales" && p.state === "archive";
       let next = touch({ ...p, ...patch });
       if (isPaid) {
         next = appendLog(next, {
           actor: actorOf(u), actionType: "mark_paid",
           description: `${u.shortName} marked this paid`,
-          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: target.pipeline, toStage: target.stage },
+          metadata: { fromPipeline: p.stage, fromStage: p.state, toPipeline: target.stage, toStage: target.state },
         });
       } else if (isArchive) {
         next = appendLog(next, {
           actor: actorOf(u), actionType: "archive",
           description: `${u.shortName} archived this`,
-          metadata: { fromPipeline: p.pipeline, fromStage: p.stage },
+          metadata: { fromPipeline: p.stage, fromStage: p.state },
         });
       } else if (wasArchive) {
         next = appendLog(next, {
           actor: actorOf(u), actionType: "unarchive",
           description: `${u.shortName} restored this from archive`,
-          metadata: { toPipeline: target.pipeline, toStage: target.stage },
+          metadata: { toPipeline: target.stage, toStage: target.state },
         });
       } else {
         next = appendLog(next, {
           actor: actorOf(u), actionType: "stage_change",
           description: `${u.shortName} moved this from ${fromLabel} to ${toLabel}`,
-          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: target.pipeline, toStage: target.stage },
+          metadata: { fromPipeline: p.stage, fromStage: p.state, toPipeline: target.stage, toStage: target.state },
         });
       }
       return next;
@@ -499,8 +499,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       notes: undefined,
       lineItems: undefined,
       log: undefined,
-      pipeline: orig.pipeline,
       stage: orig.stage,
+      state: orig.state,
       flagged: false,
       deletedAt: undefined,
       deletedFromPipeline: undefined,
@@ -524,8 +524,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       projectName: input.projectName,
       detailSummary: input.detailSummary,
       pointPerson: input.pointPerson ?? "AV",
-      pipeline: "sales",
-      stage: "proposal",
+      stage: "sales",
+      state: "proposal",
       deadline: "—",
       deadlineDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       value: 0,
@@ -561,12 +561,12 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const softDeleteProject = useCallback<PipelineStoreCtx["softDeleteProject"]>((projectId) => {
     const orig = projects.find((p) => p.id === projectId && !p.deletedAt);
     if (!orig) return null;
-    const restoredFrom = { pipeline: orig.pipeline, stage: orig.stage };
+    const restoredFrom = { stage: orig.stage, state: orig.state };
     const u = userRef.current;
     setProjects((prev) => prev.map((p) =>
       p.id === projectId
         ? appendLog(
-            { ...p, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage },
+            { ...p, deletedAt: new Date(), deletedFromPipeline: orig.stage, deletedFromStage: orig.state },
             { actor: actorOf(u), actionType: "trash", description: `${u.shortName} moved this to Trash` },
           )
         : p,
@@ -577,8 +577,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const restoreProject = useCallback<PipelineStoreCtx["restoreProject"]>((projectId) => {
     const orig = projects.find((p) => p.id === projectId && p.deletedAt);
     if (!orig) return null;
-    const knownStages: StageId[] = PIPELINES.flatMap((pp) => pp.stages.map((s) => s.id));
-    const targetPipeline: PipelineId = orig.deletedFromPipeline ?? orig.pipeline ?? "sales";
+    const knownStages: StageId[] = STAGES.flatMap((pp) => pp.states.map((s) => s.id));
+    const targetPipeline: PipelineId = orig.deletedFromPipeline ?? orig.stage ?? "sales";
     const fallbackStage: Record<PipelineId, StageId> = {
       sales: "quote", design: "design", operations: "preproduction",
       shipping: "shipment_required", finance: "invoice_required",
@@ -591,13 +591,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     setProjects((prev) => prev.map((p) =>
       p.id === projectId
         ? appendLog(
-            { ...p, pipeline: targetPipeline, stage: targetStage,
+            { ...p, stage: targetPipeline, state: targetStage,
               deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined },
             { actor: actorOf(u), actionType: "restore", description: `${u.shortName} restored this from Trash` },
           )
         : p,
     ));
-    return { pipeline: targetPipeline, stage: targetStage };
+    return { stage: targetPipeline, state: targetStage };
   }, [projects]);
 
   const hardDeleteProject = useCallback((projectId: string) => {
@@ -641,11 +641,11 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const u = userRef.current;
     setProjects((prev) => prev.map((p) => {
       if (p.id !== projectId) return p;
-      const next = touch({ ...p, shipmentId, pipeline: "shipping" as const, stage: "shipment_assigned" as const, shippingMode: ship.mode });
+      const next = touch({ ...p, shipmentId, stage: "shipping" as const, state: "shipment_assigned" as const, shippingMode: ship.mode });
       return appendLog(next, {
         actor: actorOf(u), actionType: "stage_change",
         description: `${u.shortName} assigned this to shipment ${ship.code}`,
-        metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "shipping", toStage: "shipment_assigned" },
+        metadata: { fromPipeline: p.stage, fromStage: p.state, toPipeline: "shipping", toStage: "shipment_assigned" },
       });
     }));
   }, [shipments]);
@@ -674,15 +674,15 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     let count = 0;
     const u = userRef.current;
     setProjects((prev) => prev.map((p) => {
-      if (p.shipmentId === shipmentId && p.pipeline === "shipping") {
+      if (p.shipmentId === shipmentId && p.stage === "shipping") {
         count += 1;
-        const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required" };
+        const patch: Partial<Project> = { stage: "finance", state: "invoice_required" };
         if (!p.invoiceNumber) patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
         const next = touch({ ...p, ...patch });
         return appendLog(next, {
           actor: actorOf(u), actionType: "stage_change",
           description: `${u.shortName} marked shipment delivered`,
-          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "finance", toStage: "invoice_required" },
+          metadata: { fromPipeline: p.stage, fromStage: p.state, toPipeline: "finance", toStage: "invoice_required" },
         });
       }
       return p;
@@ -698,7 +698,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     [projects],
   );
   const archivedProjects = useMemo(
-    () => liveProjects.filter((p) => p.pipeline === "sales" && p.stage === "archive"),
+    () => liveProjects.filter((p) => p.stage === "sales" && p.state === "archive"),
     [liveProjects],
   );
 

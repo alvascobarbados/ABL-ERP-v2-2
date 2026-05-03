@@ -3,9 +3,9 @@ import { Menu } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  PIPELINES, PipelineId, PipelineCard, Shipment, StageId,
+  STAGES, PipelineId, PipelineCard, Shipment, StageId,
   SUPPLIERS, buildCard, Project,
-} from "@/data/pipelines";
+} from "@/data/stages";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
@@ -167,7 +167,7 @@ function projectHasMissingData(p: Project): boolean {
     shipment_required: 5, shipment_assigned: 6,
     invoice_required: 7, invoiced: 8, paid: 9,
   };
-  const r = stageRank[p.stage] ?? 0;
+  const r = stageRank[p.state] ?? 0;
   if (r >= 1 && !p.quoteNumber) return true;
   if (r >= 2 && !p.supplierId) return true;
   if (r >= 2 && !p.shippingMode) return true;
@@ -195,7 +195,7 @@ function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
     const reps = (p.pointPerson ?? "").split(",").map((s) => s.trim()).filter(Boolean);
     if (!f.salesReps.some((r) => reps.includes(r))) return false;
   }
-  if (f.stages.length && !f.stages.includes(p.stage)) return false;
+  if (f.states.length && !f.states.includes(p.state)) return false;
   if (f.urgency) {
     const days = daysToDeadline(c.deadlineDate);
     if (f.urgency === "overdue" && days >= 0) return false;
@@ -222,7 +222,7 @@ const Index = () => {
     activeTab === "all" || activeTab === "completed" ? "sales" : activeTab;
   const { view: desktopView, setView: setDesktopView } = useViewMode(activeTab);
 
-  // Single shared filter state — persists across pipeline tab switches and
+  // Single shared filter state — persists across stage tab switches and
   // across the Kanban/Table view toggle. Lives outside any per-tab component
   // lifecycle so child remounts can never reset it.
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER);
@@ -243,8 +243,8 @@ const Index = () => {
   const [searchScopeAll, setSearchScopeAll] = useState(false);
 
   const [pickerCard, setPickerCard] = useState<PipelineCard | null>(null);
-  const [confirmLost, setConfirmLost] = useState<{ card: PipelineCard; target: { pipeline: PipelineId; stage: StageId } } | null>(null);
-  const [missingFields, setMissingFields] = useState<{ card: PipelineCard; target: { pipeline: PipelineId; stage: StageId }; missing: string[] } | null>(null);
+  const [confirmLost, setConfirmLost] = useState<{ card: PipelineCard; target: { stage: PipelineId; state: StageId } } | null>(null);
+  const [missingFields, setMissingFields] = useState<{ card: PipelineCard; target: { stage: PipelineId; state: StageId }; missing: string[] } | null>(null);
   const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
   const [assignOpen, setAssignOpen] = useState(false);
 
@@ -266,7 +266,7 @@ const Index = () => {
     if (!id) return;
     const proj = projects.find((p) => p.id === id);
     if (proj) {
-      setActiveTab(proj.pipeline);
+      setActiveTab(proj.stage);
       setTimeout(() => { setSelectedCard(buildCard(proj)); setSelectedShipment(null); }, 0);
     }
     const next = new URLSearchParams(searchParams);
@@ -287,17 +287,17 @@ const Index = () => {
     return (id?: string) => (id ? map.get(id) ?? "" : "");
   }, []);
 
-  // Pipeline-facing project list — excludes archived (sales/archive) AND completed (paid).
+  // Stage-facing project list — excludes archived (sales/archive) AND completed (paid).
   const pipelineProjects = useMemo(
     () => projects.filter((p) =>
-      !(p.pipeline === "sales" && p.stage === "archive") &&
-      !(p.pipeline === "finance" && p.stage === "paid"),
+      !(p.stage === "sales" && p.state === "archive") &&
+      !(p.stage === "finance" && p.state === "paid"),
     ),
     [projects],
   );
 
   const completedProjects = useMemo(
-    () => projects.filter((p) => p.pipeline === "finance" && p.stage === "paid"),
+    () => projects.filter((p) => p.stage === "finance" && p.state === "paid"),
     [projects],
   );
 
@@ -305,15 +305,15 @@ const Index = () => {
   const baseCards = useMemo<PipelineCard[]>(() => {
     if (isCompleted) return completedProjects.map(buildCard);
     if (isAll) return pipelineProjects.map(buildCard);
-    return pipelineProjects.filter((p) => p.pipeline === activePipeline).map(buildCard);
+    return pipelineProjects.filter((p) => p.stage === activePipeline).map(buildCard);
   }, [activePipeline, isAll, isCompleted, pipelineProjects, completedProjects]);
 
   const counts = useMemo<Record<PipelineId, number>>(() => ({
-    sales: pipelineProjects.filter((p) => p.pipeline === "sales").length,
-    design: pipelineProjects.filter((p) => p.pipeline === "design").length,
-    operations: pipelineProjects.filter((p) => p.pipeline === "operations").length,
-    shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
-    finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
+    sales: pipelineProjects.filter((p) => p.stage === "sales").length,
+    design: pipelineProjects.filter((p) => p.stage === "design").length,
+    operations: pipelineProjects.filter((p) => p.stage === "operations").length,
+    shipping: pipelineProjects.filter((p) => p.stage === "shipping").length,
+    finance: pipelineProjects.filter((p) => p.stage === "finance").length,
   }), [pipelineProjects]);
 
   // Filtered counts — used by chevron tabs to update live as filters change.
@@ -326,11 +326,11 @@ const Index = () => {
       return true;
     };
     return {
-      sales: pipelineProjects.filter((p) => p.pipeline === "sales" && match(p)).length,
-      design: pipelineProjects.filter((p) => p.pipeline === "design" && match(p)).length,
-      operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length,
-      shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && match(p)).length,
-      finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
+      sales: pipelineProjects.filter((p) => p.stage === "sales" && match(p)).length,
+      design: pipelineProjects.filter((p) => p.stage === "design" && match(p)).length,
+      operations: pipelineProjects.filter((p) => p.stage === "operations" && match(p)).length,
+      shipping: pipelineProjects.filter((p) => p.stage === "shipping" && match(p)).length,
+      finance: pipelineProjects.filter((p) => p.stage === "finance" && match(p)).length,
     };
   }, [pipelineProjects, filters, search]);
 
@@ -371,20 +371,20 @@ const Index = () => {
       .sort((a, b) => compareCards(a, b, sort, idIndex, supplierName));
   }, [baseCards, pipelineProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
 
-  const pipeline = PIPELINES.find((p) => p.id === activePipeline)!;
+  const stage = STAGES.find((p) => p.id === activePipeline)!;
   const hasActiveFilter = filterCount(filters) > 0;
   const isSearching = !!search.trim();
 
   // ─── Move logic (preserved) ───
-  const performMove = (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
-    if (target.stage === "archive" && card.stage !== "archive") {
+  const performMove = (card: PipelineCard, target: { stage: PipelineId; state: StageId }) => {
+    if (target.state === "archive" && card.state !== "archive") {
       setConfirmLost({ card, target });
       return;
     }
     doMove(card, target);
   };
 
-  const doMove = (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
+  const doMove = (card: PipelineCard, target: { stage: PipelineId; state: StageId }) => {
     const v = validateMove(card.project, target);
     if (!v.ok) {
       const labels = v.missing.map((m) =>
@@ -394,20 +394,20 @@ const Index = () => {
       setMissingFields({ card, target, missing: labels });
       return;
     }
-    const fromPipeline = card.pipeline;
-    const fromStage = card.stage;
+    const fromPipeline = card.stage;
+    const fromStage = card.state;
     const label = `${card.project.customer} · ${card.project.projectName}`;
     const result = moveCard(card.id, target);
     if (!result.ok) return;
-    if (target.pipeline !== fromPipeline) triggerPulse(target.pipeline);
+    if (target.stage !== fromPipeline) triggerPulse(target.stage);
 
-    toast.success(`${label} moved to ${getStageTitle(target.pipeline, target.stage)}`, {
+    toast.success(`${label} moved to ${getStageTitle(target.stage, target.state)}`, {
       description: `From ${getStageTitle(fromPipeline, fromStage)}. Tap Undo to reverse.`,
       duration: 5000,
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(card.id, { pipeline: fromPipeline, stage: fromStage });
+          moveCard(card.id, { stage: fromPipeline, state: fromStage });
           toast(`Move undone`, { duration: 2500 });
         },
       },
@@ -415,10 +415,10 @@ const Index = () => {
   };
 
   const markAsPaid = (card: PipelineCard) => {
-    const fromPipeline = card.pipeline;
-    const fromStage = card.stage;
+    const fromPipeline = card.stage;
+    const fromStage = card.state;
     const label = `${card.project.customer} · ${card.project.projectName}`;
-    const result = moveCard(card.id, { pipeline: "finance", stage: "paid" });
+    const result = moveCard(card.id, { stage: "finance", state: "paid" });
     if (!result.ok) return;
     toast.success(`${label} marked as paid`, {
       description: "Moved to Completed.",
@@ -426,7 +426,7 @@ const Index = () => {
       action: {
         label: "Undo",
         onClick: () => {
-          moveCard(card.id, { pipeline: fromPipeline, stage: fromStage });
+          moveCard(card.id, { stage: fromPipeline, state: fromStage });
           toast(`Move undone`, { duration: 2000 });
         },
       },
@@ -435,7 +435,7 @@ const Index = () => {
 
   const onSwipeForward = (card: PipelineCard) => {
     // Special case: Invoiced cards swipe-right → Mark as paid (no modal)
-    if (card.pipeline === "finance" && card.stage === "invoiced") {
+    if (card.stage === "finance" && card.state === "invoiced") {
       markAsPaid(card);
       return;
     }
@@ -443,7 +443,7 @@ const Index = () => {
   };
   const onSwipeBack = (card: PipelineCard) => { const prev = prevStage(card); if (prev) performMove(card, prev); };
   const onOpenPicker = (card: PipelineCard) => setPickerCard(card);
-  const handlePickerSelect = (target: { pipeline: PipelineId; stage: StageId }) => {
+  const handlePickerSelect = (target: { stage: PipelineId; state: StageId }) => {
     if (!pickerCard) return;
     const card = pickerCard;
     setPickerCard(null);
@@ -457,7 +457,7 @@ const Index = () => {
   const openProjectById = (id: string) => {
     const proj = projects.find((p) => p.id === id);
     if (!proj) return;
-    setActiveTab(proj.pipeline);
+    setActiveTab(proj.stage);
     setTimeout(() => { setSelectedCard(buildCard(proj)); setSelectedShipment(null); }, 0);
   };
 
@@ -480,10 +480,10 @@ const Index = () => {
   const accentHex = isAll ? "transparent" : PIPELINE_ACCENT[activePipeline].hex;
   const showSearchScopeToggle = isSearching && !isAll;
 
-  // What pipeline label to show in the search results header
+  // What stage label to show in the search results header
   const searchScopeLabel = isAll
-    ? "all pipelines"
-    : (searchScopeAll ? "all pipelines" : pipeline.title);
+    ? "all stages"
+    : (searchScopeAll ? "all stages" : stage.title);
 
   return (
     <JiggleProvider onPick={(card, target) => performMove(card, target)}>
@@ -600,7 +600,7 @@ const Index = () => {
                 className="text-xs font-medium underline underline-offset-4"
                 style={{ color: "hsl(var(--brand-navy))" }}
               >
-                {searchScopeAll ? `Search only ${pipeline.title}` : "Search all pipelines"}
+                {searchScopeAll ? `Search only ${stage.title}` : "Search all stages"}
               </button>
             )}
           </div>
@@ -608,12 +608,12 @@ const Index = () => {
 
         {(() => {
           const shippingProjectsFiltered = projects.filter((p) => {
-            if (p.pipeline !== "shipping") return false;
+            if (p.stage !== "shipping") return false;
             if (!cardMatchesFilter(buildCard(p), filters)) return false;
             if (isSearching && !projectMatchesSearch(p, search.trim())) return false;
             return true;
           });
-          const intakeCount = projects.filter((p) => p.pipeline === "shipping" && p.stage === "shipment_required").length;
+          const intakeCount = projects.filter((p) => p.stage === "shipping" && p.state === "shipment_required").length;
 
           if (isCompleted) {
             return (
@@ -681,21 +681,21 @@ const Index = () => {
             );
           }
 
-          return pipeline.stages.map((stage) => (
+          return stage.states.map((state) => (
             <StageSection
-              key={stage.id}
-              title={stage.title}
-              stage={stage.id}
-              cards={visible.filter((c) => c.stage === stage.id)}
+              key={state.id}
+              title={state.title}
+              state={state.id}
+              cards={visible.filter((c) => c.state === state.id)}
               onOpenCard={setSelectedCard}
               onOpenShipment={openShipmentById}
               onSwipeForward={onSwipeForward}
               onSwipeBack={onSwipeBack}
               onOpenPicker={onOpenPicker}
               emptyHint={
-                stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
-                : stage.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
-                : stage.id === "invoice_required" ? "No projects awaiting an invoice."
+                state.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
+                : state.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
+                : state.id === "invoice_required" ? "No projects awaiting an invoice."
                 : undefined
               }
             />
@@ -703,7 +703,7 @@ const Index = () => {
         })()}
 
         <p className="text-center text-xs text-muted-foreground pt-4 pb-1">
-          Swipe → to advance, ← to send back. Long-press to jump stages. Tap ⋮ for actions.
+          Swipe → to advance, ← to send back. Long-press to jump states. Tap ⋮ for actions.
         </p>
       </main>
 
@@ -808,7 +808,7 @@ const Index = () => {
         onClose={() => setPickerCard(null)}
         title={pickerCard ? pickerCard.project.projectName : ""}
         subtitle={pickerCard ? pickerCard.project.customer : ""}
-        current={pickerCard ? { pipeline: pickerCard.pipeline, stage: pickerCard.stage } : null}
+        current={pickerCard ? { stage: pickerCard.stage, state: pickerCard.state } : null}
         onPick={handlePickerSelect}
       />
 
@@ -850,7 +850,7 @@ const Index = () => {
       <AssignShipmentSheet
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
-        intakeSubs={projects.filter((p) => p.pipeline === "shipping" && p.stage === "shipment_required")}
+        intakeSubs={projects.filter((p) => p.stage === "shipping" && p.state === "shipment_required")}
         shipments={shipments}
       />
 
@@ -863,7 +863,7 @@ const Index = () => {
 };
 
 import { getNextStage as nextS, getPrevStage as prevS } from "@/hooks/usePipelineStore";
-function nextStage(card: PipelineCard) { return nextS(card.pipeline, card.stage); }
-function prevStage(card: PipelineCard) { return prevS(card.pipeline, card.stage); }
+function nextStage(card: PipelineCard) { return nextS(card.stage, card.state); }
+function prevStage(card: PipelineCard) { return prevS(card.stage, card.state); }
 
 export default Index;

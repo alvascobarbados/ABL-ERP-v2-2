@@ -1,7 +1,7 @@
 /**
  * Desktop Table view — dense, sortable data grid alternative to the
  * Kanban board. Same projects, same gestures (click=open, double-click=flag,
- * long-click=stage picker). Reuses the existing CardActionsPopover for
+ * long-click=state picker). Reuses the existing CardActionsPopover for
  * the per-row three-dots menu.
  *
  * Mobile (<1024px) never renders this — Index.tsx hides the view switcher
@@ -10,25 +10,25 @@
 import { useMemo, useState, useRef, MouseEvent as ReactMouseEvent } from "react";
 import { Flag, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 import {
-  PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
-} from "@/data/pipelines";
+  STAGES, PipelineCard, PipelineId, StageId, SUPPLIERS,
+} from "@/data/stages";
 import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
 
-// Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
+// Stage order matches the chevron flow (Sales → Production → Shipping → Finance).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
   sales: 0, design: 1, operations: 2, shipping: 3, finance: 4,
 };
-// Display overrides for stages whose canonical title differs from the
-// PIPELINES config (or that aren't listed there at all). "paid" must
-// render Title Case; both shipping sub-stages render as "Shipping".
+// Display overrides for states whose canonical title differs from the
+// STAGES config (or that aren't listed there at all). "paid" must
+// render Title Case; both shipping sub-states render as "Shipping".
 const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
   paid: "Paid",
   shipment_required: "Shipping",
   shipment_assigned: "Shipping",
 };
-function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
-  return STAGE_DISPLAY[stage] ?? getStageTitle(pipeline, stage);
+function displayStageTitle(stage: PipelineId, state: StageId): string {
+  return STAGE_DISPLAY[state] ?? getStageTitle(stage, state);
 }
 import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
 import { useMasterData } from "@/hooks/useMasterData";
@@ -38,7 +38,7 @@ import { CardEditOverlay } from "./CardEditOverlay";
 import type { TabId } from "./PipelineTabs";
 
 type SortKey =
-  | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
+  | "flagged" | "state" | "customer" | "project" | "detail" | "supplier"
   | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline" | "urgency";
 
 interface Props {
@@ -78,13 +78,13 @@ function stageLabel(c: PipelineCard, _activeTab: TabId): string {
   // Always render as "Department · State" — including redundant pairs like
   // "Shipping · Shipping" or "Design · Design". Department = team owner;
   // state = work status. Conceptually different even when labels match.
-  const pipelineTitle = PIPELINES.find((p) => p.id === c.pipeline)?.title ?? c.pipeline;
-  const stageTitle = displayStageTitle(c.pipeline, c.stage);
+  const pipelineTitle = STAGES.find((p) => p.id === c.stage)?.title ?? c.stage;
+  const stageTitle = displayStageTitle(c.stage, c.state);
   return `${pipelineTitle} · ${stageTitle}`;
 }
 
-// Stage progression rank within each pipeline. Lower = earlier in the flow.
-// Shipping collapses to a single rank (only one user-facing stage).
+// State progression rank within each stage. Lower = earlier in the flow.
+// Shipping collapses to a single rank (only one user-facing state).
 const STAGE_RANK: Record<StageId, number> = {
   proposal: 0, quote: 1, confirming: 2, archive: 99,
   design: 0, proof: 1,
@@ -117,15 +117,15 @@ function compareCards(
     case "flagged":
       // flagged first when asc
       return dir * (Number(!!b.project.flagged) - Number(!!a.project.flagged));
-    case "stage": {
-      // Sort by pipeline order (Sales→Production→Shipping→Finance), then by
-      // stage progression rank within pipeline (NOT alphabetical). Within
-      // Shipping (single stage) tie-break alphabetically by Customer.
-      const ap = PIPELINE_ORDER[a.pipeline] ?? 99;
-      const bp = PIPELINE_ORDER[b.pipeline] ?? 99;
+    case "state": {
+      // Sort by stage order (Sales→Production→Shipping→Finance), then by
+      // state progression rank within stage (NOT alphabetical). Within
+      // Shipping (single state) tie-break alphabetically by Customer.
+      const ap = PIPELINE_ORDER[a.stage] ?? 99;
+      const bp = PIPELINE_ORDER[b.stage] ?? 99;
       if (ap !== bp) return dir * (ap - bp);
-      const ar = STAGE_RANK[a.stage] ?? 99;
-      const br = STAGE_RANK[b.stage] ?? 99;
+      const ar = STAGE_RANK[a.state] ?? 99;
+      const br = STAGE_RANK[b.state] ?? 99;
       if (ar !== br) return dir * (ar - br);
       return dir * a.project.customer.localeCompare(b.project.customer);
     }
@@ -186,7 +186,7 @@ function compareCards(
 // viewport (overflow-auto on the wrapper handles it).
 const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
-  { key: "stage", label: "Pipeline · Stage", defaultPx: 220 },
+  { key: "state", label: "Stage · State", defaultPx: 220 },
   { key: "customer", label: "Customer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 200 },
@@ -249,7 +249,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
             }}
           >
             {COLS.map((c) => {
-              const sortable = !(activeTab === "completed" && c.key === "stage");
+              const sortable = !(activeTab === "completed" && c.key === "state");
               const isActive = sortable && sortKey === c.key;
               const Arrow = isActive ? (sortDir === 1 ? ArrowUp : ArrowDown) : null;
               const resizable = c.resizable !== false;
@@ -321,7 +321,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 onEdit={() => setEditingCard(card)}
                 onMoveStage={() => onOpenPicker(card)}
                 onDuplicate={() => store.duplicateProject(card.project.id)}
-                onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
+                onArchive={() => store.moveCard(card.id, { stage: "sales", state: "archive" as StageId })}
                 onDelete={() => store.deleteProject(card.project.id)}
               />
             ))
@@ -374,7 +374,7 @@ const TableRow = ({
   const md = useMasterData();
   const supName = supplierName(proj.supplierId, md.getSupplierByAnyId) || proj.supplierLabel || "";
 
-  // Long-press / long-click → stage picker
+  // Long-press / long-click → state picker
   const longPressTimer = useRef<number | null>(null);
   const longPressed = useRef(false);
   // Single vs double click discrimination
@@ -453,7 +453,7 @@ const TableRow = ({
           <Flag className="h-3.5 w-3.5 fill-current" style={{ color: "hsl(var(--brand-orange))" }} />
         ) : null}
       </div>
-      {/* Pipeline · Stage */}
+      {/* Stage · State */}
       <Cell title={stageLabel(card, activeTab)}>
         <span className="font-medium">{stageLabel(card, activeTab)}</span>
       </Cell>

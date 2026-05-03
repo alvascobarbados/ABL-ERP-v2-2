@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState, ReactNode } from "react";
-import { PipelineCard, PipelineId, StageId } from "@/data/pipelines";
+import { PipelineCard, PipelineId, StageId } from "@/data/stages";
 import { JiggleOverlay, JiggleAnchor } from "@/components/leads/JiggleOverlay";
 
 interface JiggleCtx {
@@ -15,8 +15,8 @@ const Ctx = createContext<JiggleCtx | null>(null);
 
 interface ProviderProps {
   children: ReactNode;
-  /** Called when the user taps a chip to commit a stage move. */
-  onPick: (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => void;
+  /** Called when the user taps a chip to commit a state move. */
+  onPick: (card: PipelineCard, target: { stage: PipelineId; state: StageId }) => void;
 }
 
 export const JiggleProvider = ({ children, onPick }: ProviderProps) => {
@@ -29,7 +29,7 @@ export const JiggleProvider = ({ children, onPick }: ProviderProps) => {
   const dismiss = useCallback(() => setAnchor(null), []);
 
   const handlePick = useCallback(
-    (target: { pipeline: PipelineId; stage: StageId }) => {
+    (target: { stage: PipelineId; state: StageId }) => {
       if (!anchor) return;
       const card = anchor.card;
       setAnchor(null);

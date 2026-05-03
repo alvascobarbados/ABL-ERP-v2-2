@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { MoreVertical, Factory, Flag, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { PipelineCard, formatShippingLabel, getShipment, PIPELINES } from "@/data/pipelines";
+import { PipelineCard, formatShippingLabel, getShipment, STAGES } from "@/data/stages";
 import { getNextStage, getPrevStage, getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
 import { useJiggle } from "@/hooks/useJiggle";
 import { useEditMode } from "@/hooks/useEditMode";
@@ -19,7 +19,7 @@ interface ProjectCardProps {
   onSwipeForward: () => void;
   onSwipeBack: () => void;
   onOpenPicker: () => void;
-  /** When true, renders a quiet "Pipeline · Stage" label in the bottom row.
+  /** When true, renders a quiet "Stage · State" label in the bottom row.
       Used by the flat All view where there are no section headers. */
   showStageLabel?: boolean;
 }
@@ -46,8 +46,8 @@ const urgencyHex = (tone: "urgent" | "soon" | "neutral") =>
   : tone === "soon" ? "hsl(var(--brand-orange))"
   : "hsl(var(--muted-foreground))";
 
-function pipelineTitle(id: PipelineCard["pipeline"]) {
-  return PIPELINES.find((p) => p.id === id)?.title ?? id;
+function pipelineTitle(id: PipelineCard["stage"]) {
+  return STAGES.find((p) => p.id === id)?.title ?? id;
 }
 
 export const ProjectCard = ({
@@ -67,7 +67,7 @@ export const ProjectCard = ({
   const isEditing = editMode.activeId === card.id;
   const isEditDimmed = editMode.activeId !== null && !isEditing;
   const proj = liveProject;
-  const pipelineHex = PIPELINE_ACCENT[card.pipeline].hex;
+  const pipelineHex = PIPELINE_ACCENT[card.stage].hex;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const expandCtx = useExpandedCards();
@@ -75,8 +75,8 @@ export const ProjectCard = ({
   const lineItems = proj.lineItems ?? [];
   const hasLineItems = lineItems.length > 0;
 
-  const next = getNextStage(card.pipeline, card.stage);
-  const prev = getPrevStage(card.pipeline, card.stage);
+  const next = getNextStage(card.stage, card.state);
+  const prev = getPrevStage(card.stage, card.state);
   const canForward = !!next;
   const canBack = !!prev;
 
@@ -242,11 +242,11 @@ export const ProjectCard = ({
   );
   const u = getUrgency(card.deadlineDate);
 
-  // Shipping has one user-facing stage. Display "Shipping · Shipping"
+  // Shipping has one user-facing state. Display "Shipping · Shipping"
   // collapses to just "Shipping". "paid" is forced to Title Case "Paid".
-  const stageLabel = card.pipeline === "shipping"
+  const stageLabel = card.stage === "shipping"
     ? "Shipping"
-    : `${pipelineTitle(card.pipeline)} · ${card.stage === "paid" ? "Paid" : getStageTitle(card.pipeline, card.stage)}`;
+    : `${pipelineTitle(card.stage)} · ${card.state === "paid" ? "Paid" : getStageTitle(card.stage, card.state)}`;
 
   // Action menu handlers
   const handleEdit = () => { haptics.pickup(); editMode.enter(card); };
@@ -257,15 +257,15 @@ export const ProjectCard = ({
     if (dup) toast.success(`Duplicated · ${dup.customer} · ${dup.projectName}`, { duration: 4000 });
   };
   const handleArchive = () => {
-    const fromPipeline = card.pipeline;
-    const fromStage = card.stage;
-    store.moveCard(card.id, { pipeline: "sales", stage: "archive" });
+    const fromPipeline = card.stage;
+    const fromStage = card.state;
+    store.moveCard(card.id, { stage: "sales", state: "archive" });
     toast.success(`${proj.customer} · ${proj.projectName} archived`, {
       duration: 5000,
       action: {
         label: "Undo",
         onClick: () => {
-          store.moveCard(card.id, { pipeline: fromPipeline, stage: fromStage });
+          store.moveCard(card.id, { stage: fromPipeline, state: fromStage });
           toast("Archive undone", { duration: 1800 });
         },
       },
@@ -330,7 +330,7 @@ export const ProjectCard = ({
             )}
             style={{ color: "hsl(var(--swipe-back))" }}
           >
-            ← {prev ? getStageTitle(prev.pipeline, prev.stage) : ""}
+            ← {prev ? getStageTitle(prev.stage, prev.state) : ""}
           </span>
           <span
             className={cn(
@@ -339,11 +339,11 @@ export const ProjectCard = ({
             )}
             style={{ color: "hsl(var(--swipe-forward))" }}
           >
-            {next ? getStageTitle(next.pipeline, next.stage) : ""} →
+            {next ? getStageTitle(next.stage, next.state) : ""} →
           </span>
           {showResist && (
             <span className="absolute left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-wider text-muted-foreground/80 italic">
-              {dx > 0 ? "Already at last stage" : "Already at first stage"}
+              {dx > 0 ? "Already at last state" : "Already at first state"}
             </span>
           )}
         </div>
@@ -392,7 +392,7 @@ export const ProjectCard = ({
             opacity: showBack ? intensity : 0,
           }}
         />
-        {/* Pipeline accent stripe — slightly thicker (4px) so it registers as a pipeline indicator */}
+        {/* Stage accent stripe — slightly thicker (4px) so it registers as a stage indicator */}
         <span
           className="absolute left-0 top-0 bottom-0 w-[4px] z-[2]"
           style={{ backgroundColor: pipelineHex, opacity: 0.85 }}
@@ -442,7 +442,7 @@ export const ProjectCard = ({
           onArchive={handleArchive}
           onDelete={handleDelete}
           onMarkAsPaid={
-            card.pipeline === "finance" && card.stage === "invoiced"
+            card.stage === "finance" && card.state === "invoiced"
               ? () => onSwipeForward()
               : undefined
           }
@@ -676,7 +676,7 @@ export const ProjectCard = ({
               </span>
             </div>
 
-            {/* ─── BOTTOM ROW: mode/tracking · stage label (All view) · deadline ─── */}
+            {/* ─── BOTTOM ROW: mode/tracking · state label (All view) · deadline ─── */}
             <div className="flex items-center gap-3 min-h-[18px] pr-7">
               <span
                 className={cn(

@@ -3,7 +3,7 @@ import { Trash2, RotateCcw, X, Search, ArrowDownNarrowWide, ArrowUpNarrowWide, C
 import { toast } from "sonner";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { Project, PIPELINES } from "@/data/pipelines";
+import { Project, STAGES } from "@/data/stages";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ const fmtRemaining = (deletedAt: Date): string => {
   return `auto-deletes in ${days}d`;
 };
 
-const pipelineLabel = (id: string) => PIPELINES.find((p) => p.id === id)?.title ?? id;
+const pipelineLabel = (id: string) => STAGES.find((p) => p.id === id)?.title ?? id;
 
 export const TrashView = ({ open, onClose }: Props) => {
   const store = usePipelineStore();
@@ -74,7 +74,7 @@ export const TrashView = ({ open, onClose }: Props) => {
   const restoreOne = (p: Project) => {
     const result = store.restoreProject(p.id);
     if (!result) return;
-    const where = `${pipelineLabel(result.pipeline)} / ${getStageTitle(result.pipeline, result.stage)}`;
+    const where = `${pipelineLabel(result.stage)} / ${getStageTitle(result.stage, result.state)}`;
     toast.success(`${p.customer} · ${p.projectName} restored to ${where}`, {
       duration: 5000,
       action: {

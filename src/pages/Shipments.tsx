@@ -8,7 +8,7 @@ import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { ShipmentsView } from "@/components/leads/ShipmentsView";
 import { ShipmentView } from "@/components/leads/ShipmentView";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
-import type { Shipment } from "@/data/pipelines";
+import type { Shipment } from "@/data/stages";
 
 export default function ShipmentsPage() {
   const navigate = useNavigate();

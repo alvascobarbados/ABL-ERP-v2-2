@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Factory, Search, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Supplier, ShippingMode } from "@/data/pipelines";
+import { Supplier, ShippingMode } from "@/data/stages";
 
 // ─────────── Generic bottom sheet ───────────
 interface BottomSheetProps {
@@ -124,7 +124,7 @@ export const DateEditor = ({ open, onClose, title, value, onSave }: DateEditorPr
   );
 };
 
-// ─────────── Single-list picker (stage-mode-style) ───────────
+// ─────────── Single-list picker (state-mode-style) ───────────
 export interface ListOption { id: string; label: string; sublabel?: string; }
 interface ListPickerProps {
   open: boolean;

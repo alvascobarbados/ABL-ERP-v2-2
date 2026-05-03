@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
-import { PipelineId, StageId } from "@/data/pipelines";
+import { PipelineId, StageId } from "@/data/stages";
 
 const STORAGE_KEY = "alvasco.friendlyMode";
 const DISMISS_PREFIX = "alvasco.tip.dismissed:";
