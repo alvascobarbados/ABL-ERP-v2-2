@@ -42,27 +42,12 @@ import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { ProjectTable } from "@/components/leads/ProjectTable";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
 import { useViewMode } from "@/hooks/useViewMode";
-// ─── Filter persistence per-tab ───
-const FILTER_STORAGE = "alvasco.filters.v2";
-const DEFAULT_FILTERS: Record<TabId, FilterState> = {
-  all: EMPTY_FILTER, sales: EMPTY_FILTER, operations: EMPTY_FILTER,
-  shipping: EMPTY_FILTER, finance: EMPTY_FILTER, completed: EMPTY_FILTER,
-};
-function loadFilters(): Record<TabId, FilterState> {
-  try {
-    const raw = localStorage.getItem(FILTER_STORAGE);
-    if (!raw) return DEFAULT_FILTERS;
-    const parsed = JSON.parse(raw);
-    // Merge each tab to ensure new fields default cleanly
-    const out = { ...DEFAULT_FILTERS } as Record<TabId, FilterState>;
-    for (const k of Object.keys(out) as TabId[]) {
-      out[k] = { ...EMPTY_FILTER, ...(parsed?.[k] ?? {}) };
-    }
-    return out;
-  } catch {
-    return DEFAULT_FILTERS;
-  }
-}
+// ─── Filter persistence (single shared filter across all tabs) ───
+// Filters live above the per-tab component lifecycle so switching tabs
+// preserves the active selection. They reset on full app reload — we
+// intentionally do NOT persist to localStorage so a fresh session starts
+// clean.
+const DEFAULT_FILTER: FilterState = EMPTY_FILTER;
 
 // ─── Sort persistence per-tab ───
 const SORT_STORAGE = "alvasco.sort.v1";
