@@ -427,6 +427,9 @@ const TableRow = ({
       </Cell>
       <Cell title={proj.customer}>{proj.customer}</Cell>
       <Cell title={proj.projectName}>{proj.projectName}</Cell>
+      <Cell title={proj.detailSummary?.trim() || undefined} muted={!proj.detailSummary?.trim()}>
+        {proj.detailSummary?.trim() || "—"}
+      </Cell>
       <Cell title={supName} muted={!supName}>{supName || "—"}</Cell>
       <Cell title={proj.quoteNumber ?? ""} muted={!proj.quoteNumber}>
         <span className="tabular">{proj.quoteNumber ?? "—"}</span>
