@@ -47,6 +47,8 @@ interface Props {
   visible: PipelineCard[];
   onOpenCard: (c: PipelineCard) => void;
   onOpenPicker: (c: PipelineCard) => void;
+  hasActiveFilter?: boolean;
+  onClearFilters?: () => void;
 }
 
 const DAY = 86400000;
