@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useColumnWidths } from "@/hooks/useColumnWidths";
+import { ColumnResizeHandle } from "./ColumnResizeHandle";
 
 // ─── Editor descriptors ────────────────────────────────────────────────────
 export type EditorOption = { value: string; label: string };
