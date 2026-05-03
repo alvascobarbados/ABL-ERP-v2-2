@@ -424,6 +424,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           </Section>
         )}
 
+        {/* ─── LOG (immutable audit trail — always last) ─── */}
+        <LogSection entries={live.log ?? []} />
+
         <div className="h-10" />
       </aside>
 
