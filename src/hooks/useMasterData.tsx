@@ -234,6 +234,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteCustomer = useCallback(async (id: string) => {
     const { error } = await supabase.from("customers").delete().eq("id", id);
     if (error) throw error;
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   const addSupplier = useCallback(async (input: Partial<SupplierRecord> & { name: string }) => {
