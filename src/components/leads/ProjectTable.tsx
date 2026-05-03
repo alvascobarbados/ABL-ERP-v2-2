@@ -29,12 +29,14 @@ interface Props {
   onOpenPicker: (c: PipelineCard) => void;
 }
 
-const TODAY = new Date(2026, 4, 8);
 const DAY = 86400000;
 
 function urgencyLabel(date?: Date): { text: string; tone: "urgent" | "soon" | "neutral" | "none"; days: number } {
   if (!date) return { text: "—", tone: "none", days: Number.POSITIVE_INFINITY };
-  const diff = Math.ceil((date.getTime() - TODAY.getTime()) / DAY);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.round((d.getTime() - today.getTime()) / DAY);
+  if (diff === 0) return { text: "due today", tone: "soon", days: 0 };
   if (diff < 0) return { text: `${Math.abs(diff)}d overdue`, tone: "urgent", days: diff };
   if (diff <= 7) return { text: `in ${diff}d`, tone: "urgent", days: diff };
   if (diff <= 14) return { text: `in ${diff}d`, tone: "soon", days: diff };
