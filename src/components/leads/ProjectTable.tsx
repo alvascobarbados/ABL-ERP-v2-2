@@ -13,6 +13,7 @@ import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
 } from "@/data/pipelines";
 import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
+import { useMasterData } from "@/hooks/useMasterData";
 import { cn } from "@/lib/utils";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
