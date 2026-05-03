@@ -309,6 +309,10 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   );
   const [shipments, setShipments] = useState<Shipment[]>(() => SEED_SHIPMENTS.map((s) => ({ ...s })));
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => SUPPLIERS.map((s) => ({ ...s })));
+  const currentUser = useCurrentUser();
+  // Refs so callbacks see the latest values without retriggering.
+  const userRef = useRef(currentUser); userRef.current = currentUser;
+  const suppliersRef = useRef(suppliers); suppliersRef.current = suppliers;
   const [pulsePipeline, setPulsePipeline] = useState<PipelineId | null>(null);
   const pulseTimer = useRef<number | null>(null);
 
