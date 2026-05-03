@@ -912,18 +912,16 @@ export function SpreadsheetView<TRow>({
                           }}
                           onDoubleClick={(e) => {
                             e.stopPropagation();
-                            if (editMode && editable) {
-                              startEdit(rk, c.id);
-                            } else if (onRowClick) {
-                              onRowClick(row);
-                            }
+                            // Locked = inert. Double-click only opens the editor
+                            // when unlocked. Detail/edit panels are reached via
+                            // the three-dots row menu, never from a cell.
+                            if (editMode && editable) startEdit(rk, c.id);
                           }}
                           className={cn(
                             "px-4 py-3 whitespace-nowrap overflow-hidden text-ellipsis",
                             !isSelectedThis && !isEditingThis && "group-hover:bg-[hsl(var(--brand-navy)/0.04)]",
                             isFirst && "font-medium",
                             editMode && editable && !isEditingThis && "cursor-cell",
-                            !editMode && onRowClick && "cursor-pointer",
                             isShaking && "animate-pulse",
                           )}
                           style={{
