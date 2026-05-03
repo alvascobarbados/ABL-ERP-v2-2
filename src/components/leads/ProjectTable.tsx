@@ -186,6 +186,7 @@ const COLS: { key: SortKey; label: string; width: string; align?: "right" | "lef
   { key: "stage", label: "Pipeline · Stage", width: "220px" },
   { key: "customer", label: "Customer", width: "150px" },
   { key: "project", label: "Project", width: "minmax(220px, 1.6fr)" },
+  { key: "detail", label: "Detail", width: "200px" },
   { key: "supplier", label: "Supplier", width: "130px" },
   { key: "quote", label: "Q#", width: "84px" },
   { key: "amount", label: "Amount", width: "104px", align: "right" },
