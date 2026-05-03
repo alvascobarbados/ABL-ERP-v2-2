@@ -717,6 +717,61 @@ const MiniProjectCard = ({ card, live, supplierName, accentHex }: MiniProjectCar
 };
 
 // ─────────── Layout primitives ───────────
+const LOG_DOT: Record<ProjectLogActionType, string> = {
+  stage_change: "hsl(var(--brand-orange))",
+  field_edit: "hsl(var(--muted-foreground))",
+  flag_toggle: "hsl(var(--brand-orange))",
+  note_added: "hsl(var(--brand-teal))",
+  project_created: "hsl(var(--brand-navy))",
+  archive: "hsl(var(--muted-foreground))",
+  unarchive: "hsl(var(--muted-foreground))",
+  trash: "hsl(var(--destructive))",
+  restore: "hsl(var(--muted-foreground))",
+  mark_paid: "hsl(var(--brand-gold, var(--brand-orange)))",
+  line_item_change: "hsl(var(--muted-foreground))",
+};
+
+const fmtLogTs = (d: Date) => {
+  const dt = d instanceof Date ? d : new Date(d);
+  return `${dt.getDate()} ${dt.toLocaleString("en-US", { month: "short" })} · ${dt
+    .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+};
+
+const LogSection = ({ entries }: { entries: ProjectLogEntry[] }) => {
+  const [expanded, setExpanded] = useState(false);
+  if (!entries.length) return null;
+  const sorted = [...entries].sort(
+    (a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()
+  );
+  const visible = expanded ? sorted : sorted.slice(0, 5);
+  return (
+    <Section label="Log">
+      <ul className="px-3 space-y-2">
+        {visible.map((e) => (
+          <li key={e.id} className="flex gap-2.5 text-[13px] leading-snug">
+            <span
+              className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
+              style={{ background: LOG_DOT[e.actionType] ?? "hsl(var(--muted-foreground))" }}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="text-foreground">{e.description}</div>
+              <div className="text-[11px] text-muted-foreground">{fmtLogTs(e.ts)}</div>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {sorted.length > 5 && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 px-3 text-[12px] font-medium text-muted-foreground hover:text-foreground"
+        >
+          {expanded ? "Show less" : `Show ${sorted.length - 5} more`}
+        </button>
+      )}
+    </Section>
+  );
+};
+
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <section className="px-3 sm:px-5 pt-6 pb-2 border-b border-border/60">
     <h2 className="px-3 text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mb-1.5">{label}</h2>
