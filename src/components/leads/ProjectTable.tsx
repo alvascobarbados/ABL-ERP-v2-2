@@ -198,18 +198,17 @@ function compareCards(
 // viewport (overflow-auto on the wrapper handles it).
 const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
-  { key: "stage", label: "Pipeline · Stage", defaultPx: 220 },
-  { key: "customer", label: "Customer", defaultPx: 150 },
+  { key: "stage", label: "Stage", defaultPx: 140 },
+  { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "project", label: "Project", defaultPx: 280 },
-  { key: "detail", label: "Detail", defaultPx: 200 },
+  { key: "detail", label: "Detail", defaultPx: 180 },
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
   { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
   { key: "mode", label: "Mode", defaultPx: 76 },
   { key: "tracking", label: "Tracking", defaultPx: 120 },
   { key: "rep", label: "Rep", defaultPx: 60 },
-  { key: "deadline", label: "Deadline", defaultPx: 92 },
-  { key: "urgency", label: "Urgency", defaultPx: 100 },
+  { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
 export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters }: Props) => {
