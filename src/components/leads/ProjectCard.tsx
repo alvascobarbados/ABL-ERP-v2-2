@@ -659,7 +659,7 @@ export const ProjectCard = ({
                     : "hsl(var(--brand-navy) / 0.40)",
                 }}
               >
-                {qText ?? "Q-"}
+                {qText ? `Q-${qText}` : "Q-"}
               </span>
               <span
                 className={cn(
@@ -672,7 +672,7 @@ export const ProjectCard = ({
                     : "hsl(var(--brand-navy) / 0.40)",
                 }}
               >
-                {invText ?? "INV-"}
+                {invText ? `INV-${invText}` : "INV-"}
               </span>
             </div>
 
