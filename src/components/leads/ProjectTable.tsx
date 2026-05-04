@@ -42,13 +42,17 @@ function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
 import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
 import { useMasterData } from "@/hooks/useMasterData";
 import { cn } from "@/lib/utils";
+import { pipelineAccent } from "@/lib/brand";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
 import type { TabId } from "./PipelineTabs";
 
 type SortKey =
   | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
-  | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline" | "urgency";
+  | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline";
 
 interface Props {
   activeTab: TabId;
