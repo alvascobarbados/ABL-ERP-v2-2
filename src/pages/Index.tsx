@@ -594,6 +594,16 @@ const Index = () => {
               <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
+          {/* Desktop sub-chevron — per-stage filter pills (collapses to nothing on single-state tabs) */}
+          <div className="hidden lg:block max-w-none px-4 sm:px-6">
+            <SubChevron
+              activeTab={activeTab}
+              selectedStage={subStage}
+              onSelect={setSubStage}
+              stageCounts={stageCounts}
+              allCount={subAllCount}
+            />
+          </div>
         </div>
 
         {/* Mobile filter row (filter pill + search + sort) */}
