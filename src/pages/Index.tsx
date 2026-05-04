@@ -481,7 +481,7 @@ const Index = () => {
     const fromPipeline = card.pipeline;
     const fromStage = card.stage;
     const label = `${card.project.customer} · ${card.project.projectName}`;
-    const result = await moveCard(card.id, { pipeline: "finance", stage: "paid" });
+    const result = await moveCard(card.id, { pipeline: "completed", stage: "completed" });
     if (!result.ok) return;
     toast.success(`${label} marked as paid`, {
       description: "Moved to Completed.",

@@ -572,13 +572,19 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     }
     const fromLabel = pipelineStageLabel(proj.pipeline, proj.stage);
     const toLabel = pipelineStageLabel(target.pipeline, target.stage);
-    const isPaid = target.pipeline === "finance" && target.stage === "paid";
+    // "Mark as paid" = transition into the terminal Completed pipeline.
+    // The legacy finance/paid combination is also kept as a recognized
+    // payment marker for any historical rows the migration missed.
+    const isPaid =
+      (target.pipeline === "completed" && target.stage === "completed") ||
+      (target.pipeline === "finance" && target.stage === "paid");
     const isArchive = target.pipeline === "sales" && target.stage === "archive";
     const wasArchive = proj.pipeline === "sales" && proj.stage === "archive";
     let next = touch({ ...proj, ...patch });
     let res;
     if (isPaid) {
-      res = appendLog(next, { actor: actorOf(u), actionType: "mark_paid", description: `${u.shortName} marked this paid`,
+      res = appendLog(next, { actor: actorOf(u), actionType: "mark_paid",
+        description: `${u.shortName} marked this paid (transitioned to Completed)`,
         metadata: { fromPipeline: proj.pipeline, fromStage: proj.stage, toPipeline: target.pipeline, toStage: target.stage } });
     } else if (isArchive) {
       res = appendLog(next, { actor: actorOf(u), actionType: "archive", description: `${u.shortName} archived this`,
