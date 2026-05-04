@@ -109,6 +109,23 @@ const STAGE_RANK: Record<StageId, number> = {
   invoice_required: 0, invoiced: 1, paid: 2,
 };
 
+// Number of user-facing stages per pipeline (used for shade ramp).
+// Single-state pipelines stay at full saturation.
+const STAGE_COUNT: Record<PipelineId, number> = {
+  sales: 3, design: 2, purchasing: 1, production: 1,
+  shipping: 1, finance: 3, operations: 1,
+};
+
+/** Shade strength 0..1 — earlier stages lighter, later stages full saturation. */
+function stageShade(pipeline: PipelineId, stage: StageId): number {
+  const total = STAGE_COUNT[pipeline] ?? 1;
+  if (total <= 1) return 1;
+  // For finance, "paid" is index 2 (full); for sales, confirming is index 2.
+  const idx = STAGE_RANK[stage] ?? 0;
+  const min = 0.3;
+  return Math.min(1, min + ((1 - min) * idx) / (total - 1));
+}
+
 function supplierName(id: string | undefined, lookup?: (id?: string | null) => { name: string } | undefined): string {
   if (!id) return "";
   const fromMaster = lookup?.(id)?.name;
