@@ -806,8 +806,6 @@ if (noQ1) noQ1.quoteNumber = undefined;
 const noQ2 = find("Caribbean Airlines", "Inflight Refresh", "Branded amenity kits");
 if (noQ2) noQ2.quoteNumber = undefined;
 
-// A Production card with no PO yet (still in pre-production, awaiting paperwork)
-const noPO = find("Solo Beverages", "Summer SKUs", "Custom labels");
 // A Purchasing card with no PO yet (still being prepared, awaiting paperwork)
 const noPO = find("Solo Beverages", "Summer SKUs", "Custom labels");
 if (noPO && noPO.pipeline === "purchasing") noPO.poNumber = undefined;
@@ -887,8 +885,11 @@ export function pipelineCounts(): Record<PipelineId, number> {
   return {
     sales: PROJECTS.filter((p) => p.pipeline === "sales").length,
     design: PROJECTS.filter((p) => p.pipeline === "design").length,
-    operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
+    purchasing: PROJECTS.filter((p) => p.pipeline === "purchasing").length,
+    production: PROJECTS.filter((p) => p.pipeline === "production").length,
     shipping: PROJECTS.filter((p) => p.pipeline === "shipping").length,
     finance: PROJECTS.filter((p) => p.pipeline === "finance").length,
+    // Legacy alias — counts any not-yet-migrated rows under their old key.
+    operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
   };
 }
