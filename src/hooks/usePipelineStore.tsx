@@ -129,7 +129,9 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     orderType: row.order_type,
     priority: row.priority,
     tag: row.tag ?? undefined,
-    quoteNumber: row.quote_number ?? undefined,
+    quoteNumber: row.quote_number == null || row.quote_number === ""
+      ? undefined
+      : (String(row.quote_number).startsWith("Q-") ? row.quote_number : `Q-${row.quote_number}`),
     poNumber: row.po_number ?? undefined,
     invoiceNumber: row.invoice_number ?? undefined,
     createdAt: new Date(row.created_at),
