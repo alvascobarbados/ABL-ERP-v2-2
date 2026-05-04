@@ -15,7 +15,7 @@ import {
 } from "@/data/pipelines";
 import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
-import { EditableCell, SaveResult } from "./EditableCell";
+import { EditableCell, SaveResult, SelectionProvider } from "./EditableCell";
 import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
 import {
   Popover,
@@ -239,9 +239,12 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
     setSortKey(null); setSortDir(1);
   };
 
+  const tableRootRef = useRef<HTMLDivElement>(null);
+
   return (
+    <SelectionProvider outsideRef={tableRootRef}>
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex-1 min-h-0 overflow-auto px-5 pt-3 pb-2">
+      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-5 pt-3 pb-2">
         <div
           className="rounded-xl border bg-card/40"
           style={{ borderColor: "hsl(var(--brand-navy) / 0.12)" }}
@@ -353,6 +356,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
         />
       )}
     </div>
+    </SelectionProvider>
   );
 };
 
@@ -398,12 +402,11 @@ const TableRow = ({
     window.setTimeout(() => setFlashCell((cur) => (cur?.key === k ? null : cur)), 700);
   };
 
-  // Long-press / long-click → stage picker. Disabled while a popover is open
-  // OR while a cell is being edited (EditableCell stops mousedown propagation
-  // on click, so this only fires on row-area presses).
+  // Long-press → stage picker. Disabled while a popover is open OR while a
+  // cell is being edited (EditableCell stops mousedown propagation, so this
+  // only fires on row-area presses outside cells).
   const longPressTimer = useRef<number | null>(null);
   const longPressed = useRef(false);
-  const clickTimer = useRef<number | null>(null);
 
   const startLongPress = () => {
     longPressed.current = false;
@@ -420,18 +423,12 @@ const TableRow = ({
     }
   };
 
+  // Single-click on row whitespace (not on a cell) → open detail.
+  // Cells stop propagation, so this only fires on margins / read-only gutters.
+  // Double-click no longer toggles flag — that gesture is reserved for cells.
   const handleClick = (_e: ReactMouseEvent) => {
     if (longPressed.current) return;
-    if (clickTimer.current) {
-      window.clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-      onToggleFlag();
-      return;
-    }
-    clickTimer.current = window.setTimeout(() => {
-      clickTimer.current = null;
-      onOpen();
-    }, 220);
+    onOpen();
   };
 
   const handleContextMenu = (e: ReactMouseEvent) => {
@@ -579,11 +576,19 @@ const TableRow = ({
         color: "hsl(var(--brand-navy))",
       }}
     >
-      {/* Flag — read-only (toggled via row double-click) */}
-      <div className="px-3 flex items-center justify-center">
+      {/* Flag — single click toggles (special-case column) */}
+      <div
+        className="px-3 flex items-center justify-center cursor-pointer hover:bg-[hsl(var(--brand-orange)/0.08)]"
+        onClick={(e) => { e.stopPropagation(); onToggleFlag(); }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        title={flagged ? "Unflag" : "Flag"}
+      >
         {flagged ? (
           <Flag className="h-3.5 w-3.5 fill-current" style={{ color: "hsl(var(--brand-orange))" }} />
-        ) : null}
+        ) : (
+          <Flag className="h-3.5 w-3.5 opacity-0 hover:opacity-30" style={{ color: "hsl(var(--brand-orange))" }} />
+        )}
       </div>
 
       {/* Pipeline · Stage — read-only here; long-press opens StagePicker */}
@@ -593,6 +598,7 @@ const TableRow = ({
 
       {/* Customer — entity popover */}
       <EditableCell
+        cellKey={`${card.id}:customer`}
         mode="custom"
         align="left"
         display={proj.customer}
@@ -604,6 +610,7 @@ const TableRow = ({
 
       {/* Project name — text */}
       <EditableCell
+        cellKey={`${card.id}:projectName`}
         mode="text"
         align="left"
         display={proj.projectName}
@@ -614,6 +621,7 @@ const TableRow = ({
 
       {/* Detail summary — text */}
       <EditableCell
+        cellKey={`${card.id}:detailSummary`}
         mode="text"
         align="left"
         display={proj.detailSummary?.trim() || "—"}
@@ -626,6 +634,7 @@ const TableRow = ({
 
       {/* Supplier — entity popover */}
       <EditableCell
+        cellKey={`${card.id}:supplier`}
         mode="custom"
         align="left"
         display={supName || "—"}
@@ -638,6 +647,7 @@ const TableRow = ({
 
       {/* Quote # — text */}
       <EditableCell
+        cellKey={`${card.id}:quoteNumber`}
         mode="text"
         align="left"
         display={<span className="tabular">{proj.quoteNumber ?? "—"}</span>}
@@ -650,6 +660,7 @@ const TableRow = ({
 
       {/* Amount — number */}
       <EditableCell
+        cellKey={`${card.id}:value`}
         mode="number"
         align="right"
         display={<span className="tabular">{fmtMoney(proj.value)}</span>}
@@ -661,6 +672,7 @@ const TableRow = ({
 
       {/* Mode — enum popover */}
       <ModeCell
+        cellKey={`${card.id}:mode`}
         value={proj.shippingMode}
         active={openPicker === "mode"}
         flash={flashFor("mode")}
@@ -673,6 +685,7 @@ const TableRow = ({
 
       {/* Tracking — text */}
       <EditableCell
+        cellKey={`${card.id}:trackingRef`}
         mode="text"
         align="left"
         display={<span className="tabular">{proj.trackingRef ?? "—"}</span>}
@@ -685,6 +698,7 @@ const TableRow = ({
 
       {/* Rep — multi popover */}
       <EditableCell
+        cellKey={`${card.id}:rep`}
         mode="custom"
         align="left"
         display={<span className="tabular">{repInitials(proj.pointPerson)}</span>}
@@ -799,6 +813,7 @@ const ReadOnlyCell = ({ children, title, align = "left", muted }: ReadOnlyCellPr
 
 // ── Mode cell (Air / Ocean / Local enum popover) ──────────────────────
 interface ModeCellProps {
+  cellKey: string;
   value: ShippingMode | undefined;
   active: boolean;
   flash: "success" | "error" | null;
@@ -808,10 +823,11 @@ interface ModeCellProps {
   onClose: () => void;
   anchorEl: HTMLElement | null;
 }
-const ModeCell = ({ value, active, flash, onActivate, onPick, open, onClose, anchorEl }: ModeCellProps) => {
+const ModeCell = ({ cellKey, value, active, flash, onActivate, onPick, open, onClose, anchorEl }: ModeCellProps) => {
   return (
     <>
       <EditableCell
+        cellKey={cellKey}
         mode="custom"
         align="left"
         display={value ?? "—"}
