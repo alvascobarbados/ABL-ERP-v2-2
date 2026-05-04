@@ -374,7 +374,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
 
       {/* Footer */}
       <div
-        className="px-5 pb-3 pt-1 text-right text-[11px] tabular"
+        className="px-6 lg:px-8 pb-4 pt-2 text-right text-[12px] tabular"
         style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
       >
         {sorted.length} project{sorted.length === 1 ? "" : "s"}
@@ -594,7 +594,7 @@ const TableRow = ({
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}
       className={cn(
-        "grid items-stretch text-[13px] cursor-pointer transition-colors group select-none relative",
+        "grid items-stretch text-[13.5px] cursor-pointer transition-colors group select-none relative",
         "hover:bg-[hsl(var(--brand-orange)/0.045)]",
       )}
       style={{
