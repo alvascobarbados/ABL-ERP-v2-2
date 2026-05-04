@@ -897,7 +897,7 @@ const ModeCell = ({ cellKey, value, active, flash, onActivate, onPick, open, onC
         cellKey={cellKey}
         mode="custom"
         align="left"
-        display={value ?? "—"}
+        display={value ? <ModeBadge mode={value} /> : "—"}
         muted={!value}
         active={active}
         flash={flash}
@@ -931,18 +931,73 @@ const ModeCell = ({ cellKey, value, active, flash, onActivate, onPick, open, onC
                 key={m}
                 onClick={() => onPick(m)}
                 className={cn(
-                  "w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-muted/60 transition-colors",
+                  "w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-muted/60 transition-colors flex items-center gap-2",
                   value === m && "bg-muted/60 font-medium",
                 )}
                 style={{ color: "hsl(var(--brand-navy))" }}
               >
-                {m}
+                <ModeBadge mode={m} />
               </button>
             ))}
           </PopoverContent>
         </Popover>
       )}
     </>
+  );
+};
+
+// ── Stage · State pill ────────────────────────────────────────────────
+// Compact pill: "Sales · Quote". Background tint and text color shade
+// from light to full saturation as the stage progresses through its pipeline.
+const StageStatePill = ({
+  pipeline, stage, accent,
+}: { pipeline: PipelineId; stage: StageId; accent: string }) => {
+  const pipelineTitle = PIPELINES.find((p) => p.id === pipeline)?.title ?? pipeline;
+  const stageTitle = displayStageTitle(pipeline, stage);
+  const shade = stageShade(pipeline, stage); // 0..1
+  const bgPct = Math.round(8 + shade * 14); // 8% → 22%
+  const textPct = Math.round(60 + shade * 40); // 60% → 100% mix toward accent
+  return (
+    <span
+      className="inline-flex items-center max-w-full truncate rounded-[5px] tabular"
+      style={{
+        height: 22,
+        padding: "0 8px",
+        fontSize: 11.5,
+        fontWeight: 500,
+        backgroundColor: `color-mix(in srgb, ${accent} ${bgPct}%, transparent)`,
+        color: `color-mix(in srgb, ${accent} ${textPct}%, hsl(var(--brand-navy)))`,
+        letterSpacing: "0.005em",
+      }}
+    >
+      <span className="truncate">{pipelineTitle} · {stageTitle}</span>
+    </span>
+  );
+};
+
+// ── Mode badge (Air = green plane, Ocean = blue waves, Local = orange pin) ──
+const MODE_STYLE: Record<ShippingMode, { hex: string; Icon: typeof Plane; label: string }> = {
+  Air:   { hex: "#3F7B4F", Icon: Plane, label: "Air" },     // forest green
+  Ocean: { hex: "#2F6BA8", Icon: Waves, label: "Ocean" },   // ocean blue
+  Local: { hex: "#E97B2C", Icon: MapPin, label: "Local" },  // brand orange
+};
+const ModeBadge = ({ mode }: { mode: ShippingMode }) => {
+  const { hex, Icon, label } = MODE_STYLE[mode];
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-[5px]"
+      style={{
+        height: 22,
+        padding: "0 8px",
+        fontSize: 11.5,
+        fontWeight: 500,
+        backgroundColor: `color-mix(in srgb, ${hex} 14%, transparent)`,
+        color: hex,
+      }}
+    >
+      <Icon style={{ width: 12, height: 12 }} />
+      {label}
+    </span>
   );
 };
 
