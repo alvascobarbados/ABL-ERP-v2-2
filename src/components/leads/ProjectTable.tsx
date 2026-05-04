@@ -42,13 +42,17 @@ function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
 import { getStageTitle, usePipelineStore } from "@/hooks/usePipelineStore";
 import { useMasterData } from "@/hooks/useMasterData";
 import { cn } from "@/lib/utils";
+import { pipelineAccent } from "@/lib/brand";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
 import type { TabId } from "./PipelineTabs";
 
 type SortKey =
   | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
-  | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline" | "urgency";
+  | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline";
 
 interface Props {
   activeTab: TabId;
@@ -184,8 +188,6 @@ function compareCards(
       return dir * (a.project.pointPerson ?? "").localeCompare(b.project.pointPerson ?? "");
     case "deadline":
       return dir * (dl(a) - dl(b));
-    case "urgency":
-      return dir * (urgencyLabel(a.deadlineDate).days - urgencyLabel(b.deadlineDate).days);
   }
 }
 
@@ -196,18 +198,17 @@ function compareCards(
 // viewport (overflow-auto on the wrapper handles it).
 const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
-  { key: "stage", label: "Pipeline · Stage", defaultPx: 220 },
-  { key: "customer", label: "Customer", defaultPx: 150 },
+  { key: "stage", label: "Stage", defaultPx: 140 },
+  { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "project", label: "Project", defaultPx: 280 },
-  { key: "detail", label: "Detail", defaultPx: 200 },
+  { key: "detail", label: "Detail", defaultPx: 180 },
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
   { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
   { key: "mode", label: "Mode", defaultPx: 76 },
   { key: "tracking", label: "Tracking", defaultPx: 120 },
   { key: "rep", label: "Rep", defaultPx: 60 },
-  { key: "deadline", label: "Deadline", defaultPx: 92 },
-  { key: "urgency", label: "Urgency", defaultPx: 100 },
+  { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
 export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters }: Props) => {
@@ -245,6 +246,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
 
   return (
     <SelectionProvider outsideRef={tableRootRef}>
+    <TooltipProvider delayDuration={300}>
     <div className="flex-1 min-h-0 flex flex-col">
       <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-5 pt-3 pb-2">
         <div
@@ -253,12 +255,12 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
         >
           {/* Header */}
           <div
-            className="sticky top-0 z-10 grid items-center text-[11px] font-semibold uppercase tracking-[0.06em] rounded-t-xl"
+            className="sticky top-0 z-10 grid items-center text-[10.5px] font-semibold uppercase tracking-[0.08em] rounded-t-xl"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "hsl(var(--background))",
-              color: "hsl(var(--brand-navy))",
-              borderBottom: "1px solid hsl(var(--brand-navy) / 0.12)",
+              backgroundColor: "hsl(var(--brand-navy) / 0.04)",
+              color: "hsl(var(--brand-navy) / 0.6)",
+              borderBottom: "1px solid hsl(var(--brand-navy) / 0.14)",
             }}
           >
             {COLS.map((c) => {
@@ -273,14 +275,14 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
-                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.04)] cursor-pointer" : "cursor-default",
+                      "h-9 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
+                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.06)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
                       c.align === "right" ? "justify-end" : "justify-start",
                     )}
                     title={c.label}
                   >
                     <span className="truncate">{c.label}</span>
-                    {Arrow && <Arrow className="h-3 w-3 shrink-0" />}
+                    {Arrow && <Arrow className="h-3 w-3 shrink-0 opacity-70" />}
                   </button>
                   {resizable && (
                     <ColumnResizeHandle
@@ -292,7 +294,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 </div>
               );
             })}
-            <div className="h-10" />
+            <div className="h-9" />
           </div>
 
           {/* Rows */}
@@ -358,6 +360,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
         />
       )}
     </div>
+    </TooltipProvider>
     </SelectionProvider>
   );
 };
@@ -439,15 +442,12 @@ const TableRow = ({
   };
 
   const tone = u.tone;
-  const urgencyColor =
-    tone === "urgent" ? "hsl(var(--urgent))"
-    : tone === "soon" ? "hsl(var(--brand-orange))"
-    : tone === "none" ? "hsl(var(--muted-foreground))"
-    : "hsl(var(--brand-navy))";
+  const accent = pipelineAccent(card.pipeline);
+  const stageOnly = displayStageTitle(card.pipeline, card.stage);
 
   const stripeBg = index % 2 === 0
     ? "transparent"
-    : "hsl(var(--brand-navy) / 0.025)";
+    : "hsl(var(--brand-navy) / 0.018)";
 
   // ── Save helpers (text columns) ──────────────────────────────────────
   const saveText = async (field: keyof typeof proj, raw: string): Promise<SaveResult> => {
@@ -566,15 +566,15 @@ const TableRow = ({
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}
       className={cn(
-        "grid items-stretch text-[13px] cursor-pointer transition-colors group select-none",
-        "hover:bg-[hsl(var(--brand-navy)/0.05)]",
+        "grid items-stretch text-[13px] cursor-pointer transition-colors group select-none relative",
+        "hover:bg-[hsl(var(--brand-orange)/0.045)]",
       )}
       style={{
         gridTemplateColumns: gridCols,
-        minHeight: 44,
+        minHeight: 40,
         backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
-        borderBottom: "1px solid hsl(var(--brand-navy) / 0.06)",
-        boxShadow: flagged ? "inset 3px 0 0 0 hsl(var(--brand-orange))" : "none",
+        borderBottom: "1px solid hsl(var(--brand-navy) / 0.05)",
+        boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}`,
         color: "hsl(var(--brand-navy))",
       }}
     >
@@ -593,17 +593,25 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Pipeline · Stage — read-only here; long-press opens StagePicker */}
+      {/* Stage pill — stage name only (pipeline encoded by left stripe) */}
       <ReadOnlyCell title={stageLabel(card, activeTab)}>
-        <span className="font-medium">{stageLabel(card, activeTab)}</span>
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold uppercase tracking-[0.04em] truncate max-w-full"
+          style={{
+            backgroundColor: `${accent}1F`, /* ~12% opacity */
+            color: accent,
+          }}
+        >
+          {stageOnly}
+        </span>
       </ReadOnlyCell>
 
-      {/* Customer — entity popover */}
+      {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
       <EditableCell
         cellKey={`${card.id}:customer`}
         mode="custom"
         align="left"
-        display={proj.customer}
+        display={<span className="font-semibold text-[13.5px] truncate block">{proj.customer}</span>}
         title={proj.customer}
         active={openPicker === "customer"}
         flash={flashFor("customer")}
@@ -664,12 +672,23 @@ const TableRow = ({
         }}
       />
 
-      {/* Amount — number */}
+      {/* Amount — number, proportional visual weight */}
       <EditableCell
         cellKey={`${card.id}:value`}
         mode="number"
         align="right"
-        display={<span className="tabular">{fmtMoney(proj.value)}</span>}
+        display={
+          <span
+            className="tabular"
+            style={{
+              opacity: !proj.value ? 0.55 : 1,
+              fontWeight: (proj.value ?? 0) >= 10000 ? 600 : 400,
+              color: (proj.value ?? 0) >= 10000 ? "hsl(var(--brand-navy))" : undefined,
+            }}
+          >
+            {fmtMoney(proj.value)}
+          </span>
+        }
         muted={!proj.value}
         value={proj.value ? String(proj.value) : ""}
         placeholder="0"
@@ -714,16 +733,38 @@ const TableRow = ({
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("rep"); }}
       />
 
-      {/* Deadline — read-only (date picker lives in CardEditOverlay) */}
+      {/* Deadline — date + urgency dot (combined) */}
       <ReadOnlyCell muted={!card.deadlineDate}>
-        <span className="tabular">{fmtDeadline(card.deadlineDate)}</span>
-      </ReadOnlyCell>
-
-      {/* Urgency — read-only computed */}
-      <ReadOnlyCell>
-        <span className="tabular" style={{ color: urgencyColor, fontWeight: tone === "urgent" ? 600 : 400 }}>
-          {u.text}
-        </span>
+        {card.deadlineDate ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-1.5 truncate">
+                {tone === "urgent" || tone === "soon" ? (
+                  <span
+                    className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
+                    style={{
+                      backgroundColor: tone === "urgent" ? "hsl(var(--urgent))" : "hsl(var(--brand-orange))",
+                      boxShadow: tone === "urgent" ? "0 0 0 2px hsl(var(--urgent) / 0.18)" : "0 0 0 2px hsl(var(--brand-orange) / 0.18)",
+                    }}
+                    aria-hidden
+                  />
+                ) : null}
+                <span
+                  className="tabular"
+                  style={{
+                    color: tone === "urgent" ? "hsl(var(--urgent))" : undefined,
+                    fontWeight: tone === "urgent" ? 600 : 400,
+                  }}
+                >
+                  {fmtDeadline(card.deadlineDate)}
+                </span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">{u.text}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="tabular">—</span>
+        )}
       </ReadOnlyCell>
 
       {/* Actions */}
@@ -807,10 +848,10 @@ interface ReadOnlyCellProps {
 const ReadOnlyCell = ({ children, title, align = "left", muted }: ReadOnlyCellProps) => (
   <div
     className={cn(
-      "px-3 py-2 truncate flex items-center",
+      "px-3 py-1.5 truncate flex items-center",
       align === "right" ? "justify-end text-right" : "justify-start text-left",
     )}
-    style={muted ? { color: "hsl(var(--muted-foreground))" } : undefined}
+    style={muted ? { color: "hsl(var(--brand-navy) / 0.28)" } : undefined}
     title={title}
   >
     <span className="truncate w-full">{children}</span>
