@@ -538,8 +538,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const moveCard = useCallback<PipelineStoreCtx["moveCard"]>(async (cardId, target) => {
     const proj = projectsRef.current.find((p) => p.id === cardId);
     if (!proj) return { ok: false };
-    const v = validateMove(proj, target);
-    if (!v.ok) return { blocked: { reason: "missing-fields", missing: v.missing } };
+    // Note: validateMove() is still exported and used by callers (Index.tsx) to
+    // surface a non-blocking warning toast on forward moves with missing fields.
+    // The store itself no longer blocks the move — softening per product decision.
 
     const u = userRef.current;
     const patch: Partial<Project> = { pipeline: target.pipeline, stage: target.stage };
