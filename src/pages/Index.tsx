@@ -255,6 +255,12 @@ const Index = () => {
   const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
   const [assignOpen, setAssignOpen] = useState(false);
 
+  // Per-tab sub-stage filter (null = "All <Pipeline>"). Persists across tab switches.
+  const [subStageByTab, setSubStageByTab] = useState<Partial<Record<TabId, StageId | null>>>({});
+  const subStage = subStageByTab[activeTab] ?? null;
+  const setSubStage = (s: StageId | null) =>
+    setSubStageByTab((prev) => ({ ...prev, [activeTab]: s }));
+
   // Sort state, persisted per tab
   const [sorts, setSorts] = useState<Record<TabId, SortState>>(loadSorts);
   const sort = sorts[activeTab];
