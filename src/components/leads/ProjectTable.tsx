@@ -254,12 +254,12 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
         >
           {/* Header */}
           <div
-            className="sticky top-0 z-10 grid items-center text-[11px] font-semibold uppercase tracking-[0.06em] rounded-t-xl"
+            className="sticky top-0 z-10 grid items-center text-[10.5px] font-semibold uppercase tracking-[0.08em] rounded-t-xl"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "hsl(var(--background))",
-              color: "hsl(var(--brand-navy))",
-              borderBottom: "1px solid hsl(var(--brand-navy) / 0.12)",
+              backgroundColor: "hsl(var(--brand-navy) / 0.04)",
+              color: "hsl(var(--brand-navy) / 0.6)",
+              borderBottom: "1px solid hsl(var(--brand-navy) / 0.14)",
             }}
           >
             {COLS.map((c) => {
@@ -274,14 +274,14 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
-                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.04)] cursor-pointer" : "cursor-default",
+                      "h-9 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
+                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.06)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
                       c.align === "right" ? "justify-end" : "justify-start",
                     )}
                     title={c.label}
                   >
                     <span className="truncate">{c.label}</span>
-                    {Arrow && <Arrow className="h-3 w-3 shrink-0" />}
+                    {Arrow && <Arrow className="h-3 w-3 shrink-0 opacity-70" />}
                   </button>
                   {resizable && (
                     <ColumnResizeHandle
@@ -293,7 +293,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 </div>
               );
             })}
-            <div className="h-10" />
+            <div className="h-9" />
           </div>
 
           {/* Rows */}
