@@ -17,6 +17,7 @@ import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterD
 import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StagePicker } from "./StagePicker";
+import { usePresence } from "@/hooks/usePresence";
 
 interface Props {
   card: PipelineCard | null;
