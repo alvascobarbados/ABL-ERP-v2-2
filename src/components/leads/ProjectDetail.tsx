@@ -189,20 +189,24 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     });
     setEditor(null);
   };
+  const stripNumberPrefix = (raw: string, px: "Q" | "PO" | "INV") => {
+    const re = new RegExp(`^\\s*${px}-?`, "i");
+    return raw.replace(re, "").replace(/\D/g, "").trim();
+  };
   const saveQuote = (v: string) => {
-    const t = v.trim() || undefined;
+    const t = stripNumberPrefix(v, "Q") || undefined;
     if (t && isQuoteNumberDuplicate(t, live.id)) { toast.error(`Quote ${t} already in use`); return; }
     updateProject(live.id, { quoteNumber: t });
     setEditor(null);
   };
   const savePO = (v: string) => {
-    const t = v.trim() || undefined;
+    const t = stripNumberPrefix(v, "PO") || undefined;
     if (t && isPONumberDuplicate(t, live.id)) { toast.error(`PO ${t} already in use`); return; }
     updateProject(live.id, { poNumber: t });
     setEditor(null);
   };
   const saveInvoice = (v: string) => {
-    const t = v.trim() || undefined;
+    const t = stripNumberPrefix(v, "INV") || undefined;
     if (t && isInvoiceNumberDuplicate(t, live.id)) { toast.error(`Invoice ${t} already in use`); return; }
     updateProject(live.id, { invoiceNumber: t });
     setEditor(null);
@@ -421,9 +425,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                   </button>
                 ) : null}
               />
-              <DetailRow label="Q#" value={live.quoteNumber} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
-              <DetailRow label="PO#" value={live.poNumber} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
-              <DetailRow label="INV#" value={live.invoiceNumber} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
+              <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
               <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
               <DetailRow label="Contact" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
               <DetailRow
@@ -584,7 +588,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setEditor(null)}
         title="Quote number"
         value={live.quoteNumber ?? ""}
-        placeholder="Q-2046"
+        placeholder="2046"
+        prefix="Q-"
+        digitsOnly
         onSave={saveQuote}
       />
       <TextEditor
@@ -592,7 +598,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setEditor(null)}
         title="PO number"
         value={live.poNumber ?? ""}
-        placeholder="PO-1095"
+        placeholder="1095"
+        prefix="PO-"
+        digitsOnly
         onSave={savePO}
       />
       <TextEditor
@@ -600,7 +608,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setEditor(null)}
         title="Invoice number"
         value={live.invoiceNumber ?? ""}
-        placeholder="INV-1050"
+        placeholder="1050"
+        prefix="INV-"
+        digitsOnly
         onSave={saveInvoice}
       />
       <TextEditor

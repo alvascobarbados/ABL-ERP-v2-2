@@ -64,15 +64,79 @@ interface TextEditorProps {
   placeholder?: string;
   multiline?: boolean;
   warning?: string | null;
+  /** Fixed visual prefix shown left of input (e.g. "Q-"). Not part of the saved value. */
+  prefix?: string;
+  /** Restrict input to digits only (paste is sanitized; prefix stripped). */
+  digitsOnly?: boolean;
   onSave: (v: string) => void;
 }
-export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, onSave }: TextEditorProps) => {
-  const [v, setV] = useState(value);
+export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, onSave }: TextEditorProps) => {
+  // When digitsOnly+prefix, seed with digits only — strip any leading prefix from incoming value.
+  const sanitizeIncoming = (raw: string) => {
+    if (!digitsOnly) return raw;
+    let s = raw.trim();
+    if (prefix) {
+      const px = prefix.replace(/-$/, "");
+      const re = new RegExp(`^\\s*${px}-?`, "i");
+      s = s.replace(re, "");
+    }
+    return s.replace(/\D/g, "");
+  };
+  const [v, setV] = useState(sanitizeIncoming(value));
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
-  useEffect(() => { if (open) setV(value); }, [open, value]);
-  useEffect(() => { if (open) setTimeout(() => ref.current?.focus(), 50); }, [open]);
+  useEffect(() => { if (open) setV(sanitizeIncoming(value)); }, [open, value]);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.focus();
+      // Place cursor at end so prefix stays untouched
+      const len = (el as HTMLInputElement).value.length;
+      try { (el as HTMLInputElement).setSelectionRange(len, len); } catch { /* noop */ }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!digitsOnly) return;
+    // Allow control keys
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const allowed = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "Tab", "Enter", "Escape"];
+    if (allowed.includes(e.key)) return;
+    if (!/^\d$/.test(e.key)) e.preventDefault();
+  };
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    if (!digitsOnly) return;
+    e.preventDefault();
+    const raw = e.clipboardData.getData("text") ?? "";
+    let s = raw.trim();
+    if (prefix) {
+      const px = prefix.replace(/-$/, "");
+      const re = new RegExp(`^\\s*${px}-?`, "i");
+      s = s.replace(re, "");
+    }
+    const digits = s.replace(/\D/g, "");
+    if (!digits) return;
+    const target = e.currentTarget;
+    const start = target.selectionStart ?? v.length;
+    const end = target.selectionEnd ?? v.length;
+    const next = (v.slice(0, start) + digits + v.slice(end));
+    setV(next.replace(/\D/g, ""));
+  };
+  const handleChange = (raw: string) => {
+    if (digitsOnly) setV(raw.replace(/\D/g, ""));
+    else setV(raw);
+  };
+  const commit = () => {
+    if (digitsOnly) onSave(v.replace(/\D/g, ""));
+    else onSave(v.trim());
+  };
+  // Allow empty save when digitsOnly (clearing the field is meaningful)
+  const saveDisabled = digitsOnly ? false : !v.trim();
+
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} onSave={() => onSave(v.trim())} saveDisabled={!v.trim()}>
+    <BottomSheet open={open} onClose={onClose} title={title} onSave={commit} saveDisabled={saveDisabled}>
       {multiline ? (
         <textarea
           ref={ref as React.RefObject<HTMLTextAreaElement>}
@@ -82,6 +146,42 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
           rows={4}
           className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)] resize-none"
         />
+      ) : prefix ? (
+        <div
+          className="flex items-center w-full rounded-xl border border-border bg-card px-3 py-2.5 focus-within:ring-2 focus-within:ring-[hsl(var(--brand-navy)/0.4)] focus-within:border-transparent"
+          style={{ minHeight: 48 }}
+          onMouseDown={(e) => {
+            // Clicking the prefix label forwards focus to the input (cursor at end).
+            if (e.target !== ref.current) {
+              e.preventDefault();
+              const el = ref.current as HTMLInputElement | null;
+              if (el) {
+                el.focus();
+                const len = el.value.length;
+                try { el.setSelectionRange(len, len); } catch { /* noop */ }
+              }
+            }
+          }}
+        >
+          <span
+            aria-hidden
+            className="text-[15px] tabular select-none pointer-events-none shrink-0 mr-0.5"
+            style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
+          >
+            {prefix}
+          </span>
+          <input
+            ref={ref as React.RefObject<HTMLInputElement>}
+            value={v}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={placeholder}
+            inputMode={digitsOnly ? "numeric" : undefined}
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[15px] tabular p-0"
+            style={{ color: "hsl(var(--brand-navy))" }}
+          />
+        </div>
       ) : (
         <input
           ref={ref as React.RefObject<HTMLInputElement>}
