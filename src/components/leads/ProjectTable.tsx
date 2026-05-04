@@ -356,6 +356,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
         />
       )}
     </div>
+    </SelectionProvider>
   );
 };
 
