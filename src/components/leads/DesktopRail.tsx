@@ -4,10 +4,9 @@
  */
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Users, Factory, UserCircle2, Package, Ship, Trash2, HelpCircle, LogOut,
-  Table2, Archive, KanbanSquare, ChevronRight, ChevronDown, ChevronLeft,
+  Users, Factory, UserCircle2, Trash2, HelpCircle, LogOut,
+  Archive, KanbanSquare, ChevronLeft,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "./Wordmark";
@@ -50,20 +49,11 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
 
   const projectsItems: Item[] = [
     { icon: KanbanSquare, label: "Pipeline", to: "/" },
-    { icon: Table2, label: "Spreadsheet", to: "/spreadsheet" },
-  ];
-  const shipmentSubItems: { label: string; to: string }[] = [
-    { label: "All", to: "/shipments" },
-    { label: "FCL", to: "/shipments/fcl" },
-    { label: "LCL", to: "/shipments/lcl" },
-    { label: "DHL", to: "/shipments/dhl" },
-    { label: "AF",  to: "/shipments/af"  },
   ];
   const masterItems: Item[] = [
     { icon: Users, label: "Customers", to: "/customers" },
     { icon: Factory, label: "Suppliers", to: "/suppliers" },
     { icon: UserCircle2, label: "Team", to: "/team" },
-    { icon: Package, label: "Products", to: "/products" },
   ];
   const archiveTrashItems: Item[] = [
     { icon: Archive, label: "Archive", to: "/archive", badge: archiveCount },
