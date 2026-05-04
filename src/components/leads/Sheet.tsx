@@ -21,7 +21,7 @@ export const Sheet = ({ open, onClose, title, eyebrow, children, width = "max-w-
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 flex" style={{ zIndex: 200 }}>
       <div className="flex-1 bg-foreground/30 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <aside className={cn("w-full bg-background border-l border-border shadow-2xl overflow-y-auto animate-slide-in-right", width)}>
         <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border px-5 py-4 flex items-center justify-between">
