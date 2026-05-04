@@ -486,11 +486,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 </>
               );
             })()}
+            </SectionCard>
           </section>
 
           {/* ── NOTES ── */}
           <section>
             <SectionHeaderWithAction onAction={() => setEditor({ kind: "addNote" })}>Notes</SectionHeaderWithAction>
+            <SectionCard>
             {(() => {
               const userNotes = (live.notes ?? []).filter((n) => !n.auto);
               if (userNotes.length === 0) {
@@ -510,16 +512,17 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 </ul>
               );
             })()}
+            </SectionCard>
           </section>
 
           {/* ── TIMELINE ── */}
           <section>
             <SectionHeader>Timeline</SectionHeader>
-            <div>
+            <SectionCard>
               <DetailRow label="Created" value={fmtLong(live.createdAt)} locked />
               <DetailRow label="Confirmed" value={confirmedAt ? fmtLong(confirmedAt) : undefined} locked />
               <DetailRow label="Completed" value={completedAt ? fmtLong(completedAt) : undefined} locked />
-            </div>
+            </SectionCard>
           </section>
 
           {/* ── ACTIVITY ── */}
