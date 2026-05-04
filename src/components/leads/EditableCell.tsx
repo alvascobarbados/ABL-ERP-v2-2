@@ -296,7 +296,7 @@ export const EditableCell = (props: Props) => {
       )}
       style={{
         ...ringStyle,
-        color: muted && !isEditing ? "hsl(var(--muted-foreground))" : undefined,
+        color: muted && !isEditing ? "hsl(var(--brand-navy) / 0.28)" : undefined,
       }}
       title={isEditing ? undefined : title}
     >
