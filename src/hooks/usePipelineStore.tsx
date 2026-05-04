@@ -8,6 +8,18 @@ import {
 import { useCurrentUser, type CurrentUser } from "./useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 
+// Strip a known prefix and any non-digits. Returns undefined for empty.
+// Defensive: DB should hold plain digits, but legacy rows may include "Q-"/"PO-"/"INV-".
+function stripRefPrefix(raw: unknown, prefix: string): string | undefined {
+  if (raw == null) return undefined;
+  const s = String(raw).trim();
+  if (!s) return undefined;
+  const px = prefix.replace(/-$/, "");
+  const re = new RegExp(`^\\s*${px}-?`, "i");
+  const cleaned = s.replace(re, "").replace(/\D/g, "");
+  return cleaned || undefined;
+}
+
 // ─────────── Log helpers ───────────
 function makeLogId() {
   return `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -129,11 +141,9 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     orderType: row.order_type,
     priority: row.priority,
     tag: row.tag ?? undefined,
-    quoteNumber: row.quote_number == null || row.quote_number === ""
-      ? undefined
-      : (String(row.quote_number).startsWith("Q-") ? row.quote_number : `Q-${row.quote_number}`),
-    poNumber: row.po_number ?? undefined,
-    invoiceNumber: row.invoice_number ?? undefined,
+    quoteNumber: stripRefPrefix(row.quote_number, "Q-"),
+    poNumber: stripRefPrefix(row.po_number, "PO-"),
+    invoiceNumber: stripRefPrefix(row.invoice_number, "INV-"),
     createdAt: new Date(row.created_at),
     updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
     deletedAt: row.deleted_at ? new Date(row.deleted_at) : undefined,
