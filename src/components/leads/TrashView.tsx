@@ -71,8 +71,8 @@ export const TrashView = ({ open, onClose }: Props) => {
     setSelected(next);
   };
 
-  const restoreOne = (p: Project) => {
-    const result = store.restoreProject(p.id);
+  const restoreOne = async (p: Project) => {
+    const result = await store.restoreProject(p.id);
     if (!result) return;
     const where = `${pipelineLabel(result.pipeline)} / ${getStageTitle(result.pipeline, result.stage)}`;
     toast.success(`${p.customer} · ${p.projectName} restored to ${where}`, {
@@ -84,10 +84,10 @@ export const TrashView = ({ open, onClose }: Props) => {
     });
   };
 
-  const restoreSelected = () => {
+  const restoreSelected = async () => {
     const ids = Array.from(selected);
     let n = 0;
-    ids.forEach((id) => { if (store.restoreProject(id)) n += 1; });
+    for (const id of ids) { if (await store.restoreProject(id)) n += 1; }
     toast.success(`${n} ${n === 1 ? "project" : "projects"} restored`, { duration: 4000 });
     exitSelect();
   };
