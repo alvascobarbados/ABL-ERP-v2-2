@@ -477,7 +477,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
           actor: { userId: r.actor_user_id, displayName: r.actor_display_name },
           actionType: r.action_type as ProjectLogActionType,
           description: r.description,
-          metadata: r.metadata ?? undefined,
+          metadata: (r.metadata ?? undefined) as any,
         });
         logByProj.set(r.project_id, arr);
       }
