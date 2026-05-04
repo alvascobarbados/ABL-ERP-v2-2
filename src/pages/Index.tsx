@@ -11,7 +11,7 @@ import { usePipelineStore, getStageTitle, validateMove, isForwardMove } from "@/
 import { StageSection } from "@/components/leads/StageSection";
 import { ProjectCard } from "@/components/leads/ProjectCard";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
-import { ChevronTabs } from "@/components/leads/ChevronTabs";
+import { PipelineStatCards } from "@/components/leads/PipelineStatCards";
 import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
 import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
@@ -588,10 +588,10 @@ const Index = () => {
               <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
-          {/* Desktop chevron tabs — full width */}
-          <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center">
+          {/* Desktop pipeline stat cards — full width */}
+          <div className="hidden lg:flex max-w-none px-6 lg:px-8 pt-3 pb-2 items-center">
             <div className="flex-1 min-w-0">
-              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
+              <PipelineStatCards active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
           {/* Desktop sub-chevron — per-stage filter pills. Only multi-stage pipelines render. */}

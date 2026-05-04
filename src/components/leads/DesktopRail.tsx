@@ -1,15 +1,17 @@
 /**
  * Persistent left navigation rail — desktop only.
- * Sections: PROJECTS / MASTER DATA / (unlabeled: Archive, Trash) / Footer.
+ *
+ * Visual: dark navy background (#1B2A4E), white text. Sections grouped under
+ * uppercase labels: MAIN / TEAM / OTHER. Active item is highlighted with an
+ * orange-tinted fill. Footer holds avatar + Help + Settings.
  */
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Users, Factory, UserCircle2, Trash2, HelpCircle, LogOut,
+  Users, Factory, UserCircle2, Trash2, HelpCircle, Settings,
   Archive, KanbanSquare, ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Wordmark } from "./Wordmark";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 
 interface Props {
@@ -23,13 +25,12 @@ interface Item {
   to?: string;
   onClick?: () => void;
   badge?: number;
-  dim?: boolean;
 }
 
 const SectionLabel = ({ children }: { children: string }) => (
   <div
-    className="px-3 pt-3 pb-1 text-[10px] uppercase font-semibold"
-    style={{ color: "hsl(var(--brand-navy))", opacity: 0.5, letterSpacing: "0.05em" }}
+    className="px-3 pt-4 pb-1.5 text-[11px] uppercase font-semibold"
+    style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em" }}
   >
     {children}
   </div>
@@ -41,21 +42,17 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
   const isActive = (path: string) =>
     path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(path + "/");
 
-  const projectsItems: Item[] = [
+  const mainItems: Item[] = [
     { icon: KanbanSquare, label: "Pipeline", to: "/" },
   ];
-  const masterItems: Item[] = [
+  const teamItems: Item[] = [
     { icon: Users, label: "Customers", to: "/customers" },
     { icon: Factory, label: "Suppliers", to: "/suppliers" },
     { icon: UserCircle2, label: "Team", to: "/team" },
   ];
-  const archiveTrashItems: Item[] = [
+  const otherItems: Item[] = [
     { icon: Archive, label: "Archive", to: "/archive", badge: archiveCount },
     { icon: Trash2, label: "Trash", to: "/trash", badge: trashCount },
-  ];
-  const footerItems: Item[] = [
-    { icon: HelpCircle, label: "Help", onClick: () => toast("Help docs coming soon") },
-    { icon: LogOut, label: "Sign out", onClick: () => toast("Sign out coming soon"), dim: true },
   ];
 
   const renderItem = (item: Item, key: string) => {
@@ -70,19 +67,29 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
         onClick={handleClick}
         className={cn(
           "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-colors",
-          active
-            ? "bg-[hsl(var(--brand-navy)/0.08)]"
-            : "hover:bg-[hsl(var(--brand-navy)/0.05)]",
         )}
+        style={{
+          backgroundColor: active
+            ? "hsl(var(--brand-orange) / 0.18)"
+            : "transparent",
+        }}
+        onMouseEnter={(e) => {
+          if (!active) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
+        }}
+        onMouseLeave={(e) => {
+          if (!active) e.currentTarget.style.backgroundColor = "transparent";
+        }}
       >
         <item.icon
           className="h-4 w-4 shrink-0"
-          style={{ color: "hsl(var(--brand-navy))", opacity: item.dim ? 0.55 : 1 }}
+          style={{
+            color: active ? "hsl(var(--brand-orange))" : "rgba(255,255,255,0.85)",
+          }}
         />
         <span
           className="text-[14px] flex-1 truncate"
           style={{
-            color: item.dim ? "hsl(var(--muted-foreground))" : "hsl(var(--brand-navy))",
+            color: active ? "#fff" : "rgba(255,255,255,0.92)",
             fontWeight: active ? 600 : 500,
           }}
         >
@@ -94,8 +101,8 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
             style={{
               minWidth: 20,
               height: 18,
-              backgroundColor: "hsl(var(--brand-navy) / 0.1)",
-              color: "hsl(var(--brand-navy))",
+              backgroundColor: active ? "hsl(var(--brand-orange))" : "rgba(255,255,255,0.15)",
+              color: active ? "#fff" : "rgba(255,255,255,0.95)",
             }}
           >
             {item.badge}
@@ -110,45 +117,80 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
 
   return (
     <aside
-      className="hidden lg:flex flex-col shrink-0 h-screen sticky top-0 border-r"
+      className="hidden lg:flex flex-col shrink-0 h-screen sticky top-0"
       style={{
         width: 240,
-        backgroundColor: "hsl(36 28% 92%)",
-        borderColor: "hsl(var(--brand-navy) / 0.12)",
+        backgroundColor: "hsl(var(--brand-navy))",
+        borderRight: "1px solid rgba(255,255,255,0.08)",
       }}
     >
+      {/* Brand row */}
       <div className="px-5 pt-6 pb-5 flex items-center justify-between gap-2">
-        <button onClick={() => navigate("/")} className="block" aria-label="Home">
-          <Wordmark />
+        <button
+          onClick={() => navigate("/")}
+          className="block"
+          aria-label="Home"
+        >
+          <span
+            className="font-display text-[22px] leading-none tracking-tight"
+            style={{ fontWeight: 600 }}
+          >
+            <span style={{ color: "#fff" }}>alvas</span>
+            <span style={{ color: "hsl(var(--brand-orange))" }}>co</span>
+          </span>
         </button>
         <button
           onClick={toggle}
           aria-label="Collapse sidebar"
           title="Collapse sidebar (⌘\\)"
-          className="inline-flex items-center justify-center rounded-md hover:bg-[hsl(var(--brand-navy)/0.08)] transition-colors"
-          style={{ width: 28, height: 28, color: "hsl(var(--brand-navy))" }}
+          className="inline-flex items-center justify-center rounded-md transition-colors"
+          style={{ width: 28, height: 28, color: "rgba(255,255,255,0.7)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="border-t mx-3" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
+      <div className="border-t mx-3" style={{ borderColor: "rgba(255,255,255,0.08)" }} />
 
-      <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
-        <SectionLabel>Projects</SectionLabel>
-        {projectsItems.map((it, i) => renderItem(it, "p" + i))}
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+        <SectionLabel>Main</SectionLabel>
+        {mainItems.map((it, i) => renderItem(it, "m" + i))}
 
-        <SectionLabel>Lists</SectionLabel>
-        {masterItems.map((it, i) => renderItem(it, "m" + i))}
+        <SectionLabel>Team</SectionLabel>
+        {teamItems.map((it, i) => renderItem(it, "t" + i))}
 
-        <div className="my-2 mx-2 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
-        {archiveTrashItems.map((it, i) => renderItem(it, "a" + i))}
+        <SectionLabel>Other</SectionLabel>
+        {otherItems.map((it, i) => renderItem(it, "o" + i))}
       </nav>
 
-      <div className="border-t mx-3" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
+      <div className="border-t mx-3" style={{ borderColor: "rgba(255,255,255,0.08)" }} />
 
-      <div className="px-2 py-3 space-y-0.5">
-        {footerItems.map((it, i) => renderItem(it, "f" + i))}
+      {/* Footer: avatar + name + Help/Settings */}
+      <div className="px-3 py-3 space-y-1">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0"
+            style={{
+              backgroundColor: "hsl(var(--brand-orange))",
+              color: "#fff",
+            }}
+          >
+            AV
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-semibold truncate" style={{ color: "#fff" }}>
+              Avinash
+            </div>
+            <div className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
+              Admin
+            </div>
+          </div>
+        </div>
+        {renderItem({ icon: HelpCircle, label: "Help", onClick: () => toast("Help docs coming soon") }, "fh")}
+        {renderItem({ icon: Settings, label: "Settings", onClick: () => toast("Settings coming soon") }, "fs")}
       </div>
     </aside>
   );
