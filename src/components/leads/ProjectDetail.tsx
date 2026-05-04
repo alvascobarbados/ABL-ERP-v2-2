@@ -425,9 +425,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                   </button>
                 ) : null}
               />
-              <DetailRow label="Q#" value={live.quoteNumber} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
-              <DetailRow label="PO#" value={live.poNumber} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
-              <DetailRow label="INV#" value={live.invoiceNumber} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
+              <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
               <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
               <DetailRow label="Contact" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
               <DetailRow
