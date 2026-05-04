@@ -115,6 +115,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   }, [card, onClose]);
 
   const live = useMemo(() => card ? projects.find((p) => p.id === card.id) ?? null : null, [card, projects]);
+  const presentOthers = usePresence(live?.id);
 
   const confirmedAt = useMemo(() => {
     const n = live?.notes?.find((x) => x.auto && /→\s*Confirming/i.test(x.text));
