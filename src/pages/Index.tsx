@@ -372,7 +372,7 @@ const Index = () => {
     return Array.from(set).sort();
   }, [projects]);
 
-  // Apply filters + search, then sort
+  // Apply filters + search + sub-stage, then sort
   const visible = useMemo(() => {
     const searchActive = !!search.trim();
     let pool = baseCards;
@@ -383,10 +383,33 @@ const Index = () => {
       .filter((c) => {
         if (!cardMatchesFilter(c, filters)) return false;
         if (searchActive && !projectMatchesSearch(c.project, search.trim())) return false;
+        // Sub-chevron stage filter (only applies when not in "all" / "completed" tabs).
+        if (subStage && c.stage !== subStage) return false;
         return true;
       })
       .sort((a, b) => compareCards(a, b, sort, idIndex, supplierName));
-  }, [baseCards, pipelineProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
+  }, [baseCards, pipelineProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName, subStage]);
+
+  // Per-stage counts within the active pipeline (post-filter, post-search; ignores subStage itself).
+  const stageCounts = useMemo<Partial<Record<StageId, number>>>(() => {
+    if (isAll || isCompleted) return {};
+    const q = search.trim();
+    const counts: Partial<Record<StageId, number>> = {};
+    pipelineProjects
+      .filter((p) => p.pipeline === activePipeline)
+      .forEach((p) => {
+        const c = buildCard(p);
+        if (!cardMatchesFilter(c, filters)) return;
+        if (q && !projectMatchesSearch(p, q)) return;
+        counts[p.stage] = (counts[p.stage] ?? 0) + 1;
+      });
+    return counts;
+  }, [pipelineProjects, activePipeline, isAll, isCompleted, filters, search]);
+
+  const subAllCount = useMemo(
+    () => Object.values(stageCounts).reduce((a, b) => a + (b ?? 0), 0),
+    [stageCounts],
+  );
 
   const pipeline = PIPELINES.find((p) => p.id === activePipeline)!;
   const hasActiveFilter = filterCount(filters) > 0;
