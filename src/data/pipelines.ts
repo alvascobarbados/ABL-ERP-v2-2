@@ -114,21 +114,32 @@ export const PIPELINES: PipelineConfig[] = [
   {
     id: "finance",
     title: "Finance",
-    // "paid" stage still exists in StageId for backward compat and as the
-    // canonical marker that a project is COMPLETED. It is intentionally
-    // NOT listed here so the Finance pipeline kanban renders only two
-    // columns (Invoice Required → Invoiced). Completed projects surface
-    // under the dedicated "Completed" scope tab.
+    // Finance has exactly TWO sub-stages now. The "paid" stage is no longer
+    // part of the relay race — once a project is paid it moves to the
+    // Completed pipeline below. Display labels are action-oriented:
+    // "To Invoice" / "To Collect" — the IDs stay so historical audit log
+    // entries remain stable.
     stages: [
-      { id: "invoice_required", title: "Invoice Required" },
-      { id: "invoiced", title: "Invoiced" },
+      { id: "invoice_required", title: "To Invoice" },
+      { id: "invoiced", title: "To Collect" },
+    ],
+  },
+  {
+    id: "completed",
+    title: "Completed",
+    // Single-state terminal pipeline. Reached via "Mark as paid" from
+    // Finance · To Collect (replaces the old finance/paid stage).
+    stages: [
+      { id: "completed", title: "Completed" },
     ],
   },
 ];
 
-/** Canonical "this project is completed/paid" check. */
+/** Canonical "this project is completed/paid" check. Includes the legacy
+ *  finance/paid combination so old rows that haven't been migrated yet
+ *  still register as completed. */
 export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) =>
-  p.pipeline === "finance" && p.stage === "paid";
+  p.pipeline === "completed" || (p.pipeline === "finance" && p.stage === "paid");
 
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
@@ -138,6 +149,7 @@ export const STAGE_ACCENT: Record<StageId, string> = {
   preproduction: "violet", in_production: "orange",
   shipment_required: "amber", shipment_assigned: "sky",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
+  completed: "emerald",
 };
 
 // ─────────── Suppliers ───────────
