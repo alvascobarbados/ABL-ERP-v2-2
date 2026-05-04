@@ -672,12 +672,23 @@ const TableRow = ({
         }}
       />
 
-      {/* Amount — number */}
+      {/* Amount — number, proportional visual weight */}
       <EditableCell
         cellKey={`${card.id}:value`}
         mode="number"
         align="right"
-        display={<span className="tabular">{fmtMoney(proj.value)}</span>}
+        display={
+          <span
+            className="tabular"
+            style={{
+              opacity: !proj.value ? 0.55 : 1,
+              fontWeight: (proj.value ?? 0) >= 10000 ? 600 : 400,
+              color: (proj.value ?? 0) >= 10000 ? "hsl(var(--brand-navy))" : undefined,
+            }}
+          >
+            {fmtMoney(proj.value)}
+          </span>
+        }
         muted={!proj.value}
         value={proj.value ? String(proj.value) : ""}
         placeholder="0"
