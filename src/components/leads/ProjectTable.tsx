@@ -682,10 +682,10 @@ const TableRow = ({
         cellKey={`${card.id}:quoteNumber`}
         mode="text"
         align="left"
-        display={<span className="tabular">{proj.quoteNumber ?? "—"}</span>}
-        title={proj.quoteNumber ?? ""}
+        display={<span className="tabular">{proj.quoteNumber ? `Q-${proj.quoteNumber}` : "—"}</span>}
+        title={proj.quoteNumber ? `Q-${proj.quoteNumber}` : ""}
         muted={!proj.quoteNumber}
-        value={(proj.quoteNumber ?? "").replace(/^Q-/, "")}
+        value={proj.quoteNumber ?? ""}
         placeholder="####"
         prefix="Q-"
         onCommit={(v) => {
