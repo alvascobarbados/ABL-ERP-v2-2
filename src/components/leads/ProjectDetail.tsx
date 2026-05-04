@@ -343,61 +343,63 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           {/* ── STATUS ── */}
           <section>
             <SectionHeader>Status</SectionHeader>
-            <div className="space-y-2">
-              <div>
-                <StageStatePill pipeline={live.pipeline} stage={live.stage} accent={accentHex} />
+            <SectionCard>
+              <div className="space-y-2">
+                <div>
+                  <StageStatePill pipeline={live.pipeline} stage={live.stage} accent={accentHex} />
+                </div>
+                <div className="text-[17px] leading-snug font-medium" style={{ color: "hsl(var(--brand-navy))" }}>
+                  {live.customer}
+                  <span className="opacity-40 mx-1.5">·</span>
+                  {live.projectName}
+                </div>
+                <div className="text-[14px]" style={{ color: "hsl(var(--brand-navy) / 0.75)" }}>
+                  {live.contactPerson || <span className="italic" style={{ color: "hsl(var(--brand-navy) / 0.4)" }}>No contact set</span>}
+                </div>
               </div>
-              <div className="text-[17px] leading-snug font-medium" style={{ color: "hsl(var(--brand-navy))" }}>
-                {live.customer}
-                <span className="opacity-40 mx-1.5">·</span>
-                {live.projectName}
+              <div className="mt-5 flex items-center gap-2.5">
+                <button
+                  onClick={handleMoveForward}
+                  disabled={!canAdvance}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg text-[14px] font-semibold tracking-tight transition-all",
+                    canAdvance
+                      ? "text-white hover:opacity-90 active:scale-[0.98]"
+                      : "text-muted-foreground/60 cursor-not-allowed",
+                  )}
+                  style={{
+                    height: 38,
+                    padding: "0 16px",
+                    backgroundColor: canAdvance ? "hsl(var(--brand-navy))" : "hsl(var(--muted))",
+                  }}
+                >
+                  Move Forward <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={handleFlag}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg text-[14px] font-medium border transition-all active:scale-[0.98]",
+                  )}
+                  style={{
+                    height: 38,
+                    padding: "0 14px",
+                    borderColor: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy) / 0.25)",
+                    color: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy))",
+                    backgroundColor: live.flagged ? "hsl(var(--brand-orange) / 0.08)" : "transparent",
+                  }}
+                  aria-pressed={!!live.flagged}
+                >
+                  <Flag className="h-4 w-4" style={{ fill: live.flagged ? "hsl(var(--brand-orange))" : "transparent" }} />
+                  {live.flagged ? "Flagged" : "Flag"}
+                </button>
               </div>
-              <div className="text-[14px]" style={{ color: "hsl(var(--brand-navy) / 0.75)" }}>
-                {live.contactPerson || <span className="italic" style={{ color: "hsl(var(--brand-navy) / 0.4)" }}>No contact set</span>}
-              </div>
-            </div>
-            <div className="mt-5 flex items-center gap-2.5">
-              <button
-                onClick={handleMoveForward}
-                disabled={!canAdvance}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-lg text-[14px] font-semibold tracking-tight transition-all",
-                  canAdvance
-                    ? "text-white hover:opacity-90 active:scale-[0.98]"
-                    : "text-muted-foreground/60 cursor-not-allowed",
-                )}
-                style={{
-                  height: 38,
-                  padding: "0 16px",
-                  backgroundColor: canAdvance ? "hsl(var(--brand-navy))" : "hsl(var(--muted))",
-                }}
-              >
-                Move Forward <ArrowRight className="h-4 w-4" />
-              </button>
-              <button
-                onClick={handleFlag}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-lg text-[14px] font-medium border transition-all active:scale-[0.98]",
-                )}
-                style={{
-                  height: 38,
-                  padding: "0 14px",
-                  borderColor: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy) / 0.25)",
-                  color: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy))",
-                  backgroundColor: live.flagged ? "hsl(var(--brand-orange) / 0.08)" : "transparent",
-                }}
-                aria-pressed={!!live.flagged}
-              >
-                <Flag className="h-4 w-4" style={{ fill: live.flagged ? "hsl(var(--brand-orange))" : "transparent" }} />
-                {live.flagged ? "Flagged" : "Flag"}
-              </button>
-            </div>
+            </SectionCard>
           </section>
 
           {/* ── DETAILS ── */}
           <section>
             <SectionHeader>Details</SectionHeader>
-            <div className="rounded-md overflow-hidden" style={{ backgroundColor: "transparent" }}>
+            <SectionCard>
               <DetailRow label="Customer" value={live.customer} locked />
               <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
               <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
@@ -435,12 +437,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 onClick={() => setEditor({ kind: "deadline" })}
                 valueColor={u.color}
               />
-            </div>
+            </SectionCard>
           </section>
 
           {/* ── LINE ITEMS ── */}
           <section>
             <SectionHeaderWithAction onAction={() => setEditor({ kind: "addLineItem" })}>Line items</SectionHeaderWithAction>
+            <SectionCard>
             {!live.lineItems || live.lineItems.length === 0 ? (
               <div className="text-[13px] italic text-muted-foreground/70">No line items yet</div>
             ) : (() => {
@@ -483,11 +486,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 </>
               );
             })()}
+            </SectionCard>
           </section>
 
           {/* ── NOTES ── */}
           <section>
             <SectionHeaderWithAction onAction={() => setEditor({ kind: "addNote" })}>Notes</SectionHeaderWithAction>
+            <SectionCard>
             {(() => {
               const userNotes = (live.notes ?? []).filter((n) => !n.auto);
               if (userNotes.length === 0) {
@@ -507,16 +512,17 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 </ul>
               );
             })()}
+            </SectionCard>
           </section>
 
           {/* ── TIMELINE ── */}
           <section>
             <SectionHeader>Timeline</SectionHeader>
-            <div>
+            <SectionCard>
               <DetailRow label="Created" value={fmtLong(live.createdAt)} locked />
               <DetailRow label="Confirmed" value={confirmedAt ? fmtLong(confirmedAt) : undefined} locked />
               <DetailRow label="Completed" value={completedAt ? fmtLong(completedAt) : undefined} locked />
-            </div>
+            </SectionCard>
           </section>
 
           {/* ── ACTIVITY ── */}
@@ -700,17 +706,30 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
 const SectionHeader = ({ children }: { children: React.ReactNode }) => (
   <h2
-    className="text-[11px] uppercase font-semibold mb-3"
+    className="text-[11px] uppercase font-semibold mb-3 px-1"
     style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
   >
     {children}
   </h2>
 );
 
+const SectionCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <div
+    className={cn("rounded-2xl px-5 py-5 lg:px-6 lg:py-6", className)}
+    style={{
+      backgroundColor: "hsl(var(--card))",
+      border: "1px solid hsl(var(--brand-navy) / 0.07)",
+      boxShadow: "0 1px 3px hsl(var(--brand-navy) / 0.04)",
+    }}
+  >
+    {children}
+  </div>
+);
+
 const SectionHeaderWithAction = ({
   children, onAction,
 }: { children: React.ReactNode; onAction: () => void }) => (
-  <div className="flex items-center justify-between mb-3">
+  <div className="flex items-center justify-between mb-3 px-1">
     <h2
       className="text-[11px] uppercase font-semibold"
       style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
@@ -778,7 +797,7 @@ const DetailRow = ({
     </>
   );
 
-  const baseClass = "w-full flex items-center gap-3 px-2 -mx-2 py-2.5 border-b text-left";
+  const baseClass = "w-full flex items-center gap-3 px-2 -mx-2 py-2.5 border-b last:border-b-0 text-left";
   const borderStyle = { borderColor: "hsl(var(--brand-navy) / 0.07)" };
 
   if (!interactive) {
@@ -854,7 +873,7 @@ const ActivitySection = ({
     return (
       <section>
         <SectionHeader>Activity</SectionHeader>
-        <div className="text-[13px] italic text-muted-foreground/70">No activity yet</div>
+        <SectionCard><div className="text-[13px] italic text-muted-foreground/70">No activity yet</div></SectionCard>
       </section>
     );
   }
@@ -880,20 +899,22 @@ const ActivitySection = ({
           </button>
         )}
       </div>
-      <ul className="space-y-2.5">
-        {visible.map((e) => (
-          <li key={e.id} className="flex gap-2.5 text-[13px] leading-snug">
-            <span
-              className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
-              style={{ background: LOG_DOT[e.actionType] ?? "hsl(var(--muted-foreground))" }}
-            />
-            <div className="flex-1 min-w-0">
-              <div className="text-foreground">{e.description}</div>
-              <div className="text-[11px] text-muted-foreground">{fmtLogTs(e.ts)}</div>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <SectionCard>
+        <ul className="space-y-2.5">
+          {visible.map((e) => (
+            <li key={e.id} className="flex gap-2.5 text-[13px] leading-snug">
+              <span
+                className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ background: LOG_DOT[e.actionType] ?? "hsl(var(--muted-foreground))" }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-foreground">{e.description}</div>
+                <div className="text-[11px] text-muted-foreground">{fmtLogTs(e.ts)}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </SectionCard>
     </section>
   );
 };
