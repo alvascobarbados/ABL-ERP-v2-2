@@ -138,61 +138,7 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
         <SectionLabel>Projects</SectionLabel>
         {projectsItems.map((it, i) => renderItem(it, "p" + i))}
 
-        {/* Shipments parent (toggle) + sub-items */}
-        <button
-          onClick={() => setShipmentsOpen((o) => !o)}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-colors",
-            pathname.startsWith("/shipments")
-              ? "bg-[hsl(var(--brand-navy)/0.08)]"
-              : "hover:bg-[hsl(var(--brand-navy)/0.05)]",
-          )}
-          aria-expanded={shipmentsOpen}
-        >
-          <Ship className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy))" }} />
-          <span
-            className="text-[14px] flex-1 truncate"
-            style={{
-              color: "hsl(var(--brand-navy))",
-              fontWeight: pathname.startsWith("/shipments") ? 600 : 500,
-            }}
-          >
-            Shipments
-          </span>
-          {shipmentsOpen
-            ? <ChevronDown className="h-3.5 w-3.5" style={{ color: "hsl(var(--brand-navy) / 0.6)" }} />
-            : <ChevronRight className="h-3.5 w-3.5" style={{ color: "hsl(var(--brand-navy) / 0.6)" }} />}
-        </button>
-        {shipmentsOpen && (
-          <div
-            className="ml-5 pl-3 border-l space-y-0.5"
-            style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}
-          >
-            {shipmentSubItems.map((sub) => {
-              const active = pathname === sub.to;
-              return (
-                <button
-                  key={sub.to}
-                  onClick={() => navigate(sub.to)}
-                  className={cn(
-                    "w-full text-left px-2.5 py-1.5 rounded-md transition-colors text-[13px]",
-                    active
-                      ? "bg-[hsl(var(--brand-navy)/0.08)]"
-                      : "hover:bg-[hsl(var(--brand-navy)/0.04)]",
-                  )}
-                  style={{
-                    color: "hsl(var(--brand-navy))",
-                    fontWeight: active ? 600 : 500,
-                  }}
-                >
-                  {sub.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        <SectionLabel>Master Data</SectionLabel>
+        <SectionLabel>Lists</SectionLabel>
         {masterItems.map((it, i) => renderItem(it, "m" + i))}
 
         <div className="my-2 mx-2 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
