@@ -602,7 +602,6 @@ const Index = () => {
                 selectedStage={subStage}
                 onSelect={setSubStage}
                 stageCounts={stageCounts}
-                allCount={subAllCount}
               />
             </div>
           )}
