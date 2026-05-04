@@ -270,24 +270,24 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
     <SelectionProvider outsideRef={tableRootRef}>
     <TooltipProvider delayDuration={300}>
     <div className="flex-1 min-h-0 flex flex-col">
-      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-6 pt-3 pb-2">
+      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-6 lg:px-8 pt-2 pb-3">
         <div
-          className="rounded-xl border"
+          className="rounded-2xl border"
           style={{
-            borderColor: "hsl(var(--brand-navy) / 0.10)",
-            backgroundColor: "#FDFCF7",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.06)",
+            borderColor: "hsl(var(--brand-navy) / 0.08)",
+            backgroundColor: "#FFFFFF",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(27,42,78,0.04)",
           }}
         >
           {/* Header — sticky to outer scroll container; fully opaque */}
           <div
-            className="sticky top-0 z-20 grid items-center text-[11px] font-medium uppercase tracking-[0.05em] rounded-t-xl"
+            className="sticky top-0 z-20 grid items-center text-[11px] font-semibold uppercase tracking-[0.05em] rounded-t-2xl"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "#FAF7EE",
-              color: "hsl(var(--brand-navy) / 0.55)",
-              borderBottom: "1px solid hsl(var(--brand-navy) / 0.12)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.04)",
+              backgroundColor: "#F7F4ED",
+              color: "hsl(var(--brand-navy) / 0.6)",
+              borderBottom: "1px solid hsl(var(--brand-navy) / 0.1)",
+              boxShadow: "0 1px 0 hsl(var(--brand-navy) / 0.04)",
             }}
           >
             {COLS.map((c) => {
@@ -302,8 +302,8 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
-                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.06)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
+                      "h-11 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
+                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.05)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
                       c.align === "right" ? "justify-end" : "justify-start",
                     )}
                     title={c.label}
@@ -321,7 +321,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 </div>
               );
             })}
-            <div className="h-10" />
+            <div className="h-11" />
           </div>
 
           {/* Rows */}
