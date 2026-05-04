@@ -442,15 +442,12 @@ const TableRow = ({
   };
 
   const tone = u.tone;
-  const urgencyColor =
-    tone === "urgent" ? "hsl(var(--urgent))"
-    : tone === "soon" ? "hsl(var(--brand-orange))"
-    : tone === "none" ? "hsl(var(--muted-foreground))"
-    : "hsl(var(--brand-navy))";
+  const accent = pipelineAccent(card.pipeline);
+  const stageOnly = displayStageTitle(card.pipeline, card.stage);
 
   const stripeBg = index % 2 === 0
     ? "transparent"
-    : "hsl(var(--brand-navy) / 0.025)";
+    : "hsl(var(--brand-navy) / 0.018)";
 
   // ── Save helpers (text columns) ──────────────────────────────────────
   const saveText = async (field: keyof typeof proj, raw: string): Promise<SaveResult> => {
