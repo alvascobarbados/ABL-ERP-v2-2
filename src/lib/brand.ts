@@ -5,9 +5,13 @@ import { PipelineId } from "@/data/pipelines";
 export const PIPELINE_ACCENT: Record<PipelineId, { hex: string; name: string }> = {
   sales:      { hex: "#E97B2C", name: "orange" },   // Alvasco Orange — getting new business
   design:     { hex: "#8B3A62", name: "magenta" },  // Deep magenta — design & proofing
-  operations: { hex: "#1B2A4E", name: "navy" },     // Alvasco Navy — making
+  purchasing: { hex: "#4A5D8A", name: "slate" },    // Slate blue — procurement (Teshima)
+  production: { hex: "#1B2A4E", name: "navy" },     // Alvasco Navy — making
   shipping:   { hex: "#3D7B86", name: "teal" },     // Soft navy / teal — moving the goods
   finance:    { hex: "#B8884D", name: "gold" },     // muted gold — getting paid
+  // legacy alias — kept for any historical PipelineId === "operations"
+  // appearing in old log entries; falls back to navy.
+  operations: { hex: "#1B2A4E", name: "navy" },
 };
 
 // Supplier chip colors — small 8px square next to supplier name.

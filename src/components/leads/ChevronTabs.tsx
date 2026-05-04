@@ -54,7 +54,7 @@ const BORDER = 1;         // outline thickness in px
 const CHEVRON_CLIP = `polygon(0 0, calc(100% - ${CHEV}px) 0, 100% 50%, calc(100% - ${CHEV}px) 100%, 0 100%, ${CHEV}px 50%)`;
 
 export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse, loading }: Props) => {
-  const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
+  const activeCount = counts.sales + counts.design + counts.purchasing + counts.production + counts.shipping + counts.finance + counts.operations;
   const flowTabs = PIPELINES.map((p) => ({ id: p.id, title: p.title, count: counts[p.id] }));
   const allActive = active === "all";
   const completedActive = active === "completed";

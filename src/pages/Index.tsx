@@ -59,7 +59,9 @@ const DEFAULT_SORTS: Record<TabId, SortState> = {
   all: { field: "deadline", dir: "asc" },
   sales: { field: "deadline", dir: "asc" },
   design: { field: "deadline", dir: "asc" },
-  operations: { field: "deadline", dir: "asc" },
+  purchasing: { field: "deadline", dir: "asc" },
+  production: { field: "deadline", dir: "asc" },
+  operations: { field: "deadline", dir: "asc" }, // legacy alias
   shipping: { field: "deadline", dir: "asc" },
   finance: { field: "deadline", dir: "asc" },
   completed: { field: "updated", dir: "desc" },
@@ -165,7 +167,8 @@ function projectHasMissingData(p: Project): boolean {
   const stageRank: Record<StageId, number> = {
     proposal: 0, quote: 1, confirming: 2, archive: 0,
     design: 2, proof: 2,
-    preproduction: 3, in_production: 4,
+    purchasing: 3, production: 4,
+    preproduction: 3, in_production: 4, // legacy
     shipment_required: 5, shipment_assigned: 6,
     invoice_required: 7, invoiced: 8, paid: 9,
   };
@@ -314,9 +317,11 @@ const Index = () => {
   const counts = useMemo<Record<PipelineId, number>>(() => ({
     sales: pipelineProjects.filter((p) => p.pipeline === "sales").length,
     design: pipelineProjects.filter((p) => p.pipeline === "design").length,
-    operations: pipelineProjects.filter((p) => p.pipeline === "operations").length,
+    purchasing: pipelineProjects.filter((p) => p.pipeline === "purchasing").length,
+    production: pipelineProjects.filter((p) => p.pipeline === "production").length,
     shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
     finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
+    operations: pipelineProjects.filter((p) => p.pipeline === "operations").length, // legacy
   }), [pipelineProjects]);
 
   // Filtered counts — used by chevron tabs to update live as filters change.
@@ -331,9 +336,11 @@ const Index = () => {
     return {
       sales: pipelineProjects.filter((p) => p.pipeline === "sales" && match(p)).length,
       design: pipelineProjects.filter((p) => p.pipeline === "design" && match(p)).length,
-      operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length,
+      purchasing: pipelineProjects.filter((p) => p.pipeline === "purchasing" && match(p)).length,
+      production: pipelineProjects.filter((p) => p.pipeline === "production" && match(p)).length,
       shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && match(p)).length,
       finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
+      operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length, // legacy
     };
   }, [pipelineProjects, filters, search]);
 
@@ -478,7 +485,7 @@ const Index = () => {
   };
 
   // Tab swipe gesture (preserved)
-  const TAB_ORDER: TabId[] = ["all", "sales", "design", "operations", "shipping", "finance", "completed"];
+  const TAB_ORDER: TabId[] = ["all", "sales", "design", "purchasing", "production", "shipping", "finance", "completed"];
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; touchStart.current = { x: t.clientX, y: t.clientY }; };
   const onTouchEnd = (e: React.TouchEvent) => {

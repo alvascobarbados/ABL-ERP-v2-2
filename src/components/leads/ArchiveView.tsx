@@ -83,7 +83,14 @@ export const ArchiveView = ({ open, onClose }: Props) => {
       toast.error("Can't restore — missing required fields. Open the project to fill them in.");
       return;
     }
-    const where = `${target.pipeline === "sales" ? "Sales" : target.pipeline === "operations" ? "Production" : target.pipeline === "shipping" ? "Shipping" : "Finance"} / ${getStageTitle(target.pipeline, target.stage)}`;
+    const pipelineLabel =
+      target.pipeline === "sales" ? "Sales"
+      : target.pipeline === "design" ? "Design"
+      : target.pipeline === "purchasing" ? "Purchasing"
+      : target.pipeline === "production" || target.pipeline === "operations" ? "Production"
+      : target.pipeline === "shipping" ? "Shipping"
+      : "Finance";
+    const where = `${pipelineLabel} / ${getStageTitle(target.pipeline, target.stage)}`;
     toast.success(`${p.customer} · ${p.projectName} restored to ${where}`, {
       duration: 5000,
       action: {

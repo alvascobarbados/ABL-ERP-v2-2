@@ -23,9 +23,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-// Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
+// Pipeline order matches the chevron flow (Sales → Design → Purchasing → Production → Shipping → Finance).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
-  sales: 0, design: 1, operations: 2, shipping: 3, finance: 4,
+  sales: 0, design: 1, purchasing: 2, production: 3, shipping: 4, finance: 5,
+  operations: 3, // legacy alias — same slot as production
 };
 // Display overrides for stages whose canonical title differs from the
 // PIPELINES config (or that aren't listed there at all). "paid" must
@@ -96,7 +97,8 @@ function stageLabel(c: PipelineCard, _activeTab: TabId): string {
 const STAGE_RANK: Record<StageId, number> = {
   proposal: 0, quote: 1, confirming: 2, archive: 99,
   design: 0, proof: 1,
-  preproduction: 0, in_production: 1,
+  purchasing: 0, production: 0,
+  preproduction: 0, in_production: 1, // legacy
   shipment_required: 0, shipment_assigned: 0,
   invoice_required: 0, invoiced: 1, paid: 2,
 };

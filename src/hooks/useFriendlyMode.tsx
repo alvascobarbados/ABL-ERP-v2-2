@@ -86,6 +86,9 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
   archive: "Archive — closed or paused",
   design: "Design — artwork being created",
   proof: "Proof — confirmation with customer",
+  purchasing: "Purchasing — issuing PO & deposit",
+  production: "In Production — being made at the factory",
+  // legacy — kept for historical log entries
   preproduction: "Pre-Production — getting ready to make",
   in_production: "In Production — being made at the factory",
   shipment_required: "Awaiting shipment assignment",
@@ -98,18 +101,24 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
 export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
   sales: "Getting new business",
   design: "Designing & proofing",
-  operations: "Making the goods",
+  purchasing: "Issuing POs & paying deposits",
+  production: "Making the goods",
   shipping: "Moving the goods",
   finance: "Invoicing and getting paid",
+  // legacy alias
+  operations: "Making the goods",
 };
 
 export const FRIENDLY_STAGE_HELP: Record<StageId, string> = {
   proposal: "New enquiries that need a written proposal. Once you've sent the proposal, move forward to Quote.",
   quote: "Projects that need pricing worked out and sent to the customer. Once you've sent the quote, move forward to Confirming.",
-  confirming: "Quote sent. Waiting for the customer to say yes. When they confirm, the project splits into items and moves into Production.",
+  confirming: "Quote sent. Waiting for the customer to say yes. When they confirm, the project splits into items and moves into Purchasing.",
   archive: "Closed or paused projects — cold leads, lost deals, or anything not actively progressing. Tags inside (Cold / Lost / Other) keep the distinction.",
   design: "Designer is producing artwork from scratch (or modifying customer-supplied files). Move forward to Proof when the artwork is ready.",
-  proof: "Artwork placed on the Alvasco proof document and sent to the customer. Waiting for approval before Production starts.",
+  proof: "Artwork placed on the Alvasco proof document and sent to the customer. Waiting for approval before Purchasing starts.",
+  purchasing: "Confirmed orders waiting on Teshima to issue POs, confirm with suppliers, and pay deposits. Move forward when the factory begins producing.",
+  production: "The factory has the order and is making it. When production finishes, the item moves to Shipping for shipment assignment.",
+  // legacy — historical log-entry rendering only
   preproduction: "Order is being prepared internally before the factory starts making it — artwork, sign-offs, factory PO, deposit. Move forward when the factory begins producing.",
   in_production: "The factory has the order and is making it. When production finishes, the item moves to Shipping for shipment assignment.",
   shipment_required: "Production is done — the item is waiting to be assigned to a shipment (Air or Ocean). Tap the banner to assign.",

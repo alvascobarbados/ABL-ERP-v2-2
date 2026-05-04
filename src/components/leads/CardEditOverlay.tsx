@@ -156,7 +156,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
 
   const pickSupplier = (supplierId: string) => {
     const hasItems = (proj.lineItems?.length ?? 0) > 0 || !!proj.poNumber;
-    if (hasItems && proj.supplierId && supplierId !== proj.supplierId && card.pipeline === "operations") {
+    if (hasItems && proj.supplierId && supplierId !== proj.supplierId && (card.pipeline === "purchasing" || card.pipeline === "production" || card.pipeline === "operations")) {
       setEditing(null);
       setSupplierConfirm({ supplierId });
       return;
@@ -364,7 +364,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         </div>
       );
     }
-    if (card.pipeline === "operations") {
+    if (card.pipeline === "purchasing" || card.pipeline === "production" || card.pipeline === "operations") {
       return (
         <div className={grid}>
           {customerField}

@@ -3,15 +3,27 @@
 // one supplier max, one shipping mode max, line items.
 // Shared "project name" across multiple cards is just a naming convention.
 
-export type PipelineId = "sales" | "design" | "operations" | "shipping" | "finance";
+// "operations" is the legacy id for the Production pipeline. Kept in the union
+// so historical project_log_entries rows that reference it still type-check.
+// All new code should use "production".
+export type PipelineId =
+  | "sales" | "design" | "purchasing" | "production" | "shipping" | "finance"
+  /** @deprecated renamed to "production" */
+  | "operations";
 
 export type StageId =
   // sales
   | "proposal" | "quote" | "confirming" | "archive"
   // design
   | "design" | "proof"
-  // operations (production)
-  | "preproduction" | "in_production"
+  // purchasing — single-state pipeline (procurement: POs, supplier confirmation, deposits)
+  | "purchasing"
+  // production — single-state pipeline (factory making the goods)
+  | "production"
+  /** @deprecated split into "purchasing" (pre-production work) and "production" (factory making) */
+  | "preproduction"
+  /** @deprecated renamed to "production" */
+  | "in_production"
   // shipping — NOT real stages anymore. The Shipping pipeline groups by
   // mode (Air / Ocean) + assignment status. The two values below are
   // routing hints only:
@@ -63,11 +75,17 @@ export const PIPELINES: PipelineConfig[] = [
     ],
   },
   {
-    id: "operations",
+    id: "purchasing",
+    title: "Purchasing",
+    stages: [
+      { id: "purchasing", title: "Purchasing" },
+    ],
+  },
+  {
+    id: "production",
     title: "Production",
     stages: [
-      { id: "preproduction", title: "Pre-Production" },
-      { id: "in_production", title: "In Production" },
+      { id: "production", title: "Production" },
     ],
   },
   {
@@ -104,6 +122,8 @@ export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) 
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
   design: "magenta", proof: "magenta",
+  purchasing: "slate", production: "navy",
+  // legacy — kept for historical log-entry rendering
   preproduction: "violet", in_production: "orange",
   shipment_required: "amber", shipment_assigned: "sky",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
@@ -499,35 +519,35 @@ export const PROJECTS: Project[] = [
     { detailSummary: "Branded card stock", tag: "Lost" }),
 
   // ── PRODUCTION · Pre-Production ──
-  p("Bermudez Group", "Lucia Ramos", "Snack Launch", d(5, 14), 22000, "operations", "preproduction",
+  p("Bermudez Group", "Lucia Ramos", "Snack Launch", d(5, 14), 22000, "production", "production",
     { detailSummary: "Acrylic display stands", supplierId: "sup-shenzhen", shippingMode: "Ocean LCL", priority: "Rush" }),
-  p("Bermudez Group", "Lucia Ramos", "Snack Launch", d(5, 14), 12000, "operations", "preproduction",
+  p("Bermudez Group", "Lucia Ramos", "Snack Launch", d(5, 14), 12000, "production", "production",
     { detailSummary: "POS shelf strips", supplierId: "sup-shenzhen", shippingMode: "Ocean LCL", priority: "Rush" }),
-  p("Carib Brewery", "Mark Yeung", "Stadium Activation", d(5, 19), 32000, "operations", "preproduction",
+  p("Carib Brewery", "Mark Yeung", "Stadium Activation", d(5, 19), 32000, "production", "production",
     { detailSummary: "Branded coolers", supplierId: "sup-freedom", shippingMode: "Ocean FCL" }),
-  p("Carib Brewery", "Mark Yeung", "Stadium Activation", d(5, 19), 20000, "operations", "preproduction",
+  p("Carib Brewery", "Mark Yeung", "Stadium Activation", d(5, 19), 20000, "production", "production",
     { detailSummary: "Stadium banners", supplierId: "sup-admax", shippingMode: "Air" }),
-  p("WIBISCO", "Aisha Khan", "Biscuit Promo", d(5, 22), 18000, "operations", "preproduction",
+  p("WIBISCO", "Aisha Khan", "Biscuit Promo", d(5, 22), 18000, "production", "production",
     { detailSummary: "POS shelf strips", supplierId: "sup-shenzhen", shippingMode: "Ocean LCL" }),
-  p("Solo Beverages", "Devon Ali", "Summer SKUs", d(5, 23), 14500, "operations", "preproduction",
+  p("Solo Beverages", "Devon Ali", "Summer SKUs", d(5, 23), 14500, "production", "production",
     { detailSummary: "Custom labels", supplierId: "sup-shenzhen", shippingMode: "Air" }),
 
   // ── PRODUCTION · In Production ──
-  p("BTMI", "Melissa McGeary", "Trade Show", d(5, 17), 14000, "operations", "in_production",
+  p("BTMI", "Melissa McGeary", "Trade Show", d(5, 17), 14000, "production", "production",
     { detailSummary: "Brochure binders", supplierId: "sup-shenzhen", shippingMode: "Air", priority: "Rush", orderType: "Re-order" }),
-  p("BTMI", "Melissa McGeary", "Trade Show", d(5, 17), 14000, "operations", "in_production",
+  p("BTMI", "Melissa McGeary", "Trade Show", d(5, 17), 14000, "production", "production",
     { detailSummary: "Cotton tote bags", supplierId: "sup-ningbo", shippingMode: "Air", priority: "Rush", orderType: "Re-order" }),
-  p("Digicel", "Anya Sharma", "Retail Refresh", d(5, 21), 26000, "operations", "in_production",
+  p("Digicel", "Anya Sharma", "Retail Refresh", d(5, 21), 26000, "production", "production",
     { detailSummary: "Counter displays", supplierId: "sup-shenzhen", shippingMode: "Ocean FCL" }),
-  p("Digicel", "Anya Sharma", "Retail Refresh", d(5, 21), 20000, "operations", "in_production",
+  p("Digicel", "Anya Sharma", "Retail Refresh", d(5, 21), 20000, "production", "production",
     { detailSummary: "Crew polos", supplierId: "sup-ningbo", shippingMode: "Ocean FCL" }),
-  p("Sandals Resorts", "David Chen", "Spa Amenities", d(5, 24), 28000, "operations", "in_production",
+  p("Sandals Resorts", "David Chen", "Spa Amenities", d(5, 24), 28000, "production", "production",
     { detailSummary: "Branded robes", supplierId: "sup-ningbo", shippingMode: "Ocean LCL", orderType: "Re-order" }),
-  p("Sandals Resorts", "David Chen", "Spa Amenities", d(5, 24), 10000, "operations", "in_production",
+  p("Sandals Resorts", "David Chen", "Spa Amenities", d(5, 24), 10000, "production", "production",
     { detailSummary: "Amenity kits", supplierId: "sup-yiwu", shippingMode: "Ocean LCL", orderType: "Re-order" }),
-  p("Republic Bank", "Sarah Kim", "ATM Wraps", d(5, 28), 22000, "operations", "in_production",
+  p("Republic Bank", "Sarah Kim", "ATM Wraps", d(5, 28), 22000, "production", "production",
     { detailSummary: "Vinyl branding", supplierId: "sup-shenzhen", shippingMode: "Air" }),
-  p("Massy Stores", "Mike Lee", "Eco Tote Run", d(5, 30), 32000, "operations", "in_production",
+  p("Massy Stores", "Mike Lee", "Eco Tote Run", d(5, 30), 32000, "production", "production",
     { detailSummary: "10k cotton bags", supplierId: "sup-ningbo", shippingMode: "Ocean FCL", orderType: "Re-order" }),
 
   // ── SHIPPING · Shipment Required (intake) ──
@@ -707,7 +727,9 @@ function pickItems(seed: string): LineItem[] {
 // Assign quote / PO / invoice numbers deterministically.
 let _qSeq = 2040, _poSeq = 1080, _invSeq = 1040;
 const STAGE_ORDER: StageId[] = [
-  "proposal", "quote", "confirming", "preproduction", "in_production",
+  "proposal", "quote", "confirming",
+  "design", "proof",
+  "purchasing", "production",
   "shipment_required", "shipment_assigned",
   "invoice_required", "invoiced", "paid", "archive",
 ];
@@ -725,7 +747,7 @@ for (const proj of PROJECTS) {
   if (reachedStage(proj, "quote")) {
     proj.quoteNumber = `Q-${_qSeq++}`;
   }
-  if (reachedStage(proj, "preproduction")) {
+  if (reachedStage(proj, "purchasing")) {
     proj.poNumber = `PO-${_poSeq++}`;
     proj.lineItems = pickItems(proj.id);
   }
@@ -784,17 +806,17 @@ if (noQ1) noQ1.quoteNumber = undefined;
 const noQ2 = find("Caribbean Airlines", "Inflight Refresh", "Branded amenity kits");
 if (noQ2) noQ2.quoteNumber = undefined;
 
-// A Production card with no PO yet (still in pre-production, awaiting paperwork)
+// A Purchasing card with no PO yet (still being prepared, awaiting paperwork)
 const noPO = find("Solo Beverages", "Summer SKUs", "Custom labels");
-if (noPO && noPO.pipeline === "operations") noPO.poNumber = undefined;
+if (noPO && noPO.pipeline === "purchasing") noPO.poNumber = undefined;
 
-// A Production card with no shipping mode decided yet
+// A Purchasing card with no shipping mode decided yet
 const noMode = find("WIBISCO", "Biscuit Promo", "POS shelf strips");
-if (noMode && noMode.pipeline === "operations") noMode.shippingMode = undefined;
+if (noMode && noMode.pipeline === "purchasing") noMode.shippingMode = undefined;
 
-// A Production card missing both
+// A Purchasing card missing both
 const noBoth = find("Bermudez Group", "Snack Launch", "POS shelf strips");
-if (noBoth && noBoth.pipeline === "operations") {
+if (noBoth && noBoth.pipeline === "purchasing") {
   noBoth.poNumber = undefined;
   noBoth.shippingMode = undefined;
 }
@@ -863,8 +885,11 @@ export function pipelineCounts(): Record<PipelineId, number> {
   return {
     sales: PROJECTS.filter((p) => p.pipeline === "sales").length,
     design: PROJECTS.filter((p) => p.pipeline === "design").length,
-    operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
+    purchasing: PROJECTS.filter((p) => p.pipeline === "purchasing").length,
+    production: PROJECTS.filter((p) => p.pipeline === "production").length,
     shipping: PROJECTS.filter((p) => p.pipeline === "shipping").length,
     finance: PROJECTS.filter((p) => p.pipeline === "finance").length,
+    // Legacy alias — counts any not-yet-migrated rows under their old key.
+    operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
   };
 }
