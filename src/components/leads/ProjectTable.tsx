@@ -621,28 +621,10 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Stage — colored dot + thin label. Column omitted entirely when sub-chevron filter is active. */}
-      {!hideStageColumn && (
-        <ReadOnlyCell title={stageLabel(card, activeTab)}>
-          <span className="inline-flex items-center gap-1.5 truncate max-w-full">
-            <span
-              aria-hidden
-              className="rounded-full shrink-0"
-              style={{ width: 8, height: 8, backgroundColor: accent }}
-            />
-            <span
-              className="truncate"
-              style={{
-                fontSize: 11.5,
-                color: "hsl(var(--brand-navy) / 0.6)",
-                fontWeight: 400,
-              }}
-            >
-              {stageOnly}
-            </span>
-          </span>
-        </ReadOnlyCell>
-      )}
+      {/* Stage · State — always shown. Compact pill, color shaded by stage progression. */}
+      <ReadOnlyCell title={stageLabel(card, activeTab)}>
+        <StageStatePill pipeline={card.pipeline} stage={card.stage} accent={accent} />
+      </ReadOnlyCell>
 
       {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
       <EditableCell
