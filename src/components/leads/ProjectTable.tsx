@@ -61,6 +61,8 @@ interface Props {
   onOpenPicker: (c: PipelineCard) => void;
   hasActiveFilter?: boolean;
   onClearFilters?: () => void;
+  /** When true (sub-chevron stage selected), drop the Stage column entirely. */
+  hideStageColumn?: boolean;
 }
 
 const DAY = 86400000;
