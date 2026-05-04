@@ -247,7 +247,7 @@ const Index = () => {
 
   const [pickerCard, setPickerCard] = useState<PipelineCard | null>(null);
   const [confirmLost, setConfirmLost] = useState<{ card: PipelineCard; target: { pipeline: PipelineId; stage: StageId } } | null>(null);
-  const [missingFields, setMissingFields] = useState<{ card: PipelineCard; target: { pipeline: PipelineId; stage: StageId }; missing: string[] } | null>(null);
+  // (missingFields modal removed — soft toast in doMove now handles missing-field warnings.)
   const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
   const [assignOpen, setAssignOpen] = useState(false);
 
