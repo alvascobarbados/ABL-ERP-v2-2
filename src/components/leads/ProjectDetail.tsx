@@ -797,7 +797,7 @@ const DetailRow = ({
     </>
   );
 
-  const baseClass = "w-full flex items-center gap-3 px-2 -mx-2 py-2.5 border-b text-left";
+  const baseClass = "w-full flex items-center gap-3 px-2 -mx-2 py-2.5 border-b last:border-b-0 text-left";
   const borderStyle = { borderColor: "hsl(var(--brand-navy) / 0.07)" };
 
   if (!interactive) {
