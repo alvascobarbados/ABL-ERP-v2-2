@@ -256,22 +256,22 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
     <div className="flex-1 min-h-0 flex flex-col">
       <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-6 pt-3 pb-2">
         <div
-          className="rounded-xl border overflow-hidden"
+          className="rounded-xl border"
           style={{
             borderColor: "hsl(var(--brand-navy) / 0.10)",
             backgroundColor: "#FDFCF7",
             boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.06)",
           }}
         >
-          {/* Header — fully opaque, slight tint, subtle shadow when scrolled */}
+          {/* Header — sticky to outer scroll container; fully opaque */}
           <div
-            className="sticky top-0 z-10 grid items-center text-[11px] font-semibold uppercase tracking-[0.05em]"
+            className="sticky top-0 z-20 grid items-center text-[11px] font-medium uppercase tracking-[0.05em] rounded-t-xl"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "#F4F1E8",
+              backgroundColor: "#FAF7EE",
               color: "hsl(var(--brand-navy) / 0.55)",
               borderBottom: "1px solid hsl(var(--brand-navy) / 0.12)",
-              boxShadow: "0 2px 4px -2px rgba(27, 42, 78, 0.08)",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.04)",
             }}
           >
             {COLS.map((c) => {
