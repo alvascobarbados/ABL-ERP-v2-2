@@ -44,6 +44,8 @@ import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { ProjectTable } from "@/components/leads/ProjectTable";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
 import { useViewMode } from "@/hooks/useViewMode";
+import { NewProjectFAB } from "@/components/leads/NewProjectFAB";
+import { NewProjectSheet } from "@/components/leads/NewProjectSheet";
 // ─── Filter persistence (single shared filter across all tabs) ───
 // Filters live above the per-tab component lifecycle so switching tabs
 // preserves the active selection. They reset on full app reload — we
