@@ -495,7 +495,9 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         onClose={() => setEditing(null)}
         title="Quote number"
         value={proj.quoteNumber ?? ""}
-        placeholder="Q-2046"
+        placeholder="2046"
+        prefix="Q-"
+        digitsOnly
         onSave={(v) => commitText("quote", v)}
       />
       <TextEditor
@@ -503,7 +505,9 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         onClose={() => setEditing(null)}
         title="PO number"
         value={proj.poNumber ?? ""}
-        placeholder="PO-1095"
+        placeholder="1095"
+        prefix="PO-"
+        digitsOnly
         onSave={(v) => commitText("po", v)}
       />
       <TextEditor
@@ -511,7 +515,9 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         onClose={() => setEditing(null)}
         title="Invoice number"
         value={proj.invoiceNumber ?? ""}
-        placeholder="INV-1050"
+        placeholder="1050"
+        prefix="INV-"
+        digitsOnly
         onSave={(v) => commitText("invoice", v)}
       />
       {proj.shippingMode === "Air" || proj.shippingMode === "Ocean" ? (
