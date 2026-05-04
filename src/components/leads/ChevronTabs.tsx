@@ -25,7 +25,26 @@ interface Props {
   counts: Record<PipelineId, number>;
   completedCount?: number;
   pulse?: PipelineId | null;
+  loading?: boolean;
 }
+
+const CountSlot = ({ value, loading, active }: { value: number; loading?: boolean; active: boolean }) => {
+  if (loading) {
+    return (
+      <span
+        aria-hidden
+        className="inline-block rounded animate-pulse"
+        style={{
+          width: 22,
+          height: 14,
+          marginTop: 2,
+          backgroundColor: active ? "rgba(255,255,255,0.35)" : "hsl(var(--brand-navy) / 0.15)",
+        }}
+      />
+    );
+  }
+  return <>{value}</>;
+};
 
 const CHEV = 16;          // chevron point depth in px
 const TAB_H = 60;         // tab height
