@@ -650,13 +650,16 @@ const TableRow = ({
         cellKey={`${card.id}:quoteNumber`}
         mode="text"
         align="left"
-        display={<span className="tabular">{proj.quoteNumber ? `Q-${proj.quoteNumber}` : "—"}</span>}
-        title={proj.quoteNumber ? `Q-${proj.quoteNumber}` : ""}
+        display={<span className="tabular">{proj.quoteNumber ?? "—"}</span>}
+        title={proj.quoteNumber ?? ""}
         muted={!proj.quoteNumber}
-        value={proj.quoteNumber ?? ""}
+        value={(proj.quoteNumber ?? "").replace(/^Q-/, "")}
         placeholder="####"
         prefix="Q-"
-        onCommit={(v) => saveText("quoteNumber", v.trim())}
+        onCommit={(v) => {
+          const trimmed = v.trim();
+          return saveText("quoteNumber", trimmed ? `Q-${trimmed}` : "");
+        }}
       />
 
       {/* Amount — number */}
