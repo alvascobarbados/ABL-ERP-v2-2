@@ -8,6 +8,9 @@
 // All new code should use "production".
 export type PipelineId =
   | "sales" | "design" | "purchasing" | "production" | "shipping" | "finance"
+  // Completed is the terminal pipeline (single-state). Projects land here
+  // after Finance · To Collect via the "Mark as paid" action.
+  | "completed"
   /** @deprecated renamed to "production" */
   | "operations";
 
@@ -30,10 +33,18 @@ export type StageId =
   //   shipment_required → no shipment assigned yet (Awaiting Shipment)
   //   shipment_assigned → on a shipment (rendered under Air or Ocean)
   // "Delivered" no longer exists in Shipping — delivered projects move
-  // out of Shipping entirely into Finance · Invoice Required.
+  // out of Shipping entirely into Finance · To Invoice.
   | "shipment_required" | "shipment_assigned"
-  // finance
-  | "invoice_required" | "invoiced" | "paid";
+  // finance — display labels are "To Invoice" and "To Collect" (the IDs
+  // stay so historical audit log entries continue to match cleanly).
+  | "invoice_required" | "invoiced"
+  /** @deprecated Paid is no longer a Finance stage. Projects that complete
+   *  the relay race now live at pipeline=completed/stage=completed. Kept
+   *  here so historical project_log_entries that reference "paid" still
+   *  type-check. */
+  | "paid"
+  // completed — terminal single-state pipeline.
+  | "completed";
 
 // Three modes only. Carrier (DHL/FedEx/Other) and container (FCL/LCL) live
 // inside the trackingRef as a PREFIX-number string.
