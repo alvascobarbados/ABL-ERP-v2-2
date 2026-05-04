@@ -606,12 +606,12 @@ const TableRow = ({
         </span>
       </ReadOnlyCell>
 
-      {/* Customer — entity popover */}
+      {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
       <EditableCell
         cellKey={`${card.id}:customer`}
         mode="custom"
         align="left"
-        display={proj.customer}
+        display={<span className="font-semibold text-[13.5px] truncate block">{proj.customer}</span>}
         title={proj.customer}
         active={openPicker === "customer"}
         flash={flashFor("customer")}
