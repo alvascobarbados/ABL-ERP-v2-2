@@ -248,19 +248,24 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
     <SelectionProvider outsideRef={tableRootRef}>
     <TooltipProvider delayDuration={300}>
     <div className="flex-1 min-h-0 flex flex-col">
-      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-5 pt-3 pb-2">
+      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-6 pt-3 pb-2">
         <div
-          className="rounded-xl border bg-card/40"
-          style={{ borderColor: "hsl(var(--brand-navy) / 0.12)" }}
+          className="rounded-xl border overflow-hidden"
+          style={{
+            borderColor: "hsl(var(--brand-navy) / 0.10)",
+            backgroundColor: "#FDFCF7",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.06)",
+          }}
         >
-          {/* Header */}
+          {/* Header — fully opaque, slight tint, subtle shadow when scrolled */}
           <div
-            className="sticky top-0 z-10 grid items-center text-[10.5px] font-semibold uppercase tracking-[0.08em] rounded-t-xl"
+            className="sticky top-0 z-10 grid items-center text-[11px] font-semibold uppercase tracking-[0.05em]"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "hsl(var(--brand-navy) / 0.04)",
-              color: "hsl(var(--brand-navy) / 0.6)",
-              borderBottom: "1px solid hsl(var(--brand-navy) / 0.14)",
+              backgroundColor: "#F4F1E8",
+              color: "hsl(var(--brand-navy) / 0.55)",
+              borderBottom: "1px solid hsl(var(--brand-navy) / 0.12)",
+              boxShadow: "0 2px 4px -2px rgba(27, 42, 78, 0.08)",
             }}
           >
             {COLS.map((c) => {
@@ -282,7 +287,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                     title={c.label}
                   >
                     <span className="truncate">{c.label}</span>
-                    {Arrow && <Arrow className="h-3 w-3 shrink-0 opacity-70" />}
+                    {Arrow && <Arrow className="h-3 w-3 shrink-0" style={{ opacity: 1, color: "hsl(var(--brand-navy))" }} />}
                   </button>
                   {resizable && (
                     <ColumnResizeHandle
@@ -593,13 +598,19 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Stage pill — stage name only (pipeline encoded by left stripe) */}
+      {/* Stage pill — squarer tag, pipeline accent tint + saturated text */}
       <ReadOnlyCell title={stageLabel(card, activeTab)}>
         <span
-          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold uppercase tracking-[0.04em] truncate max-w-full"
+          className="inline-flex items-center rounded-[5px] truncate max-w-full"
           style={{
-            backgroundColor: `${accent}1F`, /* ~12% opacity */
+            backgroundColor: `${accent}24`, /* ~14% opacity */
             color: accent,
+            padding: "2px 6px",
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            lineHeight: 1.4,
           }}
         >
           {stageOnly}

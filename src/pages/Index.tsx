@@ -42,6 +42,7 @@ import { DesktopRail } from "@/components/leads/DesktopRail";
 import { DesktopSidebarReopen } from "@/components/leads/DesktopSidebarReopen";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { ProjectTable } from "@/components/leads/ProjectTable";
+import { SubChevron } from "@/components/leads/SubChevron";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
 import { useViewMode } from "@/hooks/useViewMode";
 import { NewProjectFAB } from "@/components/leads/NewProjectFAB";
@@ -254,6 +255,12 @@ const Index = () => {
   const [shippingFilter, setShippingFilter] = useState<ShippingFilter>("in_transit");
   const [assignOpen, setAssignOpen] = useState(false);
 
+  // Per-tab sub-stage filter (null = "All <Pipeline>"). Persists across tab switches.
+  const [subStageByTab, setSubStageByTab] = useState<Partial<Record<TabId, StageId | null>>>({});
+  const subStage = subStageByTab[activeTab] ?? null;
+  const setSubStage = (s: StageId | null) =>
+    setSubStageByTab((prev) => ({ ...prev, [activeTab]: s }));
+
   // Sort state, persisted per tab
   const [sorts, setSorts] = useState<Record<TabId, SortState>>(loadSorts);
   const sort = sorts[activeTab];
@@ -365,7 +372,7 @@ const Index = () => {
     return Array.from(set).sort();
   }, [projects]);
 
-  // Apply filters + search, then sort
+  // Apply filters + search + sub-stage, then sort
   const visible = useMemo(() => {
     const searchActive = !!search.trim();
     let pool = baseCards;
@@ -376,10 +383,33 @@ const Index = () => {
       .filter((c) => {
         if (!cardMatchesFilter(c, filters)) return false;
         if (searchActive && !projectMatchesSearch(c.project, search.trim())) return false;
+        // Sub-chevron stage filter (only applies when not in "all" / "completed" tabs).
+        if (subStage && c.stage !== subStage) return false;
         return true;
       })
       .sort((a, b) => compareCards(a, b, sort, idIndex, supplierName));
-  }, [baseCards, pipelineProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName]);
+  }, [baseCards, pipelineProjects, filters, sort, idIndex, search, searchScopeAll, isAll, supplierName, subStage]);
+
+  // Per-stage counts within the active pipeline (post-filter, post-search; ignores subStage itself).
+  const stageCounts = useMemo<Partial<Record<StageId, number>>>(() => {
+    if (isAll || isCompleted) return {};
+    const q = search.trim();
+    const counts: Partial<Record<StageId, number>> = {};
+    pipelineProjects
+      .filter((p) => p.pipeline === activePipeline)
+      .forEach((p) => {
+        const c = buildCard(p);
+        if (!cardMatchesFilter(c, filters)) return;
+        if (q && !projectMatchesSearch(p, q)) return;
+        counts[p.stage] = (counts[p.stage] ?? 0) + 1;
+      });
+    return counts;
+  }, [pipelineProjects, activePipeline, isAll, isCompleted, filters, search]);
+
+  const subAllCount = useMemo(
+    () => Object.values(stageCounts).reduce((a, b) => a + (b ?? 0), 0),
+    [stageCounts],
+  );
 
   const pipeline = PIPELINES.find((p) => p.id === activePipeline)!;
   const hasActiveFilter = filterCount(filters) > 0;
@@ -564,6 +594,18 @@ const Index = () => {
               <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
+          {/* Desktop sub-chevron — per-stage filter pills. Only multi-stage pipelines render. */}
+          {(activeTab === "sales" || activeTab === "design" || activeTab === "finance") && (
+            <div className="hidden lg:block max-w-none px-4 sm:px-6 pt-1 pb-1">
+              <SubChevron
+                activeTab={activeTab}
+                selectedStage={subStage}
+                onSelect={setSubStage}
+                stageCounts={stageCounts}
+                allCount={subAllCount}
+              />
+            </div>
+          )}
         </div>
 
         {/* Mobile filter row (filter pill + search + sort) */}
