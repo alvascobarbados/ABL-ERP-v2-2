@@ -129,10 +129,11 @@ export const AssignShipmentSheet = ({ open, onClose, intakeSubs, shipments }: Pr
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (!draft.code) return;
-                        const ship = createShipment({ ...draft, supplierId: sub.supplierId ?? "" });
-                        assignToShipment(sub.id, ship.id);
+                        const ship = await createShipment({ ...draft, supplierId: sub.supplierId ?? "" });
+                        if (!ship) return;
+                        await assignToShipment(sub.id, ship.id);
                         setCreatingFor(null);
                         setDraft({ mode: "Air", code: "", etd: new Date(), eta: new Date(), supplierId: "" });
                       }}
