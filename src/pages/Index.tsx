@@ -37,7 +37,7 @@ import { AssignShipmentSheet } from "@/components/leads/AssignShipmentSheet";
 import type { TabId } from "@/components/leads/PipelineTabs";
 import { JiggleProvider } from "@/hooks/useJiggle";
 import { EditModeProvider } from "@/hooks/useEditMode";
-import { haptics } from "@/lib/haptics";
+// haptics import removed — no longer triggering nope() on missing fields (soft toast replaces hard block).
 import { DesktopRail } from "@/components/leads/DesktopRail";
 import { DesktopSidebarReopen } from "@/components/leads/DesktopSidebarReopen";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
