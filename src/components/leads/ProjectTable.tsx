@@ -955,18 +955,18 @@ const StageStatePill = ({
   const pipelineTitle = PIPELINES.find((p) => p.id === pipeline)?.title ?? pipeline;
   const stageTitle = displayStageTitle(pipeline, stage);
   const shade = stageShade(pipeline, stage); // 0..1
-  const bgPct = Math.round(8 + shade * 14); // 8% → 22%
-  const textPct = Math.round(60 + shade * 40); // 60% → 100% mix toward accent
+  // Background tint stays in 12-15% range; text color stays at full pipeline accent.
+  const bgPct = Math.round(12 + shade * 3); // 12% → 15%
   return (
     <span
-      className="inline-flex items-center max-w-full truncate rounded-[5px] tabular"
+      className="inline-flex items-center max-w-full truncate rounded-[6px] tabular"
       style={{
-        height: 22,
-        padding: "0 8px",
-        fontSize: 11.5,
-        fontWeight: 500,
+        minHeight: 24,
+        padding: "3px 7px",
+        fontSize: 12.5,
+        fontWeight: 600,
         backgroundColor: `color-mix(in srgb, ${accent} ${bgPct}%, transparent)`,
-        color: `color-mix(in srgb, ${accent} ${textPct}%, hsl(var(--brand-navy)))`,
+        color: accent,
         letterSpacing: "0.005em",
       }}
     >
