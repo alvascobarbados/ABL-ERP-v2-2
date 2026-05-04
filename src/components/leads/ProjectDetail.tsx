@@ -343,61 +343,63 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
           {/* ── STATUS ── */}
           <section>
             <SectionHeader>Status</SectionHeader>
-            <div className="space-y-2">
-              <div>
-                <StageStatePill pipeline={live.pipeline} stage={live.stage} accent={accentHex} />
+            <SectionCard>
+              <div className="space-y-2">
+                <div>
+                  <StageStatePill pipeline={live.pipeline} stage={live.stage} accent={accentHex} />
+                </div>
+                <div className="text-[17px] leading-snug font-medium" style={{ color: "hsl(var(--brand-navy))" }}>
+                  {live.customer}
+                  <span className="opacity-40 mx-1.5">·</span>
+                  {live.projectName}
+                </div>
+                <div className="text-[14px]" style={{ color: "hsl(var(--brand-navy) / 0.75)" }}>
+                  {live.contactPerson || <span className="italic" style={{ color: "hsl(var(--brand-navy) / 0.4)" }}>No contact set</span>}
+                </div>
               </div>
-              <div className="text-[17px] leading-snug font-medium" style={{ color: "hsl(var(--brand-navy))" }}>
-                {live.customer}
-                <span className="opacity-40 mx-1.5">·</span>
-                {live.projectName}
+              <div className="mt-5 flex items-center gap-2.5">
+                <button
+                  onClick={handleMoveForward}
+                  disabled={!canAdvance}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg text-[14px] font-semibold tracking-tight transition-all",
+                    canAdvance
+                      ? "text-white hover:opacity-90 active:scale-[0.98]"
+                      : "text-muted-foreground/60 cursor-not-allowed",
+                  )}
+                  style={{
+                    height: 38,
+                    padding: "0 16px",
+                    backgroundColor: canAdvance ? "hsl(var(--brand-navy))" : "hsl(var(--muted))",
+                  }}
+                >
+                  Move Forward <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={handleFlag}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg text-[14px] font-medium border transition-all active:scale-[0.98]",
+                  )}
+                  style={{
+                    height: 38,
+                    padding: "0 14px",
+                    borderColor: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy) / 0.25)",
+                    color: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy))",
+                    backgroundColor: live.flagged ? "hsl(var(--brand-orange) / 0.08)" : "transparent",
+                  }}
+                  aria-pressed={!!live.flagged}
+                >
+                  <Flag className="h-4 w-4" style={{ fill: live.flagged ? "hsl(var(--brand-orange))" : "transparent" }} />
+                  {live.flagged ? "Flagged" : "Flag"}
+                </button>
               </div>
-              <div className="text-[14px]" style={{ color: "hsl(var(--brand-navy) / 0.75)" }}>
-                {live.contactPerson || <span className="italic" style={{ color: "hsl(var(--brand-navy) / 0.4)" }}>No contact set</span>}
-              </div>
-            </div>
-            <div className="mt-5 flex items-center gap-2.5">
-              <button
-                onClick={handleMoveForward}
-                disabled={!canAdvance}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-lg text-[14px] font-semibold tracking-tight transition-all",
-                  canAdvance
-                    ? "text-white hover:opacity-90 active:scale-[0.98]"
-                    : "text-muted-foreground/60 cursor-not-allowed",
-                )}
-                style={{
-                  height: 38,
-                  padding: "0 16px",
-                  backgroundColor: canAdvance ? "hsl(var(--brand-navy))" : "hsl(var(--muted))",
-                }}
-              >
-                Move Forward <ArrowRight className="h-4 w-4" />
-              </button>
-              <button
-                onClick={handleFlag}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-lg text-[14px] font-medium border transition-all active:scale-[0.98]",
-                )}
-                style={{
-                  height: 38,
-                  padding: "0 14px",
-                  borderColor: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy) / 0.25)",
-                  color: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy))",
-                  backgroundColor: live.flagged ? "hsl(var(--brand-orange) / 0.08)" : "transparent",
-                }}
-                aria-pressed={!!live.flagged}
-              >
-                <Flag className="h-4 w-4" style={{ fill: live.flagged ? "hsl(var(--brand-orange))" : "transparent" }} />
-                {live.flagged ? "Flagged" : "Flag"}
-              </button>
-            </div>
+            </SectionCard>
           </section>
 
           {/* ── DETAILS ── */}
           <section>
             <SectionHeader>Details</SectionHeader>
-            <div className="rounded-md overflow-hidden" style={{ backgroundColor: "transparent" }}>
+            <SectionCard>
               <DetailRow label="Customer" value={live.customer} locked />
               <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
               <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
@@ -435,12 +437,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 onClick={() => setEditor({ kind: "deadline" })}
                 valueColor={u.color}
               />
-            </div>
+            </SectionCard>
           </section>
 
           {/* ── LINE ITEMS ── */}
           <section>
             <SectionHeaderWithAction onAction={() => setEditor({ kind: "addLineItem" })}>Line items</SectionHeaderWithAction>
+            <SectionCard>
             {!live.lineItems || live.lineItems.length === 0 ? (
               <div className="text-[13px] italic text-muted-foreground/70">No line items yet</div>
             ) : (() => {
