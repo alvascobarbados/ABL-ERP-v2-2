@@ -727,7 +727,9 @@ function pickItems(seed: string): LineItem[] {
 // Assign quote / PO / invoice numbers deterministically.
 let _qSeq = 2040, _poSeq = 1080, _invSeq = 1040;
 const STAGE_ORDER: StageId[] = [
-  "proposal", "quote", "confirming", "preproduction", "in_production",
+  "proposal", "quote", "confirming",
+  "design", "proof",
+  "purchasing", "production",
   "shipment_required", "shipment_assigned",
   "invoice_required", "invoiced", "paid", "archive",
 ];
@@ -745,7 +747,7 @@ for (const proj of PROJECTS) {
   if (reachedStage(proj, "quote")) {
     proj.quoteNumber = `Q-${_qSeq++}`;
   }
-  if (reachedStage(proj, "preproduction")) {
+  if (reachedStage(proj, "purchasing")) {
     proj.poNumber = `PO-${_poSeq++}`;
     proj.lineItems = pickItems(proj.id);
   }
@@ -806,15 +808,17 @@ if (noQ2) noQ2.quoteNumber = undefined;
 
 // A Production card with no PO yet (still in pre-production, awaiting paperwork)
 const noPO = find("Solo Beverages", "Summer SKUs", "Custom labels");
-if (noPO && noPO.pipeline === "operations") noPO.poNumber = undefined;
+// A Purchasing card with no PO yet (still being prepared, awaiting paperwork)
+const noPO = find("Solo Beverages", "Summer SKUs", "Custom labels");
+if (noPO && noPO.pipeline === "purchasing") noPO.poNumber = undefined;
 
-// A Production card with no shipping mode decided yet
+// A Purchasing card with no shipping mode decided yet
 const noMode = find("WIBISCO", "Biscuit Promo", "POS shelf strips");
-if (noMode && noMode.pipeline === "operations") noMode.shippingMode = undefined;
+if (noMode && noMode.pipeline === "purchasing") noMode.shippingMode = undefined;
 
-// A Production card missing both
+// A Purchasing card missing both
 const noBoth = find("Bermudez Group", "Snack Launch", "POS shelf strips");
-if (noBoth && noBoth.pipeline === "operations") {
+if (noBoth && noBoth.pipeline === "purchasing") {
   noBoth.poNumber = undefined;
   noBoth.shippingMode = undefined;
 }
