@@ -9,11 +9,19 @@
  */
 import { useMemo, useState, useRef, MouseEvent as ReactMouseEvent } from "react";
 import { Flag, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "sonner";
 import {
-  PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
+  PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS, ShippingMode,
 } from "@/data/pipelines";
 import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
+import { EditableCell, SaveResult } from "./EditableCell";
+import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
@@ -364,6 +372,8 @@ interface RowProps {
   onDelete: () => void;
 }
 
+type EntityKindKey = "customer" | "supplier" | "rep";
+
 const TableRow = ({
   index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onDuplicate, onArchive, onDelete,
@@ -372,12 +382,27 @@ const TableRow = ({
   const flagged = !!proj.flagged;
   const u = urgencyLabel(card.deadlineDate);
   const md = useMasterData();
+  const store = usePipelineStore();
   const supName = supplierName(proj.supplierId, md.getSupplierByAnyId) || proj.supplierLabel || "";
 
-  // Long-press / long-click → stage picker
+  // ── Inline-edit state ────────────────────────────────────────────────
+  // Active entity popover: which kind is open (only one at a time).
+  const [openPicker, setOpenPicker] = useState<EntityKindKey | "mode" | null>(null);
+  const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null);
+  // Per-cell flash override (for entity/enum saves where popover closes first).
+  const [flashCell, setFlashCell] = useState<{ key: string; tone: "success" | "error" } | null>(null);
+
+  const flashFor = (k: string) => (flashCell?.key === k ? flashCell.tone : null);
+  const triggerFlash = (k: string, tone: "success" | "error") => {
+    setFlashCell({ key: k, tone });
+    window.setTimeout(() => setFlashCell((cur) => (cur?.key === k ? null : cur)), 700);
+  };
+
+  // Long-press / long-click → stage picker. Disabled while a popover is open
+  // OR while a cell is being edited (EditableCell stops mousedown propagation
+  // on click, so this only fires on row-area presses).
   const longPressTimer = useRef<number | null>(null);
   const longPressed = useRef(false);
-  // Single vs double click discrimination
   const clickTimer = useRef<number | null>(null);
 
   const startLongPress = () => {
@@ -395,9 +420,8 @@ const TableRow = ({
     }
   };
 
-  const handleClick = (e: ReactMouseEvent) => {
-    if (longPressed.current) return; // long-press already fired
-    // Defer so a second click within 250ms can cancel into double-click → flag
+  const handleClick = (_e: ReactMouseEvent) => {
+    if (longPressed.current) return;
     if (clickTimer.current) {
       window.clearTimeout(clickTimer.current);
       clickTimer.current = null;
@@ -426,6 +450,114 @@ const TableRow = ({
     ? "transparent"
     : "hsl(var(--brand-navy) / 0.025)";
 
+  // ── Save helpers (text columns) ──────────────────────────────────────
+  const saveText = async (field: keyof typeof proj, raw: string): Promise<SaveResult> => {
+    const trimmed = raw.trim();
+    try {
+      await store.updateProject(proj.id, { [field]: trimmed || undefined } as any);
+      return { ok: true };
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      return { ok: false, reason: err?.message };
+    }
+  };
+  const saveProjectName = async (raw: string): Promise<SaveResult> => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      toast.error("Project name cannot be empty");
+      return { ok: false };
+    }
+    try {
+      await store.updateProject(proj.id, { projectName: trimmed });
+      return { ok: true };
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      return { ok: false };
+    }
+  };
+  const saveCustomer = async (raw: string): Promise<SaveResult> => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      toast.error("Customer cannot be empty");
+      return { ok: false };
+    }
+    try {
+      await store.updateProject(proj.id, { customer: trimmed });
+      return { ok: true };
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      return { ok: false };
+    }
+  };
+  const saveValue = async (raw: string): Promise<SaveResult> => {
+    const cleaned = raw.replace(/[^0-9.\-]/g, "");
+    const n = cleaned === "" ? 0 : Number(cleaned);
+    if (!Number.isFinite(n)) {
+      toast.error("Enter a valid number");
+      return { ok: false };
+    }
+    try {
+      await store.updateProject(proj.id, { value: n });
+      return { ok: true };
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      return { ok: false };
+    }
+  };
+
+  // ── Entity-save helpers (called from popover onPick) ─────────────────
+  const pickCustomer = async (name: string) => {
+    setOpenPicker(null);
+    try {
+      await store.updateProject(proj.id, { customer: name });
+      triggerFlash("customer", "success");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      triggerFlash("customer", "error");
+    }
+  };
+  const pickSupplier = async (id: string) => {
+    setOpenPicker(null);
+    try {
+      await store.updateProject(proj.id, { supplierId: id, supplierLabel: undefined });
+      triggerFlash("supplier", "success");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      triggerFlash("supplier", "error");
+    }
+  };
+  const pickSupplierMeta = async (meta: string) => {
+    setOpenPicker(null);
+    try {
+      const label = meta === "TBD" || meta === "Various" ? meta : undefined;
+      await store.updateProject(proj.id, { supplierId: undefined, supplierLabel: label });
+      triggerFlash("supplier", "success");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      triggerFlash("supplier", "error");
+    }
+  };
+  const pickReps = async (initials: string[]) => {
+    setOpenPicker(null);
+    try {
+      await store.updateProject(proj.id, { pointPerson: initials.join(", ") || "AV" });
+      triggerFlash("rep", "success");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      triggerFlash("rep", "error");
+    }
+  };
+  const pickShippingMode = async (m: ShippingMode) => {
+    setOpenPicker(null);
+    try {
+      await store.updateProject(proj.id, { shippingMode: m });
+      triggerFlash("mode", "success");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      triggerFlash("mode", "error");
+    }
+  };
+
   return (
     <div
       role="row"
@@ -435,7 +567,7 @@ const TableRow = ({
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}
       className={cn(
-        "grid items-center text-[13px] cursor-pointer transition-colors group select-none",
+        "grid items-stretch text-[13px] cursor-pointer transition-colors group select-none",
         "hover:bg-[hsl(var(--brand-navy)/0.05)]",
       )}
       style={{
@@ -447,43 +579,133 @@ const TableRow = ({
         color: "hsl(var(--brand-navy))",
       }}
     >
-      {/* Flag */}
+      {/* Flag — read-only (toggled via row double-click) */}
       <div className="px-3 flex items-center justify-center">
         {flagged ? (
           <Flag className="h-3.5 w-3.5 fill-current" style={{ color: "hsl(var(--brand-orange))" }} />
         ) : null}
       </div>
-      {/* Pipeline · Stage */}
-      <Cell title={stageLabel(card, activeTab)}>
+
+      {/* Pipeline · Stage — read-only here; long-press opens StagePicker */}
+      <ReadOnlyCell title={stageLabel(card, activeTab)}>
         <span className="font-medium">{stageLabel(card, activeTab)}</span>
-      </Cell>
-      <Cell title={proj.customer}>{proj.customer}</Cell>
-      <Cell title={proj.projectName}>{proj.projectName}</Cell>
-      <Cell title={proj.detailSummary?.trim() || undefined} muted={!proj.detailSummary?.trim()}>
-        {proj.detailSummary?.trim() || "—"}
-      </Cell>
-      <Cell title={supName} muted={!supName}>{supName || "—"}</Cell>
-      <Cell title={proj.quoteNumber ?? ""} muted={!proj.quoteNumber}>
-        <span className="tabular">{proj.quoteNumber ?? "—"}</span>
-      </Cell>
-      <Cell align="right" muted={!proj.value}>
-        <span className="tabular">{fmtMoney(proj.value)}</span>
-      </Cell>
-      <Cell muted={!proj.shippingMode}>{proj.shippingMode ?? "—"}</Cell>
-      <Cell title={proj.trackingRef ?? ""} muted={!proj.trackingRef}>
-        <span className="tabular">{proj.trackingRef ?? "—"}</span>
-      </Cell>
-      <Cell title={proj.pointPerson}>
-        <span className="tabular">{repInitials(proj.pointPerson)}</span>
-      </Cell>
-      <Cell muted={!card.deadlineDate}>
+      </ReadOnlyCell>
+
+      {/* Customer — entity popover */}
+      <EditableCell
+        mode="custom"
+        align="left"
+        display={proj.customer}
+        title={proj.customer}
+        active={openPicker === "customer"}
+        flash={flashFor("customer")}
+        onActivate={(el) => { setPickerAnchor(el); setOpenPicker("customer"); }}
+      />
+
+      {/* Project name — text */}
+      <EditableCell
+        mode="text"
+        align="left"
+        display={proj.projectName}
+        title={proj.projectName}
+        value={proj.projectName}
+        onCommit={saveProjectName}
+      />
+
+      {/* Detail summary — text */}
+      <EditableCell
+        mode="text"
+        align="left"
+        display={proj.detailSummary?.trim() || "—"}
+        title={proj.detailSummary?.trim() || undefined}
+        muted={!proj.detailSummary?.trim()}
+        value={proj.detailSummary ?? ""}
+        placeholder="Add detail…"
+        onCommit={(v) => saveText("detailSummary", v)}
+      />
+
+      {/* Supplier — entity popover */}
+      <EditableCell
+        mode="custom"
+        align="left"
+        display={supName || "—"}
+        title={supName}
+        muted={!supName}
+        active={openPicker === "supplier"}
+        flash={flashFor("supplier")}
+        onActivate={(el) => { setPickerAnchor(el); setOpenPicker("supplier"); }}
+      />
+
+      {/* Quote # — text */}
+      <EditableCell
+        mode="text"
+        align="left"
+        display={<span className="tabular">{proj.quoteNumber ?? "—"}</span>}
+        title={proj.quoteNumber ?? ""}
+        muted={!proj.quoteNumber}
+        value={proj.quoteNumber ?? ""}
+        placeholder="Q#"
+        onCommit={(v) => saveText("quoteNumber", v)}
+      />
+
+      {/* Amount — number */}
+      <EditableCell
+        mode="number"
+        align="right"
+        display={<span className="tabular">{fmtMoney(proj.value)}</span>}
+        muted={!proj.value}
+        value={proj.value ? String(proj.value) : ""}
+        placeholder="0"
+        onCommit={saveValue}
+      />
+
+      {/* Mode — enum popover */}
+      <ModeCell
+        value={proj.shippingMode}
+        active={openPicker === "mode"}
+        flash={flashFor("mode")}
+        onActivate={(el) => { setPickerAnchor(el); setOpenPicker("mode"); }}
+        onPick={pickShippingMode}
+        open={openPicker === "mode"}
+        onClose={() => setOpenPicker(null)}
+        anchorEl={pickerAnchor}
+      />
+
+      {/* Tracking — text */}
+      <EditableCell
+        mode="text"
+        align="left"
+        display={<span className="tabular">{proj.trackingRef ?? "—"}</span>}
+        title={proj.trackingRef ?? ""}
+        muted={!proj.trackingRef}
+        value={proj.trackingRef ?? ""}
+        placeholder="Tracking"
+        onCommit={(v) => saveText("trackingRef", v)}
+      />
+
+      {/* Rep — multi popover */}
+      <EditableCell
+        mode="custom"
+        align="left"
+        display={<span className="tabular">{repInitials(proj.pointPerson)}</span>}
+        title={proj.pointPerson}
+        active={openPicker === "rep"}
+        flash={flashFor("rep")}
+        onActivate={(el) => { setPickerAnchor(el); setOpenPicker("rep"); }}
+      />
+
+      {/* Deadline — read-only (date picker lives in CardEditOverlay) */}
+      <ReadOnlyCell muted={!card.deadlineDate}>
         <span className="tabular">{fmtDeadline(card.deadlineDate)}</span>
-      </Cell>
-      <Cell>
+      </ReadOnlyCell>
+
+      {/* Urgency — read-only computed */}
+      <ReadOnlyCell>
         <span className="tabular" style={{ color: urgencyColor, fontWeight: tone === "urgent" ? 600 : 400 }}>
           {u.text}
         </span>
-      </Cell>
+      </ReadOnlyCell>
+
       {/* Actions */}
       <div className="px-1 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
         <CardActionsPopover
@@ -509,25 +731,135 @@ const TableRow = ({
           }
         />
       </div>
+
+      {/* ── Anchored popovers (rendered once per row, only one open at a time) ── */}
+      {openPicker === "customer" && (
+        <EntityPicker
+          open
+          onClose={() => setOpenPicker(null)}
+          kind="customer"
+          presentation="popover"
+          anchorEl={pickerAnchor}
+          selectedId={proj.customer}
+          onPick={pickCustomer}
+        />
+      )}
+      {openPicker === "supplier" && (
+        <EntityPicker
+          open
+          onClose={() => setOpenPicker(null)}
+          kind="supplier"
+          presentation="popover"
+          anchorEl={pickerAnchor}
+          selectedId={proj.supplierId}
+          selectedMeta={proj.supplierLabel}
+          onPick={pickSupplier}
+          onPickMeta={pickSupplierMeta}
+        />
+      )}
+      {openPicker === "rep" && (
+        <TeamMultiPicker
+          open
+          onClose={() => setOpenPicker(null)}
+          presentation="popover"
+          anchorEl={pickerAnchor}
+          selected={parseInitialsList(proj.pointPerson)}
+          onConfirm={pickReps}
+        />
+      )}
     </div>
   );
 };
 
-interface CellProps {
+// Parse "AV, RC" → ["AV","RC"] for TeamMultiPicker.
+function parseInitialsList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw.split(/[,\s]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
+}
+
+// ── Read-only cell (Pipeline·Stage, Deadline, Urgency) ─────────────────
+interface ReadOnlyCellProps {
   children: React.ReactNode;
   title?: string;
   align?: "left" | "right";
   muted?: boolean;
 }
-const Cell = ({ children, title, align = "left", muted }: CellProps) => (
+const ReadOnlyCell = ({ children, title, align = "left", muted }: ReadOnlyCellProps) => (
   <div
     className={cn(
-      "px-3 py-2 truncate",
-      align === "right" ? "text-right" : "text-left",
+      "px-3 py-2 truncate flex items-center",
+      align === "right" ? "justify-end text-right" : "justify-start text-left",
     )}
     style={muted ? { color: "hsl(var(--muted-foreground))" } : undefined}
     title={title}
   >
-    {children}
+    <span className="truncate w-full">{children}</span>
   </div>
 );
+
+// ── Mode cell (Air / Ocean / Local enum popover) ──────────────────────
+interface ModeCellProps {
+  value: ShippingMode | undefined;
+  active: boolean;
+  flash: "success" | "error" | null;
+  onActivate: (el: HTMLElement) => void;
+  onPick: (m: ShippingMode) => void;
+  open: boolean;
+  onClose: () => void;
+  anchorEl: HTMLElement | null;
+}
+const ModeCell = ({ value, active, flash, onActivate, onPick, open, onClose, anchorEl }: ModeCellProps) => {
+  return (
+    <>
+      <EditableCell
+        mode="custom"
+        align="left"
+        display={value ?? "—"}
+        muted={!value}
+        active={active}
+        flash={flash}
+        onActivate={onActivate}
+      />
+      {open && (
+        <Popover open onOpenChange={(o) => { if (!o) onClose(); }}>
+          <PopoverTrigger asChild>
+            <span
+              style={{
+                position: "fixed",
+                left: anchorEl?.getBoundingClientRect().left ?? 0,
+                top: anchorEl?.getBoundingClientRect().bottom ?? 0,
+                width: anchorEl?.getBoundingClientRect().width ?? 0,
+                height: 0,
+                pointerEvents: "none",
+              }}
+            />
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            side="bottom"
+            sideOffset={2}
+            className="w-[160px] p-1.5"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {(["Air", "Ocean", "Local"] as ShippingMode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => onPick(m)}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-muted/60 transition-colors",
+                  value === m && "bg-muted/60 font-medium",
+                )}
+                style={{ color: "hsl(var(--brand-navy))" }}
+              >
+                {m}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
+    </>
+  );
+};
+

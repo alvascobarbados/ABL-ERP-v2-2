@@ -1,45 +1,49 @@
 /**
- * Generic list-bound bottom-sheet picker for the 4 master-data entities
+ * Generic list-bound picker for the 4 master-data entities
  * (Customer, Supplier, Team Member, Product) and a multi-select variant
  * for Sales Reps.
+ *
+ * Two presentations:
+ *   - "sheet"   (default) — full-screen bottom sheet, used in CardEditOverlay
+ *                and other mobile-first contexts.
+ *   - "popover" — anchored Radix popover, used by the desktop ProjectTable
+ *                inline-editing flow. Feels like a Google-Sheets dropdown.
  *
  * The pattern, from the brief:
  *   - Title at top
  *   - Auto-focused search input
  *   - Live-filtered, alphabetised list
  *   - "+ Add new …" inline form (escape valve, always available)
- *   - Optional meta-options at the top of the list (TBD/Various/Unassigned for
- *     Supplier; "Custom (free text)" for Product)
- *
- * Free-typing in the host form is REPLACED by tapping a field → this picker
- * opens. Locked-by-default master data, escape valve always there.
+ *   - Optional meta-options (TBD/Various/Unassigned for Supplier; "Custom" for Product)
  */
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BottomSheet } from "./EditorSheets";
-import { useMasterData, EntityKind, parseInitials } from "@/hooks/useMasterData";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useMasterData, EntityKind } from "@/hooks/useMasterData";
 import type { ShippingMode } from "@/data/pipelines";
+
+type Presentation = "sheet" | "popover";
 
 // ─── Single-select picker ────────────────────────────────────────────────
 interface SingleProps {
   open: boolean;
   onClose: () => void;
   kind: EntityKind;
-  /** Currently selected id (Customer/Supplier/Team/Product) */
   selectedId?: string | null;
-  /** Currently selected meta value (e.g. "TBD", "Custom"). */
   selectedMeta?: string | null;
-  /** Called with the row's primary identifier:
-   *   - Customer  → name
-   *   - Supplier  → id (uuid)
-   *   - Team      → initials
-   *   - Product   → name
-   */
   onPick: (idOrName: string) => void;
-  /** Called with a meta-option key (e.g. "TBD", "Various", "Unassigned", "Custom"). */
   onPickMeta?: (meta: string, value?: string) => void;
+  /** "sheet" (default) or "popover". */
+  presentation?: Presentation;
+  /** When presentation="popover", anchor element to position relative to. */
+  anchorEl?: HTMLElement | null;
 }
 
 const META_OPTIONS: Record<EntityKind, { key: string; label: string; italic?: boolean }[]> = {
@@ -48,9 +52,7 @@ const META_OPTIONS: Record<EntityKind, { key: string; label: string; italic?: bo
     { key: "Various", label: "Various", italic: true },
     { key: "Unassigned", label: "Unassigned", italic: true },
   ],
-  product: [
-    { key: "Custom", label: "Custom (free text)", italic: true },
-  ],
+  product: [{ key: "Custom", label: "Custom (free text)", italic: true }],
   customer: [],
   team: [],
 };
@@ -69,14 +71,22 @@ const ADD_LABELS: Record<EntityKind, string> = {
   product: "Add new product",
 };
 
-export const EntityPicker = ({
-  open, onClose, kind, selectedId, selectedMeta, onPick, onPickMeta,
-}: SingleProps) => {
+// Body shared by sheet and popover presentations
+const PickerBody = ({
+  kind, selectedId, selectedMeta, onPick, onPickMeta, onClose, onStartAdd, compact,
+}: {
+  kind: EntityKind;
+  selectedId?: string | null;
+  selectedMeta?: string | null;
+  onPick: (id: string) => void;
+  onPickMeta?: (meta: string) => void;
+  onClose: () => void;
+  onStartAdd: (initialName: string) => void;
+  compact?: boolean;
+}) => {
   const md = useMasterData();
   const [q, setQ] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  useEffect(() => { if (open) { setQ(""); setAdding(false); } }, [open]);
+  useEffect(() => { setQ(""); }, [kind]);
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -102,13 +112,101 @@ export const EntityPicker = ({
 
   const exactMatch = rows.some((r) => r.label.toLowerCase() === q.trim().toLowerCase());
   const showInlineCreate = q.trim().length > 0 && !exactMatch && kind !== "team";
+  const metaOpts = META_OPTIONS[kind];
+
+  const minRow = compact ? 36 : 48;
+
+  return (
+    <>
+      <div className="relative mb-2">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search…"
+          className="w-full rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+          style={{ minHeight: compact ? 36 : 48 }}
+          autoFocus
+        />
+      </div>
+
+      {metaOpts.length > 0 && onPickMeta && (
+        <div className="grid grid-cols-3 gap-1.5 mb-2">
+          {metaOpts.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => { onPickMeta(m.key); onClose(); }}
+              className={cn(
+                "px-2 py-1.5 rounded-lg border text-xs transition-colors hover:bg-muted/40",
+                selectedMeta === m.key ? "bg-muted/60" : "bg-card border-border/60",
+              )}
+              style={{ minHeight: compact ? 32 : 44 }}
+            >
+              <span className={cn(m.italic && "italic text-muted-foreground")}>{m.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showInlineCreate && (
+        <button
+          onClick={() => onStartAdd(q.trim())}
+          className="mb-2 w-full inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed text-xs font-medium hover:bg-muted/40 transition-colors"
+          style={{ borderColor: "hsl(var(--brand-orange) / 0.55)", color: "hsl(var(--brand-orange))", minHeight: minRow }}
+        >
+          <Plus className="h-3.5 w-3.5" /> Add "{q.trim()}"
+        </button>
+      )}
+
+      <ul className={cn("space-y-1 overflow-y-auto", compact && "max-h-[260px]")}>
+        {rows.map((r) => (
+          <li key={r.id}>
+            <button
+              onClick={() => { onPick(r.id); onClose(); }}
+              className={cn(
+                "w-full text-left px-3 py-2 rounded-lg border transition-colors hover:bg-muted/40",
+                selectedId === r.id ? "bg-muted/60" : "bg-card border-border/60",
+              )}
+              style={{ minHeight: minRow, borderColor: selectedId === r.id ? "hsl(var(--brand-navy) / 0.35)" : undefined }}
+            >
+              <div className="text-[13px] font-medium text-foreground truncate">{r.label}</div>
+              {r.sub && <div className="text-[11px] text-muted-foreground truncate">{r.sub}</div>}
+            </button>
+          </li>
+        ))}
+        {rows.length === 0 && !showInlineCreate && (
+          <li className="text-xs text-muted-foreground italic px-3 py-3 text-center">No matches.</li>
+        )}
+      </ul>
+
+      <button
+        onClick={() => onStartAdd(q.trim())}
+        className="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed text-xs font-medium hover:bg-muted/40 transition-colors"
+        style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: minRow }}
+      >
+        <Plus className="h-3.5 w-3.5" /> {ADD_LABELS[kind]}
+      </button>
+    </>
+  );
+};
+
+export const EntityPicker = ({
+  open, onClose, kind, selectedId, selectedMeta, onPick, onPickMeta,
+  presentation = "sheet", anchorEl,
+}: SingleProps) => {
+  const [adding, setAdding] = useState(false);
+  const [addInitial, setAddInitial] = useState("");
+
+  useEffect(() => { if (open) setAdding(false); }, [open]);
+
+  const startAdd = (name: string) => { setAddInitial(name); setAdding(true); };
 
   if (adding) {
     return (
       <InlineAdd
         open={open}
         kind={kind}
-        initialName={q}
+        initialName={addInitial}
         onClose={() => setAdding(false)}
         onCreated={(idOrName) => {
           setAdding(false);
@@ -119,82 +217,66 @@ export const EntityPicker = ({
     );
   }
 
-  const metaOpts = META_OPTIONS[kind];
+  if (presentation === "popover") {
+    return (
+      <Popover open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+        <PopoverTrigger asChild>
+          <span
+            ref={(el) => {
+              // Position relative to provided anchor element
+              if (el && anchorEl && el.parentElement !== anchorEl) {
+                // no-op — Radix uses the trigger ref as the anchor; we'll
+                // instead use PopoverAnchor pattern via virtual ref below.
+              }
+            }}
+            style={{
+              position: "fixed",
+              left: anchorEl?.getBoundingClientRect().left ?? 0,
+              top: anchorEl?.getBoundingClientRect().bottom ?? 0,
+              width: anchorEl?.getBoundingClientRect().width ?? 0,
+              height: 0,
+              pointerEvents: "none",
+            }}
+          />
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={2}
+          className="w-[320px] p-3"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold mb-2">
+            {TITLES[kind]}
+          </div>
+          <PickerBody
+            kind={kind}
+            selectedId={selectedId}
+            selectedMeta={selectedMeta}
+            onPick={onPick}
+            onPickMeta={onPickMeta}
+            onClose={onClose}
+            onStartAdd={startAdd}
+            compact
+          />
+        </PopoverContent>
+      </Popover>
+    );
+  }
 
   return (
     <BottomSheet open={open} onClose={onClose} title={TITLES[kind]}>
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search…"
-          className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
-          style={{ minHeight: 48 }}
-          autoFocus
-        />
-      </div>
-
-      {/* Meta options */}
-      {metaOpts.length > 0 && onPickMeta && (
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          {metaOpts.map((m) => (
-            <button
-              key={m.key}
-              onClick={() => { onPickMeta(m.key); onClose(); }}
-              className={cn(
-                "px-2.5 py-2.5 rounded-xl border text-sm transition-colors hover:bg-muted/40",
-                selectedMeta === m.key ? "bg-muted/60" : "bg-card border-border/60",
-              )}
-              style={{ minHeight: 44 }}
-            >
-              <span className={cn(m.italic && "italic text-muted-foreground")}>{m.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Inline-create row when search has no match */}
-      {showInlineCreate && (
-        <button
-          onClick={() => setAdding(true)}
-          className="mb-2 w-full inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed text-sm font-medium hover:bg-muted/40 transition-colors"
-          style={{ borderColor: "hsl(var(--brand-orange) / 0.55)", color: "hsl(var(--brand-orange))", minHeight: 48 }}
-        >
-          <Plus className="h-4 w-4" /> Add "{q.trim()}"
-        </button>
-      )}
-
-      {/* Existing list */}
-      <ul className="space-y-1.5">
-        {rows.map((r) => (
-          <li key={r.id}>
-            <button
-              onClick={() => { onPick(r.id); onClose(); }}
-              className={cn(
-                "w-full text-left px-3.5 py-2.5 rounded-xl border transition-colors hover:bg-muted/40",
-                selectedId === r.id ? "bg-muted/60" : "bg-card border-border/60",
-              )}
-              style={{ minHeight: 48, borderColor: selectedId === r.id ? "hsl(var(--brand-navy) / 0.35)" : undefined }}
-            >
-              <div className="text-sm font-medium text-foreground truncate">{r.label}</div>
-              {r.sub && <div className="text-xs text-muted-foreground">{r.sub}</div>}
-            </button>
-          </li>
-        ))}
-        {rows.length === 0 && !showInlineCreate && (
-          <li className="text-sm text-muted-foreground italic px-3 py-4 text-center">No matches.</li>
-        )}
-      </ul>
-
-      {/* Always-available Add-new */}
-      <button
-        onClick={() => setAdding(true)}
-        className="mt-3 w-full inline-flex items-center justify-center gap-2 px-3.5 py-3 rounded-xl border border-dashed text-sm font-medium hover:bg-muted/40 transition-colors"
-        style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: 48 }}
-      >
-        <Plus className="h-4 w-4" /> {ADD_LABELS[kind]}
-      </button>
+      <PickerBody
+        kind={kind}
+        selectedId={selectedId}
+        selectedMeta={selectedMeta}
+        onPick={onPick}
+        onPickMeta={onPickMeta}
+        onClose={onClose}
+        onStartAdd={startAdd}
+      />
     </BottomSheet>
   );
 };
@@ -203,18 +285,22 @@ export const EntityPicker = ({
 interface MultiProps {
   open: boolean;
   onClose: () => void;
-  /** Currently selected initials (uppercase). */
   selected: string[];
   onConfirm: (initials: string[]) => void;
+  presentation?: Presentation;
+  anchorEl?: HTMLElement | null;
 }
 
-export const TeamMultiPicker = ({ open, onClose, selected, onConfirm }: MultiProps) => {
+const TeamMultiBody = ({
+  draft, setDraft, onStartAdd, compact,
+}: {
+  draft: string[];
+  setDraft: React.Dispatch<React.SetStateAction<string[]>>;
+  onStartAdd: () => void;
+  compact?: boolean;
+}) => {
   const md = useMasterData();
   const [q, setQ] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState<string[]>(selected);
-
-  useEffect(() => { if (open) { setQ(""); setDraft(selected); setAdding(false); } }, [open, selected]);
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -226,6 +312,96 @@ export const TeamMultiPicker = ({ open, onClose, selected, onConfirm }: MultiPro
   const toggle = (init: string) => {
     setDraft((d) => d.includes(init) ? d.filter((x) => x !== init) : [...d, init]);
   };
+
+  const minRow = compact ? 36 : 48;
+
+  return (
+    <>
+      <div className="relative mb-2">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search team"
+          className="w-full rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+          style={{ minHeight: compact ? 36 : 48 }}
+          autoFocus
+        />
+      </div>
+
+      {draft.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {draft.map((init) => {
+            const t = md.getTeamByInitials(init);
+            return (
+              <button
+                key={init}
+                onClick={() => toggle(init)}
+                className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-[11px] font-semibold tracking-wide"
+                style={{ background: "hsl(var(--brand-navy) / 0.1)", color: "hsl(var(--brand-navy))" }}
+                title={t?.full_name ?? init}
+              >
+                {init}
+                <X className="h-3 w-3" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <ul className={cn("space-y-1 overflow-y-auto", compact && "max-h-[260px]")}>
+        {rows.map((r) => {
+          const on = draft.includes(r.initials);
+          return (
+            <li key={r.initials}>
+              <button
+                onClick={() => toggle(r.initials)}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-lg border transition-colors hover:bg-muted/40 flex items-center gap-2",
+                  on ? "bg-muted/60" : "bg-card border-border/60",
+                )}
+                style={{ minHeight: minRow, borderColor: on ? "hsl(var(--brand-navy) / 0.35)" : undefined }}
+              >
+                <span
+                  className={cn(
+                    "h-4 w-4 rounded border flex items-center justify-center shrink-0",
+                    on && "bg-[hsl(var(--brand-navy))] border-transparent",
+                  )}
+                  style={{ borderColor: on ? undefined : "hsl(var(--brand-navy) / 0.4)" }}
+                >
+                  {on && <Check className="h-3 w-3 text-background" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-medium text-foreground truncate">{r.label}</div>
+                  {r.role && <div className="text-[11px] text-muted-foreground truncate">{r.role}</div>}
+                </div>
+              </button>
+            </li>
+          );
+        })}
+        {rows.length === 0 && (
+          <li className="text-xs text-muted-foreground italic px-3 py-3 text-center">No team members match.</li>
+        )}
+      </ul>
+
+      <button
+        onClick={onStartAdd}
+        className="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed text-xs font-medium hover:bg-muted/40 transition-colors"
+        style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: minRow }}
+      >
+        <Plus className="h-3.5 w-3.5" /> Add new team member
+      </button>
+    </>
+  );
+};
+
+export const TeamMultiPicker = ({
+  open, onClose, selected, onConfirm, presentation = "sheet", anchorEl,
+}: MultiProps) => {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<string[]>(selected);
+
+  useEffect(() => { if (open) { setDraft(selected); setAdding(false); } }, [open, selected]);
 
   if (adding) {
     return (
@@ -242,6 +418,48 @@ export const TeamMultiPicker = ({ open, onClose, selected, onConfirm }: MultiPro
     );
   }
 
+  if (presentation === "popover") {
+    return (
+      <Popover open={open} onOpenChange={(o) => { if (!o) { onConfirm(draft); onClose(); } }}>
+        <PopoverTrigger asChild>
+          <span
+            style={{
+              position: "fixed",
+              left: anchorEl?.getBoundingClientRect().left ?? 0,
+              top: anchorEl?.getBoundingClientRect().bottom ?? 0,
+              width: anchorEl?.getBoundingClientRect().width ?? 0,
+              height: 0,
+              pointerEvents: "none",
+            }}
+          />
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={2}
+          className="w-[300px] p-3"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+              Pick sales reps
+            </div>
+            <button
+              onClick={() => { onConfirm(draft); onClose(); }}
+              className="text-[11px] font-semibold"
+              style={{ color: "hsl(var(--brand-orange))" }}
+            >
+              Done
+            </button>
+          </div>
+          <TeamMultiBody draft={draft} setDraft={setDraft} onStartAdd={() => setAdding(true)} compact />
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   return (
     <BottomSheet
       open={open}
@@ -250,110 +468,28 @@ export const TeamMultiPicker = ({ open, onClose, selected, onConfirm }: MultiPro
       onSave={() => { onConfirm(draft); onClose(); }}
       saveLabel="Done"
     >
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search team"
-          className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
-          style={{ minHeight: 48 }}
-          autoFocus
-        />
-      </div>
-
-      {/* Draft chips */}
-      {draft.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {draft.map((init) => {
-            const t = md.getTeamByInitials(init);
-            return (
-              <button
-                key={init}
-                onClick={() => toggle(init)}
-                className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-[12px] font-semibold tracking-wide"
-                style={{
-                  background: "hsl(var(--brand-navy) / 0.1)",
-                  color: "hsl(var(--brand-navy))",
-                }}
-                title={t?.full_name ?? init}
-              >
-                {init}
-                <X className="h-3 w-3" />
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      <ul className="space-y-1.5">
-        {rows.map((r) => {
-          const on = draft.includes(r.initials);
-          return (
-            <li key={r.initials}>
-              <button
-                onClick={() => toggle(r.initials)}
-                className={cn(
-                  "w-full text-left px-3.5 py-2.5 rounded-xl border transition-colors hover:bg-muted/40 flex items-center gap-2.5",
-                  on ? "bg-muted/60" : "bg-card border-border/60",
-                )}
-                style={{ minHeight: 48, borderColor: on ? "hsl(var(--brand-navy) / 0.35)" : undefined }}
-              >
-                <span
-                  className={cn(
-                    "h-5 w-5 rounded border flex items-center justify-center shrink-0",
-                    on && "bg-[hsl(var(--brand-navy))] border-transparent",
-                  )}
-                  style={{ borderColor: on ? undefined : "hsl(var(--brand-navy) / 0.4)" }}
-                >
-                  {on && <Check className="h-3.5 w-3.5 text-background" />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground truncate">{r.label}</div>
-                  {r.role && <div className="text-xs text-muted-foreground">{r.role}</div>}
-                </div>
-              </button>
-            </li>
-          );
-        })}
-        {rows.length === 0 && (
-          <li className="text-sm text-muted-foreground italic px-3 py-4 text-center">No team members match.</li>
-        )}
-      </ul>
-
-      <button
-        onClick={() => setAdding(true)}
-        className="mt-3 w-full inline-flex items-center justify-center gap-2 px-3.5 py-3 rounded-xl border border-dashed text-sm font-medium hover:bg-muted/40 transition-colors"
-        style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: 48 }}
-      >
-        <Plus className="h-4 w-4" /> Add new team member
-      </button>
+      <TeamMultiBody draft={draft} setDraft={setDraft} onStartAdd={() => setAdding(true)} />
     </BottomSheet>
   );
 };
 
-// ─── Inline-add form ─────────────────────────────────────────────────────
+// ─── Inline-add form (sheet only) ────────────────────────────────────────
 interface InlineAddProps {
   open: boolean;
   kind: EntityKind;
   initialName?: string;
   onClose: () => void;
-  /** Returns the new entity's primary identifier (same convention as `onPick`). */
   onCreated: (idOrName: string) => void;
 }
 
 export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: InlineAddProps) => {
   const md = useMasterData();
   const [name, setName] = useState(initialName);
-  // Supplier extras
   const [country, setCountry] = useState("");
   const [mode, setMode] = useState<ShippingMode>("Ocean");
-  // Team extras
   const [initials, setInitials] = useState("");
   const [fullName, setFullName] = useState("");
-  // Customer extras
   const [industry, setIndustry] = useState("");
-  // Product extras
   const [unit, setUnit] = useState("");
 
   useEffect(() => {
