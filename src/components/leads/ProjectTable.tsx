@@ -848,10 +848,10 @@ interface ReadOnlyCellProps {
 const ReadOnlyCell = ({ children, title, align = "left", muted }: ReadOnlyCellProps) => (
   <div
     className={cn(
-      "px-3 py-2 truncate flex items-center",
+      "px-3 py-1.5 truncate flex items-center",
       align === "right" ? "justify-end text-right" : "justify-start text-left",
     )}
-    style={muted ? { color: "hsl(var(--muted-foreground))" } : undefined}
+    style={muted ? { color: "hsl(var(--brand-navy) / 0.28)" } : undefined}
     title={title}
   >
     <span className="truncate w-full">{children}</span>
