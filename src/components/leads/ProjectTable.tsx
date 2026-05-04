@@ -8,7 +8,7 @@
  * and only mounts the Table at the lg breakpoint.
  */
 import { useMemo, useState, useRef, MouseEvent as ReactMouseEvent } from "react";
-import { Flag, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
+import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS, ShippingMode,
@@ -109,6 +109,23 @@ const STAGE_RANK: Record<StageId, number> = {
   invoice_required: 0, invoiced: 1, paid: 2,
 };
 
+// Number of user-facing stages per pipeline (used for shade ramp).
+// Single-state pipelines stay at full saturation.
+const STAGE_COUNT: Record<PipelineId, number> = {
+  sales: 3, design: 2, purchasing: 1, production: 1,
+  shipping: 1, finance: 3, operations: 1,
+};
+
+/** Shade strength 0..1 — earlier stages lighter, later stages full saturation. */
+function stageShade(pipeline: PipelineId, stage: StageId): number {
+  const total = STAGE_COUNT[pipeline] ?? 1;
+  if (total <= 1) return 1;
+  // For finance, "paid" is index 2 (full); for sales, confirming is index 2.
+  const idx = STAGE_RANK[stage] ?? 0;
+  const min = 0.3;
+  return Math.min(1, min + ((1 - min) * idx) / (total - 1));
+}
+
 function supplierName(id: string | undefined, lookup?: (id?: string | null) => { name: string } | undefined): string {
   if (!id) return "";
   const fromMaster = lookup?.(id)?.name;
@@ -200,27 +217,26 @@ function compareCards(
 // viewport (overflow-auto on the wrapper handles it).
 const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
-  { key: "stage", label: "Stage", defaultPx: 110 },
+  { key: "stage", label: "Stage · State", defaultPx: 150 },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 180 },
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
   { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
-  { key: "mode", label: "Mode", defaultPx: 76 },
+  { key: "mode", label: "Mode", defaultPx: 96 },
   { key: "tracking", label: "Tracking", defaultPx: 120 },
   { key: "rep", label: "Rep", defaultPx: 60 },
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
-export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters, hideStageColumn }: Props) => {
+export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters, hideStageColumn: _ignored }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
-  const COLS = useMemo(
-    () => (hideStageColumn ? ALL_COLS.filter((c) => c.key !== "stage") : ALL_COLS),
-    [hideStageColumn],
-  );
+  // Stage column is now ALWAYS shown — the redundancy with sub-chevron is
+  // intentional (consistent column set across filtered & unfiltered views).
+  const COLS = ALL_COLS;
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
   // null = no local override; rows render in the order Index.tsx provides
@@ -254,24 +270,24 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
     <SelectionProvider outsideRef={tableRootRef}>
     <TooltipProvider delayDuration={300}>
     <div className="flex-1 min-h-0 flex flex-col">
-      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-6 pt-3 pb-2">
+      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-6 lg:px-8 pt-2 pb-3">
         <div
-          className="rounded-xl border"
+          className="rounded-2xl border"
           style={{
-            borderColor: "hsl(var(--brand-navy) / 0.10)",
-            backgroundColor: "#FDFCF7",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.06)",
+            borderColor: "hsl(var(--brand-navy) / 0.08)",
+            backgroundColor: "#FFFFFF",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(27,42,78,0.04)",
           }}
         >
           {/* Header — sticky to outer scroll container; fully opaque */}
           <div
-            className="sticky top-0 z-20 grid items-center text-[11px] font-medium uppercase tracking-[0.05em] rounded-t-xl"
+            className="sticky top-0 z-20 grid items-center text-[11px] font-semibold uppercase tracking-[0.05em] rounded-t-2xl"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "#FAF7EE",
-              color: "hsl(var(--brand-navy) / 0.55)",
-              borderBottom: "1px solid hsl(var(--brand-navy) / 0.12)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.04)",
+              backgroundColor: "#F7F4ED",
+              color: "hsl(var(--brand-navy) / 0.6)",
+              borderBottom: "1px solid hsl(var(--brand-navy) / 0.1)",
+              boxShadow: "0 1px 0 hsl(var(--brand-navy) / 0.04)",
             }}
           >
             {COLS.map((c) => {
@@ -286,8 +302,8 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
-                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.06)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
+                      "h-11 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
+                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.05)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
                       c.align === "right" ? "justify-end" : "justify-start",
                     )}
                     title={c.label}
@@ -305,7 +321,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 </div>
               );
             })}
-            <div className="h-10" />
+            <div className="h-11" />
           </div>
 
           {/* Rows */}
@@ -349,8 +365,8 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 onDuplicate={() => store.duplicateProject(card.project.id)}
                 onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
                 onDelete={() => store.deleteProject(card.project.id)}
-                hideStageColumn={!!hideStageColumn}
               />
+
             ))
           )}
         </div>
@@ -358,7 +374,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
 
       {/* Footer */}
       <div
-        className="px-5 pb-3 pt-1 text-right text-[11px] tabular"
+        className="px-6 lg:px-8 pb-4 pt-2 text-right text-[12px] tabular"
         style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
       >
         {sorted.length} project{sorted.length === 1 ? "" : "s"}
@@ -391,7 +407,6 @@ interface RowProps {
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
-  hideStageColumn: boolean;
 }
 
 type EntityKindKey = "customer" | "supplier" | "rep";
@@ -399,7 +414,6 @@ type EntityKindKey = "customer" | "supplier" | "rep";
 const TableRow = ({
   index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onDuplicate, onArchive, onDelete,
-  hideStageColumn,
 }: RowProps) => {
   const proj = card.project;
   const flagged = !!proj.flagged;
@@ -580,12 +594,12 @@ const TableRow = ({
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}
       className={cn(
-        "grid items-stretch text-[13px] cursor-pointer transition-colors group select-none relative",
+        "grid items-stretch text-[13.5px] cursor-pointer transition-colors group select-none relative",
         "hover:bg-[hsl(var(--brand-orange)/0.045)]",
       )}
       style={{
         gridTemplateColumns: gridCols,
-        minHeight: 40,
+        minHeight: 44,
         backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
         borderBottom: "1px solid hsl(var(--brand-navy) / 0.05)",
         boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}`,
@@ -607,28 +621,10 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Stage — colored dot + thin label. Column omitted entirely when sub-chevron filter is active. */}
-      {!hideStageColumn && (
-        <ReadOnlyCell title={stageLabel(card, activeTab)}>
-          <span className="inline-flex items-center gap-1.5 truncate max-w-full">
-            <span
-              aria-hidden
-              className="rounded-full shrink-0"
-              style={{ width: 8, height: 8, backgroundColor: accent }}
-            />
-            <span
-              className="truncate"
-              style={{
-                fontSize: 11.5,
-                color: "hsl(var(--brand-navy) / 0.6)",
-                fontWeight: 400,
-              }}
-            >
-              {stageOnly}
-            </span>
-          </span>
-        </ReadOnlyCell>
-      )}
+      {/* Stage · State — always shown. Compact pill, color shaded by stage progression. */}
+      <ReadOnlyCell title={stageLabel(card, activeTab)}>
+        <StageStatePill pipeline={card.pipeline} stage={card.stage} accent={accent} />
+      </ReadOnlyCell>
 
       {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
       <EditableCell
@@ -901,7 +897,7 @@ const ModeCell = ({ cellKey, value, active, flash, onActivate, onPick, open, onC
         cellKey={cellKey}
         mode="custom"
         align="left"
-        display={value ?? "—"}
+        display={value ? <ModeBadge mode={value} /> : "—"}
         muted={!value}
         active={active}
         flash={flash}
@@ -935,18 +931,73 @@ const ModeCell = ({ cellKey, value, active, flash, onActivate, onPick, open, onC
                 key={m}
                 onClick={() => onPick(m)}
                 className={cn(
-                  "w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-muted/60 transition-colors",
+                  "w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-muted/60 transition-colors flex items-center gap-2",
                   value === m && "bg-muted/60 font-medium",
                 )}
                 style={{ color: "hsl(var(--brand-navy))" }}
               >
-                {m}
+                <ModeBadge mode={m} />
               </button>
             ))}
           </PopoverContent>
         </Popover>
       )}
     </>
+  );
+};
+
+// ── Stage · State pill ────────────────────────────────────────────────
+// Compact pill: "Sales · Quote". Background tint and text color shade
+// from light to full saturation as the stage progresses through its pipeline.
+const StageStatePill = ({
+  pipeline, stage, accent,
+}: { pipeline: PipelineId; stage: StageId; accent: string }) => {
+  const pipelineTitle = PIPELINES.find((p) => p.id === pipeline)?.title ?? pipeline;
+  const stageTitle = displayStageTitle(pipeline, stage);
+  const shade = stageShade(pipeline, stage); // 0..1
+  const bgPct = Math.round(8 + shade * 14); // 8% → 22%
+  const textPct = Math.round(60 + shade * 40); // 60% → 100% mix toward accent
+  return (
+    <span
+      className="inline-flex items-center max-w-full truncate rounded-[5px] tabular"
+      style={{
+        height: 22,
+        padding: "0 8px",
+        fontSize: 11.5,
+        fontWeight: 500,
+        backgroundColor: `color-mix(in srgb, ${accent} ${bgPct}%, transparent)`,
+        color: `color-mix(in srgb, ${accent} ${textPct}%, hsl(var(--brand-navy)))`,
+        letterSpacing: "0.005em",
+      }}
+    >
+      <span className="truncate">{pipelineTitle} · {stageTitle}</span>
+    </span>
+  );
+};
+
+// ── Mode badge (Air = green plane, Ocean = blue waves, Local = orange pin) ──
+const MODE_STYLE: Record<ShippingMode, { hex: string; Icon: typeof Plane; label: string }> = {
+  Air:   { hex: "#3F7B4F", Icon: Plane, label: "Air" },     // forest green
+  Ocean: { hex: "#2F6BA8", Icon: Waves, label: "Ocean" },   // ocean blue
+  Local: { hex: "#E97B2C", Icon: MapPin, label: "Local" },  // brand orange
+};
+const ModeBadge = ({ mode }: { mode: ShippingMode }) => {
+  const { hex, Icon, label } = MODE_STYLE[mode];
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-[5px]"
+      style={{
+        height: 22,
+        padding: "0 8px",
+        fontSize: 11.5,
+        fontWeight: 500,
+        backgroundColor: `color-mix(in srgb, ${hex} 14%, transparent)`,
+        color: hex,
+      }}
+    >
+      <Icon style={{ width: 12, height: 12 }} />
+      {label}
+    </span>
   );
 };
 

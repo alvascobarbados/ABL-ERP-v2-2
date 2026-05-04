@@ -37,13 +37,13 @@ const Chip = ({
     type="button"
     onClick={onClick}
     className={cn(
-      "h-7 px-2.5 rounded-full text-[12px] font-medium transition-colors border whitespace-nowrap",
+      "h-8 px-3 rounded-full text-[13px] font-medium transition-colors border whitespace-nowrap",
       active ? "text-white border-transparent" : "hover:border-foreground/40",
     )}
     style={{
-      backgroundColor: active ? "hsl(var(--brand-navy))" : "hsl(var(--brand-paper, 36 38% 95%))",
+      backgroundColor: active ? "hsl(var(--brand-navy))" : "#FFFFFF",
       color: active ? "white" : "hsl(var(--brand-navy))",
-      borderColor: active ? "transparent" : "hsl(var(--brand-navy) / 0.2)",
+      borderColor: active ? "transparent" : "hsl(var(--brand-navy) / 0.18)",
     }}
   >
     {children}
@@ -52,8 +52,8 @@ const Chip = ({
 
 const GroupLabel = ({ children }: { children: React.ReactNode }) => (
   <span
-    className="text-[10px] font-semibold uppercase mr-2 shrink-0"
-    style={{ color: "hsl(var(--brand-navy) / 0.6)", letterSpacing: "0.05em" }}
+    className="text-[11px] font-semibold uppercase mr-2 shrink-0"
+    style={{ color: "hsl(var(--brand-navy) / 0.55)", letterSpacing: "0.06em" }}
   >
     {children}
   </span>
@@ -64,9 +64,9 @@ const Divider = () => (
     aria-hidden
     className="inline-block shrink-0"
     style={{
-      width: 1, height: 18,
-      backgroundColor: "hsl(var(--brand-navy) / 0.12)",
-      margin: "0 14px",
+      width: 1, height: 22,
+      backgroundColor: "hsl(var(--brand-navy) / 0.1)",
+      margin: "0 18px",
     }}
   />
 );
@@ -145,14 +145,14 @@ function MultiSearchDropdown({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "h-7 pl-2.5 pr-1.5 rounded-full text-[12px] font-medium transition-all border inline-flex items-center gap-1 whitespace-nowrap",
+          "h-8 pl-3 pr-2 rounded-full text-[13px] font-medium transition-all border inline-flex items-center gap-1.5 whitespace-nowrap",
           active ? "text-white border-transparent" : "hover:border-foreground/40",
         )}
         style={{
-          minWidth: 110,
-          backgroundColor: active ? "hsl(var(--brand-orange))" : "hsl(var(--brand-paper, 36 38% 95%))",
+          minWidth: 120,
+          backgroundColor: active ? "hsl(var(--brand-orange))" : "#FFFFFF",
           color: active ? "white" : "hsl(var(--brand-navy))",
-          borderColor: active ? "transparent" : "hsl(var(--brand-navy) / 0.2)",
+          borderColor: active ? "transparent" : "hsl(var(--brand-navy) / 0.18)",
           boxShadow: open ? "0 0 0 2px hsl(var(--brand-orange) / 0.35)" : undefined,
         }}
       >
@@ -245,13 +245,14 @@ export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesR
 
   return (
     <div
-      className="rounded-2xl border px-3 py-2.5"
+      className="rounded-2xl border px-4 py-3"
       style={{
-        backgroundColor: "hsl(var(--brand-navy) / 0.03)",
-        borderColor: "hsl(var(--brand-navy) / 0.1)",
+        backgroundColor: "#FFFFFF",
+        borderColor: "hsl(var(--brand-navy) / 0.08)",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
       }}
     >
-      <div className="flex flex-wrap items-center gap-y-2">
+      <div className="flex flex-wrap items-center gap-y-2.5">
         <Group label="MODE">
           {MODES.map((m, i) => (
             <Chip key={m} active={value.shippingModes.includes(m)} onClick={() => setMode(m)}>{m}</Chip>
