@@ -41,12 +41,6 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
   const isActive = (path: string) =>
     path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(path + "/");
 
-  const shipmentsExpandedDefault = pathname.startsWith("/shipments");
-  const [shipmentsOpen, setShipmentsOpen] = useState(shipmentsExpandedDefault);
-  useEffect(() => {
-    if (pathname.startsWith("/shipments")) setShipmentsOpen(true);
-  }, [pathname]);
-
   const projectsItems: Item[] = [
     { icon: KanbanSquare, label: "Pipeline", to: "/" },
   ];
