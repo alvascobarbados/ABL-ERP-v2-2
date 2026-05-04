@@ -584,7 +584,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setEditor(null)}
         title="Quote number"
         value={live.quoteNumber ?? ""}
-        placeholder="Q-2046"
+        placeholder="2046"
+        prefix="Q-"
+        digitsOnly
         onSave={saveQuote}
       />
       <TextEditor
@@ -592,7 +594,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setEditor(null)}
         title="PO number"
         value={live.poNumber ?? ""}
-        placeholder="PO-1095"
+        placeholder="1095"
+        prefix="PO-"
+        digitsOnly
         onSave={savePO}
       />
       <TextEditor
@@ -600,7 +604,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onClose={() => setEditor(null)}
         title="Invoice number"
         value={live.invoiceNumber ?? ""}
-        placeholder="INV-1050"
+        placeholder="1050"
+        prefix="INV-"
+        digitsOnly
         onSave={saveInvoice}
       />
       <TextEditor
