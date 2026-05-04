@@ -541,7 +541,7 @@ const Index = () => {
           {/* Desktop chevron tabs — full width */}
           <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center">
             <div className="flex-1 min-w-0">
-              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
+              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
         </div>
