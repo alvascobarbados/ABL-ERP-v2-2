@@ -813,6 +813,7 @@ const ReadOnlyCell = ({ children, title, align = "left", muted }: ReadOnlyCellPr
 
 // ── Mode cell (Air / Ocean / Local enum popover) ──────────────────────
 interface ModeCellProps {
+  cellKey: string;
   value: ShippingMode | undefined;
   active: boolean;
   flash: "success" | "error" | null;
@@ -822,10 +823,11 @@ interface ModeCellProps {
   onClose: () => void;
   anchorEl: HTMLElement | null;
 }
-const ModeCell = ({ value, active, flash, onActivate, onPick, open, onClose, anchorEl }: ModeCellProps) => {
+const ModeCell = ({ cellKey, value, active, flash, onActivate, onPick, open, onClose, anchorEl }: ModeCellProps) => {
   return (
     <>
       <EditableCell
+        cellKey={cellKey}
         mode="custom"
         align="left"
         display={value ?? "—"}
