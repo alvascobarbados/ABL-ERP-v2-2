@@ -287,7 +287,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                     title={c.label}
                   >
                     <span className="truncate">{c.label}</span>
-                    {Arrow && <Arrow className="h-3 w-3 shrink-0 opacity-70" />}
+                    {Arrow && <Arrow className="h-3 w-3 shrink-0" style={{ opacity: 1, color: "hsl(var(--brand-navy))" }} />}
                   </button>
                   {resizable && (
                     <ColumnResizeHandle
