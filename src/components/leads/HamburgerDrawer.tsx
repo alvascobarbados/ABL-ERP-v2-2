@@ -1,16 +1,14 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Factory, Users, Ship, HelpCircle, LogOut, Trash2, Table2, UserCircle2, Package, Archive } from "lucide-react";
+import { X, Factory, Users, HelpCircle, LogOut, Trash2, UserCircle2, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onOpenSpreadsheet: () => void;
   onOpenSuppliers: () => void;
   onOpenCustomers: () => void;
-  onOpenShipments: () => void;
   onOpenTrash: () => void;
   onOpenArchive: () => void;
   trashCount: number;
@@ -48,7 +46,7 @@ const MenuItem = ({
 );
 
 export const HamburgerDrawer = ({
-  open, onClose, onOpenSpreadsheet, onOpenSuppliers, onOpenCustomers, onOpenShipments, onOpenTrash, onOpenArchive, trashCount, archiveCount,
+  open, onClose, onOpenSuppliers, onOpenCustomers, onOpenTrash, onOpenArchive, trashCount, archiveCount,
 }: Props) => {
   const navigate = useNavigate();
   useEffect(() => {
@@ -89,17 +87,12 @@ export const HamburgerDrawer = ({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-          <MenuItem icon={Table2} label="Spreadsheet" onClick={() => { onClose(); onOpenSpreadsheet(); }} />
-
-          <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
-          <div className="px-5 pb-1 text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70 font-medium">Master data</div>
+          <div className="px-5 pb-1 text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70 font-medium">Lists</div>
           <MenuItem icon={Users}        label="Customers" onClick={() => { onClose(); navigate("/customers"); }} />
           <MenuItem icon={Factory}      label="Suppliers" onClick={() => { onClose(); navigate("/suppliers"); }} />
           <MenuItem icon={UserCircle2}  label="Team"      onClick={() => { onClose(); navigate("/team"); }} />
-          <MenuItem icon={Package}      label="Products"  onClick={() => { onClose(); navigate("/products"); }} />
 
           <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
-          <MenuItem icon={Ship} label="Shipments" onClick={() => { onClose(); onOpenShipments(); }} />
           <MenuItem icon={Archive} label="Archive" badge={archiveCount} onClick={() => { onClose(); onOpenArchive(); }} />
           <MenuItem icon={Trash2} label="Trash" badge={trashCount} onClick={() => { onClose(); onOpenTrash(); }} />
 

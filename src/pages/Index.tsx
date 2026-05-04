@@ -18,7 +18,7 @@ import { ProjectDetail } from "@/components/leads/ProjectDetail";
 import { ShipmentView } from "@/components/leads/ShipmentView";
 import { SuppliersView } from "@/components/leads/SuppliersView";
 import { CustomersView } from "@/components/leads/CustomersView";
-import { ShipmentsView } from "@/components/leads/ShipmentsView";
+
 import { TrashView } from "@/components/leads/TrashView";
 import { ArchiveView } from "@/components/leads/ArchiveView";
 import { HamburgerDrawer } from "@/components/leads/HamburgerDrawer";
@@ -233,7 +233,7 @@ const Index = () => {
   const [hamburgerOpen, setHamburgerOpen] = useState(false);
   const [suppliersOpen, setSuppliersOpen] = useState(false);
   const [customersOpen, setCustomersOpen] = useState(false);
-  const [shipmentsListOpen, setShipmentsListOpen] = useState(false);
+  
   const [trashOpen, setTrashOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -761,10 +761,8 @@ const Index = () => {
       <HamburgerDrawer
         open={hamburgerOpen}
         onClose={() => setHamburgerOpen(false)}
-        onOpenSpreadsheet={() => navigate("/spreadsheet")}
         onOpenSuppliers={() => setSuppliersOpen(true)}
         onOpenCustomers={() => setCustomersOpen(true)}
-        onOpenShipments={() => setShipmentsListOpen(true)}
         onOpenTrash={() => setTrashOpen(true)}
         onOpenArchive={() => setArchiveOpen(true)}
         trashCount={store.trashedProjects.length}
@@ -795,13 +793,6 @@ const Index = () => {
       <SuppliersView open={suppliersOpen} onClose={() => setSuppliersOpen(false)}
         onOpenProject={(id) => { setSuppliersOpen(false); openProjectById(id); }} />
       <CustomersView open={customersOpen} onClose={() => setCustomersOpen(false)} />
-      <ShipmentsView
-        open={shipmentsListOpen}
-        onClose={() => setShipmentsListOpen(false)}
-        shipments={shipments}
-        projects={projects}
-        onOpenShipment={openShipmentById}
-      />
 
       <StagePicker
         open={!!pickerCard}
