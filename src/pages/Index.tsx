@@ -7,7 +7,7 @@ import {
   SUPPLIERS, buildCard, Project,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
-import { usePipelineStore, getStageTitle, validateMove } from "@/hooks/usePipelineStore";
+import { usePipelineStore, getStageTitle, validateMove, isForwardMove } from "@/hooks/usePipelineStore";
 import { StageSection } from "@/components/leads/StageSection";
 import { ProjectCard } from "@/components/leads/ProjectCard";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
@@ -388,21 +388,34 @@ const Index = () => {
   };
 
   const doMove = async (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
-    const v = validateMove(card.project, target);
-    if (!v.ok) {
-      const labels = v.missing.map((m) =>
-        m === "detailSummary" ? "detail summary" : m === "supplier" ? "supplier" : "shipping mode",
-      );
-      haptics.nope();
-      setMissingFields({ card, target, missing: labels });
-      return;
-    }
     const fromPipeline = card.pipeline;
     const fromStage = card.stage;
     const label = `${card.project.customer} · ${card.project.projectName}`;
     const result = await moveCard(card.id, target);
     if (!result.ok) return;
     if (target.pipeline !== fromPipeline) triggerPulse(target.pipeline);
+
+    // Soft validation: if this is a forward move (not archive, not backward) and required
+    // fields are missing, surface a non-blocking warning toast instead of a success toast.
+    const v = validateMove(card.project, target);
+    const isForward = isForwardMove(fromStage, target.stage);
+    if (!v.ok && isForward) {
+      const fieldLabels = v.missing.map((m) =>
+        m === "detailSummary" ? "detail summary" : m === "supplier" ? "supplier" : "shipping mode",
+      );
+      const stageTitle = getStageTitle(target.pipeline, target.stage);
+      toast.warning(`Moved to ${stageTitle} — missing ${fieldLabels.join(", ")}`, {
+        description: "Tap to open project and fill in.",
+        duration: 5000,
+        onAutoClose: () => {},
+        // Clicking the toast body opens the project detail panel.
+        action: {
+          label: "Open",
+          onClick: () => setSelectedCard(card),
+        },
+      });
+      return;
+    }
 
     toast.success(`${label} moved to ${getStageTitle(target.pipeline, target.stage)}`, {
       description: `From ${getStageTitle(fromPipeline, fromStage)}. Tap Undo to reverse.`,
