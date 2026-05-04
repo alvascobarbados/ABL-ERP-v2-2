@@ -645,7 +645,7 @@ const TableRow = ({
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("supplier"); }}
       />
 
-      {/* Quote # — text */}
+      {/* Quote # — text with fixed "Q-" prefix in edit mode */}
       <EditableCell
         cellKey={`${card.id}:quoteNumber`}
         mode="text"
@@ -653,9 +653,13 @@ const TableRow = ({
         display={<span className="tabular">{proj.quoteNumber ?? "—"}</span>}
         title={proj.quoteNumber ?? ""}
         muted={!proj.quoteNumber}
-        value={proj.quoteNumber ?? ""}
-        placeholder="Q#"
-        onCommit={(v) => saveText("quoteNumber", v)}
+        value={(proj.quoteNumber ?? "").replace(/^Q-/, "")}
+        placeholder="####"
+        prefix="Q-"
+        onCommit={(v) => {
+          const trimmed = v.trim();
+          return saveText("quoteNumber", trimmed ? `Q-${trimmed}` : "");
+        }}
       />
 
       {/* Amount — number */}

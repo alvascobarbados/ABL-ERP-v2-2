@@ -146,6 +146,8 @@ interface TextProps extends BaseProps {
   value: string;
   /** Placeholder while editing. */
   placeholder?: string;
+  /** Optional fixed visual prefix shown left of the input while editing (e.g. "Q-"). Not part of the saved value. */
+  prefix?: string;
   /** Called when the user commits (Enter or blur). Return ok=false to flash red. */
   onCommit: (next: string) => Promise<SaveResult> | SaveResult;
 }
@@ -299,23 +301,34 @@ export const EditableCell = (props: Props) => {
       title={isEditing ? undefined : title}
     >
       {isEditing && props.mode !== "custom" ? (
-        <input
-          ref={inputRef}
-          type={props.mode === "number" ? "text" : "text"}
-          inputMode={props.mode === "number" ? "decimal" : undefined}
-          defaultValue={props.value}
-          placeholder={props.placeholder}
-          onBlur={(e) => commit(e.target.value)}
-          onKeyDown={handleKey}
-          onClick={(e) => e.stopPropagation()}
-          onDoubleClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          className={cn(
-            "w-full bg-transparent outline-none border-none text-[13px] tabular",
-            align === "right" && "text-right",
+        <div className="flex items-center w-full" onMouseDown={(e) => e.stopPropagation()}>
+          {props.prefix && (
+            <span
+              aria-hidden
+              className="text-[13px] tabular select-none pointer-events-none shrink-0"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
+              {props.prefix}
+            </span>
           )}
-          style={{ color: "hsl(var(--brand-navy))", padding: 0 }}
-        />
+          <input
+            ref={inputRef}
+            type={props.mode === "number" ? "text" : "text"}
+            inputMode={props.mode === "number" ? "decimal" : undefined}
+            defaultValue={props.value}
+            placeholder={props.placeholder}
+            onBlur={(e) => commit(e.target.value)}
+            onKeyDown={handleKey}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            className={cn(
+              "w-full bg-transparent outline-none border-none text-[13px] tabular",
+              align === "right" && "text-right",
+            )}
+            style={{ color: "hsl(var(--brand-navy))", padding: 0 }}
+          />
+        </div>
       ) : (
         <>
           <span className="truncate w-full">{display}</span>
