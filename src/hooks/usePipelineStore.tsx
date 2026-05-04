@@ -296,7 +296,7 @@ export function getNextStage(pipeline: PipelineId, stage: StageId): { pipeline: 
 export function getPrevStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
   if (pipeline === "shipping") {
     if (stage === "shipment_assigned" || stage === "shipment_required") {
-      return { pipeline: "operations", stage: "in_production" };
+      return { pipeline: "production", stage: "production" };
     }
     return null;
   }
@@ -323,6 +323,8 @@ export interface MoveValidation {
 export const STAGE_ORDER: StageId[] = [
   "proposal", "quote", "confirming",
   "design", "proof",
+  "purchasing", "production",
+  // legacy stage IDs kept in the order so historical log entries still rank correctly
   "preproduction", "in_production",
   "shipment_required", "shipment_assigned",
   "invoice_required", "invoiced", "paid",
@@ -338,9 +340,11 @@ export function isForwardMove(from: StageId, to: StageId): boolean {
 }
 
 export function validateMove(project: Project, target: { pipeline: PipelineId; stage: StageId }): MoveValidation {
+  // Gate: anything from "purchasing" onwards (Purchasing, Production, Shipping,
+  // Finance) requires the canonical confirming-fields trio.
+  if (target.stage === "archive") return { ok: true, missing: [] };
   const targetIdx = STAGE_ORDER.indexOf(target.stage);
   const gateIdx = STAGE_ORDER.indexOf("proof");
-  if (target.stage === "archive") return { ok: true, missing: [] };
   if (targetIdx <= gateIdx) return { ok: true, missing: [] };
 
   const missing: MoveValidation["missing"] = [];
@@ -557,7 +561,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const patch: Partial<Project> = { pipeline: target.pipeline, stage: target.stage };
     if (target.pipeline === "shipping" && target.stage === "shipment_required") patch.shipmentId = undefined;
     if (target.stage === "quote" && !proj.quoteNumber) patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`;
-    if (target.pipeline === "operations" && !proj.poNumber) patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`;
+    if ((target.pipeline === "purchasing" || target.pipeline === "production") && !proj.poNumber) patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`;
     if (target.pipeline === "finance" && !proj.invoiceNumber) patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`;
     if (target.pipeline === "finance" && target.stage === "invoice_required" && !proj.invoiceRequiredEnteredAt) {
       patch.invoiceRequiredEnteredAt = new Date();
