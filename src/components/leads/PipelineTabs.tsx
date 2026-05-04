@@ -19,7 +19,7 @@ export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pul
 
   const tabs: { id: TabId; title: string; count: number; isAll?: boolean; isCompleted?: boolean }[] = [
     { id: "all", title: "Active", count: activeCount, isAll: true },
-    ...PIPELINES.map((p) => ({ id: p.id as TabId, title: p.title, count: counts[p.id] })),
+    ...PIPELINES.filter((p) => p.id !== "completed").map((p) => ({ id: p.id as TabId, title: p.title, count: counts[p.id] })),
     { id: "completed", title: "Completed", count: completedCount, isCompleted: true },
   ];
 
