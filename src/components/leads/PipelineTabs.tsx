@@ -13,7 +13,7 @@ interface Props {
   loading?: boolean;
 }
 
-export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
+export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pulse, loading }: Props) => {
   const { friendly } = useFriendlyMode();
   const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
 
