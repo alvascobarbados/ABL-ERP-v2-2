@@ -729,7 +729,7 @@ const SectionCard = ({ children, className }: { children: React.ReactNode; class
 const SectionHeaderWithAction = ({
   children, onAction,
 }: { children: React.ReactNode; onAction: () => void }) => (
-  <div className="flex items-center justify-between mb-3">
+  <div className="flex items-center justify-between mb-3 px-1">
     <h2
       className="text-[11px] uppercase font-semibold"
       style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
