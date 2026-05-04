@@ -527,7 +527,7 @@ export const ProjectCard = ({
                       : "hsl(var(--brand-navy) / 0.40)",
                   }}
                 >
-                  {poText ?? "PO-"}
+                  {poText ? `PO-${poText}` : "PO-"}
                 </span>
               </div>
             </div>
