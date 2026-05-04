@@ -733,16 +733,38 @@ const TableRow = ({
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("rep"); }}
       />
 
-      {/* Deadline — read-only (date picker lives in CardEditOverlay) */}
+      {/* Deadline — date + urgency dot (combined) */}
       <ReadOnlyCell muted={!card.deadlineDate}>
-        <span className="tabular">{fmtDeadline(card.deadlineDate)}</span>
-      </ReadOnlyCell>
-
-      {/* Urgency — read-only computed */}
-      <ReadOnlyCell>
-        <span className="tabular" style={{ color: urgencyColor, fontWeight: tone === "urgent" ? 600 : 400 }}>
-          {u.text}
-        </span>
+        {card.deadlineDate ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-1.5 truncate">
+                {tone === "urgent" || tone === "soon" ? (
+                  <span
+                    className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
+                    style={{
+                      backgroundColor: tone === "urgent" ? "hsl(var(--urgent))" : "hsl(var(--brand-orange))",
+                      boxShadow: tone === "urgent" ? "0 0 0 2px hsl(var(--urgent) / 0.18)" : "0 0 0 2px hsl(var(--brand-orange) / 0.18)",
+                    }}
+                    aria-hidden
+                  />
+                ) : null}
+                <span
+                  className="tabular"
+                  style={{
+                    color: tone === "urgent" ? "hsl(var(--urgent))" : undefined,
+                    fontWeight: tone === "urgent" ? 600 : 400,
+                  }}
+                >
+                  {fmtDeadline(card.deadlineDate)}
+                </span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">{u.text}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="tabular">—</span>
+        )}
       </ReadOnlyCell>
 
       {/* Actions */}
