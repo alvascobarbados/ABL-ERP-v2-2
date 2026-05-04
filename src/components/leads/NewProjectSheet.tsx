@@ -59,14 +59,15 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
     else onClose();
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!valid) return;
-    const proj = store.createProject({
+    const proj = await store.createProject({
       customer,
       projectName: projectName.trim(),
       detailSummary: detail.trim() || undefined,
       pointPerson: DEFAULT_USER_INITIALS,
     });
+    if (!proj) return;
     toast.success(`Project created · ${proj.customer} · ${proj.projectName}`, {
       duration: 5000,
       action: {
