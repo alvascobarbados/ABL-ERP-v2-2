@@ -68,6 +68,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
       projectName: projectName.trim(),
       detailSummary: detail.trim() || undefined,
       pointPerson: DEFAULT_USER_INITIALS,
+      initialStage,
     });
     if (!proj) return;
     toast.success(`Project created · ${proj.customer} · ${proj.projectName}`, {
