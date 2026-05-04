@@ -74,11 +74,11 @@ export const ArchiveView = ({ open, onClose }: Props) => {
     setSelected(next);
   };
 
-  const handleRestorePick = (target: { pipeline: PipelineId; stage: StageId }) => {
+  const handleRestorePick = async (target: { pipeline: PipelineId; stage: StageId }) => {
     if (!restoreTarget) return;
     const p = restoreTarget;
     setRestoreTarget(null);
-    const result = store.moveCard(p.id, target);
+    const result = await store.moveCard(p.id, target);
     if (!result.ok) {
       toast.error("Can't restore — missing required fields. Open the project to fill them in.");
       return;
