@@ -186,6 +186,7 @@ export const EditableCell = (props: Props) => {
   }, [isEditing, props.mode]);
 
   // Custom cells: call onActivate exactly when transitioning Idle/Selected → Editing.
+  // When `active` (popover-open) flips false while still Editing, drop to Selected.
   useEffect(() => {
     if (props.mode !== "custom") return;
     if (isEditing && !wasEditingRef.current && cellRef.current) {
@@ -193,6 +194,16 @@ export const EditableCell = (props: Props) => {
     }
     wasEditingRef.current = isEditing;
   }, [isEditing, props]);
+
+  useEffect(() => {
+    if (props.mode !== "custom") return;
+    // After a popover closes (active → false) while we're in Editing, step down.
+    if (isEditing && (props as CustomProps).active === false) {
+      // Defer one tick so the Radix close + outside-click handler don't race.
+      const t = window.setTimeout(() => sel?.stopEditing(), 0);
+      return () => window.clearTimeout(t);
+    }
+  }, [isEditing, (props as CustomProps).active, props.mode, sel]);
 
   // Clear internal flash after timeout
   useEffect(() => {
