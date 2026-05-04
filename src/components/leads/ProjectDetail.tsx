@@ -108,8 +108,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     return n?.ts;
   }, [live?.notes]);
   const completedAt = useMemo(() => {
-    if (!live || live.pipeline !== "finance" || live.stage !== "paid") return undefined;
-    const n = [...(live.notes ?? [])].reverse().find((x) => x.auto && /→\s*Paid/i.test(x.text));
+    if (!live) return undefined;
+    const isDone =
+      live.pipeline === "completed" ||
+      (live.pipeline === "finance" && live.stage === "paid");
+    if (!isDone) return undefined;
+    const n = [...(live.notes ?? [])].reverse().find((x) => x.auto && /→\s*(Paid|Completed)/i.test(x.text));
     return n?.ts ?? live.updatedAt;
   }, [live?.notes, live?.pipeline, live?.stage, live?.updatedAt, live]);
 

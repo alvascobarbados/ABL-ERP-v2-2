@@ -172,7 +172,7 @@ function projectHasMissingData(p: Project): boolean {
     purchasing: 3, production: 4,
     preproduction: 3, in_production: 4, // legacy
     shipment_required: 5, shipment_assigned: 6,
-    invoice_required: 7, invoiced: 8, paid: 9,
+    invoice_required: 7, invoiced: 8, paid: 9, completed: 9,
   };
   const r = stageRank[p.stage] ?? 0;
   if (r >= 1 && !p.quoteNumber) return true;
@@ -301,17 +301,22 @@ const Index = () => {
     return (id?: string) => (id ? map.get(id) ?? "" : "");
   }, []);
 
-  // Pipeline-facing project list — excludes archived (sales/archive) AND completed (paid).
+  // Pipeline-facing project list — excludes archived (sales/archive) AND completed
+  // (both the new pipeline=completed and the legacy finance/paid combination).
   const pipelineProjects = useMemo(
     () => projects.filter((p) =>
       !(p.pipeline === "sales" && p.stage === "archive") &&
+      p.pipeline !== "completed" &&
       !(p.pipeline === "finance" && p.stage === "paid"),
     ),
     [projects],
   );
 
   const completedProjects = useMemo(
-    () => projects.filter((p) => p.pipeline === "finance" && p.stage === "paid"),
+    () => projects.filter((p) =>
+      p.pipeline === "completed" ||
+      (p.pipeline === "finance" && p.stage === "paid"),
+    ),
     [projects],
   );
 
@@ -329,6 +334,8 @@ const Index = () => {
     production: pipelineProjects.filter((p) => p.pipeline === "production").length,
     shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
     finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
+    // "completed" is tracked separately via completedCount/completedProjects.
+    completed: 0,
     operations: pipelineProjects.filter((p) => p.pipeline === "operations").length, // legacy
   }), [pipelineProjects]);
 
@@ -348,6 +355,8 @@ const Index = () => {
       production: pipelineProjects.filter((p) => p.pipeline === "production" && match(p)).length,
       shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && match(p)).length,
       finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
+      // "completed" is tracked separately via completedCount.
+      completed: 0,
       operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length, // legacy
     };
   }, [pipelineProjects, filters, search]);
@@ -472,7 +481,7 @@ const Index = () => {
     const fromPipeline = card.pipeline;
     const fromStage = card.stage;
     const label = `${card.project.customer} · ${card.project.projectName}`;
-    const result = await moveCard(card.id, { pipeline: "finance", stage: "paid" });
+    const result = await moveCard(card.id, { pipeline: "completed", stage: "completed" });
     if (!result.ok) return;
     toast.success(`${label} marked as paid`, {
       description: "Moved to Completed.",

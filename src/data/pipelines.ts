@@ -8,6 +8,9 @@
 // All new code should use "production".
 export type PipelineId =
   | "sales" | "design" | "purchasing" | "production" | "shipping" | "finance"
+  // Completed is the terminal pipeline (single-state). Projects land here
+  // after Finance · To Collect via the "Mark as paid" action.
+  | "completed"
   /** @deprecated renamed to "production" */
   | "operations";
 
@@ -30,10 +33,18 @@ export type StageId =
   //   shipment_required → no shipment assigned yet (Awaiting Shipment)
   //   shipment_assigned → on a shipment (rendered under Air or Ocean)
   // "Delivered" no longer exists in Shipping — delivered projects move
-  // out of Shipping entirely into Finance · Invoice Required.
+  // out of Shipping entirely into Finance · To Invoice.
   | "shipment_required" | "shipment_assigned"
-  // finance
-  | "invoice_required" | "invoiced" | "paid";
+  // finance — display labels are "To Invoice" and "To Collect" (the IDs
+  // stay so historical audit log entries continue to match cleanly).
+  | "invoice_required" | "invoiced"
+  /** @deprecated Paid is no longer a Finance stage. Projects that complete
+   *  the relay race now live at pipeline=completed/stage=completed. Kept
+   *  here so historical project_log_entries that reference "paid" still
+   *  type-check. */
+  | "paid"
+  // completed — terminal single-state pipeline.
+  | "completed";
 
 // Three modes only. Carrier (DHL/FedEx/Other) and container (FCL/LCL) live
 // inside the trackingRef as a PREFIX-number string.
@@ -103,21 +114,32 @@ export const PIPELINES: PipelineConfig[] = [
   {
     id: "finance",
     title: "Finance",
-    // "paid" stage still exists in StageId for backward compat and as the
-    // canonical marker that a project is COMPLETED. It is intentionally
-    // NOT listed here so the Finance pipeline kanban renders only two
-    // columns (Invoice Required → Invoiced). Completed projects surface
-    // under the dedicated "Completed" scope tab.
+    // Finance has exactly TWO sub-stages now. The "paid" stage is no longer
+    // part of the relay race — once a project is paid it moves to the
+    // Completed pipeline below. Display labels are action-oriented:
+    // "To Invoice" / "To Collect" — the IDs stay so historical audit log
+    // entries remain stable.
     stages: [
-      { id: "invoice_required", title: "Invoice Required" },
-      { id: "invoiced", title: "Invoiced" },
+      { id: "invoice_required", title: "To Invoice" },
+      { id: "invoiced", title: "To Collect" },
+    ],
+  },
+  {
+    id: "completed",
+    title: "Completed",
+    // Single-state terminal pipeline. Reached via "Mark as paid" from
+    // Finance · To Collect (replaces the old finance/paid stage).
+    stages: [
+      { id: "completed", title: "Completed" },
     ],
   },
 ];
 
-/** Canonical "this project is completed/paid" check. */
+/** Canonical "this project is completed/paid" check. Includes the legacy
+ *  finance/paid combination so old rows that haven't been migrated yet
+ *  still register as completed. */
 export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) =>
-  p.pipeline === "finance" && p.stage === "paid";
+  p.pipeline === "completed" || (p.pipeline === "finance" && p.stage === "paid");
 
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
@@ -127,6 +149,7 @@ export const STAGE_ACCENT: Record<StageId, string> = {
   preproduction: "violet", in_production: "orange",
   shipment_required: "amber", shipment_assigned: "sky",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
+  completed: "emerald",
 };
 
 // ─────────── Suppliers ───────────
@@ -889,6 +912,7 @@ export function pipelineCounts(): Record<PipelineId, number> {
     production: PROJECTS.filter((p) => p.pipeline === "production").length,
     shipping: PROJECTS.filter((p) => p.pipeline === "shipping").length,
     finance: PROJECTS.filter((p) => p.pipeline === "finance").length,
+    completed: PROJECTS.filter((p) => p.pipeline === "completed").length,
     // Legacy alias — counts any not-yet-migrated rows under their old key.
     operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
   };
