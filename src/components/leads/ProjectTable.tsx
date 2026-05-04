@@ -239,9 +239,12 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
     setSortKey(null); setSortDir(1);
   };
 
+  const tableRootRef = useRef<HTMLDivElement>(null);
+
   return (
+    <SelectionProvider outsideRef={tableRootRef}>
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex-1 min-h-0 overflow-auto px-5 pt-3 pb-2">
+      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-5 pt-3 pb-2">
         <div
           className="rounded-xl border bg-card/40"
           style={{ borderColor: "hsl(var(--brand-navy) / 0.12)" }}
