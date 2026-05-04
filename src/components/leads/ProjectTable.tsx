@@ -961,9 +961,9 @@ const StageStatePill = ({
     <span
       className="inline-flex items-center max-w-full truncate rounded-[6px] tabular"
       style={{
-        minHeight: 24,
-        padding: "3px 7px",
-        fontSize: 12.5,
+        minHeight: 26,
+        padding: "4px 8px",
+        fontSize: 13,
         fontWeight: 600,
         backgroundColor: `color-mix(in srgb, ${accent} ${bgPct}%, transparent)`,
         color: accent,

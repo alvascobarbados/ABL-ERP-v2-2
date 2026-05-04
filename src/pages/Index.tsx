@@ -43,6 +43,7 @@ import { DesktopSidebarReopen } from "@/components/leads/DesktopSidebarReopen";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { ProjectTable } from "@/components/leads/ProjectTable";
 import { SubChevron } from "@/components/leads/SubChevron";
+import { SubStageRow } from "@/components/leads/SubStageRow";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
 import { useViewMode } from "@/hooks/useViewMode";
 import { NewProjectFAB } from "@/components/leads/NewProjectFAB";
@@ -588,40 +589,28 @@ const Index = () => {
               <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
-          {/* Desktop pipeline stat cards — full width. Sub-chevron is anchored
-              under the active card via the `subRow` prop. */}
-          <div className="hidden lg:flex max-w-none px-6 lg:px-8 pt-3 pb-2 items-center">
-            <div className="flex-1 min-w-0">
-              <PipelineStatCards
-                active={activeTab}
-                onChange={setActiveTab}
-                counts={filteredCounts}
-                completedCount={completedCount}
-                pulse={pulsePipeline}
-                loading={loading}
-                subRowAccent={
-                  activeTab === "sales" || activeTab === "design" || activeTab === "finance"
-                    ? PIPELINE_ACCENT[activeTab as PipelineId].hex
-                    : undefined
-                }
-                subRow={
-                  (activeTab === "sales" || activeTab === "design" || activeTab === "finance") ? (
-                    <SubChevron
-                      activeTab={activeTab}
-                      selectedStage={subStage}
-                      onSelect={setSubStage}
-                      stageCounts={stageCounts}
-                    />
-                  ) : null
-                }
+          {/* Desktop pipeline stat cards + persistent sub-stage row.
+              Sub-stage row always exists (empty when active pipeline has no
+              sub-stages) so the filter row never shifts vertically. */}
+          <div className="hidden lg:block max-w-none px-6 lg:px-8 pt-3 pb-2">
+            <PipelineStatCards
+              active={activeTab}
+              onChange={setActiveTab}
+              counts={filteredCounts}
+              completedCount={completedCount}
+              pulse={pulsePipeline}
+              loading={loading}
+              showFin={activeTab === "sales" || activeTab === "design" || activeTab === "finance"}
+            />
+            <div style={{ marginTop: 10 }}>
+              <SubStageRow
+                activeTab={activeTab}
+                selectedStage={subStage}
+                onSelect={setSubStage}
+                stageCounts={stageCounts}
               />
             </div>
           </div>
-          {/* Spacer to clear the absolutely-positioned sub-row when present.
-              Sub-row height ≈ 48px including notch + padding. */}
-          {(activeTab === "sales" || activeTab === "design" || activeTab === "finance") && (
-            <div className="hidden lg:block" style={{ height: 56 }} aria-hidden />
-          )}
         </div>
 
         {/* Mobile filter row (filter pill + search + sort) */}
