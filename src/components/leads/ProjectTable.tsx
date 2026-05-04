@@ -566,15 +566,15 @@ const TableRow = ({
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}
       className={cn(
-        "grid items-stretch text-[13px] cursor-pointer transition-colors group select-none",
-        "hover:bg-[hsl(var(--brand-navy)/0.05)]",
+        "grid items-stretch text-[13px] cursor-pointer transition-colors group select-none relative",
+        "hover:bg-[hsl(var(--brand-orange)/0.045)]",
       )}
       style={{
         gridTemplateColumns: gridCols,
-        minHeight: 44,
+        minHeight: 40,
         backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
-        borderBottom: "1px solid hsl(var(--brand-navy) / 0.06)",
-        boxShadow: flagged ? "inset 3px 0 0 0 hsl(var(--brand-orange))" : "none",
+        borderBottom: "1px solid hsl(var(--brand-navy) / 0.05)",
+        boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}`,
         color: "hsl(var(--brand-navy))",
       }}
     >
@@ -593,9 +593,17 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Pipeline · Stage — read-only here; long-press opens StagePicker */}
+      {/* Stage pill — stage name only (pipeline encoded by left stripe) */}
       <ReadOnlyCell title={stageLabel(card, activeTab)}>
-        <span className="font-medium">{stageLabel(card, activeTab)}</span>
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold uppercase tracking-[0.04em] truncate max-w-full"
+          style={{
+            backgroundColor: `${accent}1F`, /* ~12% opacity */
+            color: accent,
+          }}
+        >
+          {stageOnly}
+        </span>
       </ReadOnlyCell>
 
       {/* Customer — entity popover */}
