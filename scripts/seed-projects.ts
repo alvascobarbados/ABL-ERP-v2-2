@@ -40,7 +40,7 @@ function projectToRow(p: Project) {
     customer: p.customer,
     contact_person: p.contactPerson ?? null,
     point_person: p.pointPerson,
-    project_name: p.projectName,
+    project_name: p.projectName ?? "(untitled)",
     detail_summary: p.detailSummary ?? null,
     supplier_id: p.supplierId ?? null,
     supplier_label: p.supplierLabel ?? null,
