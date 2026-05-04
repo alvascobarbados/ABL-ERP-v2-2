@@ -3,15 +3,27 @@
 // one supplier max, one shipping mode max, line items.
 // Shared "project name" across multiple cards is just a naming convention.
 
-export type PipelineId = "sales" | "design" | "operations" | "shipping" | "finance";
+// "operations" is the legacy id for the Production pipeline. Kept in the union
+// so historical project_log_entries rows that reference it still type-check.
+// All new code should use "production".
+export type PipelineId =
+  | "sales" | "design" | "purchasing" | "production" | "shipping" | "finance"
+  /** @deprecated renamed to "production" */
+  | "operations";
 
 export type StageId =
   // sales
   | "proposal" | "quote" | "confirming" | "archive"
   // design
   | "design" | "proof"
-  // operations (production)
-  | "preproduction" | "in_production"
+  // purchasing — single-state pipeline (procurement: POs, supplier confirmation, deposits)
+  | "purchasing"
+  // production — single-state pipeline (factory making the goods)
+  | "production"
+  /** @deprecated split into "purchasing" (pre-production work) and "production" (factory making) */
+  | "preproduction"
+  /** @deprecated renamed to "production" */
+  | "in_production"
   // shipping — NOT real stages anymore. The Shipping pipeline groups by
   // mode (Air / Ocean) + assignment status. The two values below are
   // routing hints only:
@@ -63,11 +75,17 @@ export const PIPELINES: PipelineConfig[] = [
     ],
   },
   {
-    id: "operations",
+    id: "purchasing",
+    title: "Purchasing",
+    stages: [
+      { id: "purchasing", title: "Purchasing" },
+    ],
+  },
+  {
+    id: "production",
     title: "Production",
     stages: [
-      { id: "preproduction", title: "Pre-Production" },
-      { id: "in_production", title: "In Production" },
+      { id: "production", title: "Production" },
     ],
   },
   {
@@ -104,6 +122,8 @@ export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) 
 export const STAGE_ACCENT: Record<StageId, string> = {
   proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
   design: "magenta", proof: "magenta",
+  purchasing: "slate", production: "navy",
+  // legacy — kept for historical log-entry rendering
   preproduction: "violet", in_production: "orange",
   shipment_required: "amber", shipment_assigned: "sky",
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
