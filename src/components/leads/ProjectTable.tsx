@@ -599,7 +599,7 @@ const TableRow = ({
       )}
       style={{
         gridTemplateColumns: gridCols,
-        minHeight: 40,
+        minHeight: 44,
         backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
         borderBottom: "1px solid hsl(var(--brand-navy) / 0.05)",
         boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}`,
