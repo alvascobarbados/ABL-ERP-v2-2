@@ -207,7 +207,7 @@ function logEntryToRow(projectId: string, e: ProjectLogEntry) {
     actor_display_name: e.actor.displayName,
     action_type: e.actionType,
     description: e.description,
-    metadata: e.metadata ?? null,
+    metadata: (e.metadata ?? null) as any,
   };
 }
 function noteToRow(projectId: string, n: ProjectNote) {
