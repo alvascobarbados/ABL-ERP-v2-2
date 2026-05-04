@@ -689,8 +689,8 @@ const TableRow = ({
         placeholder="####"
         prefix="Q-"
         onCommit={(v) => {
-          const trimmed = v.trim();
-          return saveText("quoteNumber", trimmed ? `Q-${trimmed}` : "");
+          const trimmed = v.replace(/^\s*Q-?/i, "").replace(/\D/g, "").trim();
+          return saveText("quoteNumber", trimmed);
         }}
       />
 
