@@ -188,8 +188,6 @@ function compareCards(
       return dir * (a.project.pointPerson ?? "").localeCompare(b.project.pointPerson ?? "");
     case "deadline":
       return dir * (dl(a) - dl(b));
-    case "urgency":
-      return dir * (urgencyLabel(a.deadlineDate).days - urgencyLabel(b.deadlineDate).days);
   }
 }
 
