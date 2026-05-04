@@ -319,16 +319,27 @@ export interface MoveValidation {
   missing: ("detailSummary" | "supplier" | "shippingMode")[];
 }
 
+/** Forward order of stages across all pipelines. `archive` is treated as a terminal exit (not part of the linear flow). */
+export const STAGE_ORDER: StageId[] = [
+  "proposal", "quote", "confirming",
+  "design", "proof",
+  "preproduction", "in_production",
+  "shipment_required", "shipment_assigned",
+  "invoice_required", "invoiced", "paid",
+];
+
+/** Returns true if moving from `from` to `to` advances the project (toward Production/Shipping/Finance/Completed). */
+export function isForwardMove(from: StageId, to: StageId): boolean {
+  if (to === "archive") return false; // exit state — never "forward" for warning purposes
+  const fi = STAGE_ORDER.indexOf(from);
+  const ti = STAGE_ORDER.indexOf(to);
+  if (fi < 0 || ti < 0) return false;
+  return ti > fi;
+}
+
 export function validateMove(project: Project, target: { pipeline: PipelineId; stage: StageId }): MoveValidation {
-  const STAGE_GATE_ORDER: StageId[] = [
-    "proposal", "quote", "confirming",
-    "design", "proof",
-    "preproduction", "in_production",
-    "shipment_required", "shipment_assigned",
-    "invoice_required", "invoiced", "paid",
-  ];
-  const targetIdx = STAGE_GATE_ORDER.indexOf(target.stage);
-  const gateIdx = STAGE_GATE_ORDER.indexOf("proof");
+  const targetIdx = STAGE_ORDER.indexOf(target.stage);
+  const gateIdx = STAGE_ORDER.indexOf("proof");
   if (target.stage === "archive") return { ok: true, missing: [] };
   if (targetIdx <= gateIdx) return { ok: true, missing: [] };
 
