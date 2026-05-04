@@ -217,27 +217,26 @@ function compareCards(
 // viewport (overflow-auto on the wrapper handles it).
 const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
-  { key: "stage", label: "Stage", defaultPx: 110 },
+  { key: "stage", label: "Stage · State", defaultPx: 150 },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 180 },
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
   { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
-  { key: "mode", label: "Mode", defaultPx: 76 },
+  { key: "mode", label: "Mode", defaultPx: 96 },
   { key: "tracking", label: "Tracking", defaultPx: 120 },
   { key: "rep", label: "Rep", defaultPx: 60 },
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
-export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters, hideStageColumn }: Props) => {
+export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters, hideStageColumn: _ignored }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
-  const COLS = useMemo(
-    () => (hideStageColumn ? ALL_COLS.filter((c) => c.key !== "stage") : ALL_COLS),
-    [hideStageColumn],
-  );
+  // Stage column is now ALWAYS shown — the redundancy with sub-chevron is
+  // intentional (consistent column set across filtered & unfiltered views).
+  const COLS = ALL_COLS;
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
   // null = no local override; rows render in the order Index.tsx provides
