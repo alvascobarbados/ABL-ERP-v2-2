@@ -196,7 +196,11 @@ export const PipelineStatCards = ({
     counts.sales + counts.design + counts.purchasing + counts.production +
     counts.shipping + counts.finance + counts.operations;
 
-  const workflowIds: PipelineId[] = ["sales", "design", "purchasing", "production", "shipping", "finance"];
+  // Completed is now the LAST card in the workflow row (no longer a right
+  // bookend). Active remains the only bookend on the left.
+  const workflowIds: PipelineId[] = [
+    "sales", "design", "purchasing", "production", "shipping", "finance", "completed",
+  ];
 
   return (
     <div className="relative w-full">
@@ -219,23 +223,30 @@ export const PipelineStatCards = ({
         {/* Bookend → workflow gap with separator */}
         <BookendSeparator />
 
-        {/* Workflow cards with chevron arrows between them */}
+        {/* Workflow cards with chevron arrows between them. Completed is
+            the terminal card and uses its own count + sage accent. */}
         {workflowIds.map((p, i) => {
-          const meta = PIPELINES.find((x) => x.id === p);
+          const isCompletedCard = p === "completed";
+          const meta = isCompletedCard
+            ? { id: "completed" as PipelineId, title: "Completed" }
+            : PIPELINES.find((x) => x.id === p);
           if (!meta) return null;
-          const isActive = active === p;
+          const isActive = isCompletedCard ? active === "completed" : active === p;
+          const accent = isCompletedCard ? SAGE : PIPELINE_ACCENT[p].hex;
+          const count = isCompletedCard ? completedCount : counts[p];
+          const tabId: TabId = isCompletedCard ? "completed" : p;
           return (
             <div key={p} className="flex items-stretch" style={{ flex: "1 1 0%", minWidth: 152, gap: 0 }}>
               {i > 0 && <FlowArrow />}
               <div className="flex-1 min-w-0 flex">
                 <StatCard
-                  id={p}
+                  id={tabId}
                   title={meta.title}
-                  count={counts[p]}
+                  count={count}
                   active={isActive}
-                  accent={PIPELINE_ACCENT[p].hex}
-                  onClick={() => onChange(p)}
-                  pulse={pulse === p}
+                  accent={accent}
+                  onClick={() => onChange(tabId)}
+                  pulse={!isCompletedCard && pulse === p}
                   loading={loading}
                   variant="workflow"
                   fin={isActive && showFin}
@@ -244,21 +255,6 @@ export const PipelineStatCards = ({
             </div>
           );
         })}
-
-        {/* Workflow → bookend gap with separator */}
-        <BookendSeparator />
-
-        {/* Completed bookend */}
-        <StatCard
-          id="completed"
-          title="Completed"
-          count={completedCount}
-          active={active === "completed"}
-          accent={SAGE}
-          onClick={() => onChange("completed")}
-          loading={loading}
-          variant="bookend"
-        />
       </div>
     </div>
   );
