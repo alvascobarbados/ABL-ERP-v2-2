@@ -391,6 +391,7 @@ interface RowProps {
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  hideStageColumn: boolean;
 }
 
 type EntityKindKey = "customer" | "supplier" | "rep";
@@ -398,6 +399,7 @@ type EntityKindKey = "customer" | "supplier" | "rep";
 const TableRow = ({
   index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onDuplicate, onArchive, onDelete,
+  hideStageColumn,
 }: RowProps) => {
   const proj = card.project;
   const flagged = !!proj.flagged;
