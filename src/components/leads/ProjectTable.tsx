@@ -286,7 +286,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-9 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
+                      "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
                       sortable ? "hover:bg-[hsl(var(--brand-navy)/0.06)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
                       c.align === "right" ? "justify-end" : "justify-start",
                     )}
