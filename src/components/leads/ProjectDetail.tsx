@@ -189,20 +189,24 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     });
     setEditor(null);
   };
+  const stripNumberPrefix = (raw: string, px: "Q" | "PO" | "INV") => {
+    const re = new RegExp(`^\\s*${px}-?`, "i");
+    return raw.replace(re, "").replace(/\D/g, "").trim();
+  };
   const saveQuote = (v: string) => {
-    const t = v.trim() || undefined;
+    const t = stripNumberPrefix(v, "Q") || undefined;
     if (t && isQuoteNumberDuplicate(t, live.id)) { toast.error(`Quote ${t} already in use`); return; }
     updateProject(live.id, { quoteNumber: t });
     setEditor(null);
   };
   const savePO = (v: string) => {
-    const t = v.trim() || undefined;
+    const t = stripNumberPrefix(v, "PO") || undefined;
     if (t && isPONumberDuplicate(t, live.id)) { toast.error(`PO ${t} already in use`); return; }
     updateProject(live.id, { poNumber: t });
     setEditor(null);
   };
   const saveInvoice = (v: string) => {
-    const t = v.trim() || undefined;
+    const t = stripNumberPrefix(v, "INV") || undefined;
     if (t && isInvoiceNumberDuplicate(t, live.id)) { toast.error(`Invoice ${t} already in use`); return; }
     updateProject(live.id, { invoiceNumber: t });
     setEditor(null);
