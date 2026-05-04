@@ -39,6 +39,16 @@ export const SubChevron = ({ activeTab, selectedStage, onSelect, stageCounts }: 
   if (!pipeline) return null;
 
   const accentHex = PIPELINE_ACCENT[pipelineId].hex;
+  const total = pipeline.stages.length;
+
+  // Saturation ramp by stage index — earlier stages render lighter (lower
+  // background/text opacity), later stages render at full saturation. With
+  // two stages: 0.45 → 1.0; with three: 0.3 → 0.65 → 1.0.
+  const ramp = (i: number) => {
+    if (total <= 1) return 1;
+    const min = 0.3;
+    return min + ((1 - min) * i) / (total - 1);
+  };
 
   return (
     <div className="flex items-stretch w-full">
@@ -46,9 +56,18 @@ export const SubChevron = ({ activeTab, selectedStage, onSelect, stageCounts }: 
         const isActive = selectedStage === s.id;
         const count = stageCounts[s.id] ?? 0;
         const overlap = i === 0 ? 0 : -CHEV;
-        const fill = isActive ? accentHex : "hsl(var(--background))";
-        const outline = isActive ? accentHex : "hsl(var(--brand-navy) / 0.15)";
-        const textColor = isActive ? "#fff" : accentHex;
+        const shade = ramp(i); // 0..1 — saturation strength of THIS stage's shade
+        // Active: solid fill at this stage's shade strength.
+        // Inactive: paper-tone fill, text in the shade.
+        const fill = isActive
+          ? `color-mix(in srgb, ${accentHex} ${Math.round(shade * 100)}%, #FFFFFF)`
+          : "hsl(var(--background))";
+        const outline = isActive
+          ? `color-mix(in srgb, ${accentHex} ${Math.round(shade * 100)}%, #FFFFFF)`
+          : `color-mix(in srgb, ${accentHex} ${Math.round(shade * 60)}%, transparent)`;
+        const textColor = isActive
+          ? "#fff"
+          : `color-mix(in srgb, ${accentHex} ${Math.round(shade * 100)}%, hsl(var(--brand-navy)))`;
 
         return (
           <button
@@ -85,7 +104,8 @@ export const SubChevron = ({ activeTab, selectedStage, onSelect, stageCounts }: 
                 className="absolute opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{
                   top: BORDER, bottom: BORDER, left: BORDER, right: BORDER,
-                  clipPath: CHEVRON_CLIP, backgroundColor: `${accentHex}14`,
+                  clipPath: CHEVRON_CLIP,
+                  backgroundColor: `color-mix(in srgb, ${accentHex} ${Math.round(shade * 14)}%, transparent)`,
                 }}
               />
             )}
@@ -93,10 +113,10 @@ export const SubChevron = ({ activeTab, selectedStage, onSelect, stageCounts }: 
               className="relative flex flex-col items-center justify-center h-full leading-none"
               style={{ color: textColor, paddingLeft: CHEV + 4, paddingRight: CHEV + 4 }}
             >
-              <span className="text-[11px] font-medium tracking-tight">{s.title}</span>
+              <span className="text-[12px] font-medium tracking-tight">{s.title}</span>
               <span
-                className="text-[13px] font-semibold tabular mt-0.5"
-                style={{ opacity: isActive ? 1 : 0.6 }}
+                className="text-[16px] font-semibold tabular mt-1"
+                style={{ opacity: isActive ? 1 : 0.75 }}
               >
                 {count}
               </span>
