@@ -61,6 +61,8 @@ interface Props {
   onOpenPicker: (c: PipelineCard) => void;
   hasActiveFilter?: boolean;
   onClearFilters?: () => void;
+  /** When true (sub-chevron stage selected), drop the Stage column entirely. */
+  hideStageColumn?: boolean;
 }
 
 const DAY = 86400000;
@@ -196,9 +198,9 @@ function compareCards(
 // now that columns are individually resizable we keep all widths in pixels
 // and let the table grow horizontally if the user widens columns past the
 // viewport (overflow-auto on the wrapper handles it).
-const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
+const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
-  { key: "stage", label: "Stage", defaultPx: 140 },
+  { key: "stage", label: "Stage", defaultPx: 110 },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 180 },
@@ -211,10 +213,14 @@ const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | 
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
-export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters }: Props) => {
+export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters, hideStageColumn }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
+  const COLS = useMemo(
+    () => (hideStageColumn ? ALL_COLS.filter((c) => c.key !== "stage") : ALL_COLS),
+    [hideStageColumn],
+  );
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
   // null = no local override; rows render in the order Index.tsx provides
@@ -250,22 +256,22 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
     <div className="flex-1 min-h-0 flex flex-col">
       <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-6 pt-3 pb-2">
         <div
-          className="rounded-xl border overflow-hidden"
+          className="rounded-xl border"
           style={{
             borderColor: "hsl(var(--brand-navy) / 0.10)",
             backgroundColor: "#FDFCF7",
             boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.06)",
           }}
         >
-          {/* Header — fully opaque, slight tint, subtle shadow when scrolled */}
+          {/* Header — sticky to outer scroll container; fully opaque */}
           <div
-            className="sticky top-0 z-10 grid items-center text-[11px] font-semibold uppercase tracking-[0.05em]"
+            className="sticky top-0 z-20 grid items-center text-[11px] font-medium uppercase tracking-[0.05em] rounded-t-xl"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "#F4F1E8",
+              backgroundColor: "#FAF7EE",
               color: "hsl(var(--brand-navy) / 0.55)",
               borderBottom: "1px solid hsl(var(--brand-navy) / 0.12)",
-              boxShadow: "0 2px 4px -2px rgba(27, 42, 78, 0.08)",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.04)",
             }}
           >
             {COLS.map((c) => {
@@ -280,7 +286,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-9 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
+                      "h-10 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
                       sortable ? "hover:bg-[hsl(var(--brand-navy)/0.06)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
                       c.align === "right" ? "justify-end" : "justify-start",
                     )}
@@ -299,7 +305,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 </div>
               );
             })}
-            <div className="h-9" />
+            <div className="h-10" />
           </div>
 
           {/* Rows */}
@@ -343,6 +349,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 onDuplicate={() => store.duplicateProject(card.project.id)}
                 onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
                 onDelete={() => store.deleteProject(card.project.id)}
+                hideStageColumn={!!hideStageColumn}
               />
             ))
           )}
@@ -384,6 +391,7 @@ interface RowProps {
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  hideStageColumn: boolean;
 }
 
 type EntityKindKey = "customer" | "supplier" | "rep";
@@ -391,6 +399,7 @@ type EntityKindKey = "customer" | "supplier" | "rep";
 const TableRow = ({
   index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onDuplicate, onArchive, onDelete,
+  hideStageColumn,
 }: RowProps) => {
   const proj = card.project;
   const flagged = !!proj.flagged;
@@ -598,24 +607,28 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Stage pill — squarer tag, pipeline accent tint + saturated text */}
-      <ReadOnlyCell title={stageLabel(card, activeTab)}>
-        <span
-          className="inline-flex items-center rounded-[5px] truncate max-w-full"
-          style={{
-            backgroundColor: `${accent}24`, /* ~14% opacity */
-            color: accent,
-            padding: "2px 6px",
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            lineHeight: 1.4,
-          }}
-        >
-          {stageOnly}
-        </span>
-      </ReadOnlyCell>
+      {/* Stage — colored dot + thin label. Column omitted entirely when sub-chevron filter is active. */}
+      {!hideStageColumn && (
+        <ReadOnlyCell title={stageLabel(card, activeTab)}>
+          <span className="inline-flex items-center gap-1.5 truncate max-w-full">
+            <span
+              aria-hidden
+              className="rounded-full shrink-0"
+              style={{ width: 8, height: 8, backgroundColor: accent }}
+            />
+            <span
+              className="truncate"
+              style={{
+                fontSize: 11.5,
+                color: "hsl(var(--brand-navy) / 0.6)",
+                fontWeight: 400,
+              }}
+            >
+              {stageOnly}
+            </span>
+          </span>
+        </ReadOnlyCell>
+      )}
 
       {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
       <EditableCell
