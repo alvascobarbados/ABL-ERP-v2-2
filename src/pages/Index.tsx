@@ -215,7 +215,8 @@ const Index = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const store = usePipelineStore();
-  const { projects, shipments, moveCard, pulsePipeline, triggerPulse } = store;
+  const { projects, shipments, moveCard, pulsePipeline, triggerPulse, loading } = store;
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabId>("sales");
   const isAll = activeTab === "all";
