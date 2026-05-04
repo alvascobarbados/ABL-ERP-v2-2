@@ -402,12 +402,11 @@ const TableRow = ({
     window.setTimeout(() => setFlashCell((cur) => (cur?.key === k ? null : cur)), 700);
   };
 
-  // Long-press / long-click → stage picker. Disabled while a popover is open
-  // OR while a cell is being edited (EditableCell stops mousedown propagation
-  // on click, so this only fires on row-area presses).
+  // Long-press → stage picker. Disabled while a popover is open OR while a
+  // cell is being edited (EditableCell stops mousedown propagation, so this
+  // only fires on row-area presses outside cells).
   const longPressTimer = useRef<number | null>(null);
   const longPressed = useRef(false);
-  const clickTimer = useRef<number | null>(null);
 
   const startLongPress = () => {
     longPressed.current = false;
@@ -424,18 +423,12 @@ const TableRow = ({
     }
   };
 
+  // Single-click on row whitespace (not on a cell) → open detail.
+  // Cells stop propagation, so this only fires on margins / read-only gutters.
+  // Double-click no longer toggles flag — that gesture is reserved for cells.
   const handleClick = (_e: ReactMouseEvent) => {
     if (longPressed.current) return;
-    if (clickTimer.current) {
-      window.clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-      onToggleFlag();
-      return;
-    }
-    clickTimer.current = window.setTimeout(() => {
-      clickTimer.current = null;
-      onOpen();
-    }, 220);
+    onOpen();
   };
 
   const handleContextMenu = (e: ReactMouseEvent) => {
