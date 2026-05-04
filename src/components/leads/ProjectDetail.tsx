@@ -1,13 +1,13 @@
-import { ArrowLeft, MoreVertical, Factory, ChevronRight, Plus } from "lucide-react";
+import { ArrowLeft, MoreVertical, ChevronRight, Plus, Flag, ArrowRight } from "lucide-react";
 import {
   PipelineCard, PIPELINES, PipelineId, StageId, ShippingMode,
-  SupplierLabelHint, formatShippingLabel, getShipment, ProjectLogEntry, ProjectLogActionType,
+  SupplierLabelHint, ProjectLogEntry, ProjectLogActionType,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
+import { usePipelineStore, getStageTitle, getNextStage } from "@/hooks/usePipelineStore";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
   TextEditor, DateEditor, ListPicker, ListOption, BottomSheet,
@@ -39,7 +39,6 @@ function getUrgency(date: Date) {
   return { label: `in ${diff}d`, color: "hsl(var(--muted-foreground))" };
 }
 
-const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
 const fmtLong = (d: Date) =>
   `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()}`;
 const fmtNoteTs = (d: Date) => {
@@ -51,11 +50,27 @@ const fmtNoteTs = (d: Date) => {
   return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })} · ${t}`;
 };
 
+// Display overrides (mirror ProjectTable) so e.g. shipment_required → "Shipping"
+const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
+  paid: "Paid",
+  shipment_required: "Shipping",
+  shipment_assigned: "Shipping",
+};
+function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
+  return STAGE_DISPLAY[stage] ?? getStageTitle(pipeline, stage);
+}
+
 type EditorKind =
+  | { kind: "projectName" }
+  | { kind: "detailSummary" }
   | { kind: "contact" }
   | { kind: "amount" }
   | { kind: "salesRep" }
-  | { kind: "confirmedDate" }
+  | { kind: "deadline" }
+  | { kind: "quote" }
+  | { kind: "po" }
+  | { kind: "invoice" }
+  | { kind: "tracking" }
   | { kind: "addNote" }
   | { kind: "addLineItem" }
   | { kind: "editLineItem"; index: number }
@@ -78,13 +93,15 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject, addNote,
     addLineItem, updateLineItem, removeLineItem,
     duplicateProject, softDeleteProject, restoreProject,
-    moveCard,
+    moveCard, toggleFlag,
     triggerPulse,
+    isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
   } = store;
 
   const [editor, setEditor] = useState<EditorKind>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [stagePickerOpen, setStagePickerOpen] = useState(false);
+  const [activityExpanded, setActivityExpanded] = useState(false);
   const [confirm, setConfirm] = useState<null | {
     title: string; description: string; confirmLabel: string; destructive?: boolean; onConfirm: () => void;
   }>(null);
@@ -96,13 +113,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [card, onClose]);
 
-  // Re-derive the live project from the store so edits reflect immediately.
   const live = useMemo(() => card ? projects.find((p) => p.id === card.id) ?? null : null, [card, projects]);
 
-  // Derive Confirmed/Completed timestamps from the auto stage-move notes.
-  // NOTE: these hooks must run on every render, so they sit above the early
-  // return guard below — otherwise React sees a different hook count when
-  // the card opens/closes and throws "Rendered more hooks than…".
   const confirmedAt = useMemo(() => {
     const n = live?.notes?.find((x) => x.auto && /→\s*Confirming/i.test(x.text));
     return n?.ts;
@@ -119,12 +131,14 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
   if (!card || !live) return null;
 
-  const pipeline = PIPELINES.find((p) => p.id === live.pipeline)!;
   const accentHex = PIPELINE_ACCENT[live.pipeline].hex;
   const supplier = md.getSupplierByAnyId(live.supplierId);
+  const supplierName = supplier?.name ?? live.supplierLabel ?? undefined;
 
-  // ─── Stage move (used by both action sheet and ⋮ menu) ───
-  const openStagePicker = () => setStagePickerOpen(true);
+  const next = getNextStage(live.pipeline, live.stage);
+  const canAdvance = !!next;
+
+  // ─── Stage move ─────────────────────────────────────────────────────────
   const handleStagePick = async (target: { pipeline: PipelineId; stage: StageId }) => {
     const fromPipeline = live.pipeline;
     const fromStage = live.stage;
@@ -146,8 +160,19 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     });
   };
 
-  // ─── Save handlers (only for things this view directly edits) ───
-  const saveContact = (v: string) => { updateProject(live.id, { contactPerson: v }); setEditor(null); };
+  const handleMoveForward = async () => {
+    if (!next) return;
+    await handleStagePick(next);
+  };
+
+  // ─── Save handlers ─────────────────────────────────────────────────────
+  const saveContact = (v: string) => { updateProject(live.id, { contactPerson: v.trim() || undefined }); setEditor(null); };
+  const saveProjectName = (v: string) => {
+    const t = v.trim();
+    if (t) updateProject(live.id, { projectName: t });
+    setEditor(null);
+  };
+  const saveDetail = (v: string) => { updateProject(live.id, { detailSummary: v }); setEditor(null); };
   const saveAmount = (v: string) => {
     const n = Number(v.replace(/[^0-9.]/g, ""));
     if (!Number.isNaN(n)) updateProject(live.id, { value: n });
@@ -157,9 +182,33 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { pointPerson: formatInitials(initials) });
     setEditor(null);
   };
-  const saveConfirmedDate = (d: Date) => {
-    // Stored as an auto note for now — the project model has no dedicated field.
-    addNote(live.id, `Confirmed date set to ${fmtLong(d)}`, "Av");
+  const saveDeadline = (d: Date) => {
+    updateProject(live.id, {
+      deadlineDate: d,
+      deadline: `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`,
+    });
+    setEditor(null);
+  };
+  const saveQuote = (v: string) => {
+    const t = v.trim() || undefined;
+    if (t && isQuoteNumberDuplicate(t, live.id)) { toast.error(`Quote ${t} already in use`); return; }
+    updateProject(live.id, { quoteNumber: t });
+    setEditor(null);
+  };
+  const savePO = (v: string) => {
+    const t = v.trim() || undefined;
+    if (t && isPONumberDuplicate(t, live.id)) { toast.error(`PO ${t} already in use`); return; }
+    updateProject(live.id, { poNumber: t });
+    setEditor(null);
+  };
+  const saveInvoice = (v: string) => {
+    const t = v.trim() || undefined;
+    if (t && isInvoiceNumberDuplicate(t, live.id)) { toast.error(`Invoice ${t} already in use`); return; }
+    updateProject(live.id, { invoiceNumber: t });
+    setEditor(null);
+  };
+  const saveTracking = (v: string) => {
+    updateProject(live.id, { trackingRef: v.trim() || undefined });
     setEditor(null);
   };
 
@@ -182,7 +231,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     setEditor(null);
   };
 
-  // ─── ⋮ menu actions ───
+  // ─── ⋮ menu actions ────────────────────────────────────────────────────
   const handleEdit = () => { setActionsOpen(false); editMode.enter(card); };
   const handleDuplicate = () => {
     setActionsOpen(false);
@@ -224,26 +273,40 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       description: "Restorable for 30 days from the Trash.",
       action: {
         label: "Undo",
-        onClick: () => {
-          restoreProject(live.id);
-          toast(`${label} restored`, { duration: 2000 });
-        },
+        onClick: () => { restoreProject(live.id); toast(`${label} restored`, { duration: 2000 }); },
       },
     });
   };
 
-  // ─── Render ───
-  const showShipment = !!live.shippingMode && live.shippingMode !== "Local";
+  const handleFlag = () => {
+    toggleFlag(live.id);
+  };
 
+  // ─── Derived display helpers ───────────────────────────────────────────
+  const u = getUrgency(live.deadlineDate);
+  const deadlineDisplay = `${fmtLong(live.deadlineDate)} (${u.label})`;
+  const repInitials = parseInitials(live.pointPerson);
+  const repNames = repInitials.length === 0 ? undefined :
+    repInitials.map((i) => md.getTeamByInitials(i)?.full_name ?? i).join(", ");
+
+  const hasShipmentLink = !!live.shipmentId;
+
+  // ─── Render ───
   return (
     <div className="fixed inset-0 z-[200] flex">
       <div className="flex-1 bg-foreground/30 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <aside className="w-full max-w-2xl bg-background border-l border-border shadow-2xl overflow-y-auto animate-slide-in-right">
-        {/* Top bar: back + breadcrumb + ⋮ */}
-        <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b border-border px-5 py-3 flex items-center justify-between gap-3">
+      <aside
+        className="w-full max-w-3xl border-l border-border shadow-2xl overflow-y-auto animate-slide-in-right"
+        style={{ backgroundColor: "hsl(var(--background))" }}
+      >
+        {/* ─── Sticky page header ─── */}
+        <div
+          className="sticky top-0 z-10 backdrop-blur-md border-b border-border px-6 lg:px-10 py-3.5 flex items-center justify-between gap-3"
+          style={{ backgroundColor: "hsl(var(--background) / 0.92)" }}
+        >
           <button
             onClick={onClose}
-            className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight hover:opacity-80 transition-opacity min-w-0"
+            className="inline-flex items-center gap-2.5 text-[15px] font-medium tracking-tight hover:opacity-80 transition-opacity min-w-0"
             style={{ color: "hsl(var(--brand-navy))" }}
             aria-label="Back"
           >
@@ -251,7 +314,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             <span className="truncate">
               {live.customer}
               <span className="opacity-40 mx-1.5">·</span>
-              <span className="font-medium">{live.projectName}</span>
+              <span className="font-semibold">{live.projectName}</span>
             </span>
           </button>
           <CardActionsPopover
@@ -267,171 +330,220 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             }
             onEdit={handleEdit}
             onOpenProject={() => setActionsOpen(false)}
-            onMoveStage={() => { setActionsOpen(false); openStagePicker(); }}
+            onMoveStage={() => { setActionsOpen(false); setStagePickerOpen(true); }}
             onDuplicate={handleDuplicate}
             onArchive={handleArchive}
             onDelete={handleDelete}
           />
         </div>
 
-        {/* ─── MINI CARD: replica of pipeline-view card (non-interactive) ─── */}
-        <div className="px-4 sm:px-5 pt-5">
-          <MiniProjectCard card={card} live={live} supplierName={supplier?.name} accentHex={accentHex} />
-        </div>
+        {/* ─── Document body ─── */}
+        <div className="px-6 lg:px-10 pt-8 pb-16 space-y-10">
 
-        {/* ─── LINE ITEMS ─── */}
-        <SectionWithAction
-          label="Line items"
-          actionLabel="Add"
-          onAction={() => setEditor({ kind: "addLineItem" })}
-        >
-          {!live.lineItems || live.lineItems.length === 0 ? (
-            <div className="px-3 py-3 text-[13px] text-muted-foreground italic">No line items yet</div>
-          ) : (() => {
-            const items = live.lineItems;
-            const maxDigits = Math.max(...items.map((li) => li.qty.toLocaleString().length), 3);
-            const sumTotal = items.reduce(
-              (n, li) => n + (typeof li.total === "number" ? li.total : 0),
-              0,
-            );
-            const showSum = sumTotal > 0;
-            const fmtMoney = (n: number) =>
-              n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            return (
-              <>
-                <ul>
-                  {items.map((li, i) => (
-                    <li key={i}>
-                      <button
-                        onClick={() => setEditor({ kind: "editLineItem", index: i })}
-                        className="w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg hover:bg-muted/40 transition-colors"
-                        style={{ minHeight: 48 }}
-                      >
-                        <span
-                          className="text-right tabular font-semibold text-foreground shrink-0"
-                          style={{ width: `${maxDigits + 1}ch` }}
+          {/* ── STATUS ── */}
+          <section>
+            <SectionHeader>Status</SectionHeader>
+            <div className="space-y-2">
+              <div>
+                <StageStatePill pipeline={live.pipeline} stage={live.stage} accent={accentHex} />
+              </div>
+              <div className="text-[17px] leading-snug font-medium" style={{ color: "hsl(var(--brand-navy))" }}>
+                {live.customer}
+                <span className="opacity-40 mx-1.5">·</span>
+                {live.projectName}
+              </div>
+              <div className="text-[14px]" style={{ color: "hsl(var(--brand-navy) / 0.75)" }}>
+                {live.contactPerson || <span className="italic" style={{ color: "hsl(var(--brand-navy) / 0.4)" }}>No contact set</span>}
+              </div>
+            </div>
+            <div className="mt-5 flex items-center gap-2.5">
+              <button
+                onClick={handleMoveForward}
+                disabled={!canAdvance}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-lg text-[14px] font-semibold tracking-tight transition-all",
+                  canAdvance
+                    ? "text-white hover:opacity-90 active:scale-[0.98]"
+                    : "text-muted-foreground/60 cursor-not-allowed",
+                )}
+                style={{
+                  height: 38,
+                  padding: "0 16px",
+                  backgroundColor: canAdvance ? "hsl(var(--brand-navy))" : "hsl(var(--muted))",
+                }}
+              >
+                Move Forward <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleFlag}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-lg text-[14px] font-medium border transition-all active:scale-[0.98]",
+                )}
+                style={{
+                  height: 38,
+                  padding: "0 14px",
+                  borderColor: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy) / 0.25)",
+                  color: live.flagged ? "hsl(var(--brand-orange))" : "hsl(var(--brand-navy))",
+                  backgroundColor: live.flagged ? "hsl(var(--brand-orange) / 0.08)" : "transparent",
+                }}
+                aria-pressed={!!live.flagged}
+              >
+                <Flag className="h-4 w-4" style={{ fill: live.flagged ? "hsl(var(--brand-orange))" : "transparent" }} />
+                {live.flagged ? "Flagged" : "Flag"}
+              </button>
+            </div>
+          </section>
+
+          {/* ── DETAILS ── */}
+          <section>
+            <SectionHeader>Details</SectionHeader>
+            <div className="rounded-md overflow-hidden" style={{ backgroundColor: "transparent" }}>
+              <DetailRow label="Customer" value={live.customer} locked />
+              <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
+              <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
+              <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
+              <DetailRow label="Mode" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
+              <DetailRow
+                label="Tracking"
+                value={live.trackingRef ? live.trackingRef.toUpperCase() : undefined}
+                onClick={live.shippingMode === "Local" ? undefined : () => setEditor({ kind: "tracking" })}
+                locked={live.shippingMode === "Local"}
+                lockedHint={live.shippingMode === "Local" ? "Local — no tracking" : undefined}
+                trailing={hasShipmentLink ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onOpenShipment(live.shipmentId!); }}
+                    className="text-[12px] font-medium hover:underline mr-2"
+                    style={{ color: "hsl(var(--brand-orange))" }}
+                  >
+                    View shipment
+                  </button>
+                ) : null}
+              />
+              <DetailRow label="Q#" value={live.quoteNumber} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
+              <DetailRow label="PO#" value={live.poNumber} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DetailRow label="INV#" value={live.invoiceNumber} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
+              <DetailRow label="Contact" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
+              <DetailRow
+                label="Amount"
+                value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
+                onClick={() => setEditor({ kind: "amount" })}
+              />
+              <DetailRow
+                label="Deadline"
+                value={deadlineDisplay}
+                onClick={() => setEditor({ kind: "deadline" })}
+                valueColor={u.color}
+              />
+            </div>
+          </section>
+
+          {/* ── LINE ITEMS ── */}
+          <section>
+            <SectionHeaderWithAction onAction={() => setEditor({ kind: "addLineItem" })}>Line items</SectionHeaderWithAction>
+            {!live.lineItems || live.lineItems.length === 0 ? (
+              <div className="text-[13px] italic text-muted-foreground/70">No line items yet</div>
+            ) : (() => {
+              const items = live.lineItems;
+              const maxDigits = Math.max(...items.map((li) => li.qty.toLocaleString().length), 3);
+              const sumTotal = items.reduce((n, li) => n + (typeof li.total === "number" ? li.total : 0), 0);
+              const showSum = sumTotal > 0;
+              const fmt = (n: number) =>
+                n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              return (
+                <>
+                  <ul className="divide-y" style={{ borderColor: "hsl(var(--brand-navy) / 0.08)" }}>
+                    {items.map((li, i) => (
+                      <li key={i}>
+                        <button
+                          onClick={() => setEditor({ kind: "editLineItem", index: i })}
+                          className="w-full flex items-center gap-3 py-2.5 text-left rounded-md hover:bg-muted/40 transition-colors px-2 -mx-2"
+                          style={{ minHeight: 40 }}
                         >
-                          {li.qty.toLocaleString()}
-                        </span>
-                        <span className="text-muted-foreground/60">×</span>
-                        <span className="text-foreground/90 leading-snug flex-1 min-w-0 break-words">
-                          {li.description}
-                        </span>
-                        <span
-                          className="tabular shrink-0 text-right text-[13px]"
-                          style={{ minWidth: 64, color: "hsl(var(--brand-navy) / 0.65)" }}
-                        >
-                          {typeof li.unitPrice === "number" ? `$${fmtMoney(li.unitPrice)}` : "—"}
-                        </span>
-                        <span
-                          className="tabular shrink-0 text-right text-[13px] font-semibold"
-                          style={{ minWidth: 80, color: "hsl(var(--brand-navy))" }}
-                        >
-                          {typeof li.total === "number" ? `$${fmtMoney(li.total)}` : "—"}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                      </button>
+                          <span className="text-right tabular font-semibold text-foreground shrink-0" style={{ width: `${maxDigits + 1}ch` }}>
+                            {li.qty.toLocaleString()}
+                          </span>
+                          <span className="text-muted-foreground/60">×</span>
+                          <span className="text-foreground/90 leading-snug flex-1 min-w-0 break-words">{li.description}</span>
+                          <span className="tabular shrink-0 text-right text-[13px]" style={{ minWidth: 64, color: "hsl(var(--brand-navy) / 0.65)" }}>
+                            {typeof li.unitPrice === "number" ? `$${fmt(li.unitPrice)}` : "—"}
+                          </span>
+                          <span className="tabular shrink-0 text-right text-[13px] font-semibold" style={{ minWidth: 80, color: "hsl(var(--brand-navy))" }}>
+                            {typeof li.total === "number" ? `$${fmt(li.total)}` : "—"}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 text-right text-[12px] tabular" style={{ color: "hsl(var(--brand-navy) / 0.65)" }}>
+                    {items.length} {items.length === 1 ? "item" : "items"}
+                    {showSum && ` · $${fmt(sumTotal)} BBD`}
+                  </div>
+                </>
+              );
+            })()}
+          </section>
+
+          {/* ── NOTES ── */}
+          <section>
+            <SectionHeaderWithAction onAction={() => setEditor({ kind: "addNote" })}>Notes</SectionHeaderWithAction>
+            {(() => {
+              const userNotes = (live.notes ?? []).filter((n) => !n.auto);
+              if (userNotes.length === 0) {
+                return <div className="text-[13px] italic text-muted-foreground/70">No notes yet</div>;
+              }
+              return (
+                <ul className="divide-y" style={{ borderColor: "hsl(var(--brand-navy) / 0.08)" }}>
+                  {[...userNotes].reverse().map((n) => (
+                    <li key={n.id} className="py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-baseline gap-2 mb-0.5">
+                        <span className="text-[13px] font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>{n.author}</span>
+                        <span className="text-[11px] text-muted-foreground tabular">{fmtNoteTs(n.ts)}</span>
+                      </div>
+                      <div className="text-[13px] leading-snug text-foreground whitespace-pre-wrap">{n.text}</div>
                     </li>
                   ))}
                 </ul>
-                <div
-                  className="px-3 py-2 text-right text-[12px] tabular border-t"
-                  style={{
-                    color: "hsl(var(--brand-navy) / 0.65)",
-                    borderColor: "hsl(var(--brand-navy) / 0.10)",
-                  }}
-                >
-                  {items.length} {items.length === 1 ? "item" : "items"}
-                  {showSum && ` · $${fmtMoney(sumTotal)} BBD`}
-                </div>
-              </>
-            );
-          })()}
-        </SectionWithAction>
+              );
+            })()}
+          </section>
 
-        {/* ─── NOTES (append-only, auto-attributed) ─── */}
-        <SectionWithAction
-          label="Notes"
-          actionLabel="Add"
-          onAction={() => setEditor({ kind: "addNote" })}
-        >
-          {(() => {
-            const userNotes = (live.notes ?? []).filter((n) => !n.auto);
-            if (userNotes.length === 0) {
-              return <div className="px-3 py-3 text-[13px] text-muted-foreground italic">No notes yet</div>;
-            }
-            return (
-              <ul className="px-3 py-2 divide-y divide-border/40">
-                {[...userNotes].reverse().map((n) => (
-                  <li key={n.id} className="py-2.5 first:pt-0 last:pb-0">
-                    <div className="flex items-baseline gap-2 mb-0.5">
-                      <span className="text-[13px] font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>
-                        {n.author}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground tabular">
-                        {fmtNoteTs(n.ts)}
-                      </span>
-                    </div>
-                    <div className="text-[13px] leading-snug text-foreground whitespace-pre-wrap">
-                      {n.text}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            );
-          })()}
-        </SectionWithAction>
-
-        {/* ─── PROJECT INFO ─── */}
-        <Section label="Project info">
-          <InfoRow label="Contact" value={live.contactPerson}
-            onClick={() => setEditor({ kind: "contact" })} />
-          <SalesRepRow
-            initials={parseInitials(live.pointPerson)}
-            getTeam={md.getTeamByInitials}
-            onClick={() => setEditor({ kind: "salesRep" })}
-          />
-          <InfoRow label="Amount"
-            value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
-            onClick={() => setEditor({ kind: "amount" })} />
-          <InfoRow label="Created" value={fmtLong(live.createdAt)} readOnly />
-          <InfoRow label="Confirmed"
-            value={confirmedAt ? fmtLong(confirmedAt) : undefined}
-            onClick={() => setEditor({ kind: "confirmedDate" })} />
-          <InfoRow label="Completed"
-            value={completedAt ? fmtLong(completedAt) : undefined}
-            readOnly />
-        </Section>
-
-        {/* ─── SHIPMENT (hidden for Local) ─── */}
-        {showShipment && (
-          <Section label="Shipment">
-            <div className="px-3 py-2.5 text-[15px]" style={{ color: "hsl(var(--brand-navy))" }}>
-              {formatShippingLabel(live.shippingMode, live.trackingRef ?? getShipment(live.shipmentId)?.code).text}
+          {/* ── TIMELINE ── */}
+          <section>
+            <SectionHeader>Timeline</SectionHeader>
+            <div>
+              <DetailRow label="Created" value={fmtLong(live.createdAt)} locked />
+              <DetailRow label="Confirmed" value={confirmedAt ? fmtLong(confirmedAt) : undefined} locked />
+              <DetailRow label="Completed" value={completedAt ? fmtLong(completedAt) : undefined} locked />
             </div>
-            {live.shipmentId ? (
-              <button
-                onClick={() => onOpenShipment(live.shipmentId!)}
-                className="mx-3 mt-1 inline-flex items-center gap-1 text-[13px] font-medium hover:underline"
-                style={{ color: "hsl(var(--brand-orange))", minHeight: 36 }}
-              >
-                View shipment <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <div className="px-3 pb-2 text-[12px] text-muted-foreground italic">
-                Not yet assigned to a shipment
-              </div>
-            )}
-          </Section>
-        )}
+          </section>
 
-        {/* ─── LOG (immutable audit trail — always last) ─── */}
-        <LogSection entries={live.log ?? []} />
-
-        <div className="h-10" />
+          {/* ── ACTIVITY ── */}
+          <ActivitySection
+            entries={live.log ?? []}
+            expanded={activityExpanded}
+            onToggle={() => setActivityExpanded((v) => !v)}
+          />
+        </div>
       </aside>
 
       {/* ─── Editor sheets ─── */}
+      <TextEditor
+        open={editor?.kind === "projectName"}
+        onClose={() => setEditor(null)}
+        title="Project name"
+        value={live.projectName}
+        onSave={saveProjectName}
+      />
+      <TextEditor
+        open={editor?.kind === "detailSummary"}
+        onClose={() => setEditor(null)}
+        title="Detail summary"
+        value={live.detailSummary ?? ""}
+        multiline
+        onSave={saveDetail}
+      />
       <TextEditor
         open={editor?.kind === "contact"}
         onClose={() => setEditor(null)}
@@ -455,11 +567,43 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onSave={saveAmount}
       />
       <DateEditor
-        open={editor?.kind === "confirmedDate"}
+        open={editor?.kind === "deadline"}
         onClose={() => setEditor(null)}
-        title="Set confirmed date"
-        value={confirmedAt ?? new Date()}
-        onSave={saveConfirmedDate}
+        title="Deadline"
+        value={live.deadlineDate}
+        onSave={saveDeadline}
+      />
+      <TextEditor
+        open={editor?.kind === "quote"}
+        onClose={() => setEditor(null)}
+        title="Quote number"
+        value={live.quoteNumber ?? ""}
+        placeholder="Q-2046"
+        onSave={saveQuote}
+      />
+      <TextEditor
+        open={editor?.kind === "po"}
+        onClose={() => setEditor(null)}
+        title="PO number"
+        value={live.poNumber ?? ""}
+        placeholder="PO-1095"
+        onSave={savePO}
+      />
+      <TextEditor
+        open={editor?.kind === "invoice"}
+        onClose={() => setEditor(null)}
+        title="Invoice number"
+        value={live.invoiceNumber ?? ""}
+        placeholder="INV-1050"
+        onSave={saveInvoice}
+      />
+      <TextEditor
+        open={editor?.kind === "tracking"}
+        onClose={() => setEditor(null)}
+        title="Tracking reference"
+        value={live.trackingRef ?? ""}
+        placeholder="—"
+        onSave={saveTracking}
       />
       <TextEditor
         open={editor?.kind === "addNote"}
@@ -529,7 +673,6 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onPick={handlePickShippingMode}
       />
 
-      {/* ─── Stage picker ─── */}
       <StagePicker
         open={stagePickerOpen}
         onClose={() => setStagePickerOpen(false)}
@@ -539,7 +682,6 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onPick={handleStagePick}
       />
 
-      {/* ─── Confirm dialog (archive) ─── */}
       <ConfirmDialog
         open={!!confirm}
         title={confirm?.title ?? ""}
@@ -554,170 +696,139 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   );
 };
 
-// ─────────── Mini card (non-interactive replica of ProjectCard) ───────────
-// Mirrors src/components/leads/ProjectCard.tsx layout exactly: same paddings,
-// font sizes, colors, accent stripe, divider. No gestures, no menu, no taps.
-interface MiniProjectCardProps {
-  card: PipelineCard;
-  live: PipelineCard["project"];
-  supplierName?: string;
-  accentHex: string;
-}
+// ───────────────────── Layout primitives ─────────────────────
 
-const MiniProjectCard = ({ card, live, supplierName, accentHex }: MiniProjectCardProps) => {
-  const supplierHint = live.supplierLabel;
-  const supplierIsEmpty = !supplierName && !supplierHint;
-  const supplierDisplay = supplierName ?? supplierHint ?? "Unassigned";
+const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+  <h2
+    className="text-[11px] uppercase font-semibold mb-3"
+    style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
+  >
+    {children}
+  </h2>
+);
 
-  const poText = live.poNumber;
-  const qText = live.quoteNumber;
-  const invText = live.invoiceNumber;
+const SectionHeaderWithAction = ({
+  children, onAction,
+}: { children: React.ReactNode; onAction: () => void }) => (
+  <div className="flex items-center justify-between mb-3">
+    <h2
+      className="text-[11px] uppercase font-semibold"
+      style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
+    >
+      {children}
+    </h2>
+    <button
+      onClick={onAction}
+      className="inline-flex items-center gap-1 text-[12px] font-medium hover:underline"
+      style={{ color: "hsl(var(--brand-orange))" }}
+    >
+      <Plus className="h-3.5 w-3.5" /> Add
+    </button>
+  </div>
+);
 
-  const ship = getShipment(live.shipmentId);
-  const shippingLabel = formatShippingLabel(
-    live.shippingMode,
-    live.trackingRef ?? ship?.code,
-  );
-  const u = getUrgency(card.deadlineDate);
-  const urgencyHex =
-    u.color === "hsl(var(--urgent))" ? "hsl(var(--urgent))"
-    : u.color === "hsl(var(--brand-orange))" ? "hsl(var(--brand-orange))"
-    : "hsl(var(--muted-foreground))";
+// Single label/value row used by DETAILS and TIMELINE.
+const DetailRow = ({
+  label, value, placeholder, onClick, locked, lockedHint, trailing, valueColor,
+}: {
+  label: string;
+  value?: string;
+  placeholder?: string;
+  onClick?: () => void;
+  locked?: boolean;
+  lockedHint?: string;
+  trailing?: React.ReactNode;
+  valueColor?: string;
+}) => {
+  const isEmpty = !value;
+  const display = value ?? placeholder ?? "—";
+  const interactive = !!onClick && !locked;
 
-  return (
-    <div className="relative overflow-hidden rounded-2xl bg-card border border-border/70 shadow-[var(--shadow-card)]">
-      {/* Pipeline accent stripe — matches ProjectCard (4px, 0.85 opacity) */}
+  const content = (
+    <>
       <span
-        className="absolute left-0 top-0 bottom-0 w-[4px]"
-        style={{ backgroundColor: accentHex, opacity: 0.85 }}
-      />
-
-      <div className="pl-[18px] pr-[16px] pt-[16px] pb-[16px]">
-        {/* Tier 1 + Tier 2 row */}
-        <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <h3
-              className="text-[18px] font-bold tracking-tight leading-tight"
-              style={{ color: "hsl(var(--brand-navy))" }}
-            >
-              {live.customer}
-            </h3>
-            <p
-              className="text-[15px] font-medium leading-snug mt-0.5"
-              style={{ color: "hsl(var(--brand-navy))" }}
-            >
-              {live.projectName}
-            </p>
-            <p
-              className="text-[13px] leading-snug mt-3 italic"
-              style={{
-                color: live.detailSummary?.trim()
-                  ? "hsl(var(--brand-navy) / 0.70)"
-                  : "hsl(var(--brand-navy) / 0.35)",
-              }}
-            >
-              {live.detailSummary?.trim() ? live.detailSummary : "—"}
-            </p>
-          </div>
-
-          {/* Right column — supplier + PO */}
-          <div className="shrink-0 max-w-[45%] mt-0.5 flex flex-col items-end text-right">
-            <span className="inline-flex items-center gap-1.5">
-              <Factory
-                className="h-3.5 w-3.5 shrink-0"
-                style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
-              />
-              <span
-                className={cn(
-                  "text-[13px] truncate",
-                  supplierIsEmpty
-                    ? "italic font-normal"
-                    : supplierName ? "font-normal" : "italic font-normal",
-                )}
-                style={{
-                  color: supplierName
-                    ? "hsl(var(--brand-navy))"
-                    : supplierIsEmpty
-                      ? "hsl(var(--brand-navy) / 0.40)"
-                      : "hsl(var(--brand-navy) / 0.65)",
-                }}
-              >
-                {supplierDisplay}
-              </span>
-            </span>
-            <span
-              className={cn(
-                "text-[12px] tabular leading-none mt-1.5",
-                poText ? "" : "italic",
-              )}
-              style={{
-                color: poText
-                  ? "hsl(var(--brand-navy) / 0.60)"
-                  : "hsl(var(--brand-navy) / 0.40)",
-              }}
-            >
-              {poText ?? "PO-"}
-            </span>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div
-          className="mt-5 mb-3 h-px w-full"
-          style={{ backgroundColor: "hsl(var(--brand-navy) / 0.10)" }}
-        />
-
-        {/* Tier 3: Q-, INV- */}
-        <div className="flex items-center gap-4 min-h-[16px] mb-2">
-          <span
-            className={cn("text-[12px] tabular leading-none", qText ? "" : "italic")}
-            style={{ color: qText ? "hsl(var(--brand-navy) / 0.60)" : "hsl(var(--brand-navy) / 0.40)" }}
-          >
-            {qText ?? "Q-"}
+        className="text-[13px] shrink-0"
+        style={{ color: "hsl(var(--brand-navy) / 0.6)", width: 168 }}
+      >
+        {label}
+      </span>
+      <span
+        className={cn(
+          "text-[14px] flex-1 min-w-0 truncate",
+          isEmpty ? "italic" : "font-semibold",
+        )}
+        style={{
+          color: isEmpty
+            ? "hsl(var(--brand-navy) / 0.3)"
+            : valueColor ?? "hsl(var(--brand-navy))",
+        }}
+      >
+        {display}
+      </span>
+      {trailing}
+      {locked ? (
+        lockedHint ? (
+          <span className="text-[11px] italic shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.35)" }}>
+            {lockedHint}
           </span>
-          <span
-            className={cn("text-[12px] tabular leading-none", invText ? "" : "italic")}
-            style={{ color: invText ? "hsl(var(--brand-navy) / 0.60)" : "hsl(var(--brand-navy) / 0.40)" }}
-          >
-            {invText ?? "INV-"}
-          </span>
-        </div>
+        ) : null
+      ) : interactive ? (
+        <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.35)" }} />
+      ) : null}
+    </>
+  );
 
-        {/* Bottom row: shipping label · deadline */}
-        <div className="flex items-center gap-3 min-h-[18px]">
-          <span
-            className={cn(
-              "text-[12px] tabular leading-none truncate min-w-0",
-              shippingLabel.placeholder ? "italic" : "",
-            )}
-            style={{
-              color: shippingLabel.placeholder
-                ? "hsl(var(--brand-navy) / 0.40)"
-                : "hsl(var(--brand-navy) / 0.60)",
-            }}
-          >
-            {shippingLabel.text}
-          </span>
+  const baseClass = "w-full flex items-center gap-3 px-2 -mx-2 py-2.5 border-b text-left";
+  const borderStyle = { borderColor: "hsl(var(--brand-navy) / 0.07)" };
 
-          <span className="inline-flex items-center gap-2 leading-none shrink-0 ml-auto">
-            <span
-              className="text-[12px] font-medium tabular"
-              style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
-            >
-              {card.deadline}
-            </span>
-            <span style={{ color: "hsl(var(--brand-navy) / 0.30)" }}>·</span>
-            <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex }}>
-              {u.label}
-            </span>
-          </span>
-        </div>
+  if (!interactive) {
+    return (
+      <div className={baseClass} style={{ ...borderStyle, minHeight: 40 }}>
+        {content}
       </div>
-    </div>
+    );
+  }
+  return (
+    <button
+      onClick={onClick}
+      className={cn(baseClass, "rounded-md hover:bg-muted/40 transition-colors")}
+      style={{ ...borderStyle, minHeight: 40 }}
+    >
+      {content}
+    </button>
   );
 };
 
-// ─────────── Layout primitives ───────────
+// ───────────── Stage·State pill (matches table view) ─────────────
+function stageShade(_pipeline: PipelineId, _stage: StageId): number {
+  return 0.5;
+}
+const StageStatePill = ({
+  pipeline, stage, accent,
+}: { pipeline: PipelineId; stage: StageId; accent: string }) => {
+  const pipelineTitle = PIPELINES.find((p) => p.id === pipeline)?.title ?? pipeline;
+  const stageTitle = displayStageTitle(pipeline, stage);
+  const shade = stageShade(pipeline, stage);
+  const bgPct = Math.round(12 + shade * 3);
+  return (
+    <span
+      className="inline-flex items-center max-w-full truncate rounded-[6px] tabular"
+      style={{
+        minHeight: 28,
+        padding: "5px 10px",
+        fontSize: 14,
+        fontWeight: 600,
+        backgroundColor: `color-mix(in srgb, ${accent} ${bgPct}%, transparent)`,
+        color: accent,
+        letterSpacing: "0.005em",
+      }}
+    >
+      <span className="truncate">{pipelineTitle} · {stageTitle}</span>
+    </span>
+  );
+};
+
+// ───────────── Activity section ─────────────
 const LOG_DOT: Record<ProjectLogActionType, string> = {
   stage_change: "hsl(var(--brand-orange))",
   field_edit: "hsl(var(--muted-foreground))",
@@ -731,23 +842,45 @@ const LOG_DOT: Record<ProjectLogActionType, string> = {
   mark_paid: "hsl(var(--brand-gold, var(--brand-orange)))",
   line_item_change: "hsl(var(--muted-foreground))",
 };
-
 const fmtLogTs = (d: Date) => {
   const dt = d instanceof Date ? d : new Date(d);
   return `${dt.getDate()} ${dt.toLocaleString("en-US", { month: "short" })} · ${dt
     .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 };
-
-const LogSection = ({ entries }: { entries: ProjectLogEntry[] }) => {
-  const [expanded, setExpanded] = useState(false);
-  if (!entries.length) return null;
-  const sorted = [...entries].sort(
-    (a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()
-  );
+const ActivitySection = ({
+  entries, expanded, onToggle,
+}: { entries: ProjectLogEntry[]; expanded: boolean; onToggle: () => void }) => {
+  if (!entries.length) {
+    return (
+      <section>
+        <SectionHeader>Activity</SectionHeader>
+        <div className="text-[13px] italic text-muted-foreground/70">No activity yet</div>
+      </section>
+    );
+  }
+  const sorted = [...entries].sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
   const visible = expanded ? sorted : sorted.slice(0, 5);
+  const hasMore = sorted.length > 5;
   return (
-    <Section label="Log">
-      <ul className="px-3 space-y-2">
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2
+          className="text-[11px] uppercase font-semibold"
+          style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
+        >
+          Activity
+        </h2>
+        {hasMore && (
+          <button
+            onClick={onToggle}
+            className="inline-flex items-center gap-1 text-[12px] font-medium hover:underline"
+            style={{ color: "hsl(var(--brand-orange))" }}
+          >
+            {expanded ? "Show less" : `View all (${sorted.length})`} <ArrowRight className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      <ul className="space-y-2.5">
         {visible.map((e) => (
           <li key={e.id} className="flex gap-2.5 text-[13px] leading-snug">
             <span
@@ -761,134 +894,11 @@ const LogSection = ({ entries }: { entries: ProjectLogEntry[] }) => {
           </li>
         ))}
       </ul>
-      {sorted.length > 5 && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-2 px-3 text-[12px] font-medium text-muted-foreground hover:text-foreground"
-        >
-          {expanded ? "Show less" : `Show ${sorted.length - 5} more`}
-        </button>
-      )}
-    </Section>
+    </section>
   );
 };
 
-const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <section className="px-3 sm:px-5 pt-6 pb-2 border-b border-border/60">
-    <h2 className="px-3 text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mb-1.5">{label}</h2>
-    <div>{children}</div>
-  </section>
-);
-
-const SectionWithAction = ({
-  label, actionLabel, onAction, children,
-}: { label: string; actionLabel: string; onAction: () => void; children: React.ReactNode }) => (
-  <section className="px-3 sm:px-5 pt-6 pb-2 border-b border-border/60">
-    <div className="px-3 mb-1.5 flex items-center justify-between">
-      <h2 className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium">{label}</h2>
-      <button
-        onClick={onAction}
-        className="inline-flex items-center gap-1 text-[12px] font-medium hover:underline"
-        style={{ color: "hsl(var(--brand-orange))" }}
-      >
-        <Plus className="h-3.5 w-3.5" /> {actionLabel}
-      </button>
-    </div>
-    <div>{children}</div>
-  </section>
-);
-
-// Compact label/value row used by Project Info.
-const InfoRow = ({
-  label, value, onClick, readOnly,
-}: { label: string; value?: string; onClick?: () => void; readOnly?: boolean }) => {
-  const content = (
-    <>
-      <span className="text-[11px] uppercase tracking-wider text-muted-foreground/80 w-28 shrink-0">
-        {label}
-      </span>
-      <span
-        className={cn(
-          "text-[14px] flex-1 min-w-0 truncate text-right",
-          value ? "text-foreground" : "italic text-muted-foreground/50",
-        )}
-      >
-        {value ?? "—"}
-      </span>
-      {!readOnly && onClick && (
-        <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.35)" }} />
-      )}
-    </>
-  );
-  if (readOnly || !onClick) {
-    return (
-      <div
-        className="w-full flex items-center gap-3 px-3 py-2.5"
-        style={{ minHeight: 40 }}
-      >
-        {content}
-      </div>
-    );
-  }
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-muted/40 transition-colors"
-      style={{ minHeight: 40 }}
-    >
-      {content}
-    </button>
-  );
-};
-
-// ─────────── Sales rep row (chips) ───────────
-const SalesRepRow = ({
-  initials, getTeam, onClick,
-}: {
-  initials: string[];
-  getTeam: (init: string) => { full_name: string } | undefined;
-  onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-muted/40 transition-colors"
-    style={{ minHeight: 40 }}
-  >
-    <span className="text-[11px] uppercase tracking-wider text-muted-foreground/80 w-28 shrink-0">
-      Sales rep
-    </span>
-    <span className="flex-1 min-w-0 flex flex-wrap justify-end gap-1.5">
-      {initials.length === 0 ? (
-        <span className="text-[14px] italic text-muted-foreground/50">—</span>
-      ) : (
-        initials.map((init) => {
-          const t = getTeam(init);
-          return (
-            <span
-              key={init}
-              title={t?.full_name ?? init}
-              className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-semibold tracking-wide"
-              style={{
-                background: "hsl(var(--brand-navy) / 0.1)",
-                color: "hsl(var(--brand-navy))",
-              }}
-            >
-              {init}
-            </span>
-          );
-        })
-      )}
-    </span>
-    <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.35)" }} />
-  </button>
-);
-
-// ─────────── Line item editor (free text — qty + description + optional unit price) ───────────
-// NOTE: Intentionally NO product picker / autocomplete / master-data lookup
-// in this phase. The Products master list will land in a later phase; until
-// then, line items are pure free text per project. The data model already
-// carries an optional `productId` so future items can reference the master
-// list without breaking existing free-text rows.
+// ───────────── Line item editor (unchanged from previous version) ─────────────
 interface LineItemEditorProps {
   open: boolean;
   onClose: () => void;
@@ -899,7 +909,6 @@ interface LineItemEditorProps {
   onSave: (qty: number, description: string, unitPrice?: number) => void;
   onDelete?: () => void;
 }
-
 const fmtMoney = (n: number) =>
   n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -922,9 +931,7 @@ const ProductLineItemEditor = ({
   const priceNum = price.trim() === "" ? undefined : Number(price);
   const priceValid = priceNum === undefined || (!Number.isNaN(priceNum) && priceNum >= 0);
   const valid = qNum > 0 && d.trim().length > 0 && priceValid;
-
-  const computedTotal =
-    priceNum !== undefined && qNum > 0 ? qNum * priceNum : undefined;
+  const computedTotal = priceNum !== undefined && qNum > 0 ? qNum * priceNum : undefined;
 
   return (
     <BottomSheet
@@ -936,9 +943,7 @@ const ProductLineItemEditor = ({
     >
       <div className="space-y-3">
         <div>
-          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
-            Quantity
-          </label>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Quantity</label>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value.replace(/[^\d]/g, ""))}
@@ -950,9 +955,7 @@ const ProductLineItemEditor = ({
           />
         </div>
         <div>
-          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
-            Description
-          </label>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Description</label>
           <input
             value={d}
             onChange={(e) => setD(e.target.value)}
@@ -969,13 +972,10 @@ const ProductLineItemEditor = ({
             <span
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] tabular pointer-events-none"
               style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
-            >
-              $
-            </span>
+            >$</span>
             <input
               value={price}
               onChange={(e) => {
-                // Allow digits + single decimal point
                 const v = e.target.value.replace(/[^\d.]/g, "");
                 const parts = v.split(".");
                 const cleaned = parts.length > 1
@@ -989,10 +989,7 @@ const ProductLineItemEditor = ({
               style={{ minHeight: 48 }}
             />
           </div>
-          <div
-            className="mt-2 flex items-center justify-between text-[12px]"
-            style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
-          >
+          <div className="mt-2 flex items-center justify-between text-[12px]" style={{ color: "hsl(var(--brand-navy) / 0.65)" }}>
             <span className="uppercase tracking-[0.16em] text-muted-foreground/80">Total</span>
             <span className="tabular font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>
               {computedTotal !== undefined ? `$${fmtMoney(computedTotal)}` : "—"}
@@ -1012,4 +1009,3 @@ const ProductLineItemEditor = ({
     </BottomSheet>
   );
 };
-
