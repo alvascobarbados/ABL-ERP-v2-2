@@ -53,7 +53,7 @@ const BORDER = 1;         // outline thickness in px
 // Uniform chevron silhouette: notched-left + pointed-right (applied to ALL tabs).
 const CHEVRON_CLIP = `polygon(0 0, calc(100% - ${CHEV}px) 0, 100% 50%, calc(100% - ${CHEV}px) 100%, 0 100%, ${CHEV}px 50%)`;
 
-export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
+export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse, loading }: Props) => {
   const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
   const flowTabs = PIPELINES.map((p) => ({ id: p.id, title: p.title, count: counts[p.id] }));
   const allActive = active === "all";
