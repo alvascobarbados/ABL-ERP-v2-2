@@ -41,7 +41,9 @@ const SHIPPING_MODES: ShippingMode[] = ["Air", "Ocean", "Local"];
 
 function buildColumns(activeTab: TabId, visible: PipelineCard[]): Column[] {
   if (activeTab === "all") {
-    return PIPELINES.map((p) => ({
+    // The "All" view shows the in-flight workflow only — Completed lives
+    // under its own tab and shouldn't appear as an empty column here.
+    return PIPELINES.filter((p) => p.id !== "completed").map((p) => ({
       id: p.id,
       title: p.title,
       pipeline: p.id,
@@ -78,13 +80,16 @@ export const KanbanBoard = ({
       <div className="h-full flex gap-4 px-5 py-4 w-full">
         {columns.map((col) => {
           const accentHex = PIPELINE_ACCENT[col.pipeline].hex;
-          const isPaid = col.pipeline === "finance" && col.id === "paid";
-          const dotHex = isPaid ? "#6B8E5A" : accentHex;
-          const headerBg = isPaid ? "rgba(107, 142, 90, 0.10)" : "hsl(var(--card))";
-          const badgeBg = isPaid
+          // Completed projects (new pipeline=completed OR legacy finance/paid)
+          // get sage green styling.
+          const isDone = col.pipeline === "completed" ||
+            (col.pipeline === "finance" && col.id === "paid");
+          const dotHex = isDone ? "#6B8E5A" : accentHex;
+          const headerBg = isDone ? "rgba(107, 142, 90, 0.10)" : "hsl(var(--card))";
+          const badgeBg = isDone
             ? "rgba(107, 142, 90, 0.18)"
             : col.cards.length ? "hsl(var(--brand-navy) / 0.08)" : "hsl(var(--muted))";
-          const badgeFg = isPaid
+          const badgeFg = isDone
             ? "#3D5A30"
             : col.cards.length ? "hsl(var(--brand-navy))" : "hsl(var(--muted-foreground))";
           return (
