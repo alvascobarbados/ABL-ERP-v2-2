@@ -47,7 +47,7 @@ const CountSlot = ({ value, loading, active }: { value: number; loading?: boolea
 };
 
 const CHEV = 16;          // chevron point depth in px
-const TAB_H = 60;         // tab height
+const TAB_H = 54;         // tab height
 const BORDER = 1;         // outline thickness in px
 
 // Uniform chevron silhouette: notched-left + pointed-right (applied to ALL tabs).
