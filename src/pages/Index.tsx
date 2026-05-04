@@ -301,17 +301,22 @@ const Index = () => {
     return (id?: string) => (id ? map.get(id) ?? "" : "");
   }, []);
 
-  // Pipeline-facing project list — excludes archived (sales/archive) AND completed (paid).
+  // Pipeline-facing project list — excludes archived (sales/archive) AND completed
+  // (both the new pipeline=completed and the legacy finance/paid combination).
   const pipelineProjects = useMemo(
     () => projects.filter((p) =>
       !(p.pipeline === "sales" && p.stage === "archive") &&
+      p.pipeline !== "completed" &&
       !(p.pipeline === "finance" && p.stage === "paid"),
     ),
     [projects],
   );
 
   const completedProjects = useMemo(
-    () => projects.filter((p) => p.pipeline === "finance" && p.stage === "paid"),
+    () => projects.filter((p) =>
+      p.pipeline === "completed" ||
+      (p.pipeline === "finance" && p.stage === "paid"),
+    ),
     [projects],
   );
 
