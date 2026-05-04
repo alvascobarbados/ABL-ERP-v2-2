@@ -70,7 +70,7 @@ export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pul
                     : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
               }
             >
-              {p.count}
+              {loading ? <span className="inline-block w-3 h-2 rounded bg-current opacity-30 animate-pulse" /> : p.count}
             </span>
           </button>
         );
