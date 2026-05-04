@@ -149,7 +149,7 @@ export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, puls
               >
                 <span className="text-[14px] font-medium leading-tight tracking-tight">{t.title}</span>
                 <span className="text-[18px] font-bold tabular leading-tight" style={{ opacity: isActive ? 1 : 0.7 }}>
-                  {t.count}
+                  <CountSlot value={t.count} loading={loading} active={isActive} />
                 </span>
               </span>
             </button>
