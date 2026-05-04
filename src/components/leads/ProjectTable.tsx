@@ -9,11 +9,19 @@
  */
 import { useMemo, useState, useRef, MouseEvent as ReactMouseEvent } from "react";
 import { Flag, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "sonner";
 import {
-  PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS,
+  PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS, ShippingMode,
 } from "@/data/pipelines";
 import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
+import { EditableCell, SaveResult } from "./EditableCell";
+import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // Pipeline order matches the chevron flow (Sales → Production → Shipping → Finance).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
