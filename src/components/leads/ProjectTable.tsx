@@ -349,6 +349,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 onDuplicate={() => store.duplicateProject(card.project.id)}
                 onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
                 onDelete={() => store.deleteProject(card.project.id)}
+                hideStageColumn={!!hideStageColumn}
               />
             ))
           )}
