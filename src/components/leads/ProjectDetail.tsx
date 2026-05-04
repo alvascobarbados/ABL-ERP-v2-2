@@ -886,20 +886,22 @@ const ActivitySection = ({
           </button>
         )}
       </div>
-      <ul className="space-y-2.5">
-        {visible.map((e) => (
-          <li key={e.id} className="flex gap-2.5 text-[13px] leading-snug">
-            <span
-              className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
-              style={{ background: LOG_DOT[e.actionType] ?? "hsl(var(--muted-foreground))" }}
-            />
-            <div className="flex-1 min-w-0">
-              <div className="text-foreground">{e.description}</div>
-              <div className="text-[11px] text-muted-foreground">{fmtLogTs(e.ts)}</div>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <SectionCard>
+        <ul className="space-y-2.5">
+          {visible.map((e) => (
+            <li key={e.id} className="flex gap-2.5 text-[13px] leading-snug">
+              <span
+                className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ background: LOG_DOT[e.actionType] ?? "hsl(var(--muted-foreground))" }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-foreground">{e.description}</div>
+                <div className="text-[11px] text-muted-foreground">{fmtLogTs(e.ts)}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </SectionCard>
     </section>
   );
 };
