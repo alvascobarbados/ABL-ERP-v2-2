@@ -305,7 +305,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 </div>
               );
             })}
-            <div className="h-9" />
+            <div className="h-10" />
           </div>
 
           {/* Rows */}
