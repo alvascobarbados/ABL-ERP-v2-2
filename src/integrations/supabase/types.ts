@@ -59,6 +59,50 @@ export type Database = {
         }
         Relationships: []
       }
+      line_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          position: number
+          product_id: string | null
+          project_id: string
+          qty: number
+          total: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          position: number
+          product_id?: string | null
+          project_id: string
+          qty: number
+          total?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          position?: number
+          product_id?: string | null
+          project_id?: string
+          qty?: number
+          total?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string
@@ -82,6 +126,255 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_log_entries: {
+        Row: {
+          action_type: string
+          actor_display_name: string
+          actor_user_id: string
+          description: string
+          id: string
+          metadata: Json | null
+          project_id: string
+          ts: string
+        }
+        Insert: {
+          action_type: string
+          actor_display_name: string
+          actor_user_id: string
+          description: string
+          id: string
+          metadata?: Json | null
+          project_id: string
+          ts?: string
+        }
+        Update: {
+          action_type?: string
+          actor_display_name?: string
+          actor_user_id?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_log_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_notes: {
+        Row: {
+          author: string
+          author_user_id: string | null
+          auto: boolean
+          id: string
+          project_id: string
+          text: string
+          ts: string
+        }
+        Insert: {
+          author: string
+          author_user_id?: string | null
+          auto?: boolean
+          id: string
+          project_id: string
+          text: string
+          ts?: string
+        }
+        Update: {
+          author?: string
+          author_user_id?: string | null
+          auto?: boolean
+          id?: string
+          project_id?: string
+          text?: string
+          ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          contact_person: string | null
+          created_at: string
+          customer: string
+          deadline: string
+          deadline_date: string
+          deleted_at: string | null
+          deleted_from_pipeline: string | null
+          deleted_from_stage: string | null
+          detail_summary: string | null
+          flagged: boolean
+          id: string
+          invoice_issued_date: string | null
+          invoice_issued_date_assumed: boolean | null
+          invoice_number: string | null
+          invoice_required_entered_at: string | null
+          order_type: string
+          paid_on_date: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_terms: string | null
+          payment_terms_custom_days: number | null
+          payment_terms_inherited: boolean | null
+          pipeline_id: string
+          po_number: string | null
+          point_person: string
+          priority: string
+          project_name: string
+          quote_number: string | null
+          sales_shipping_label: string | null
+          shipment_id: string | null
+          shipping_mode: string | null
+          stage_id: string
+          supplier_id: string | null
+          supplier_label: string | null
+          tag: string | null
+          tracking_ref: string | null
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          contact_person?: string | null
+          created_at?: string
+          customer: string
+          deadline: string
+          deadline_date: string
+          deleted_at?: string | null
+          deleted_from_pipeline?: string | null
+          deleted_from_stage?: string | null
+          detail_summary?: string | null
+          flagged?: boolean
+          id: string
+          invoice_issued_date?: string | null
+          invoice_issued_date_assumed?: boolean | null
+          invoice_number?: string | null
+          invoice_required_entered_at?: string | null
+          order_type?: string
+          paid_on_date?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_terms?: string | null
+          payment_terms_custom_days?: number | null
+          payment_terms_inherited?: boolean | null
+          pipeline_id: string
+          po_number?: string | null
+          point_person: string
+          priority?: string
+          project_name: string
+          quote_number?: string | null
+          sales_shipping_label?: string | null
+          shipment_id?: string | null
+          shipping_mode?: string | null
+          stage_id: string
+          supplier_id?: string | null
+          supplier_label?: string | null
+          tag?: string | null
+          tracking_ref?: string | null
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          contact_person?: string | null
+          created_at?: string
+          customer?: string
+          deadline?: string
+          deadline_date?: string
+          deleted_at?: string | null
+          deleted_from_pipeline?: string | null
+          deleted_from_stage?: string | null
+          detail_summary?: string | null
+          flagged?: boolean
+          id?: string
+          invoice_issued_date?: string | null
+          invoice_issued_date_assumed?: boolean | null
+          invoice_number?: string | null
+          invoice_required_entered_at?: string | null
+          order_type?: string
+          paid_on_date?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_terms?: string | null
+          payment_terms_custom_days?: number | null
+          payment_terms_inherited?: boolean | null
+          pipeline_id?: string
+          po_number?: string | null
+          point_person?: string
+          priority?: string
+          project_name?: string
+          quote_number?: string | null
+          sales_shipping_label?: string | null
+          shipment_id?: string | null
+          shipping_mode?: string | null
+          stage_id?: string
+          supplier_id?: string | null
+          supplier_label?: string | null
+          tag?: string | null
+          tracking_ref?: string | null
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_shipment_fk"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipments: {
+        Row: {
+          carrier: string | null
+          code: string
+          created_at: string
+          eta: string
+          etd: string
+          id: string
+          mode: string
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          carrier?: string | null
+          code: string
+          created_at?: string
+          eta: string
+          etd: string
+          id: string
+          mode: string
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          carrier?: string | null
+          code?: string
+          created_at?: string
+          eta?: string
+          etd?: string
+          id?: string
+          mode?: string
+          status?: string
+          supplier_id?: string
           updated_at?: string
         }
         Relationships: []
