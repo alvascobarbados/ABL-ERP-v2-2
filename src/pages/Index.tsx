@@ -329,6 +329,8 @@ const Index = () => {
     production: pipelineProjects.filter((p) => p.pipeline === "production").length,
     shipping: pipelineProjects.filter((p) => p.pipeline === "shipping").length,
     finance: pipelineProjects.filter((p) => p.pipeline === "finance").length,
+    // "completed" is tracked separately via completedCount/completedProjects.
+    completed: 0,
     operations: pipelineProjects.filter((p) => p.pipeline === "operations").length, // legacy
   }), [pipelineProjects]);
 
@@ -348,6 +350,8 @@ const Index = () => {
       production: pipelineProjects.filter((p) => p.pipeline === "production" && match(p)).length,
       shipping: pipelineProjects.filter((p) => p.pipeline === "shipping" && match(p)).length,
       finance: pipelineProjects.filter((p) => p.pipeline === "finance" && match(p)).length,
+      // "completed" is tracked separately via completedCount.
+      completed: 0,
       operations: pipelineProjects.filter((p) => p.pipeline === "operations" && match(p)).length, // legacy
     };
   }, [pipelineProjects, filters, search]);

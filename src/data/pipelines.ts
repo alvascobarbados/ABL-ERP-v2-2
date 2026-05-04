@@ -912,6 +912,7 @@ export function pipelineCounts(): Record<PipelineId, number> {
     production: PROJECTS.filter((p) => p.pipeline === "production").length,
     shipping: PROJECTS.filter((p) => p.pipeline === "shipping").length,
     finance: PROJECTS.filter((p) => p.pipeline === "finance").length,
+    completed: PROJECTS.filter((p) => p.pipeline === "completed").length,
     // Legacy alias — counts any not-yet-migrated rows under their old key.
     operations: PROJECTS.filter((p) => p.pipeline === "operations").length,
   };
