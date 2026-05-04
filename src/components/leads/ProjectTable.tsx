@@ -519,8 +519,7 @@ const TableRow = ({
   const pickSupplier = async (id: string) => {
     setOpenPicker(null);
     try {
-      const s = md.getSupplierByAnyId(id);
-      await store.updateProject(proj.id, { supplierId: id, supplierLabel: s?.name });
+      await store.updateProject(proj.id, { supplierId: id, supplierLabel: undefined });
       triggerFlash("supplier", "success");
     } catch (err: any) {
       toast.error(err?.message ?? "Save failed");
