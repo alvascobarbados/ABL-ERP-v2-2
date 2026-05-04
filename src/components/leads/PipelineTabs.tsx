@@ -10,6 +10,7 @@ interface Props {
   counts: Record<PipelineId, number>;
   completedCount?: number;
   pulse?: PipelineId | null;
+  loading?: boolean;
 }
 
 export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
