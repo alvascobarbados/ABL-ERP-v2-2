@@ -725,22 +725,26 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const createProject = useCallback<PipelineStoreCtx["createProject"]>(async (input) => {
     const u = userRef.current;
+    const initialStage: StageId = input.initialStage ?? "proposal";
+    const needsQuote = initialStage === "quote" || initialStage === "confirming";
     let newProj: Project = {
       id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       customer: input.customer,
       projectName: input.projectName,
       detailSummary: input.detailSummary,
       pointPerson: input.pointPerson ?? "AV",
-      pipeline: "sales", stage: "proposal",
+      pipeline: "sales", stage: initialStage,
       deadline: "—",
       deadlineDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       value: 0, orderType: "New", priority: "Standard",
       createdAt: new Date(),
       paymentTerms: "Net 30",
       paymentTermsInherited: true,
+      quoteNumber: needsQuote ? `Q-${2040 + Math.floor(Math.random() * 41)}` : undefined,
     };
+    const stageTitle = getStageTitle("sales", initialStage);
     const r = appendLog(newProj, { actor: actorOf(u), actionType: "project_created",
-      description: `${u.shortName} created this project` });
+      description: `${u.shortName} created this project in Sales · ${stageTitle}` });
     const ok = await commitProjectChange(r.project, [r.entry]);
     return ok ? r.project : null;
   }, []);
