@@ -835,25 +835,7 @@ const Index = () => {
         }}
       />
 
-      <ConfirmDialog
-        open={!!missingFields}
-        title="Missing details"
-        description={
-          missingFields
-            ? `Add the ${missingFields.missing.join(", ")} to "${missingFields.card.project.customer} · ${missingFields.card.project.projectName}" before moving past Confirming. Open the project to fill these in.`
-            : ""
-        }
-        confirmLabel="Open project"
-        cancelLabel="Cancel"
-        onCancel={() => setMissingFields(null)}
-        onConfirm={() => {
-          if (!missingFields) return;
-          const card = missingFields.card;
-          setMissingFields(null);
-          setSelectedCard(card);
-        }}
-      />
-
+      {/* "Missing details" blocking modal removed — replaced by non-blocking warning toast in doMove. */}
       <AssignShipmentSheet
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
