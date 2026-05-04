@@ -223,7 +223,8 @@ export const JiggleOverlay = ({ anchor, onClose, onPick }: JiggleOverlayProps) =
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50"
+      className="fixed inset-0"
+      style={{ zIndex: 200 }}
       onPointerDown={onBackdropPointerDown}
       style={{
         background: mounted ? "rgba(0,0,0,0.28)" : "rgba(0,0,0,0)",
