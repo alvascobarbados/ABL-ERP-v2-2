@@ -90,7 +90,7 @@ export const ShipmentView = ({ shipment, onClose, onOpenProject }: Props) => {
                       )}
                       <div className="text-xs text-muted-foreground/80 mt-1.5 flex items-center gap-1.5">
                         <SupplierChip color={supplierColor(s.supplierId ?? "")} />
-                        <span className="tabular">{s.poNumber ?? "PO-"}</span>
+                        <span className="tabular">{s.poNumber ? `PO-${s.poNumber}` : "PO-"}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
