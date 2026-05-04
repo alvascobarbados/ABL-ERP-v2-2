@@ -535,7 +535,7 @@ const Index = () => {
           {/* Mobile pill tabs */}
           <div className="lg:hidden max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
+              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
           {/* Desktop chevron tabs — full width */}
