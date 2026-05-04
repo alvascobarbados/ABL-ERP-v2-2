@@ -198,9 +198,9 @@ function compareCards(
 // now that columns are individually resizable we keep all widths in pixels
 // and let the table grow horizontally if the user widens columns past the
 // viewport (overflow-auto on the wrapper handles it).
-const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
+const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
-  { key: "stage", label: "Stage", defaultPx: 140 },
+  { key: "stage", label: "Stage", defaultPx: 110 },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 180 },
@@ -213,10 +213,14 @@ const COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | 
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
-export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters }: Props) => {
+export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters, hideStageColumn }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
+  const COLS = useMemo(
+    () => (hideStageColumn ? ALL_COLS.filter((c) => c.key !== "stage") : ALL_COLS),
+    [hideStageColumn],
+  );
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
   // null = no local override; rows render in the order Index.tsx provides
