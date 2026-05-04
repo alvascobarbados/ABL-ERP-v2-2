@@ -849,6 +849,18 @@ const Index = () => {
       />
 
       <Walkthrough />
+
+      {!selectedCard && !selectedShipment && !suppliersOpen && !customersOpen && !trashOpen && !archiveOpen && (
+        <NewProjectFAB onClick={() => setNewProjectOpen(true)} />
+      )}
+      <NewProjectSheet
+        open={newProjectOpen}
+        onClose={() => setNewProjectOpen(false)}
+        onCreated={(proj) => {
+          setActiveTab(proj.pipeline);
+          setSelectedCard(buildCard(proj));
+        }}
+      />
       </div>
     </div>
     </EditModeProvider>
