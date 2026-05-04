@@ -1,33 +1,36 @@
 /**
- * Sub-chevron — per-stage filter pills shown beneath the main ChevronTabs.
+ * Sub-chevron — per-stage filter tabs shown beneath the main ChevronTabs.
+ *
+ * Visually mirrors the main ChevronTabs at smaller scale: chevron-shaped
+ * tabs with stacked label + count. No "All <Pipeline>" tab — to widen back
+ * out, the user clicks the active sub-stage again (toggle off) or re-clicks
+ * the main pipeline tab.
  *
  * Visible only on multi-stage pipeline tabs (Sales, Design, Finance).
  * Hidden on Active, Purchasing, Production, Shipping, Completed.
- *
- * Selecting a stage writes into the parent FilterState.stages so the existing
- * filter machinery handles the rest. "All <Pipeline>" = empty stages array
- * (subject to the rule that filtered stages must belong to the active pipeline).
  */
-import { cn } from "@/lib/utils";
 import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import type { TabId } from "./PipelineTabs";
 
 interface Props {
   activeTab: TabId;
-  /** Currently selected stage within this pipeline, or null for "All". */
+  /** Currently selected stage within this pipeline, or null for "all of pipeline". */
   selectedStage: StageId | null;
   onSelect: (stage: StageId | null) => void;
   /** Live counts per stage (post-filter, post-search). */
   stageCounts: Partial<Record<StageId, number>>;
-  /** Total in this pipeline (for the "All <Pipeline>" pill). */
-  allCount: number;
 }
 
 // Pipelines that have a meaningful sub-chevron (more than one user-facing stage).
 const MULTI_STAGE: PipelineId[] = ["sales", "design", "finance"];
 
-export const SubChevron = ({ activeTab, selectedStage, onSelect, stageCounts, allCount }: Props) => {
+const CHEV = 12;          // chevron point depth — smaller than main (16)
+const TAB_H = 40;         // sub-chevron height — clearly secondary to main
+const BORDER = 1;
+const CHEVRON_CLIP = `polygon(0 0, calc(100% - ${CHEV}px) 0, 100% 50%, calc(100% - ${CHEV}px) 100%, 0 100%, ${CHEV}px 50%)`;
+
+export const SubChevron = ({ activeTab, selectedStage, onSelect, stageCounts }: Props) => {
   if (activeTab === "all" || activeTab === "completed") return null;
   const pipelineId = activeTab as PipelineId;
   if (!MULTI_STAGE.includes(pipelineId)) return null;
@@ -35,56 +38,71 @@ export const SubChevron = ({ activeTab, selectedStage, onSelect, stageCounts, al
   const pipeline = PIPELINES.find((p) => p.id === pipelineId);
   if (!pipeline) return null;
 
-  const accent = PIPELINE_ACCENT[pipelineId].hex;
-
-  const allActive = selectedStage === null;
-  const renderPill = (key: string, label: string, count: number, isActive: boolean, onClick: () => void) => (
-    <button
-      key={key}
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full transition-colors whitespace-nowrap border",
-        "px-3.5 text-[12px] font-medium",
-      )}
-      style={{
-        height: 30,
-        backgroundColor: isActive ? accent : "hsl(var(--background))",
-        color: isActive ? "#fff" : accent,
-        borderColor: isActive ? accent : `${accent}33`,
-      }}
-      onMouseEnter={(e) => {
-        if (!isActive) e.currentTarget.style.backgroundColor = `${accent}10`;
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) e.currentTarget.style.backgroundColor = "hsl(var(--background))";
-      }}
-    >
-      <span>{label}</span>
-      <span
-        className="tabular text-[11px] font-semibold"
-        style={{
-          opacity: isActive ? 1 : 0.6,
-        }}
-      >
-        {count}
-      </span>
-    </button>
-  );
+  const accentHex = PIPELINE_ACCENT[pipelineId].hex;
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {renderPill(
-        "__all__",
-        `All ${pipeline.title}`,
-        allCount,
-        allActive,
-        () => onSelect(null),
-      )}
-      {pipeline.stages.map((s) => {
+    <div className="flex items-stretch w-full">
+      {pipeline.stages.map((s, i) => {
         const isActive = selectedStage === s.id;
         const count = stageCounts[s.id] ?? 0;
-        return renderPill(s.id, s.title, count, isActive, () => onSelect(s.id));
+        const overlap = i === 0 ? 0 : -CHEV;
+        const fill = isActive ? accentHex : "hsl(var(--background))";
+        const outline = isActive ? accentHex : "hsl(var(--brand-navy) / 0.15)";
+        const textColor = isActive ? "#fff" : accentHex;
+
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onSelect(isActive ? null : s.id)}
+            className="relative flex-1 min-w-0 group"
+            style={{
+              height: TAB_H,
+              marginLeft: overlap,
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              zIndex: isActive ? 2 : 1,
+            }}
+          >
+            <span
+              aria-hidden
+              className="absolute inset-0 transition-colors"
+              style={{ clipPath: CHEVRON_CLIP, backgroundColor: outline }}
+            />
+            <span
+              aria-hidden
+              className="absolute transition-colors"
+              style={{
+                top: BORDER, bottom: BORDER, left: BORDER, right: BORDER,
+                clipPath: CHEVRON_CLIP, backgroundColor: fill,
+              }}
+            />
+            {!isActive && (
+              <span
+                aria-hidden
+                className="absolute opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{
+                  top: BORDER, bottom: BORDER, left: BORDER, right: BORDER,
+                  clipPath: CHEVRON_CLIP, backgroundColor: `${accentHex}14`,
+                }}
+              />
+            )}
+            <span
+              className="relative flex flex-col items-center justify-center h-full leading-none"
+              style={{ color: textColor, paddingLeft: CHEV + 4, paddingRight: CHEV + 4 }}
+            >
+              <span className="text-[11px] font-medium tracking-tight">{s.title}</span>
+              <span
+                className="text-[13px] font-semibold tabular mt-0.5"
+                style={{ opacity: isActive ? 1 : 0.6 }}
+              >
+                {count}
+              </span>
+            </span>
+          </button>
+        );
       })}
     </div>
   );
