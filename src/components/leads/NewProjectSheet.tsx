@@ -144,6 +144,37 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
             />
           </div>
 
+          <div>
+            <label className={labelCls}>Initial stage</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(["proposal", "quote", "confirming"] as const).map((s) => {
+                const labels = { proposal: "Proposal", quote: "Quote", confirming: "Confirming" };
+                const selected = initialStage === s;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setInitialStage(s)}
+                    className="rounded-xl border px-3 py-2.5 text-[14px] transition-colors"
+                    style={{
+                      minHeight: 48,
+                      backgroundColor: selected ? "hsl(var(--brand-navy) / 0.08)" : "hsl(var(--card))",
+                      borderColor: selected ? "hsl(var(--brand-navy) / 0.4)" : "hsl(var(--border))",
+                      color: selected ? "hsl(var(--brand-navy))" : "hsl(var(--foreground))",
+                      fontWeight: selected ? 600 : 400,
+                    }}
+                  >
+                    {labels[s]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
+              Sales · {initialStage === "proposal" ? "Proposal" : initialStage === "quote" ? "Quote" : "Confirming"}
+              {initialStage !== "proposal" && " — quote number auto-generated"}
+            </p>
+          </div>
+
           <p className="text-[11px] text-muted-foreground italic leading-snug pt-1">
             Need more fields? Create first, then expand from the project.
           </p>
