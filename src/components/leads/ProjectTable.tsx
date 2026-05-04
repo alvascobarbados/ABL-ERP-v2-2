@@ -576,11 +576,19 @@ const TableRow = ({
         color: "hsl(var(--brand-navy))",
       }}
     >
-      {/* Flag — read-only (toggled via row double-click) */}
-      <div className="px-3 flex items-center justify-center">
+      {/* Flag — single click toggles (special-case column) */}
+      <div
+        className="px-3 flex items-center justify-center cursor-pointer hover:bg-[hsl(var(--brand-orange)/0.08)]"
+        onClick={(e) => { e.stopPropagation(); onToggleFlag(); }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        title={flagged ? "Unflag" : "Flag"}
+      >
         {flagged ? (
           <Flag className="h-3.5 w-3.5 fill-current" style={{ color: "hsl(var(--brand-orange))" }} />
-        ) : null}
+        ) : (
+          <Flag className="h-3.5 w-3.5 opacity-0 hover:opacity-30" style={{ color: "hsl(var(--brand-orange))" }} />
+        )}
       </div>
 
       {/* Pipeline · Stage — read-only here; long-press opens StagePicker */}
@@ -590,6 +598,7 @@ const TableRow = ({
 
       {/* Customer — entity popover */}
       <EditableCell
+        cellKey={`${card.id}:customer`}
         mode="custom"
         align="left"
         display={proj.customer}
@@ -601,6 +610,7 @@ const TableRow = ({
 
       {/* Project name — text */}
       <EditableCell
+        cellKey={`${card.id}:projectName`}
         mode="text"
         align="left"
         display={proj.projectName}
@@ -611,6 +621,7 @@ const TableRow = ({
 
       {/* Detail summary — text */}
       <EditableCell
+        cellKey={`${card.id}:detailSummary`}
         mode="text"
         align="left"
         display={proj.detailSummary?.trim() || "—"}
@@ -623,6 +634,7 @@ const TableRow = ({
 
       {/* Supplier — entity popover */}
       <EditableCell
+        cellKey={`${card.id}:supplier`}
         mode="custom"
         align="left"
         display={supName || "—"}
@@ -635,6 +647,7 @@ const TableRow = ({
 
       {/* Quote # — text */}
       <EditableCell
+        cellKey={`${card.id}:quoteNumber`}
         mode="text"
         align="left"
         display={<span className="tabular">{proj.quoteNumber ?? "—"}</span>}
@@ -647,6 +660,7 @@ const TableRow = ({
 
       {/* Amount — number */}
       <EditableCell
+        cellKey={`${card.id}:value`}
         mode="number"
         align="right"
         display={<span className="tabular">{fmtMoney(proj.value)}</span>}
@@ -658,6 +672,7 @@ const TableRow = ({
 
       {/* Mode — enum popover */}
       <ModeCell
+        cellKey={`${card.id}:mode`}
         value={proj.shippingMode}
         active={openPicker === "mode"}
         flash={flashFor("mode")}
@@ -670,6 +685,7 @@ const TableRow = ({
 
       {/* Tracking — text */}
       <EditableCell
+        cellKey={`${card.id}:trackingRef`}
         mode="text"
         align="left"
         display={<span className="tabular">{proj.trackingRef ?? "—"}</span>}
@@ -682,6 +698,7 @@ const TableRow = ({
 
       {/* Rep — multi popover */}
       <EditableCell
+        cellKey={`${card.id}:rep`}
         mode="custom"
         align="left"
         display={<span className="tabular">{repInitials(proj.pointPerson)}</span>}
