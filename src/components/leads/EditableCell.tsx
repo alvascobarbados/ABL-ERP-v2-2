@@ -146,6 +146,8 @@ interface TextProps extends BaseProps {
   value: string;
   /** Placeholder while editing. */
   placeholder?: string;
+  /** Optional fixed visual prefix shown left of the input while editing (e.g. "Q-"). Not part of the saved value. */
+  prefix?: string;
   /** Called when the user commits (Enter or blur). Return ok=false to flash red. */
   onCommit: (next: string) => Promise<SaveResult> | SaveResult;
 }
