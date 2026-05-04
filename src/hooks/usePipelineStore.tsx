@@ -177,7 +177,7 @@ function projectToRow(p: Project): any {
     order_type: p.orderType,
     priority: p.priority,
     tag: p.tag ?? null,
-    quote_number: p.quoteNumber ?? null,
+    quote_number: p.quoteNumber ? p.quoteNumber.replace(/^Q-/, "") : null,
     po_number: p.poNumber ?? null,
     invoice_number: p.invoiceNumber ?? null,
     flagged: !!p.flagged,
