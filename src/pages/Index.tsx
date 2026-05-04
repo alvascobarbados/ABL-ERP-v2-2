@@ -172,7 +172,7 @@ function projectHasMissingData(p: Project): boolean {
     purchasing: 3, production: 4,
     preproduction: 3, in_production: 4, // legacy
     shipment_required: 5, shipment_assigned: 6,
-    invoice_required: 7, invoiced: 8, paid: 9,
+    invoice_required: 7, invoiced: 8, paid: 9, completed: 9,
   };
   const r = stageRank[p.stage] ?? 0;
   if (r >= 1 && !p.quoteNumber) return true;

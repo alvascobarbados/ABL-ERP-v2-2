@@ -798,6 +798,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       sales: "quote", design: "design",
       purchasing: "purchasing", production: "production",
       shipping: "shipment_required", finance: "invoice_required",
+      completed: "completed",
       operations: "production", // legacy alias
     };
     const targetStage: StageId =

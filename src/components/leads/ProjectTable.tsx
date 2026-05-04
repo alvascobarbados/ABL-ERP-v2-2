@@ -23,14 +23,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-// Pipeline order matches the chevron flow (Sales → Design → Purchasing → Production → Shipping → Finance).
+// Pipeline order matches the chevron flow (Sales → Design → Purchasing → Production → Shipping → Finance → Completed).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
-  sales: 0, design: 1, purchasing: 2, production: 3, shipping: 4, finance: 5,
+  sales: 0, design: 1, purchasing: 2, production: 3, shipping: 4, finance: 5, completed: 6,
   operations: 3, // legacy alias — same slot as production
 };
 // Display overrides for stages whose canonical title differs from the
-// PIPELINES config (or that aren't listed there at all). "paid" must
-// render Title Case; both shipping sub-stages render as "Shipping".
+// PIPELINES config (or that aren't listed there at all). "paid" is a
+// legacy stage shown as Title Case; both shipping sub-stages render as
+// "Shipping". "completed" already has "Completed" in PIPELINES.
 const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
   paid: "Paid",
   shipment_required: "Shipping",
@@ -107,13 +108,14 @@ const STAGE_RANK: Record<StageId, number> = {
   preproduction: 0, in_production: 1, // legacy
   shipment_required: 0, shipment_assigned: 0,
   invoice_required: 0, invoiced: 1, paid: 2,
+  completed: 0,
 };
 
 // Number of user-facing stages per pipeline (used for shade ramp).
 // Single-state pipelines stay at full saturation.
 const STAGE_COUNT: Record<PipelineId, number> = {
   sales: 3, design: 2, purchasing: 1, production: 1,
-  shipping: 1, finance: 3, operations: 1,
+  shipping: 1, finance: 2, completed: 1, operations: 1,
 };
 
 /** Shade strength 0..1 — earlier stages lighter, later stages full saturation. */

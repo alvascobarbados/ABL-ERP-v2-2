@@ -93,9 +93,10 @@ export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
   in_production: "In Production — being made at the factory",
   shipment_required: "Awaiting shipment assignment",
   shipment_assigned: "On the way (in transit)",
-  invoice_required: "Invoice Required — needs invoicing",
-  invoiced: "Invoiced — waiting for payment",
+  invoice_required: "To Invoice — needs invoicing",
+  invoiced: "To Collect — waiting for payment",
   paid: "Paid — complete",
+  completed: "Completed — done 🎉",
 };
 
 export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
@@ -105,6 +106,7 @@ export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
   production: "Making the goods",
   shipping: "Moving the goods",
   finance: "Invoicing and getting paid",
+  completed: "Done — paid and closed",
   // legacy alias
   operations: "Making the goods",
 };
@@ -122,9 +124,9 @@ export const FRIENDLY_STAGE_HELP: Record<StageId, string> = {
   preproduction: "Order is being prepared internally before the factory starts making it — artwork, sign-offs, factory PO, deposit. Move forward when the factory begins producing.",
   in_production: "The factory has the order and is making it. When production finishes, the item moves to Shipping for shipment assignment.",
   shipment_required: "Production is done — the item is waiting to be assigned to a shipment (Air or Ocean). Tap the banner to assign.",
-  shipment_assigned: "On a shipment and in transit. When the whole shipment is delivered, every item on it moves to Finance · Invoice Required.",
-  
+  shipment_assigned: "On a shipment and in transit. When the whole shipment is delivered, every item on it moves to Finance · To Invoice.",
   invoice_required: "Goods delivered — finance team needs to issue the invoice. Move forward once the invoice has been sent.",
   invoiced: "Invoice has been sent. Move forward when the customer pays.",
   paid: "Project is complete and paid. 🎉",
+  completed: "Project is complete and paid. 🎉",
 };

@@ -9,6 +9,7 @@ export const PIPELINE_ACCENT: Record<PipelineId, { hex: string; name: string }> 
   production: { hex: "#1B2A4E", name: "navy" },     // Alvasco Navy — making
   shipping:   { hex: "#3D7B86", name: "teal" },     // Soft navy / teal — moving the goods
   finance:    { hex: "#B8884D", name: "gold" },     // muted gold — getting paid
+  completed:  { hex: "#6B8E5A", name: "sage" },     // sage green — terminal / done
   // legacy alias — kept for any historical PipelineId === "operations"
   // appearing in old log entries; falls back to navy.
   operations: { hex: "#1B2A4E", name: "navy" },
