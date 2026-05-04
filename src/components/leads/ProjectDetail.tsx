@@ -17,6 +17,7 @@ import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterD
 import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StagePicker } from "./StagePicker";
+import { usePresence } from "@/hooks/usePresence";
 
 interface Props {
   card: PipelineCard | null;
@@ -114,6 +115,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   }, [card, onClose]);
 
   const live = useMemo(() => card ? projects.find((p) => p.id === card.id) ?? null : null, [card, projects]);
+  const presentOthers = usePresence(live?.id);
 
   const confirmedAt = useMemo(() => {
     const n = live?.notes?.find((x) => x.auto && /→\s*Confirming/i.test(x.text));
@@ -321,6 +323,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <span className="font-semibold">{live.projectName}</span>
             </span>
           </button>
+          <PresenceAvatars users={presentOthers} />
           <CardActionsPopover
             open={actionsOpen}
             onOpenChange={setActionsOpen}
@@ -1040,3 +1043,40 @@ const ProductLineItemEditor = ({
     </BottomSheet>
   );
 };
+
+// ── Presence avatars (top-right of sticky header) ──────────────────────
+function PresenceAvatars({ users }: { users: import("@/hooks/usePresence").PresentUser[] }) {
+  if (!users || users.length === 0) return null;
+  const visible = users.slice(0, 3);
+  const overflow = users.length - visible.length;
+  return (
+    <div className="flex items-center -space-x-1.5 shrink-0" aria-label={`${users.length} other viewer${users.length === 1 ? "" : "s"}`}>
+      {visible.map((u) => (
+        <span
+          key={u.sessionId}
+          title={u.fullName}
+          className="inline-flex items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2 ring-background"
+          style={{
+            width: 24, height: 24,
+            background: "linear-gradient(135deg, hsl(var(--brand-navy)), hsl(var(--brand-orange)))",
+          }}
+        >
+          {u.initials}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <span
+          title={users.slice(3).map((u) => u.fullName).join(", ")}
+          className="inline-flex items-center justify-center rounded-full text-[10px] font-semibold ring-2 ring-background"
+          style={{
+            width: 24, height: 24,
+            backgroundColor: "hsl(var(--brand-navy) / 0.12)",
+            color: "hsl(var(--brand-navy))",
+          }}
+        >
+          +{overflow}
+        </span>
+      )}
+    </div>
+  );
+}
