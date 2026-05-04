@@ -860,7 +860,7 @@ const ActivitySection = ({
     return (
       <section>
         <SectionHeader>Activity</SectionHeader>
-        <div className="text-[13px] italic text-muted-foreground/70">No activity yet</div>
+        <SectionCard><div className="text-[13px] italic text-muted-foreground/70">No activity yet</div></SectionCard>
       </section>
     );
   }
