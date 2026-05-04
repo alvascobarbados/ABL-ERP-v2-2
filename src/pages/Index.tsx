@@ -384,7 +384,7 @@ const Index = () => {
     doMove(card, target);
   };
 
-  const doMove = (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
+  const doMove = async (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => {
     const v = validateMove(card.project, target);
     if (!v.ok) {
       const labels = v.missing.map((m) =>
@@ -397,7 +397,7 @@ const Index = () => {
     const fromPipeline = card.pipeline;
     const fromStage = card.stage;
     const label = `${card.project.customer} · ${card.project.projectName}`;
-    const result = moveCard(card.id, target);
+    const result = await moveCard(card.id, target);
     if (!result.ok) return;
     if (target.pipeline !== fromPipeline) triggerPulse(target.pipeline);
 
@@ -414,11 +414,11 @@ const Index = () => {
     });
   };
 
-  const markAsPaid = (card: PipelineCard) => {
+  const markAsPaid = async (card: PipelineCard) => {
     const fromPipeline = card.pipeline;
     const fromStage = card.stage;
     const label = `${card.project.customer} · ${card.project.projectName}`;
-    const result = moveCard(card.id, { pipeline: "finance", stage: "paid" });
+    const result = await moveCard(card.id, { pipeline: "finance", stage: "paid" });
     if (!result.ok) return;
     toast.success(`${label} marked as paid`, {
       description: "Moved to Completed.",

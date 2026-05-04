@@ -121,11 +121,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
   // ─── Stage move (used by both action sheet and ⋮ menu) ───
   const openStagePicker = () => setStagePickerOpen(true);
-  const handleStagePick = (target: { pipeline: PipelineId; stage: StageId }) => {
+  const handleStagePick = async (target: { pipeline: PipelineId; stage: StageId }) => {
     const fromPipeline = live.pipeline;
     const fromStage = live.stage;
     setStagePickerOpen(false);
-    const result = moveCard(live.id, target);
+    const result = await moveCard(live.id, target);
     if (!result.ok) {
       toast.error("Can't move yet — fill in the missing details first.");
       return;

@@ -29,8 +29,8 @@ export const ShipmentView = ({ shipment, onClose, onOpenProject }: Props) => {
   const inShippingCount = subs.filter((s) => s.pipeline === "shipping").length;
 
   const title = formatShipmentTitle(shipment);
-  const onConfirmDeliver = () => {
-    const { count } = markShipmentDelivered(shipment.id);
+  const onConfirmDeliver = async () => {
+    const { count } = await markShipmentDelivered(shipment.id);
     setConfirmDeliver(false);
     toast.success(`${title} delivered. ${count} project${count === 1 ? "" : "s"} sent to Finance.`, {
       duration: 6000,

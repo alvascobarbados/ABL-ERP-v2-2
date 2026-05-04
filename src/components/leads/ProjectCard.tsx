@@ -252,8 +252,8 @@ export const ProjectCard = ({
   const handleEdit = () => { haptics.pickup(); editMode.enter(card); };
   const handleOpenProject = () => onOpen();
   const handleMoveStage = () => onOpenPicker();
-  const handleDuplicate = () => {
-    const dup = store.duplicateProject(proj.id);
+  const handleDuplicate = async () => {
+    const dup = await store.duplicateProject(proj.id);
     if (dup) toast.success(`Duplicated · ${dup.customer} · ${dup.projectName}`, { duration: 4000 });
   };
   const handleArchive = () => {
