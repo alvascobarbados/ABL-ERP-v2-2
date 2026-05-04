@@ -23,7 +23,7 @@ export const SuppliersView = ({ open, onClose, onOpenProject }: Props) => {
       <div className="space-y-6">
         {SUPPLIERS.map((sup) => {
           const subs = getProjectsForSupplier(sup.id);
-          const active = subs.filter((s) => s.pipeline !== "finance" || s.stage !== "paid");
+          const active = subs.filter((s) => s.pipeline !== "completed" && !(s.pipeline === "finance" && s.stage === "paid"));
           return (
             <section key={sup.id}>
               <div className="flex items-start justify-between gap-3 mb-2">
