@@ -91,7 +91,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       return;
     }
     if (key === "quote") {
-      const v = value.trim() || undefined;
+      const v = value.replace(/^\s*Q-?/i, "").replace(/\D/g, "").trim() || undefined;
       if (v && store.isQuoteNumberDuplicate(v, proj.id)) {
         toast.error(`Quote ${v} is already in use`);
         return;
@@ -103,7 +103,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       return;
     }
     if (key === "po") {
-      const v = value.trim() || undefined;
+      const v = value.replace(/^\s*PO-?/i, "").replace(/\D/g, "").trim() || undefined;
       if (v && store.isPONumberDuplicate(v, proj.id)) {
         toast.error(`PO ${v} is already in use`);
         return;
@@ -115,7 +115,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       return;
     }
     if (key === "invoice") {
-      const v = value.trim() || undefined;
+      const v = value.replace(/^\s*INV-?/i, "").replace(/\D/g, "").trim() || undefined;
       if (v && store.isInvoiceNumberDuplicate(v, proj.id)) {
         toast.error(`Invoice ${v} is already in use`);
         return;
