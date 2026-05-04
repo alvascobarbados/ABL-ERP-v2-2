@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
+import { toast } from "sonner";
 import {
   PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
   ProjectLogEntry, ProjectLogActionType,
-  SHIPMENTS as SEED_SHIPMENTS, SUPPLIERS, ShippingMode,
+  SUPPLIERS, ShippingMode,
 } from "@/data/pipelines";
-import { ABL_PROJECTS as SEED_PROJECTS } from "@/data/abl-projects";
-import { useCurrentUser, SYSTEM_CURRENT_USER, type CurrentUser } from "./useCurrentUser";
+import { useCurrentUser, type CurrentUser } from "./useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 
 // ─────────── Log helpers ───────────
@@ -107,12 +107,8 @@ function buildFieldEditEntries(
 }
 
 // ─────────── Date serialization (Supabase ⇄ Project) ───────────
-const dateFields: (keyof Project)[] = [
-  "createdAt", "updatedAt", "deadlineDate", "deletedAt",
-  "invoiceIssuedDate", "invoiceRequiredEnteredAt", "paidOnDate",
-];
 function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByProj: Map<string, ProjectLogEntry[]>, itemsByProj: Map<string, LineItem[]>): Project {
-  const p: Project = {
+  return {
     id: row.id,
     customer: row.customer,
     contactPerson: row.contact_person ?? undefined,
@@ -155,7 +151,6 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     log: logByProj.get(row.id),
     lineItems: itemsByProj.get(row.id),
   };
-  return p;
 }
 
 function projectToRow(p: Project): any {
@@ -196,6 +191,7 @@ function projectToRow(p: Project): any {
     paid_on_date: p.paidOnDate ? p.paidOnDate.toISOString() : null,
     payment_method: p.paymentMethod ?? null,
     payment_reference: p.paymentReference ?? null,
+    updated_at: new Date().toISOString(),
   };
 }
 function logEntryToRow(projectId: string, e: ProjectLogEntry) {
@@ -363,83 +359,47 @@ interface PipelineStoreCtx {
   shipments: Shipment[];
   suppliers: Supplier[];
   loading: boolean;
-  moveCard: (cardId: string, target: { pipeline: PipelineId; stage: StageId }) => MoveResult;
-  updateProject: (id: string, patch: Partial<Project>) => void;
-  renameProject: (currentName: string, newName: string) => { count: number };
-  addNote: (projectId: string, text: string, author?: string) => void;
-  addLineItem: (projectId: string, item: LineItem) => void;
-  updateLineItem: (projectId: string, index: number, item: LineItem) => void;
-  removeLineItem: (projectId: string, index: number) => void;
-  duplicateProject: (projectId: string) => Project | null;
-  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string }) => Project;
-  toggleFlag: (projectId: string) => void;
-  softDeleteProject: (projectId: string) => { restoredFrom: { pipeline: PipelineId; stage: StageId } } | null;
-  restoreProject: (projectId: string) => { pipeline: PipelineId; stage: StageId } | null;
-  hardDeleteProject: (projectId: string) => void;
-  deleteProject: (projectId: string) => void;
-  addSupplier: (input: { name: string; country: string; defaultShippingMode: ShippingMode }) => Supplier;
+  moveCard: (cardId: string, target: { pipeline: PipelineId; stage: StageId }) => Promise<MoveResult>;
+  updateProject: (id: string, patch: Partial<Project>) => Promise<void>;
+  renameProject: (currentName: string, newName: string) => Promise<{ count: number }>;
+  addNote: (projectId: string, text: string, author?: string) => Promise<void>;
+  addLineItem: (projectId: string, item: LineItem) => Promise<void>;
+  updateLineItem: (projectId: string, index: number, item: LineItem) => Promise<void>;
+  removeLineItem: (projectId: string, index: number) => Promise<void>;
+  duplicateProject: (projectId: string) => Promise<Project | null>;
+  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string }) => Promise<Project | null>;
+  toggleFlag: (projectId: string) => Promise<void>;
+  softDeleteProject: (projectId: string) => Promise<{ restoredFrom: { pipeline: PipelineId; stage: StageId } } | null>;
+  restoreProject: (projectId: string) => Promise<{ pipeline: PipelineId; stage: StageId } | null>;
+  hardDeleteProject: (projectId: string) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
+  addSupplier: (input: { name: string; country: string; defaultShippingMode: ShippingMode }) => Promise<Supplier>;
   isQuoteNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
   isPONumberDuplicate: (number: string, exceptProjectId: string) => boolean;
   isInvoiceNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
-  assignToShipment: (projectId: string, shipmentId: string) => void;
-  createShipment: (input: NewShipmentInput) => Shipment;
-  updateShipment: (id: string, patch: Partial<Shipment>) => void;
-  markShipmentDelivered: (shipmentId: string) => { count: number };
+  assignToShipment: (projectId: string, shipmentId: string) => Promise<void>;
+  createShipment: (input: NewShipmentInput) => Promise<Shipment | null>;
+  updateShipment: (id: string, patch: Partial<Shipment>) => Promise<void>;
+  markShipmentDelivered: (shipmentId: string) => Promise<{ count: number }>;
   pulsePipeline: PipelineId | null;
   triggerPulse: (id: PipelineId) => void;
 }
 
 const Ctx = createContext<PipelineStoreCtx | null>(null);
 
+const FAILURE_TOAST = "Couldn't save change — please try again";
+
 export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => {
-  // Phase 3a: useState is the single in-memory cache. It is hydrated from
-  // Supabase on mount AND mutated optimistically by every store method.
-  // Every mutation also writes to Supabase (fire-and-forget for now; errors
-  // log to console). Phase 3b will wire async error handling and remove the
-  // legacy SEED_PROJECTS hydration fallback.
-  const [projects, setProjects] = useState<Project[]>(() =>
-    // Fallback hydration from in-memory seed so the UI has something to
-    // show before the Supabase fetch returns. Replaced as soon as the
-    // initial fetch resolves.
-    SEED_PROJECTS.map((p, i) => {
-      const s = p.stage as string;
-      let next: Project = { ...p };
-      if (p.pipeline === "shipping" &&
-          s !== "shipment_required" && s !== "shipment_assigned") {
-        next = { ...next, pipeline: "finance" as const, stage: "invoice_required" as const };
-      }
-      if (!next.paymentTerms) {
-        next.paymentTerms = "Net 30";
-        next.paymentTermsInherited = true;
-      }
-      if (next.pipeline === "finance") {
-        const now = Date.now();
-        if (next.stage === "invoice_required" && !next.invoiceRequiredEnteredAt) {
-          const off = ((i * 13 + 5) % 22) + 1;
-          next.invoiceRequiredEnteredAt = new Date(now - off * 86400000);
-        }
-        if ((next.stage === "invoiced" || next.stage === "paid") && !next.invoiceIssuedDate) {
-          const base = next.stage === "paid" ? 30 : 12;
-          const jitter = ((i * 7 + 3) % 18) - 4;
-          const days = Math.max(1, base + jitter);
-          next.invoiceIssuedDate = new Date(now - days * 86400000);
-          next.invoiceIssuedDateAssumed = true;
-        }
-      }
-      if (!next.log || next.log.length === 0) {
-        next = appendLog(next, {
-          ts: next.createdAt,
-          actor: actorOf(SYSTEM_CURRENT_USER),
-          actionType: "project_created",
-          description: `${SYSTEM_CURRENT_USER.shortName} created this project`,
-        }).project;
-      }
-      return next;
-    }),
-  );
-  const [shipments, setShipments] = useState<Shipment[]>(() => SEED_SHIPMENTS.map((s) => ({ ...s })));
+  // Phase 3b: Supabase is the source of truth. No in-memory seed fallback.
+  // Mutations apply optimistically and roll back on failure with a toast.
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [shipments, setShipments] = useState<Shipment[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => SUPPLIERS.map((s) => ({ ...s })));
   const [loading, setLoading] = useState(true);
+  const projectsRef = useRef<Project[]>([]);
+  projectsRef.current = projects;
+  const shipmentsRef = useRef<Shipment[]>([]);
+  shipmentsRef.current = shipments;
   const currentUser = useCurrentUser();
   const userRef = useRef(currentUser); userRef.current = currentUser;
   const suppliersRef = useRef(suppliers); suppliersRef.current = suppliers;
@@ -449,9 +409,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   // ── Initial fetch from Supabase + realtime subscription ───────────────
   // SCALING NOTE: chatty fan-out, fine to ~5k projects, revisit when
   // growth requires pagination or scoped subscriptions.
+  // FLICKER NOTE: realtime debounced; rows are keyed by id so React
+  // reconciles in-place — no card disappearance during refetch.
   useEffect(() => {
     let mounted = true;
-    const refetch = async () => {
+    let refetchTimer: number | null = null;
+
+    const refetchNow = async () => {
       const [pj, sh, nt, lg, li] = await Promise.all([
         supabase.from("projects").select("*"),
         supabase.from("shipments").select("*"),
@@ -498,7 +462,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       if (sh.data) setShipments(sh.data.map(rowToShipment));
       setLoading(false);
     };
-    refetch();
+
+    const refetch = () => {
+      if (refetchTimer) window.clearTimeout(refetchTimer);
+      refetchTimer = window.setTimeout(() => { refetchNow(); }, 150);
+    };
+
+    refetchNow();
 
     const channel = supabase
       .channel("pipeline-store")
@@ -511,6 +481,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
     return () => {
       mounted = false;
+      if (refetchTimer) window.clearTimeout(refetchTimer);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -523,293 +494,236 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const touch = (p: Project): Project => ({ ...p, updatedAt: new Date() });
 
-  // Fire-and-forget Supabase write helpers (Phase 3a). Errors logged.
-  const persistProject = (p: Project) => {
-    supabase.from("projects").upsert(projectToRow(p)).then(({ error }) => {
-      if (error) console.error("[store] persistProject", p.id, error.message);
+  // ── Optimistic mutation core ─────────────────────────────────────────
+  // Apply optimistic in-memory change; await Supabase project upsert + log
+  // insert in one chain; rollback both the local state and (if log failed)
+  // the project row on error, then toast.
+  const commitProjectChange = async (
+    optimistic: Project,
+    logEntries: ProjectLogEntry[],
+  ): Promise<boolean> => {
+    const snapshot = projectsRef.current;
+    const prevRow = snapshot.find((p) => p.id === optimistic.id);
+    setProjects((prev) => {
+      const exists = prev.some((p) => p.id === optimistic.id);
+      return exists ? prev.map((p) => (p.id === optimistic.id ? optimistic : p)) : [optimistic, ...prev];
     });
-  };
-  const persistLog = (projectId: string, entries: ProjectLogEntry[]) => {
-    if (!entries.length) return;
-    supabase.from("project_log_entries").insert(entries.map((e) => logEntryToRow(projectId, e)))
-      .then(({ error }) => { if (error) console.error("[store] persistLog", projectId, error.message); });
-  };
-  const persistNote = (projectId: string, n: ProjectNote) => {
-    supabase.from("project_notes").insert(noteToRow(projectId, n))
-      .then(({ error }) => { if (error) console.error("[store] persistNote", projectId, error.message); });
-  };
-  const persistLineItems = (projectId: string, items: LineItem[]) => {
-    // Replace strategy: delete + reinsert with positions.
-    supabase.from("line_items").delete().eq("project_id", projectId).then(() => {
-      if (!items.length) return;
-      const rows = items.map((li, i) => ({
-        project_id: projectId, position: i, qty: li.qty, description: li.description,
-        unit_price: li.unitPrice ?? null, total: li.total ?? null, product_id: li.productId ?? null,
-      }));
-      supabase.from("line_items").insert(rows).then(({ error }) => {
-        if (error) console.error("[store] persistLineItems", projectId, error.message);
-      });
-    });
+    const { error: pErr } = await supabase.from("projects").upsert(projectToRow(optimistic));
+    if (pErr) {
+      console.error("[store] commit project failed", optimistic.id, pErr.message);
+      setProjects(snapshot);
+      toast.error(FAILURE_TOAST);
+      return false;
+    }
+    if (logEntries.length) {
+      const { error: lErr } = await supabase
+        .from("project_log_entries")
+        .insert(logEntries.map((e) => logEntryToRow(optimistic.id, e)));
+      if (lErr) {
+        console.error("[store] commit log failed", optimistic.id, lErr.message);
+        // Roll back the project row to keep audit trail consistent.
+        setProjects(snapshot);
+        if (prevRow) {
+          await supabase.from("projects").upsert(projectToRow(prevRow));
+        }
+        toast.error(FAILURE_TOAST);
+        return false;
+      }
+    }
+    return true;
   };
 
-  const moveCard = useCallback<PipelineStoreCtx["moveCard"]>((cardId, target) => {
-    const proj = projects.find((p) => p.id === cardId);
+  const moveCard = useCallback<PipelineStoreCtx["moveCard"]>(async (cardId, target) => {
+    const proj = projectsRef.current.find((p) => p.id === cardId);
     if (!proj) return { ok: false };
-
     const v = validateMove(proj, target);
     if (!v.ok) return { blocked: { reason: "missing-fields", missing: v.missing } };
 
-    let newEntries: ProjectLogEntry[] = [];
-    let updated: Project | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== cardId) return p;
-      const patch: Partial<Project> = { pipeline: target.pipeline, stage: target.stage };
-      if (target.pipeline === "shipping" && target.stage === "shipment_required") {
-        patch.shipmentId = undefined;
-      }
-      if (target.stage === "quote" && !p.quoteNumber) {
-        patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`;
-      }
-      if (target.pipeline === "operations" && !p.poNumber) {
-        patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`;
-      }
-      if (target.pipeline === "finance" && !p.invoiceNumber) {
-        patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`;
-      }
-      if (target.pipeline === "finance" && target.stage === "invoice_required"
-          && !p.invoiceRequiredEnteredAt) {
-        patch.invoiceRequiredEnteredAt = new Date();
-      }
-      if (target.pipeline === "finance" && target.stage === "invoiced"
-          && !p.invoiceIssuedDate) {
-        patch.invoiceIssuedDate = new Date();
-        patch.invoiceIssuedDateAssumed = true;
-      }
-      const u = userRef.current;
-      const fromLabel = pipelineStageLabel(p.pipeline, p.stage);
-      const toLabel = pipelineStageLabel(target.pipeline, target.stage);
-      const isPaid = target.pipeline === "finance" && target.stage === "paid";
-      const isArchive = target.pipeline === "sales" && target.stage === "archive";
-      const wasArchive = p.pipeline === "sales" && p.stage === "archive";
-      let next = touch({ ...p, ...patch });
-      let res;
-      if (isPaid) {
-        res = appendLog(next, {
-          actor: actorOf(u), actionType: "mark_paid",
-          description: `${u.shortName} marked this paid`,
-          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: target.pipeline, toStage: target.stage },
-        });
-      } else if (isArchive) {
-        res = appendLog(next, {
-          actor: actorOf(u), actionType: "archive",
-          description: `${u.shortName} archived this`,
-          metadata: { fromPipeline: p.pipeline, fromStage: p.stage },
-        });
-      } else if (wasArchive) {
-        res = appendLog(next, {
-          actor: actorOf(u), actionType: "unarchive",
-          description: `${u.shortName} restored this from archive`,
-          metadata: { toPipeline: target.pipeline, toStage: target.stage },
-        });
-      } else {
-        res = appendLog(next, {
-          actor: actorOf(u), actionType: "stage_change",
-          description: `${u.shortName} moved this from ${fromLabel} to ${toLabel}`,
-          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: target.pipeline, toStage: target.stage },
-        });
-      }
-      newEntries.push(res.entry);
-      updated = res.project;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      persistLog(updated.id, newEntries);
+    const u = userRef.current;
+    const patch: Partial<Project> = { pipeline: target.pipeline, stage: target.stage };
+    if (target.pipeline === "shipping" && target.stage === "shipment_required") patch.shipmentId = undefined;
+    if (target.stage === "quote" && !proj.quoteNumber) patch.quoteNumber = `Q-${2040 + Math.floor(Math.random() * 41)}`;
+    if (target.pipeline === "operations" && !proj.poNumber) patch.poNumber = `PO-${1080 + Math.floor(Math.random() * 31)}`;
+    if (target.pipeline === "finance" && !proj.invoiceNumber) patch.invoiceNumber = `INV-${1040 + Math.floor(Math.random() * 21)}`;
+    if (target.pipeline === "finance" && target.stage === "invoice_required" && !proj.invoiceRequiredEnteredAt) {
+      patch.invoiceRequiredEnteredAt = new Date();
     }
-    return { ok: true };
-  }, [projects]);
-
-  const updateProject = useCallback((id: string, patch: Partial<Project>) => {
-    let updated: Project | null = null;
-    let newEntries: ProjectLogEntry[] = [];
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== id) return p;
-      const u = userRef.current;
-      const entries = buildFieldEditEntries(p, patch, u, suppliersRef.current);
-      let next = touch({ ...p, ...patch });
-      for (const e of entries) {
-        const res = appendLog(next, e);
-        next = res.project;
-        newEntries.push(res.entry);
-      }
-      updated = next;
-      return next;
-    }));
-    if (updated) {
-      persistProject(updated);
-      persistLog(id, newEntries);
+    if (target.pipeline === "finance" && target.stage === "invoiced" && !proj.invoiceIssuedDate) {
+      patch.invoiceIssuedDate = new Date();
+      patch.invoiceIssuedDateAssumed = true;
     }
+    const fromLabel = pipelineStageLabel(proj.pipeline, proj.stage);
+    const toLabel = pipelineStageLabel(target.pipeline, target.stage);
+    const isPaid = target.pipeline === "finance" && target.stage === "paid";
+    const isArchive = target.pipeline === "sales" && target.stage === "archive";
+    const wasArchive = proj.pipeline === "sales" && proj.stage === "archive";
+    let next = touch({ ...proj, ...patch });
+    let res;
+    if (isPaid) {
+      res = appendLog(next, { actor: actorOf(u), actionType: "mark_paid", description: `${u.shortName} marked this paid`,
+        metadata: { fromPipeline: proj.pipeline, fromStage: proj.stage, toPipeline: target.pipeline, toStage: target.stage } });
+    } else if (isArchive) {
+      res = appendLog(next, { actor: actorOf(u), actionType: "archive", description: `${u.shortName} archived this`,
+        metadata: { fromPipeline: proj.pipeline, fromStage: proj.stage } });
+    } else if (wasArchive) {
+      res = appendLog(next, { actor: actorOf(u), actionType: "unarchive", description: `${u.shortName} restored this from archive`,
+        metadata: { toPipeline: target.pipeline, toStage: target.stage } });
+    } else {
+      res = appendLog(next, { actor: actorOf(u), actionType: "stage_change",
+        description: `${u.shortName} moved this from ${fromLabel} to ${toLabel}`,
+        metadata: { fromPipeline: proj.pipeline, fromStage: proj.stage, toPipeline: target.pipeline, toStage: target.stage } });
+    }
+    const ok = await commitProjectChange(res.project, [res.entry]);
+    return { ok };
   }, []);
 
-  const renameProject = useCallback((currentName: string, newName: string) => {
-    let count = 0;
+  const updateProject = useCallback(async (id: string, patch: Partial<Project>) => {
+    const proj = projectsRef.current.find((p) => p.id === id);
+    if (!proj) return;
     const u = userRef.current;
-    const writes: Project[] = [];
-    const logWrites: Array<{ id: string; entry: ProjectLogEntry }> = [];
-    setProjects((prev) => prev.map((p) => {
-      if (p.projectName === currentName) {
-        count += 1;
-        const res = appendLog(touch({ ...p, projectName: newName }), {
-          actor: actorOf(u), actionType: "field_edit",
-          description: `${u.shortName} changed project name from ${currentName} to ${newName}`,
-          metadata: { field: "projectName", fromValue: currentName, toValue: newName },
-        });
-        writes.push(res.project);
-        logWrites.push({ id: res.project.id, entry: res.entry });
-        return res.project;
-      }
-      return p;
-    }));
-    for (const w of writes) persistProject(w);
-    for (const lw of logWrites) persistLog(lw.id, [lw.entry]);
+    const entries = buildFieldEditEntries(proj, patch, u, suppliersRef.current);
+    let next = touch({ ...proj, ...patch });
+    const newEntries: ProjectLogEntry[] = [];
+    for (const e of entries) {
+      const r = appendLog(next, e);
+      next = r.project;
+      newEntries.push(r.entry);
+    }
+    await commitProjectChange(next, newEntries);
+  }, []);
+
+  const renameProject = useCallback(async (currentName: string, newName: string) => {
+    const targets = projectsRef.current.filter((p) => p.projectName === currentName);
+    const u = userRef.current;
+    let count = 0;
+    for (const p of targets) {
+      const r = appendLog(touch({ ...p, projectName: newName }), {
+        actor: actorOf(u), actionType: "field_edit",
+        description: `${u.shortName} changed project name from ${currentName} to ${newName}`,
+        metadata: { field: "projectName", fromValue: currentName, toValue: newName },
+      });
+      const ok = await commitProjectChange(r.project, [r.entry]);
+      if (ok) count += 1;
+    }
     return { count };
   }, []);
 
-  const addNote = useCallback((projectId: string, text: string, _author?: string) => {
+  const addNote = useCallback(async (projectId: string, text: string) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId);
+    if (!proj) return;
     const u = userRef.current;
     const note: ProjectNote = {
       id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       ts: new Date(), author: u.fullName, authorUserId: u.userId, text,
     };
-    let updated: Project | null = null;
-    let entry: ProjectLogEntry | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p;
-      let next = touch({ ...p, notes: [...(p.notes ?? []), note] });
-      const res = appendLog(next, {
-        actor: actorOf(u), actionType: "note_added",
-        description: `${u.shortName} added a note`,
-      });
-      updated = res.project;
-      entry = res.entry;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      persistNote(projectId, note);
-      if (entry) persistLog(projectId, [entry]);
+    const next = touch({ ...proj, notes: [...(proj.notes ?? []), note] });
+    const r = appendLog(next, { actor: actorOf(u), actionType: "note_added", description: `${u.shortName} added a note` });
+
+    // Snapshot and apply optimistic
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? r.project : p)));
+    const { error: nErr } = await supabase.from("project_notes").insert(noteToRow(projectId, note));
+    if (nErr) {
+      setProjects(snapshot);
+      toast.error(FAILURE_TOAST);
+      return;
+    }
+    const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
+    if (pErr) {
+      setProjects(snapshot);
+      await supabase.from("project_notes").delete().eq("id", note.id);
+      toast.error(FAILURE_TOAST);
+      return;
+    }
+    const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
+    if (lErr) {
+      setProjects(snapshot);
+      await supabase.from("project_notes").delete().eq("id", note.id);
+      await supabase.from("projects").upsert(projectToRow(proj));
+      toast.error(FAILURE_TOAST);
     }
   }, []);
 
-  const addLineItem = useCallback((projectId: string, item: LineItem) => {
-    let updated: Project | null = null;
-    let entry: ProjectLogEntry | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p;
-      const u = userRef.current;
-      let next = touch({ ...p, lineItems: [...(p.lineItems ?? []), item] });
-      const res = appendLog(next, {
-        actor: actorOf(u), actionType: "line_item_change",
-        description: `${u.shortName} added line item ${item.qty} × ${item.description}`,
-      });
-      updated = res.project;
-      entry = res.entry;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      persistLineItems(projectId, updated.lineItems ?? []);
-      if (entry) persistLog(projectId, [entry]);
+  const persistLineItemsAndCommit = async (
+    projectId: string, items: LineItem[], optimistic: Project, entry: ProjectLogEntry,
+  ) => {
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? optimistic : p)));
+    // Replace strategy: delete + reinsert.
+    const { error: dErr } = await supabase.from("line_items").delete().eq("project_id", projectId);
+    if (dErr) {
+      setProjects(snapshot); toast.error(FAILURE_TOAST); return;
     }
+    if (items.length) {
+      const rows = items.map((li, i) => ({
+        project_id: projectId, position: i, qty: li.qty, description: li.description,
+        unit_price: li.unitPrice ?? null, total: li.total ?? null, product_id: li.productId ?? null,
+      }));
+      const { error: iErr } = await supabase.from("line_items").insert(rows);
+      if (iErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    }
+    const { error: pErr } = await supabase.from("projects").upsert(projectToRow(optimistic));
+    if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, entry));
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+  };
+
+  const addLineItem = useCallback(async (projectId: string, item: LineItem) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    const items = [...(proj.lineItems ?? []), item];
+    const next = touch({ ...proj, lineItems: items });
+    const u = userRef.current;
+    const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
+      description: `${u.shortName} added line item ${item.qty} × ${item.description}` });
+    await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
   }, []);
 
-  const updateLineItem = useCallback((projectId: string, index: number, item: LineItem) => {
-    let updated: Project | null = null;
-    let entry: ProjectLogEntry | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p;
-      const items = [...(p.lineItems ?? [])];
-      if (index < 0 || index >= items.length) return p;
-      items[index] = item;
-      const u = userRef.current;
-      let next = touch({ ...p, lineItems: items });
-      const res = appendLog(next, {
-        actor: actorOf(u), actionType: "line_item_change",
-        description: `${u.shortName} edited line item ${item.qty} × ${item.description}`,
-      });
-      updated = res.project;
-      entry = res.entry;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      persistLineItems(projectId, updated.lineItems ?? []);
-      if (entry) persistLog(projectId, [entry]);
-    }
+  const updateLineItem = useCallback(async (projectId: string, index: number, item: LineItem) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    const items = [...(proj.lineItems ?? [])];
+    if (index < 0 || index >= items.length) return;
+    items[index] = item;
+    const next = touch({ ...proj, lineItems: items });
+    const u = userRef.current;
+    const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
+      description: `${u.shortName} edited line item ${item.qty} × ${item.description}` });
+    await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
   }, []);
 
-  const removeLineItem = useCallback((projectId: string, index: number) => {
-    let updated: Project | null = null;
-    let entry: ProjectLogEntry | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p;
-      const items = [...(p.lineItems ?? [])];
-      if (index < 0 || index >= items.length) return p;
-      const removed = items[index];
-      items.splice(index, 1);
-      const u = userRef.current;
-      let next = touch({ ...p, lineItems: items });
-      const res = appendLog(next, {
-        actor: actorOf(u), actionType: "line_item_change",
-        description: `${u.shortName} removed line item ${removed.qty} × ${removed.description}`,
-      });
-      updated = res.project;
-      entry = res.entry;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      persistLineItems(projectId, updated.lineItems ?? []);
-      if (entry) persistLog(projectId, [entry]);
-    }
+  const removeLineItem = useCallback(async (projectId: string, index: number) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    const items = [...(proj.lineItems ?? [])];
+    if (index < 0 || index >= items.length) return;
+    const removed = items[index];
+    items.splice(index, 1);
+    const next = touch({ ...proj, lineItems: items });
+    const u = userRef.current;
+    const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
+      description: `${u.shortName} removed line item ${removed.qty} × ${removed.description}` });
+    await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
   }, []);
 
-  const duplicateProject = useCallback((projectId: string): Project | null => {
-    const orig = projects.find((p) => p.id === projectId);
+  const duplicateProject = useCallback(async (projectId: string): Promise<Project | null> => {
+    const orig = projectsRef.current.find((p) => p.id === projectId);
     if (!orig) return null;
     const u = userRef.current;
     let copy: Project = {
       ...orig,
       id: `prj-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       projectName: `${orig.projectName} (Copy)`,
-      quoteNumber: undefined,
-      poNumber: undefined,
-      invoiceNumber: undefined,
-      shipmentId: undefined,
-      notes: undefined,
-      lineItems: undefined,
-      log: undefined,
-      pipeline: orig.pipeline,
-      stage: orig.stage,
-      flagged: false,
-      deletedAt: undefined,
-      deletedFromPipeline: undefined,
-      deletedFromStage: undefined,
-      createdAt: new Date(),
-      updatedAt: undefined,
+      quoteNumber: undefined, poNumber: undefined, invoiceNumber: undefined,
+      shipmentId: undefined, notes: undefined, lineItems: undefined, log: undefined,
+      pipeline: orig.pipeline, stage: orig.stage, flagged: false,
+      deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined,
+      createdAt: new Date(), updatedAt: undefined,
     };
-    const res = appendLog(copy, {
-      actor: actorOf(u), actionType: "project_created",
-      description: `${u.shortName} duplicated this from ${orig.projectName}`,
-    });
-    copy = res.project;
-    setProjects((prev) => [copy, ...prev]);
-    persistProject(copy);
-    persistLog(copy.id, [res.entry]);
-    return copy;
-  }, [projects]);
+    const r = appendLog(copy, { actor: actorOf(u), actionType: "project_created",
+      description: `${u.shortName} duplicated this from ${orig.projectName}` });
+    const ok = await commitProjectChange(r.project, [r.entry]);
+    return ok ? r.project : null;
+  }, []);
 
-  const createProject = useCallback<PipelineStoreCtx["createProject"]>((input) => {
+  const createProject = useCallback<PipelineStoreCtx["createProject"]>(async (input) => {
     const u = userRef.current;
     let newProj: Project = {
       id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -817,77 +731,44 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       projectName: input.projectName,
       detailSummary: input.detailSummary,
       pointPerson: input.pointPerson ?? "AV",
-      pipeline: "sales",
-      stage: "proposal",
+      pipeline: "sales", stage: "proposal",
       deadline: "—",
       deadlineDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      value: 0,
-      orderType: "New",
-      priority: "Standard",
+      value: 0, orderType: "New", priority: "Standard",
       createdAt: new Date(),
       paymentTerms: "Net 30",
       paymentTermsInherited: true,
     };
-    const res = appendLog(newProj, {
-      actor: actorOf(u), actionType: "project_created",
-      description: `${u.shortName} created this project`,
-    });
-    newProj = res.project;
-    setProjects((prev) => [newProj, ...prev]);
-    persistProject(newProj);
-    persistLog(newProj.id, [res.entry]);
-    return newProj;
+    const r = appendLog(newProj, { actor: actorOf(u), actionType: "project_created",
+      description: `${u.shortName} created this project` });
+    const ok = await commitProjectChange(r.project, [r.entry]);
+    return ok ? r.project : null;
   }, []);
 
-  const toggleFlag = useCallback<PipelineStoreCtx["toggleFlag"]>((projectId) => {
-    let updated: Project | null = null;
-    let entry: ProjectLogEntry | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p;
-      const u = userRef.current;
-      const next = touch({ ...p, flagged: !p.flagged });
-      const res = appendLog(next, {
-        actor: actorOf(u), actionType: "flag_toggle",
-        description: !p.flagged ? `${u.shortName} flagged this` : `${u.shortName} unflagged this`,
-      });
-      updated = res.project;
-      entry = res.entry;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      if (entry) persistLog(projectId, [entry]);
-    }
+  const toggleFlag = useCallback<PipelineStoreCtx["toggleFlag"]>(async (projectId) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    const u = userRef.current;
+    const next = touch({ ...proj, flagged: !proj.flagged });
+    const r = appendLog(next, { actor: actorOf(u), actionType: "flag_toggle",
+      description: !proj.flagged ? `${u.shortName} flagged this` : `${u.shortName} unflagged this` });
+    await commitProjectChange(r.project, [r.entry]);
   }, []);
 
-  const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
-  const softDeleteProject = useCallback<PipelineStoreCtx["softDeleteProject"]>((projectId) => {
-    const orig = projects.find((p) => p.id === projectId && !p.deletedAt);
+  const softDeleteProject = useCallback<PipelineStoreCtx["softDeleteProject"]>(async (projectId) => {
+    const orig = projectsRef.current.find((p) => p.id === projectId && !p.deletedAt);
     if (!orig) return null;
     const restoredFrom = { pipeline: orig.pipeline, stage: orig.stage };
     const u = userRef.current;
-    let updated: Project | null = null;
-    let entry: ProjectLogEntry | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p;
-      const res = appendLog(
-        { ...p, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage },
-        { actor: actorOf(u), actionType: "trash", description: `${u.shortName} moved this to Trash` },
-      );
-      updated = res.project;
-      entry = res.entry;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      if (entry) persistLog(projectId, [entry]);
-    }
-    return { restoredFrom };
-  }, [projects]);
+    const r = appendLog(
+      { ...orig, deletedAt: new Date(), deletedFromPipeline: orig.pipeline, deletedFromStage: orig.stage },
+      { actor: actorOf(u), actionType: "trash", description: `${u.shortName} moved this to Trash` },
+    );
+    const ok = await commitProjectChange(r.project, [r.entry]);
+    return ok ? { restoredFrom } : null;
+  }, []);
 
-  const restoreProject = useCallback<PipelineStoreCtx["restoreProject"]>((projectId) => {
-    const orig = projects.find((p) => p.id === projectId && p.deletedAt);
+  const restoreProject = useCallback<PipelineStoreCtx["restoreProject"]>(async (projectId) => {
+    const orig = projectsRef.current.find((p) => p.id === projectId && p.deletedAt);
     if (!orig) return null;
     const knownStages: StageId[] = PIPELINES.flatMap((pp) => pp.stages.map((s) => s.id));
     const targetPipeline: PipelineId = orig.deletedFromPipeline ?? orig.pipeline ?? "sales";
@@ -897,47 +778,38 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     };
     const targetStage: StageId =
       orig.deletedFromStage && knownStages.includes(orig.deletedFromStage)
-        ? orig.deletedFromStage
-        : fallbackStage[targetPipeline];
+        ? orig.deletedFromStage : fallbackStage[targetPipeline];
     const u = userRef.current;
-    let updated: Project | null = null;
-    let entry: ProjectLogEntry | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p;
-      const res = appendLog(
-        { ...p, pipeline: targetPipeline, stage: targetStage,
-          deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined },
-        { actor: actorOf(u), actionType: "restore", description: `${u.shortName} restored this from Trash` },
-      );
-      updated = res.project;
-      entry = res.entry;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      if (entry) persistLog(projectId, [entry]);
-    }
-    return { pipeline: targetPipeline, stage: targetStage };
-  }, [projects]);
-
-  const hardDeleteProject = useCallback((projectId: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== projectId));
-    supabase.from("projects").delete().eq("id", projectId).then(({ error }) => {
-      if (error) console.error("[store] hardDelete", projectId, error.message);
-    });
+    const r = appendLog(
+      { ...orig, pipeline: targetPipeline, stage: targetStage,
+        deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined },
+      { actor: actorOf(u), actionType: "restore", description: `${u.shortName} restored this from Trash` },
+    );
+    const ok = await commitProjectChange(r.project, [r.entry]);
+    return ok ? { pipeline: targetPipeline, stage: targetStage } : null;
   }, []);
 
-  const deleteProject = useCallback((projectId: string) => {
-    softDeleteProject(projectId);
+  const hardDeleteProject = useCallback(async (projectId: string) => {
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+    const { error } = await supabase.from("projects").delete().eq("id", projectId);
+    if (error) {
+      console.error("[store] hardDelete", projectId, error.message);
+      setProjects(snapshot);
+      toast.error(FAILURE_TOAST);
+    }
+  }, []);
+
+  const deleteProject = useCallback(async (projectId: string) => {
+    await softDeleteProject(projectId);
   }, [softDeleteProject]);
 
-  const addSupplier = useCallback((input: { name: string; country: string; defaultShippingMode: ShippingMode }): Supplier => {
+  const addSupplier = useCallback(async (input: { name: string; country: string; defaultShippingMode: ShippingMode }): Promise<Supplier> => {
+    // In-memory for now (master data has its own hook). Phase 3b keeps this
+    // local; persistence is handled by useMasterData for first-class flows.
     const sup: Supplier = {
-      id: `sup-${Date.now()}`,
-      name: input.name,
-      country: input.country,
-      defaultShippingMode: input.defaultShippingMode,
-      contact: "—",
+      id: `sup-${Date.now()}`, name: input.name, country: input.country,
+      defaultShippingMode: input.defaultShippingMode, contact: "—",
     };
     setSuppliers((prev) => [...prev, sup]);
     return sup;
@@ -950,89 +822,70 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const isInvoiceNumberDuplicate = useCallback((n: string, exceptId: string) =>
     projects.some((p) => p.id !== exceptId && p.invoiceNumber === n), [projects]);
 
-  const assignToShipment = useCallback((projectId: string, shipmentId: string) => {
-    const ship = shipments.find((s) => s.id === shipmentId);
-    if (!ship) return;
+  const assignToShipment = useCallback(async (projectId: string, shipmentId: string) => {
+    const ship = shipmentsRef.current.find((s) => s.id === shipmentId);
+    const proj = projectsRef.current.find((p) => p.id === projectId);
+    if (!ship || !proj) return;
     const u = userRef.current;
-    let updated: Project | null = null;
-    let entry: ProjectLogEntry | null = null;
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p;
-      const next = touch({ ...p, shipmentId, pipeline: "shipping" as const, stage: "shipment_assigned" as const, shippingMode: ship.mode });
-      const res = appendLog(next, {
-        actor: actorOf(u), actionType: "stage_change",
-        description: `${u.shortName} assigned this to shipment ${ship.code}`,
-        metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "shipping", toStage: "shipment_assigned" },
-      });
-      updated = res.project;
-      entry = res.entry;
-      return res.project;
-    }));
-    if (updated) {
-      persistProject(updated);
-      if (entry) persistLog(projectId, [entry]);
-    }
-  }, [shipments]);
+    const next = touch({ ...proj, shipmentId, pipeline: "shipping" as const, stage: "shipment_assigned" as const, shippingMode: ship.mode });
+    const r = appendLog(next, { actor: actorOf(u), actionType: "stage_change",
+      description: `${u.shortName} assigned this to shipment ${ship.code}`,
+      metadata: { fromPipeline: proj.pipeline, fromStage: proj.stage, toPipeline: "shipping", toStage: "shipment_assigned" } });
+    await commitProjectChange(r.project, [r.entry]);
+  }, []);
 
-  const createShipment = useCallback((input: NewShipmentInput): Shipment => {
+  const createShipment = useCallback(async (input: NewShipmentInput): Promise<Shipment | null> => {
     const newShip: Shipment = {
-      id: `ship-${Date.now()}`,
-      code: input.code,
-      mode: input.mode,
+      id: `ship-${Date.now()}`, code: input.code, mode: input.mode,
       carrier: input.mode === "Air" ? (input.carrier ?? "DHL") : undefined,
-      supplierId: input.supplierId,
-      etd: input.etd,
-      eta: input.eta,
-      status: "Booked",
+      supplierId: input.supplierId, etd: input.etd, eta: input.eta, status: "Booked",
     };
+    const snapshot = shipmentsRef.current;
     setShipments((prev) => [...prev, newShip]);
-    supabase.from("shipments").insert(shipmentToRow(newShip)).then(({ error }) => {
-      if (error) console.error("[store] createShipment", newShip.id, error.message);
-    });
+    const { error } = await supabase.from("shipments").insert(shipmentToRow(newShip));
+    if (error) {
+      setShipments(snapshot);
+      toast.error(FAILURE_TOAST);
+      return null;
+    }
     return newShip;
   }, []);
 
-  const updateShipment = useCallback((id: string, patch: Partial<Shipment>) => {
-    let merged: Shipment | null = null;
-    setShipments((prev) => prev.map((s) => {
-      if (s.id !== id) return s;
-      merged = { ...s, ...patch };
-      return merged;
-    }));
+  const updateShipment = useCallback(async (id: string, patch: Partial<Shipment>) => {
+    const cur = shipmentsRef.current.find((s) => s.id === id);
+    if (!cur) return;
+    const snapshot = shipmentsRef.current;
+    const merged: Shipment = { ...cur, ...patch };
+    setShipments((prev) => prev.map((s) => (s.id === id ? merged : s)));
     setProjects((prev) => prev.map((p) => (p.shipmentId === id ? touch(p) : p)));
-    if (merged) {
-      supabase.from("shipments").update(shipmentToRow(merged)).eq("id", id).then(({ error }) => {
-        if (error) console.error("[store] updateShipment", id, error.message);
-      });
+    const { error } = await supabase.from("shipments").update(shipmentToRow(merged)).eq("id", id);
+    if (error) {
+      setShipments(snapshot);
+      toast.error(FAILURE_TOAST);
     }
   }, []);
 
-  const markShipmentDelivered = useCallback((shipmentId: string) => {
-    let count = 0;
+  const markShipmentDelivered = useCallback(async (shipmentId: string) => {
     const u = userRef.current;
-    const writes: Project[] = [];
-    const logWrites: Array<{ id: string; entry: ProjectLogEntry }> = [];
-    setProjects((prev) => prev.map((p) => {
-      if (p.shipmentId === shipmentId && p.pipeline === "shipping") {
-        count += 1;
-        const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required" };
-        if (!p.invoiceNumber) patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
-        const next = touch({ ...p, ...patch });
-        const res = appendLog(next, {
-          actor: actorOf(u), actionType: "stage_change",
-          description: `${u.shortName} marked shipment delivered`,
-          metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "finance", toStage: "invoice_required" },
-        });
-        writes.push(res.project);
-        logWrites.push({ id: res.project.id, entry: res.entry });
-        return res.project;
-      }
-      return p;
-    }));
+    const subs = projectsRef.current.filter((p) => p.shipmentId === shipmentId && p.pipeline === "shipping");
+    let count = 0;
+    for (const p of subs) {
+      const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required" };
+      if (!p.invoiceNumber) patch.invoiceNumber = `INV-${1500 + Math.floor(Math.random() * 800)}`;
+      const next = touch({ ...p, ...patch });
+      const r = appendLog(next, { actor: actorOf(u), actionType: "stage_change",
+        description: `${u.shortName} marked shipment delivered`,
+        metadata: { fromPipeline: p.pipeline, fromStage: p.stage, toPipeline: "finance", toStage: "invoice_required" } });
+      const ok = await commitProjectChange(r.project, [r.entry]);
+      if (ok) count += 1;
+    }
+    const snapshot = shipmentsRef.current;
     setShipments((prev) => prev.map((s) => s.id === shipmentId ? { ...s, status: "Delivered" } : s));
-    for (const w of writes) persistProject(w);
-    for (const lw of logWrites) persistLog(lw.id, [lw.entry]);
-    supabase.from("shipments").update({ status: "Delivered" }).eq("id", shipmentId);
+    const { error } = await supabase.from("shipments").update({ status: "Delivered" }).eq("id", shipmentId);
+    if (error) {
+      setShipments(snapshot);
+      toast.error(FAILURE_TOAST);
+    }
     return { count };
   }, []);
 
