@@ -323,6 +323,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <span className="font-semibold">{live.projectName}</span>
             </span>
           </button>
+          <PresenceAvatars users={presentOthers} />
           <CardActionsPopover
             open={actionsOpen}
             onOpenChange={setActionsOpen}
