@@ -761,10 +761,8 @@ const Index = () => {
       <HamburgerDrawer
         open={hamburgerOpen}
         onClose={() => setHamburgerOpen(false)}
-        onOpenSpreadsheet={() => navigate("/spreadsheet")}
         onOpenSuppliers={() => setSuppliersOpen(true)}
         onOpenCustomers={() => setCustomersOpen(true)}
-        onOpenShipments={() => setShipmentsListOpen(true)}
         onOpenTrash={() => setTrashOpen(true)}
         onOpenArchive={() => setArchiveOpen(true)}
         trashCount={store.trashedProjects.length}
