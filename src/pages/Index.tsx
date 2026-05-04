@@ -42,6 +42,7 @@ import { DesktopRail } from "@/components/leads/DesktopRail";
 import { DesktopSidebarReopen } from "@/components/leads/DesktopSidebarReopen";
 import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { ProjectTable } from "@/components/leads/ProjectTable";
+import { SubChevron } from "@/components/leads/SubChevron";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
 import { useViewMode } from "@/hooks/useViewMode";
 import { NewProjectFAB } from "@/components/leads/NewProjectFAB";
