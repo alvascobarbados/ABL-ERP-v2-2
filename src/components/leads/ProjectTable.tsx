@@ -15,7 +15,7 @@ import {
 } from "@/data/pipelines";
 import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
-import { EditableCell, SaveResult } from "./EditableCell";
+import { EditableCell, SaveResult, SelectionProvider } from "./EditableCell";
 import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
 import {
   Popover,
