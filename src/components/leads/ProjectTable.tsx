@@ -530,7 +530,8 @@ const TableRow = ({
   const pickSupplierMeta = async (meta: string) => {
     setOpenPicker(null);
     try {
-      await store.updateProject(proj.id, { supplierId: undefined, supplierLabel: meta });
+      const label = meta === "TBD" || meta === "Various" ? meta : undefined;
+      await store.updateProject(proj.id, { supplierId: undefined, supplierLabel: label });
       triggerFlash("supplier", "success");
     } catch (err: any) {
       toast.error(err?.message ?? "Save failed");
