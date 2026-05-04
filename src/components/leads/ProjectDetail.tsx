@@ -126,10 +126,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     const fromStage = live.stage;
     setStagePickerOpen(false);
     const result = await moveCard(live.id, target);
-    if (!result.ok) {
-      toast.error("Can't move yet — fill in the missing details first.");
-      return;
-    }
+    if (!result.ok) return;
     if (target.pipeline !== fromPipeline) triggerPulse(target.pipeline);
     addNote(live.id, `Stage moved from ${getStageTitle(fromPipeline, fromStage)} → ${getStageTitle(target.pipeline, target.stage)}`, "Av");
     toast.success(`Moved to ${getStageTitle(target.pipeline, target.stage)}`, {

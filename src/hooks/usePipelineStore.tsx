@@ -319,16 +319,27 @@ export interface MoveValidation {
   missing: ("detailSummary" | "supplier" | "shippingMode")[];
 }
 
+/** Forward order of stages across all pipelines. `archive` is treated as a terminal exit (not part of the linear flow). */
+export const STAGE_ORDER: StageId[] = [
+  "proposal", "quote", "confirming",
+  "design", "proof",
+  "preproduction", "in_production",
+  "shipment_required", "shipment_assigned",
+  "invoice_required", "invoiced", "paid",
+];
+
+/** Returns true if moving from `from` to `to` advances the project (toward Production/Shipping/Finance/Completed). */
+export function isForwardMove(from: StageId, to: StageId): boolean {
+  if (to === "archive") return false; // exit state — never "forward" for warning purposes
+  const fi = STAGE_ORDER.indexOf(from);
+  const ti = STAGE_ORDER.indexOf(to);
+  if (fi < 0 || ti < 0) return false;
+  return ti > fi;
+}
+
 export function validateMove(project: Project, target: { pipeline: PipelineId; stage: StageId }): MoveValidation {
-  const STAGE_GATE_ORDER: StageId[] = [
-    "proposal", "quote", "confirming",
-    "design", "proof",
-    "preproduction", "in_production",
-    "shipment_required", "shipment_assigned",
-    "invoice_required", "invoiced", "paid",
-  ];
-  const targetIdx = STAGE_GATE_ORDER.indexOf(target.stage);
-  const gateIdx = STAGE_GATE_ORDER.indexOf("proof");
+  const targetIdx = STAGE_ORDER.indexOf(target.stage);
+  const gateIdx = STAGE_ORDER.indexOf("proof");
   if (target.stage === "archive") return { ok: true, missing: [] };
   if (targetIdx <= gateIdx) return { ok: true, missing: [] };
 
@@ -538,8 +549,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const moveCard = useCallback<PipelineStoreCtx["moveCard"]>(async (cardId, target) => {
     const proj = projectsRef.current.find((p) => p.id === cardId);
     if (!proj) return { ok: false };
-    const v = validateMove(proj, target);
-    if (!v.ok) return { blocked: { reason: "missing-fields", missing: v.missing } };
+    // Note: validateMove() is still exported and used by callers (Index.tsx) to
+    // surface a non-blocking warning toast on forward moves with missing fields.
+    // The store itself no longer blocks the move — softening per product decision.
 
     const u = userRef.current;
     const patch: Partial<Project> = { pipeline: target.pipeline, stage: target.stage };
