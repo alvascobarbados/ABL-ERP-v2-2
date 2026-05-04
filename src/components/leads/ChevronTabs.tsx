@@ -25,7 +25,26 @@ interface Props {
   counts: Record<PipelineId, number>;
   completedCount?: number;
   pulse?: PipelineId | null;
+  loading?: boolean;
 }
+
+const CountSlot = ({ value, loading, active }: { value: number; loading?: boolean; active: boolean }) => {
+  if (loading) {
+    return (
+      <span
+        aria-hidden
+        className="inline-block rounded animate-pulse"
+        style={{
+          width: 22,
+          height: 14,
+          marginTop: 2,
+          backgroundColor: active ? "rgba(255,255,255,0.35)" : "hsl(var(--brand-navy) / 0.15)",
+        }}
+      />
+    );
+  }
+  return <>{value}</>;
+};
 
 const CHEV = 16;          // chevron point depth in px
 const TAB_H = 60;         // tab height
@@ -34,7 +53,7 @@ const BORDER = 1;         // outline thickness in px
 // Uniform chevron silhouette: notched-left + pointed-right (applied to ALL tabs).
 const CHEVRON_CLIP = `polygon(0 0, calc(100% - ${CHEV}px) 0, 100% 50%, calc(100% - ${CHEV}px) 100%, 0 100%, ${CHEV}px 50%)`;
 
-export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
+export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, pulse, loading }: Props) => {
   const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
   const flowTabs = PIPELINES.map((p) => ({ id: p.id, title: p.title, count: counts[p.id] }));
   const allActive = active === "all";
@@ -65,7 +84,7 @@ export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, puls
           Active
         </span>
         <span className={cn("text-[18px] font-bold tabular leading-tight", !allActive && "opacity-70")}>
-          {activeCount}
+          <CountSlot value={activeCount} loading={loading} active={allActive} />
         </span>
       </button>
 
@@ -130,7 +149,7 @@ export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, puls
               >
                 <span className="text-[14px] font-medium leading-tight tracking-tight">{t.title}</span>
                 <span className="text-[18px] font-bold tabular leading-tight" style={{ opacity: isActive ? 1 : 0.7 }}>
-                  {t.count}
+                  <CountSlot value={t.count} loading={loading} active={isActive} />
                 </span>
               </span>
             </button>
@@ -160,7 +179,7 @@ export const ChevronTabs = ({ active, onChange, counts, completedCount = 0, puls
           Completed
         </span>
         <span className={cn("text-[18px] font-bold tabular leading-tight", !completedActive && "opacity-70")}>
-          {completedCount}
+          <CountSlot value={completedCount} loading={loading} active={completedActive} />
         </span>
       </button>
     </div>

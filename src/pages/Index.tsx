@@ -44,6 +44,8 @@ import { KanbanBoard } from "@/components/leads/KanbanBoard";
 import { ProjectTable } from "@/components/leads/ProjectTable";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
 import { useViewMode } from "@/hooks/useViewMode";
+import { NewProjectFAB } from "@/components/leads/NewProjectFAB";
+import { NewProjectSheet } from "@/components/leads/NewProjectSheet";
 // ─── Filter persistence (single shared filter across all tabs) ───
 // Filters live above the per-tab component lifecycle so switching tabs
 // preserves the active selection. They reset on full app reload — we
@@ -213,7 +215,8 @@ const Index = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const store = usePipelineStore();
-  const { projects, shipments, moveCard, pulsePipeline, triggerPulse } = store;
+  const { projects, shipments, moveCard, pulsePipeline, triggerPulse, loading } = store;
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabId>("sales");
   const isAll = activeTab === "all";
@@ -532,13 +535,13 @@ const Index = () => {
           {/* Mobile pill tabs */}
           <div className="lg:hidden max-w-6xl mx-auto px-4 sm:px-6 pb-1.5 pt-1.5 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
+              <PipelineTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
           {/* Desktop chevron tabs — full width */}
           <div className="hidden lg:flex max-w-none px-4 sm:px-6 pt-3 pb-1.5 items-center">
             <div className="flex-1 min-w-0">
-              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} />
+              <ChevronTabs active={activeTab} onChange={setActiveTab} counts={filteredCounts} completedCount={completedCount} pulse={pulsePipeline} loading={loading} />
             </div>
           </div>
         </div>
@@ -846,6 +849,18 @@ const Index = () => {
       />
 
       <Walkthrough />
+
+      {!selectedCard && !selectedShipment && !suppliersOpen && !customersOpen && !trashOpen && !archiveOpen && (
+        <NewProjectFAB onClick={() => setNewProjectOpen(true)} />
+      )}
+      <NewProjectSheet
+        open={newProjectOpen}
+        onClose={() => setNewProjectOpen(false)}
+        onCreated={(proj) => {
+          setActiveTab(proj.pipeline);
+          setSelectedCard(buildCard(proj));
+        }}
+      />
       </div>
     </div>
     </EditModeProvider>

@@ -10,9 +10,10 @@ interface Props {
   counts: Record<PipelineId, number>;
   completedCount?: number;
   pulse?: PipelineId | null;
+  loading?: boolean;
 }
 
-export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pulse }: Props) => {
+export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pulse, loading }: Props) => {
   const { friendly } = useFriendlyMode();
   const activeCount = counts.sales + counts.design + counts.operations + counts.shipping + counts.finance;
 
@@ -69,7 +70,7 @@ export const PipelineTabs = ({ active, onChange, counts, completedCount = 0, pul
                     : { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
               }
             >
-              {p.count}
+              {loading ? <span className="inline-block w-3 h-2 rounded bg-current opacity-30 animate-pulse" /> : p.count}
             </span>
           </button>
         );
