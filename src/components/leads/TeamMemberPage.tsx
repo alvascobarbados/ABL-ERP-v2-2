@@ -19,7 +19,7 @@ import { BottomSheet } from "@/components/leads/EditorSheets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMasterData, parseInitials, type TeamMember } from "@/hooks/useMasterData";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
-import { isValidEmail } from "@/lib/tracking"; // tiny helper if it exists; fallback below
+
 
 const ROLE_OPTIONS = ["Sales", "Mixed", "Production", "Finance", "Design", "Other"] as const;
 type RoleOption = typeof ROLE_OPTIONS[number];
