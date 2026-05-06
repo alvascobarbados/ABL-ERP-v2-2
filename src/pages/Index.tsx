@@ -45,6 +45,7 @@ import { ProjectTable } from "@/components/leads/ProjectTable";
 import { SubChevron } from "@/components/leads/SubChevron";
 import { SubStageRow } from "@/components/leads/SubStageRow";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
+import { ColumnsPopover } from "@/components/leads/ColumnsPopover";
 import { useViewMode } from "@/hooks/useViewMode";
 import { NewProjectFAB } from "@/components/leads/NewProjectFAB";
 import { NewProjectSheet } from "@/components/leads/NewProjectSheet";
