@@ -19,6 +19,7 @@ import { BottomSheet } from "@/components/leads/EditorSheets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMasterData, parseInitials, type TeamMember } from "@/hooks/useMasterData";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { shortNameFromFull } from "@/lib/utils";
 
 
 const ROLE_OPTIONS = ["Sales", "Mixed", "Production", "Finance", "Design", "Other"] as const;
