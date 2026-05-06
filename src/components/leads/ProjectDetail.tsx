@@ -75,6 +75,9 @@ type EditorKind =
   | { kind: "weight" }
   | { kind: "cbm" }
   | { kind: "packages" }
+  | { kind: "designBrief" }
+  | { kind: "completionDate" }
+  | { kind: "outstandingBalance" }
   | { kind: "addNote" }
   | { kind: "addLineItem" }
   | { kind: "editLineItem"; index: number }
