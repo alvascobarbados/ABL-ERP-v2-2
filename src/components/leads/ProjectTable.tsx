@@ -60,6 +60,8 @@ interface Props {
   visible: PipelineCard[];
   onOpenCard: (c: PipelineCard) => void;
   onOpenPicker: (c: PipelineCard) => void;
+  /** Inline stage transition from the Stage·State popover. Reuses Index.performMove. */
+  onPickStage?: (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => void;
   hasActiveFilter?: boolean;
   onClearFilters?: () => void;
   /** When true (sub-chevron stage selected), drop the Stage column entirely. */
