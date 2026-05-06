@@ -772,7 +772,8 @@ const Index = () => {
               onSwipeBack={onSwipeBack}
               onOpenPicker={onOpenPicker}
               emptyHint={
-                stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
+                stage.id === "sourcing" ? "No projects here yet. New leads will appear in Sourcing."
+                : stage.id === "proposal" ? "No projects here. Move a sourced lead forward when you're ready to write the proposal."
                 : stage.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
                 : stage.id === "invoice_required" ? "No projects awaiting an invoice."
                 : undefined
