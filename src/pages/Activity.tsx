@@ -155,9 +155,8 @@ export default function ActivityPage() {
       .range(0, PAGE_SIZE - 1);
     if (search) q = q.ilike("description", `%${search}%`);
     if (memberFilter) {
-      // Filter by display name matching the team member's full_name
       const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
-      if (tm) q = q.eq("actor_display_name", tm.full_name).or(`actor_display_name.eq.${tm.full_name}`);
+      if (tm) q = q.eq("actor_display_name", tm.full_name);
     }
     const { data, count } = await q;
     const list = (data ?? []) as LogRow[];
