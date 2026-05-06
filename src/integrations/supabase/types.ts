@@ -212,6 +212,7 @@ export type Database = {
       projects: {
         Row: {
           cbm: number | null
+          completion_date: string | null
           contact_person: string | null
           created_at: string
           customer: string
@@ -220,6 +221,7 @@ export type Database = {
           deleted_at: string | null
           deleted_from_pipeline: string | null
           deleted_from_stage: string | null
+          design_brief: string | null
           detail_summary: string | null
           flagged: boolean
           id: string
@@ -229,6 +231,7 @@ export type Database = {
           invoice_required_entered_at: string | null
           num_packages: number | null
           order_type: string
+          outstanding_balance: number | null
           paid_on_date: string | null
           payment_method: string | null
           payment_reference: string | null
@@ -255,6 +258,7 @@ export type Database = {
         }
         Insert: {
           cbm?: number | null
+          completion_date?: string | null
           contact_person?: string | null
           created_at?: string
           customer: string
@@ -263,6 +267,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_from_pipeline?: string | null
           deleted_from_stage?: string | null
+          design_brief?: string | null
           detail_summary?: string | null
           flagged?: boolean
           id: string
@@ -272,6 +277,7 @@ export type Database = {
           invoice_required_entered_at?: string | null
           num_packages?: number | null
           order_type?: string
+          outstanding_balance?: number | null
           paid_on_date?: string | null
           payment_method?: string | null
           payment_reference?: string | null
@@ -298,6 +304,7 @@ export type Database = {
         }
         Update: {
           cbm?: number | null
+          completion_date?: string | null
           contact_person?: string | null
           created_at?: string
           customer?: string
@@ -306,6 +313,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_from_pipeline?: string | null
           deleted_from_stage?: string | null
+          design_brief?: string | null
           detail_summary?: string | null
           flagged?: boolean
           id?: string
@@ -315,6 +323,7 @@ export type Database = {
           invoice_required_entered_at?: string | null
           num_packages?: number | null
           order_type?: string
+          outstanding_balance?: number | null
           paid_on_date?: string | null
           payment_method?: string | null
           payment_reference?: string | null

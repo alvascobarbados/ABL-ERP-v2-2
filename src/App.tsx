@@ -9,6 +9,7 @@ import { FriendlyModeProvider } from "@/hooks/useFriendlyMode";
 import { ExpandedCardsProvider } from "@/hooks/useExpandedCards";
 import { MasterDataProvider } from "@/hooks/useMasterData";
 import { ColumnWidthsProvider } from "@/hooks/useColumnWidths";
+import { ColumnVisibilityProvider } from "@/hooks/useColumnVisibility";
 import { SidebarCollapsedProvider } from "@/hooks/useSidebarCollapsed";
 import Index from "./pages/Index.tsx";
 import MasterList from "./pages/MasterList.tsx";
@@ -29,6 +30,7 @@ const App = () => (
         <PipelineStoreProvider>
           <MasterDataProvider>
             <ColumnWidthsProvider>
+              <ColumnVisibilityProvider>
               <ExpandedCardsProvider>
                 <SidebarCollapsedProvider>
                 <BrowserRouter>
@@ -51,6 +53,7 @@ const App = () => (
                 </BrowserRouter>
                 </SidebarCollapsedProvider>
               </ExpandedCardsProvider>
+              </ColumnVisibilityProvider>
             </ColumnWidthsProvider>
           </MasterDataProvider>
         </PipelineStoreProvider>

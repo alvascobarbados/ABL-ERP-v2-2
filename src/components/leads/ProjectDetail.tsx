@@ -75,6 +75,9 @@ type EditorKind =
   | { kind: "weight" }
   | { kind: "cbm" }
   | { kind: "packages" }
+  | { kind: "designBrief" }
+  | { kind: "completionDate" }
+  | { kind: "outstandingBalance" }
   | { kind: "addNote" }
   | { kind: "addLineItem" }
   | { kind: "editLineItem"; index: number }
@@ -236,6 +239,16 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const saveWeight = saveNumeric("weightKg", false);
   const saveCbm = saveNumeric("cbm", false);
   const savePackages = saveNumeric("numPackages", true);
+  const saveDesignBrief = (v: string) => { updateProject(live.id, { designBrief: v.trim() || undefined }); setEditor(null); };
+  const saveCompletionDate = (d: Date) => { updateProject(live.id, { completionDate: d }); setEditor(null); };
+  const saveOutstandingBalance = (v: string) => {
+    const cleaned = (v ?? "").replace(/[^\d.]/g, "");
+    if (cleaned === "") { updateProject(live.id, { outstandingBalance: undefined }); setEditor(null); return; }
+    const n = Number(cleaned);
+    if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
+    updateProject(live.id, { outstandingBalance: n });
+    setEditor(null);
+  };
 
   const submitNote = (text: string) => { addNote(live.id, text); setEditor(null); };
 
@@ -452,6 +465,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
+              <DetailRow
+                label="Outstanding Balance"
+                value={live.outstandingBalance != null ? `$${live.outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BBD` : undefined}
+                onClick={() => setEditor({ kind: "outstandingBalance" })}
+              />
               <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
               <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
               <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
@@ -461,6 +479,24 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 value={deadlineDisplay}
                 onClick={() => setEditor({ kind: "deadline" })}
                 valueColor={u?.color}
+              />
+              <DetailRow
+                label="Completion Date"
+                value={live.completionDate ? fmtLong(live.completionDate) : undefined}
+                onClick={() => setEditor({ kind: "completionDate" })}
+              />
+            </SectionCard>
+          </section>
+
+          {/* ── DESIGN BRIEF ── */}
+          <section>
+            <SectionHeader>Design Brief</SectionHeader>
+            <SectionCard>
+              <DetailRow
+                label="Brief"
+                value={live.designBrief}
+                placeholder="Add design brief…"
+                onClick={() => setEditor({ kind: "designBrief" })}
               />
             </SectionCard>
           </section>
@@ -708,6 +744,32 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         placeholder="0"
         digitsOnly
         onSave={savePackages}
+      />
+      <TextEditor
+        open={editor?.kind === "designBrief"}
+        onClose={() => setEditor(null)}
+        title="Design brief"
+        value={live.designBrief ?? ""}
+        placeholder="Describe the creative brief…"
+        multiline
+        onSave={saveDesignBrief}
+      />
+      <DateEditor
+        open={editor?.kind === "completionDate"}
+        onClose={() => setEditor(null)}
+        title="Completion date"
+        value={live.completionDate ?? undefined}
+        onSave={saveCompletionDate}
+      />
+      <TextEditor
+        open={editor?.kind === "outstandingBalance"}
+        onClose={() => setEditor(null)}
+        title="Outstanding balance (BBD)"
+        value={live.outstandingBalance != null ? String(live.outstandingBalance) : ""}
+        placeholder="0"
+        digitsOnly
+        allowDecimal
+        onSave={saveOutstandingBalance}
       />
       <TextEditor
         open={editor?.kind === "addNote"}
