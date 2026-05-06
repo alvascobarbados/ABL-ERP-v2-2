@@ -519,9 +519,10 @@ interface RowProps {
 type EntityKindKey = "customer" | "supplier" | "rep";
 
 const TableRow = ({
-  index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
+  index, card, activeTab, gridCols, visibleKeys, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onPickStage, onDuplicate, onArchive, onDelete,
 }: RowProps) => {
+  const has = (k: SortKey) => visibleKeys.has(k);
   const proj = card.project;
   const flagged = !!proj.flagged;
   const u = urgencyLabel(card.deadlineDate);
