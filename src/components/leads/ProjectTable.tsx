@@ -1050,7 +1050,7 @@ interface StageCellProps {
 
 // User-facing stage list per pipeline (Shipping collapses to one row).
 const STAGE_PICKER_GROUPS: { pipeline: PipelineId; stages: { id: StageId; title: string }[] }[] = [
-  { pipeline: "sales",      stages: [{ id: "proposal", title: "Proposal" }, { id: "quote", title: "Quote" }, { id: "confirming", title: "Confirming" }] },
+  { pipeline: "sales",      stages: [{ id: "sourcing", title: "Sourcing" }, { id: "proposal", title: "Proposal" }, { id: "quote", title: "Quote" }, { id: "confirming", title: "Confirming" }] },
   { pipeline: "design",     stages: [{ id: "design", title: "Design" }, { id: "proof", title: "Proof" }] },
   { pipeline: "purchasing", stages: [{ id: "purchasing", title: "Purchasing" }] },
   { pipeline: "production", stages: [{ id: "production", title: "Production" }] },
