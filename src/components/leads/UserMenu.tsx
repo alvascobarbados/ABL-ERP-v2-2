@@ -108,7 +108,7 @@ export const UserMenu = () => {
                 <Row icon={UserIcon} label="Profile" onClick={() => { setOpen(false); toast("Profile coming soon"); }} />
                 <Row icon={SettingsIcon} label="Settings" onClick={() => setView("settings")} />
                 <div className="my-1 h-px bg-border/70" />
-                <Row icon={LogOut} label="Sign out" destructive onClick={() => { setOpen(false); toast("Sign out coming soon"); }} />
+                <Row icon={LogOut} label="Sign out" destructive onClick={async () => { setOpen(false); await user.signOut(); }} />
               </div>
             </>
           ) : (
