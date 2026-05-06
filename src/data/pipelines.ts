@@ -72,6 +72,7 @@ export const PIPELINES: PipelineConfig[] = [
     // in the left rail (see ArchiveView). Pipeline views, counts, and the
     // StagePicker hide archived projects entirely.
     stages: [
+      { id: "sourcing", title: "Sourcing" },
       { id: "proposal", title: "Proposal" },
       { id: "quote", title: "Quote" },
       { id: "confirming", title: "Confirming" },
