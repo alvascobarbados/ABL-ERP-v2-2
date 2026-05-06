@@ -782,6 +782,7 @@ const TableRow = ({
       }}
     >
       {/* Flag — single click toggles (special-case column) */}
+      {has("flagged") && (
       <div
         className="px-3 flex items-center justify-center cursor-pointer hover:bg-[hsl(var(--brand-orange)/0.08)]"
         onClick={(e) => { e.stopPropagation(); onToggleFlag(); }}
@@ -795,8 +796,9 @@ const TableRow = ({
           <Flag className="h-3.5 w-3.5 opacity-0 hover:opacity-30" style={{ color: "hsl(var(--brand-orange))" }} />
         )}
       </div>
+      )}
 
-      {/* Stage · State — inline-editable pill. Three-state cell; popover lists all stages. */}
+      {has("stage") && (
       <StageCell
         cellKey={`${card.id}:stage`}
         pipeline={card.pipeline}
@@ -819,8 +821,9 @@ const TableRow = ({
           triggerFlash("stage", "success");
         }}
       />
+      )}
 
-      {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
+      {has("customer") && (
       <EditableCell
         cellKey={`${card.id}:customer`}
         mode="custom"
@@ -831,8 +834,9 @@ const TableRow = ({
         flash={flashFor("customer")}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("customer"); }}
       />
+      )}
 
-      {/* Project name — text */}
+      {has("project") && (
       <EditableCell
         cellKey={`${card.id}:projectName`}
         mode="text"
@@ -842,8 +846,9 @@ const TableRow = ({
         value={proj.projectName}
         onCommit={saveProjectName}
       />
+      )}
 
-      {/* Detail summary — text */}
+      {has("detail") && (
       <EditableCell
         cellKey={`${card.id}:detailSummary`}
         mode="text"
@@ -855,8 +860,23 @@ const TableRow = ({
         placeholder="Add detail…"
         onCommit={(v) => saveText("detailSummary", v)}
       />
+      )}
 
-      {/* Supplier — entity popover */}
+      {has("designBrief") && (
+      <EditableCell
+        cellKey={`${card.id}:designBrief`}
+        mode="text"
+        align="left"
+        display={proj.designBrief?.trim() || "—"}
+        title={proj.designBrief?.trim() || undefined}
+        muted={!proj.designBrief?.trim()}
+        value={proj.designBrief ?? ""}
+        placeholder="Add brief…"
+        onCommit={(v) => saveText("designBrief", v)}
+      />
+      )}
+
+      {has("supplier") && (
       <EditableCell
         cellKey={`${card.id}:supplier`}
         mode="custom"
@@ -868,8 +888,9 @@ const TableRow = ({
         flash={flashFor("supplier")}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("supplier"); }}
       />
+      )}
 
-      {/* Quote # — text with fixed "Q-" prefix in edit mode */}
+      {has("quote") && (
       <EditableCell
         cellKey={`${card.id}:quoteNumber`}
         mode="text"
@@ -885,8 +906,45 @@ const TableRow = ({
           return saveText("quoteNumber", trimmed);
         }}
       />
+      )}
 
-      {/* Amount — number, proportional visual weight */}
+      {has("po") && (
+      <EditableCell
+        cellKey={`${card.id}:poNumber`}
+        mode="text"
+        align="left"
+        display={<span className="tabular">{proj.poNumber ? `PO-${proj.poNumber}` : "—"}</span>}
+        title={proj.poNumber ? `PO-${proj.poNumber}` : ""}
+        muted={!proj.poNumber}
+        value={proj.poNumber ?? ""}
+        placeholder="####"
+        prefix="PO-"
+        onCommit={(v) => {
+          const trimmed = v.replace(/^\s*PO-?/i, "").replace(/\D/g, "").trim();
+          return saveText("poNumber", trimmed);
+        }}
+      />
+      )}
+
+      {has("invoice") && (
+      <EditableCell
+        cellKey={`${card.id}:invoiceNumber`}
+        mode="text"
+        align="left"
+        display={<span className="tabular">{proj.invoiceNumber ? `INV-${proj.invoiceNumber}` : "—"}</span>}
+        title={proj.invoiceNumber ? `INV-${proj.invoiceNumber}` : ""}
+        muted={!proj.invoiceNumber}
+        value={proj.invoiceNumber ?? ""}
+        placeholder="####"
+        prefix="INV-"
+        onCommit={(v) => {
+          const trimmed = v.replace(/^\s*INV-?/i, "").replace(/\D/g, "").trim();
+          return saveText("invoiceNumber", trimmed);
+        }}
+      />
+      )}
+
+      {has("amount") && (
       <EditableCell
         cellKey={`${card.id}:value`}
         mode="number"
@@ -908,8 +966,28 @@ const TableRow = ({
         placeholder="0"
         onCommit={saveValue}
       />
+      )}
 
-      {/* Weight (kg) — numeric, decimals allowed */}
+      {has("balance") && (
+      <EditableCell
+        cellKey={`${card.id}:outstandingBalance`}
+        mode="number"
+        align="right"
+        display={
+          <span className="tabular">
+            {proj.outstandingBalance != null
+              ? `$${proj.outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : "—"}
+          </span>
+        }
+        muted={proj.outstandingBalance == null}
+        value={proj.outstandingBalance != null ? String(proj.outstandingBalance) : ""}
+        placeholder="0.00"
+        onCommit={saveBalance}
+      />
+      )}
+
+      {has("weight") && (
       <EditableCell
         cellKey={`${card.id}:weightKg`}
         mode="number"
@@ -920,8 +998,9 @@ const TableRow = ({
         placeholder="0"
         onCommit={saveWeight}
       />
+      )}
 
-      {/* CBM — numeric, decimals allowed */}
+      {has("cbm") && (
       <EditableCell
         cellKey={`${card.id}:cbm`}
         mode="number"
@@ -932,8 +1011,9 @@ const TableRow = ({
         placeholder="0"
         onCommit={saveCbm}
       />
+      )}
 
-      {/* Pkgs — integer */}
+      {has("pkgs") && (
       <EditableCell
         cellKey={`${card.id}:numPackages`}
         mode="number"
@@ -944,8 +1024,9 @@ const TableRow = ({
         placeholder="0"
         onCommit={savePackages}
       />
+      )}
 
-      {/* Mode — enum popover */}
+      {has("mode") && (
       <ModeCell
         cellKey={`${card.id}:mode`}
         value={proj.shippingMode}
@@ -957,16 +1038,20 @@ const TableRow = ({
         onClose={() => setOpenPicker(null)}
         anchorEl={pickerAnchor}
       />
+      )}
 
-      {/* Tracking — opens BottomSheet TrackingEditor; disabled until Mode is set */}
+      {has("tracking") && (
       <TrackingCellTrigger
         value={proj.trackingRef}
         modeSet={!!proj.shippingMode}
         flash={flashFor("trackingRef")}
         onClick={() => proj.shippingMode && setTrackingEditorOpen(true)}
       />
+      )}
 
-      {/* Rep — multi popover */}
+      {/* TODO(auth): Rep currently reads point_person initials text;
+          migrate to sales_rep_id FK after auth + team_members lands. */}
+      {has("rep") && (
       <EditableCell
         cellKey={`${card.id}:rep`}
         mode="custom"
@@ -977,8 +1062,15 @@ const TableRow = ({
         flash={flashFor("rep")}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("rep"); }}
       />
+      )}
 
-      {/* Deadline — date + urgency dot (combined) */}
+      {has("completionDate") && (
+      <ReadOnlyCell muted={!proj.completionDate}>
+        <span className="tabular">{proj.completionDate ? fmtDeadline(proj.completionDate) : "—"}</span>
+      </ReadOnlyCell>
+      )}
+
+      {has("deadline") && (
       <ReadOnlyCell muted={!card.deadlineDate}>
         {card.deadlineDate ? (
           <Tooltip>
@@ -1011,6 +1103,7 @@ const TableRow = ({
           <span className="tabular">—</span>
         )}
       </ReadOnlyCell>
+      )}
 
       {/* Actions */}
       <div className="px-1 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
