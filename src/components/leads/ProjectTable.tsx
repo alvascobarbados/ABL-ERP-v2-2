@@ -387,16 +387,19 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             ))
           )}
           </div>
+          {/* Footer — inside the white container */}
+          <div
+            className="text-right text-[12px] tabular"
+            style={{
+              color: "hsl(var(--brand-navy) / 0.6)",
+              marginTop: 14,
+              paddingBottom: 12,
+            }}
+          >
+            {sorted.length} project{sorted.length === 1 ? "" : "s"}
+            {totalAmount > 0 && <> · ${totalAmount.toLocaleString()} BBD total</>}
+          </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div
-        className="px-6 lg:px-8 pb-4 pt-2 text-right text-[12px] tabular"
-        style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
-      >
-        {sorted.length} project{sorted.length === 1 ? "" : "s"}
-        {totalAmount > 0 && <> · ${totalAmount.toLocaleString()} BBD total</>}
       </div>
 
       {editingCard && (
