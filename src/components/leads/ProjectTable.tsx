@@ -49,6 +49,8 @@ import {
 } from "@/components/ui/tooltip";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
+import { TrackingEditor } from "./EditorSheets";
+import { ConfirmDialog } from "./ConfirmDialog";
 import type { TabId } from "./PipelineTabs";
 
 type SortKey =
@@ -655,12 +657,40 @@ const TableRow = ({
   };
   const pickShippingMode = async (m: ShippingMode) => {
     setOpenPicker(null);
+    if (m === proj.shippingMode) return;
+    const hasTracking = !!proj.trackingRef && proj.trackingRef.trim() !== "";
+    const apply = async (clearTracking: boolean) => {
+      try {
+        const patch: any = { shippingMode: m };
+        if (clearTracking || m === "Local") patch.trackingRef = undefined;
+        await store.updateProject(proj.id, patch);
+        triggerFlash("mode", "success");
+      } catch (err: any) {
+        toast.error(err?.message ?? "Save failed");
+        triggerFlash("mode", "error");
+      }
+    };
+    if (hasTracking) {
+      setModeChangeConfirm({ from: proj.shippingMode, to: m, tracking: proj.trackingRef! });
+      return;
+    }
+    apply(false);
+  };
+
+  // Mode-change confirmation state (when tracking would be cleared).
+  const [modeChangeConfirm, setModeChangeConfirm] = useState<
+    { from: ShippingMode | undefined; to: ShippingMode; tracking: string } | null
+  >(null);
+  // Tracking editor (BottomSheet) — opened from inline cell click.
+  const [trackingEditorOpen, setTrackingEditorOpen] = useState(false);
+  const saveTracking = async (v: string | null) => {
+    setTrackingEditorOpen(false);
     try {
-      await store.updateProject(proj.id, { shippingMode: m });
-      triggerFlash("mode", "success");
+      await store.updateProject(proj.id, { trackingRef: v ?? undefined });
+      triggerFlash("trackingRef", "success");
     } catch (err: any) {
       toast.error(err?.message ?? "Save failed");
-      triggerFlash("mode", "error");
+      triggerFlash("trackingRef", "error");
     }
   };
 
@@ -862,17 +892,12 @@ const TableRow = ({
         anchorEl={pickerAnchor}
       />
 
-      {/* Tracking — text */}
-      <EditableCell
-        cellKey={`${card.id}:trackingRef`}
-        mode="text"
-        align="left"
-        display={<span className="tabular">{proj.trackingRef ?? "—"}</span>}
-        title={proj.trackingRef ?? ""}
-        muted={!proj.trackingRef}
-        value={proj.trackingRef ?? ""}
-        placeholder="Tracking"
-        onCommit={(v) => saveText("trackingRef", v)}
+      {/* Tracking — opens BottomSheet TrackingEditor; disabled until Mode is set */}
+      <TrackingCellTrigger
+        value={proj.trackingRef}
+        modeSet={!!proj.shippingMode}
+        flash={flashFor("trackingRef")}
+        onClick={() => proj.shippingMode && setTrackingEditorOpen(true)}
       />
 
       {/* Rep — multi popover */}
@@ -982,7 +1007,81 @@ const TableRow = ({
           onConfirm={pickReps}
         />
       )}
+
+      {/* Tracking editor sheet (mode-gated, format-enforced) */}
+      <TrackingEditor
+        open={trackingEditorOpen}
+        onClose={() => setTrackingEditorOpen(false)}
+        shippingMode={proj.shippingMode}
+        value={proj.trackingRef ?? ""}
+        onSave={saveTracking}
+      />
+
+      {/* Mode-change confirmation when tracking would be cleared */}
+      <ConfirmDialog
+        open={!!modeChangeConfirm}
+        title="Change shipping mode?"
+        description={
+          modeChangeConfirm
+            ? `Changing mode from ${modeChangeConfirm.from ?? "—"} to ${modeChangeConfirm.to} will clear the current tracking number (${modeChangeConfirm.tracking}).`
+            : ""
+        }
+        confirmLabel="Confirm and Clear"
+        cancelLabel="Cancel"
+        onCancel={() => setModeChangeConfirm(null)}
+        onConfirm={async () => {
+          if (!modeChangeConfirm) return;
+          const m = modeChangeConfirm.to;
+          setModeChangeConfirm(null);
+          try {
+            await store.updateProject(proj.id, { shippingMode: m, trackingRef: undefined });
+            triggerFlash("mode", "success");
+          } catch (err: any) {
+            toast.error(err?.message ?? "Save failed");
+            triggerFlash("mode", "error");
+          }
+        }}
+      />
     </div>
+  );
+};
+
+// ── Tracking cell trigger (opens BottomSheet; disabled when no Mode) ──
+interface TrackingCellTriggerProps {
+  value: string | undefined;
+  modeSet: boolean;
+  flash: "success" | "error" | null;
+  onClick: () => void;
+}
+const TrackingCellTrigger = ({ value, modeSet, flash, onClick }: TrackingCellTriggerProps) => {
+  const ringStyle: React.CSSProperties =
+    flash === "success" ? { boxShadow: "inset 0 0 0 2px hsl(var(--brand-navy) / 0.5)", backgroundColor: "hsl(140 50% 50% / 0.12)" }
+    : flash === "error" ? { boxShadow: "inset 0 0 0 2px hsl(var(--urgent))", backgroundColor: "hsl(0 70% 50% / 0.10)" }
+    : {};
+  const cell = (
+    <div
+      onClick={(e) => { e.stopPropagation(); if (modeSet) onClick(); }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      className={cn(
+        "relative px-3 py-1.5 truncate transition-colors h-full flex items-center justify-start text-left",
+        modeSet ? "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer" : "cursor-not-allowed",
+      )}
+      style={{
+        ...ringStyle,
+        color: !value || !modeSet ? "hsl(var(--brand-navy) / 0.28)" : undefined,
+      }}
+      title={!modeSet ? undefined : (value ?? "")}
+    >
+      <span className="truncate w-full tabular">{value ?? "—"}</span>
+    </div>
+  );
+  if (modeSet) return cell;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{cell}</TooltipTrigger>
+      <TooltipContent side="top">Set Mode first to enable Tracking</TooltipContent>
+    </Tooltip>
   );
 };
 

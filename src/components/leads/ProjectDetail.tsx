@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { usePipelineStore, getStageTitle, getNextStage } from "@/hooks/usePipelineStore";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
-  TextEditor, DateEditor, ListPicker, ListOption, BottomSheet,
+  TextEditor, DateEditor, ListPicker, ListOption, BottomSheet, TrackingEditor,
 } from "./EditorSheets";
 import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
 import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterData";
@@ -216,8 +216,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { invoiceNumber: t });
     setEditor(null);
   };
-  const saveTracking = (v: string) => {
-    updateProject(live.id, { trackingRef: v.trim() || undefined });
+  const saveTracking = (v: string | null) => {
+    updateProject(live.id, { trackingRef: v ?? undefined });
     setEditor(null);
   };
   const saveNumeric = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) => (raw: string) => {
@@ -250,10 +250,26 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   };
   const handlePickShippingMode = (id: string) => {
     const mode = (id === "Air" || id === "Ocean" || id === "Local") ? (id as ShippingMode) : undefined;
-    const patch: Partial<typeof live> = { shippingMode: mode, salesShippingLabel: undefined };
-    if (mode === "Local") patch.trackingRef = undefined;
-    updateProject(live.id, patch);
-    setEditor(null);
+    const oldMode = live.shippingMode;
+    if (mode === oldMode) { setEditor(null); return; }
+    const hasTracking = !!live.trackingRef && live.trackingRef.trim() !== "";
+    const apply = (clearTracking: boolean) => {
+      const patch: Partial<typeof live> = { shippingMode: mode, salesShippingLabel: undefined };
+      if (clearTracking || mode === "Local") patch.trackingRef = undefined;
+      updateProject(live.id, patch);
+      setEditor(null);
+    };
+    if (hasTracking) {
+      setEditor(null);
+      setConfirm({
+        title: "Change shipping mode?",
+        description: `Changing mode from ${oldMode ?? "—"} to ${mode ?? "—"} will clear the current tracking number (${live.trackingRef}).`,
+        confirmLabel: "Confirm and Clear",
+        onConfirm: () => { apply(true); setConfirm(null); },
+      });
+      return;
+    }
+    apply(false);
   };
 
   // ─── ⋮ menu actions ────────────────────────────────────────────────────
@@ -472,9 +488,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow
                 label="Tracking"
                 value={live.trackingRef ? live.trackingRef.toUpperCase() : undefined}
-                onClick={live.shippingMode === "Local" ? undefined : () => setEditor({ kind: "tracking" })}
-                locked={live.shippingMode === "Local"}
-                lockedHint={live.shippingMode === "Local" ? "Local — no tracking" : undefined}
+                onClick={live.shippingMode ? () => setEditor({ kind: "tracking" }) : undefined}
+                locked={!live.shippingMode}
+                lockedHint={!live.shippingMode ? "Set Mode first to enable Tracking" : undefined}
                 trailing={hasShipmentLink ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenShipment(live.shipmentId!); }}
@@ -657,12 +673,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         digitsOnly
         onSave={saveInvoice}
       />
-      <TextEditor
+      <TrackingEditor
         open={editor?.kind === "tracking"}
         onClose={() => setEditor(null)}
-        title="Tracking reference"
+        shippingMode={live.shippingMode}
         value={live.trackingRef ?? ""}
-        placeholder="—"
         onSave={saveTracking}
       />
       <TextEditor
