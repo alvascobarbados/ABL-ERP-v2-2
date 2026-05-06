@@ -787,7 +787,7 @@ const Index = () => {
       </main>
 
       {/* Desktop main — Kanban or Table, only at ≥1024px. Mobile main above is hidden at lg. */}
-      <div className="hidden lg:flex lg:flex-1 lg:min-h-0">
+      <div className="hidden lg:flex lg:flex-1 lg:min-h-0 lg:min-w-0">
         {desktopView === "table" ? (
           <ProjectTable
             activeTab={activeTab}
