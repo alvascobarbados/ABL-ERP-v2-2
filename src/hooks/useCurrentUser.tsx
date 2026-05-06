@@ -143,7 +143,11 @@ export const CurrentUserProvider = ({ children }: { children: ReactNode }) => {
       }
     })();
     return () => { cancelled = true; };
-  }, [session]);
+    // Depend on stable primitives — using `session` object identity caused
+    // the INITIAL_SESSION event (fired right after SIGNED_IN) to swap the
+    // session reference, run cleanup, and cancel the in-flight team_members
+    // query before its result could be applied.
+  }, [session?.user?.id, session?.user?.email]);
 
   // 3) Hard 5s timeout on the loading state — never let users get stuck.
   useEffect(() => {
