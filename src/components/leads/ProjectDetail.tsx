@@ -220,6 +220,22 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { trackingRef: v.trim() || undefined });
     setEditor(null);
   };
+  const saveNumeric = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) => (raw: string) => {
+    const cleaned = (raw ?? "").replace(integer ? /[^\d]/g : /[^\d.]/g, "");
+    if (cleaned === "") {
+      updateProject(live.id, { [field]: undefined } as any);
+      setEditor(null);
+      return;
+    }
+    const n = Number(cleaned);
+    if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
+    const value = integer ? Math.floor(n) : n;
+    updateProject(live.id, { [field]: value } as any);
+    setEditor(null);
+  };
+  const saveWeight = saveNumeric("weightKg", false);
+  const saveCbm = saveNumeric("cbm", false);
+  const savePackages = saveNumeric("numPackages", true);
 
   const submitNote = (text: string) => { addNote(live.id, text); setEditor(null); };
 
