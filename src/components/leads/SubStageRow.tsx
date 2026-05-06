@@ -75,8 +75,8 @@ export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }:
           const count = stageCounts[s.id] ?? 0;
           const fill = isActive ? ORANGE : PILL_BG;
           const border = isActive ? ORANGE : PILL_BORDER;
-          const labelColor = isActive ? "#FFFFFF" : ORANGE;
-          const countColor = isActive ? "#FFFFFF" : ORANGE;
+          const labelColor = isActive ? "#FFFFFF" : "#7A3A10";
+          const countColor = isActive ? "#FFFFFF" : "#7A3A10";
 
           return (
             <button
@@ -94,14 +94,14 @@ export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }:
               }}
             >
               <span
-                className="font-medium tracking-tight truncate"
-                style={{ fontSize: 12, color: labelColor }}
+                className="tracking-tight truncate"
+                style={{ fontSize: 12, color: labelColor, fontWeight: 600 }}
               >
                 {s.title}
               </span>
               <span
-                className="font-semibold tabular shrink-0"
-                style={{ fontSize: 12, color: countColor, lineHeight: 1 }}
+                className="tabular shrink-0"
+                style={{ fontSize: 12, color: countColor, lineHeight: 1, fontWeight: 600 }}
               >
                 {count}
               </span>
