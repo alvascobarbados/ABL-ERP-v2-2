@@ -86,33 +86,114 @@ function colorForInitials(initials: string): string {
   return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
 }
 
-// ─── Description formatter ────────────────────────────────────────────────
-// Strips leading actor name, and for stage_change rewrites "from X to Y"
-// to "from X → Y" using metadata when available.
-// TODO: flag_toggle should ideally store {newState: true|false} in metadata
-//   for clean rendering — currently we parse "flagged"/"unflagged" from text.
-function formatDescription(row: LogRow): string {
-  let desc = row.description ?? "";
-  const prefix = row.actor_display_name + " ";
-  if (desc.startsWith(prefix)) desc = desc.slice(prefix.length);
+// ─── Sentence builder ─────────────────────────────────────────────────────
+// Builds a natural-sentence rendering: [actor] {pre} [project] {post} · [time AST]
+// where the project reference sits immediately after the verb.
+// TODO: flag_toggle should store {newState: true|false} in metadata for
+//   clean rendering — currently we parse "flagged"/"unflagged" from text.
+const FIELD_LABELS: Record<string, string> = {
+  pointPerson: "sales rep",
+  shippingMode: "mode",
+  value: "amount",
+  supplierId: "supplier",
+  supplierLabel: "supplier",
+  quoteNumber: "Q#",
+  projectName: "project name",
+  detailSummary: "detail",
+  deadline: "deadline",
+  customer: "customer",
+  contactPerson: "contact",
+  priority: "priority",
+  orderType: "order type",
+  tag: "tag",
+  poNumber: "PO#",
+  invoiceNumber: "invoice #",
+  paymentTerms: "payment terms",
+};
 
-  if (row.action_type === "stage_change" && row.metadata) {
-    const m = row.metadata;
-    const fromP = m.fromPipeline as PipelineId | undefined;
-    const fromS = m.fromStage as StageId | undefined;
-    const toP = m.toPipeline as PipelineId | undefined;
-    const toS = m.toStage as StageId | undefined;
-    if (fromP && fromS && toP && toS) {
-      try {
-        const fromTitle = getStageTitle(fromP, fromS);
-        const toTitle = getStageTitle(toP, toS);
-        const fromPipeName = PIPELINES.find((p) => p.id === fromP)?.title ?? fromP;
-        const toPipeName = PIPELINES.find((p) => p.id === toP)?.title ?? toP;
-        return `moved this from ${fromPipeName} · ${fromTitle} → ${toPipeName} · ${toTitle}`;
-      } catch { /* fall through */ }
+function fieldLabel(field: string): string {
+  return FIELD_LABELS[field] ?? field.replace(/([A-Z])/g, " $1").toLowerCase().trim();
+}
+
+function fmtFieldValue(v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "number") return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return String(v);
+}
+
+export interface Sentence {
+  pre: string;        // text between actor name and project link (with trailing space)
+  post: string;       // text after project link (with leading space if non-empty)
+}
+
+export function buildSentence(row: LogRow): Sentence {
+  const m = row.metadata ?? {};
+  switch (row.action_type) {
+    case "stage_change": {
+      const fromP = m.fromPipeline as PipelineId | undefined;
+      const fromS = m.fromStage as StageId | undefined;
+      const toP = m.toPipeline as PipelineId | undefined;
+      const toS = m.toStage as StageId | undefined;
+      if (fromP && fromS && toP && toS) {
+        try {
+          const fromTitle = getStageTitle(fromP, fromS);
+          const toTitle = getStageTitle(toP, toS);
+          const fromPipeName = PIPELINES.find((p) => p.id === fromP)?.title ?? fromP;
+          const toPipeName = PIPELINES.find((p) => p.id === toP)?.title ?? toP;
+          return { pre: "moved ", post: ` from ${fromPipeName} · ${fromTitle} → ${toPipeName} · ${toTitle}` };
+        } catch { /* fall through */ }
+      }
+      return { pre: "moved ", post: "" };
     }
+    case "flag_toggle": {
+      const isOff = /unflagged/i.test(row.description ?? "");
+      return { pre: isOff ? "unflagged " : "flagged ", post: "" };
+    }
+    case "field_edit": {
+      const f = (m.field as string) ?? "field";
+      const label = fieldLabel(f);
+      const hasFrom = m.fromValue !== undefined && m.fromValue !== null && m.fromValue !== "";
+      const hasTo = m.toValue !== undefined && m.toValue !== null && m.toValue !== "";
+      // Hide raw IDs (supplierId) from value rendering — fall back to "updated …"
+      const isIdField = f === "supplierId";
+      if (hasFrom && hasTo && !isIdField) {
+        return { pre: `changed ${label} on `, post: ` from ${fmtFieldValue(m.fromValue)} → ${fmtFieldValue(m.toValue)}` };
+      }
+      return { pre: `updated ${label} on `, post: "" };
+    }
+    case "note_added":
+      return { pre: "added a note to ", post: "" };
+    case "line_item_change":
+      return { pre: "updated line items on ", post: "" };
+    case "trash":
+      return { pre: "trashed ", post: "" };
+    case "restore":
+      return { pre: "restored ", post: "" };
+    case "project_created":
+      return { pre: "created ", post: "" };
+    default:
+      return { pre: `${row.action_type.replace(/_/g, " ")} `, post: "" };
   }
-  return desc;
+}
+
+// Time formatted in Barbados (AST, UTC-4, no DST) with explicit "AST" label.
+const AST_TIME_FMT = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Barbados",
+});
+export function fmtAstTime(ts: Date): string {
+  return `${AST_TIME_FMT.format(ts)} AST`;
+}
+
+export function projectFallbackLabel(
+  project: { customer: string; projectName: string } | undefined,
+  projectId: string,
+): string {
+  if (project) {
+    if (project.customer && project.projectName) return `${project.customer} · ${project.projectName}`;
+    if (project.projectName) return project.projectName;
+    return "[unknown project]";
+  }
+  return projectId ? "[deleted project]" : "[unknown project]";
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────
@@ -314,12 +395,15 @@ export default function ActivityPage() {
           label: g.spec.label,
           rows: g.rows.map((r) => {
             const proj = projectMap.get(r.project_id);
+            const sentence = buildSentence(r);
             return {
               id: r.id,
               ts: new Date(r.ts),
               actorDisplayName: r.actor_display_name,
-              description: formatDescription(r),
-              projectLabel: proj ? `${proj.customer} · ${proj.projectName}` : "",
+              pre: sentence.pre,
+              post: sentence.post,
+              projectLabel: projectFallbackLabel(proj, r.project_id),
+              astTime: fmtAstTime(new Date(r.ts)),
             };
           }),
         }));
@@ -527,7 +611,10 @@ function ActivityRow({
   const tm = teamMembers.find((t) => t.full_name === row.actor_display_name);
   const initials = (tm?.initials ?? row.actor_display_name.slice(0, 2)).toUpperCase();
   const avatarColor = colorForInitials(initials);
-  const desc = formatDescription(row);
+  const sentence = buildSentence(row);
+  const projectLabel = projectFallbackLabel(project, row.project_id);
+  const projectClickable = !!project;
+  const astTime = fmtAstTime(new Date(row.ts));
 
   return (
     <li
@@ -550,19 +637,21 @@ function ActivityRow({
         </div>
         <div className="flex-1 min-w-0 truncate text-[13px]" style={{ color: "hsl(var(--brand-navy) / 0.9)" }}>
           <span style={{ fontWeight: 600 }}>{row.actor_display_name}</span>{" "}
-          <span>{desc}</span>
-          {project && (
-            <>
-              <span style={{ color: "hsl(var(--brand-navy) / 0.4)" }}> · </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); onOpenProject(row.project_id); }}
-                className="hover:underline"
-                style={{ color: "hsl(var(--brand-navy))", fontWeight: 500 }}
-              >
-                {project.customer} · {project.projectName}
-              </button>
-            </>
+          <span>{sentence.pre}</span>
+          {projectClickable ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenProject(row.project_id); }}
+              className="hover:underline"
+              style={{ color: "hsl(var(--brand-navy))", fontWeight: 500 }}
+            >
+              {projectLabel}
+            </button>
+          ) : (
+            <span style={{ color: "hsl(var(--brand-navy) / 0.5)", fontStyle: "italic" }}>{projectLabel}</span>
           )}
+          {sentence.post && <span>{sentence.post}</span>}
+          <span style={{ color: "hsl(var(--brand-navy) / 0.4)" }}> · </span>
+          <span style={{ color: "hsl(var(--brand-navy) / 0.55)" }}>{astTime}</span>
         </div>
         <div className="text-[11px] tabular-nums shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.5)" }}>
           {fmtTime(new Date(row.ts), now)}
