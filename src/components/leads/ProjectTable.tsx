@@ -116,7 +116,7 @@ const STAGE_RANK: Record<StageId, number> = {
 // Number of user-facing stages per pipeline (used for shade ramp).
 // Single-state pipelines stay at full saturation.
 const STAGE_COUNT: Record<PipelineId, number> = {
-  sales: 3, design: 2, purchasing: 1, production: 1,
+  sales: 4, design: 2, purchasing: 1, production: 1,
   shipping: 1, finance: 2, completed: 1, operations: 1,
 };
 
