@@ -145,13 +145,6 @@ export function exportActivityPdf(
     y += 10;
 
     for (const r of g.rows) {
-      // Build wrapped line(s)
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const isToday = r.ts.getTime() >= today.getTime();
-      const timeStr = isToday
-        ? format(r.ts, "h:mm a")
-        : format(r.ts, "MMM d, h:mm a");
-
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
 
@@ -159,17 +152,15 @@ export function exportActivityPdf(
       const bodyX = M.left + TIME_W + 8;
       const bodyW = CONTENT_W - TIME_W - 8;
 
-      // Compose body text — name bold + rest regular. We'll split into
-      // segments and measure width while wrapping.
+      // Sentence: [actor bold] {pre} [project bold] {post} · {astTime}
       const segments: { text: string; bold: boolean }[] = [
         { text: r.actorDisplayName + " ", bold: true },
-        { text: r.description, bold: false },
+        { text: r.pre, bold: false },
       ];
-      if (r.projectLabel) {
-        segments.push({ text: ` · ${r.projectLabel}`, bold: false });
-      }
+      if (r.projectLabel) segments.push({ text: r.projectLabel, bold: true });
+      if (r.post) segments.push({ text: r.post, bold: false });
+      segments.push({ text: ` · ${r.astTime}`, bold: false });
 
-      // Naive wrapping by words
       const lines: { text: string; bold: boolean }[][] = [[]];
       let curW = 0;
       for (const seg of segments) {
@@ -181,7 +172,7 @@ export function exportActivityPdf(
           if (curW + ww > bodyW && lines[lines.length - 1].length > 0) {
             lines.push([]);
             curW = 0;
-            if (/^\s+$/.test(w)) continue; // skip leading whitespace
+            if (/^\s+$/.test(w)) continue;
           }
           lines[lines.length - 1].push({ text: w, bold: seg.bold });
           curW += ww;
@@ -192,11 +183,14 @@ export function exportActivityPdf(
       const blockH = Math.max(lineHeight, lines.length * lineHeight) + 6;
       ensureSpace(blockH);
 
-      // Time (left col)
+      // Date column (left) — keeps date context for older entries
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const isToday = r.ts.getTime() >= today.getTime();
+      const dateStr = isToday ? "Today" : format(r.ts, "MMM d");
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(...MUTED);
-      doc.text(timeStr, M.left, y);
+      doc.text(dateStr, M.left, y);
 
       // Body lines
       doc.setFontSize(10);
@@ -215,7 +209,6 @@ export function exportActivityPdf(
 
       y += Math.max(lineHeight, lines.length * lineHeight) + 6;
 
-      // Separator
       doc.setDrawColor(240, 240, 244);
       doc.setLineWidth(0.3);
       doc.line(M.left, y - 2, PAGE.w - M.right, y - 2);
