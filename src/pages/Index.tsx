@@ -794,6 +794,7 @@ const Index = () => {
             visible={visible}
             onOpenCard={setSelectedCard}
             onOpenPicker={onOpenPicker}
+            onPickStage={performMove}
             hasActiveFilter={hasActiveFilter || isSearching}
             onClearFilters={() => { setFilters(EMPTY_FILTER); setSearch(""); }}
           />
