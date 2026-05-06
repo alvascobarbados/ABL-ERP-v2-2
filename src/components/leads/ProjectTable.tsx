@@ -627,10 +627,29 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Stage · State — always shown. Compact pill, color shaded by stage progression. */}
-      <ReadOnlyCell title={stageLabel(card, activeTab)}>
-        <StageStatePill pipeline={card.pipeline} stage={card.stage} accent={accent} />
-      </ReadOnlyCell>
+      {/* Stage · State — inline-editable pill. Three-state cell; popover lists all stages. */}
+      <StageCell
+        cellKey={`${card.id}:stage`}
+        pipeline={card.pipeline}
+        stage={card.stage}
+        accent={accent}
+        active={openPicker === "stage"}
+        flash={flashFor("stage")}
+        onActivate={(el) => { setPickerAnchor(el); setOpenPicker("stage"); }}
+        open={openPicker === "stage"}
+        onClose={() => setOpenPicker(null)}
+        anchorEl={pickerAnchor}
+        onPick={(target) => {
+          setOpenPicker(null);
+          if (target.pipeline === card.pipeline && target.stage === card.stage) return;
+          if (onPickStage) {
+            onPickStage(card, target);
+          } else {
+            store.moveCard(card.id, target);
+          }
+          triggerFlash("stage", "success");
+        }}
+      />
 
       {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
       <EditableCell
