@@ -299,13 +299,25 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             }}
           >
 
-            {COLS.map((c) => {
+            {COLS.map((c, ci) => {
               const sortable = !(activeTab === "completed" && c.key === "stage");
               const isActive = sortable && sortKey === c.key;
               const Arrow = isActive ? (sortDir === 1 ? ArrowUp : ArrowDown) : null;
               const resizable = c.resizable !== false;
+              const sticky = ci < 4;
+              const isLastSticky = ci === 3;
               return (
-                <div key={c.key} className="relative">
+                <div
+                  key={c.key}
+                  className="relative"
+                  style={sticky ? {
+                    position: "sticky",
+                    left: stickyLefts[ci],
+                    zIndex: 30,
+                    backgroundColor: "#FFFFFF",
+                    boxShadow: isLastSticky ? "4px 0 6px -4px rgba(27,42,78,0.15)" : undefined,
+                  } : undefined}
+                >
                   <button
                     type="button"
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
