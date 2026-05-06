@@ -219,6 +219,9 @@ export default function ActivityPage() {
           const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
           if (!tm || r.actor_display_name !== tm.full_name) return;
         }
+        const ts = new Date(r.ts).getTime();
+        if (dateRange.from && ts < dateRange.from.getTime()) return;
+        if (dateRange.to && ts > dateRange.to.getTime()) return;
         setRows((prev) => [r, ...prev]);
         setTotal((t) => t + 1);
         if (scrolledDown) {
@@ -232,7 +235,7 @@ export default function ActivityPage() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [search, memberFilter, md.teamMembers, scrolledDown]);
+  }, [search, memberFilter, dateRange.from, dateRange.to, md.teamMembers, scrolledDown]);
 
   // Scroll handling: track position + infinite scroll
   const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
