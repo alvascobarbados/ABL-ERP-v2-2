@@ -73,6 +73,16 @@ interface TextEditorProps {
   onSave: (v: string) => void;
 }
 export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, onSave }: TextEditorProps) => {
+export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, onSave }: TextEditorProps) => {
+  const sanitizeDigitsLike = (raw: string): string => {
+    if (!digitsOnly) return raw;
+    if (!allowDecimal) return raw.replace(/\D/g, "");
+    // Strip everything but digits + dot, then collapse to at most one dot.
+    const cleaned = raw.replace(/[^\d.]/g, "");
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot === -1) return cleaned;
+    return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+  };
   // When digitsOnly+prefix, seed with digits only — strip any leading prefix from incoming value.
   const sanitizeIncoming = (raw: string) => {
     if (!digitsOnly) return raw;
@@ -82,7 +92,7 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
       const re = new RegExp(`^\\s*${px}-?`, "i");
       s = s.replace(re, "");
     }
-    return s.replace(/\D/g, "");
+    return sanitizeDigitsLike(s);
   };
   const [v, setV] = useState(sanitizeIncoming(value));
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
@@ -106,6 +116,12 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const allowed = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "Tab", "Enter", "Escape"];
     if (allowed.includes(e.key)) return;
+    if (allowDecimal) {
+      if (/^\d$/.test(e.key)) return;
+      if (e.key === "." && !v.includes(".")) return;
+      e.preventDefault();
+      return;
+    }
     if (!/^\d$/.test(e.key)) e.preventDefault();
   };
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -118,20 +134,20 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
       const re = new RegExp(`^\\s*${px}-?`, "i");
       s = s.replace(re, "");
     }
-    const digits = s.replace(/\D/g, "");
-    if (!digits) return;
+    const cleaned = sanitizeDigitsLike(s);
+    if (!cleaned) return;
     const target = e.currentTarget;
     const start = target.selectionStart ?? v.length;
     const end = target.selectionEnd ?? v.length;
-    const next = (v.slice(0, start) + digits + v.slice(end));
-    setV(next.replace(/\D/g, ""));
+    const next = v.slice(0, start) + cleaned + v.slice(end);
+    setV(sanitizeDigitsLike(next));
   };
   const handleChange = (raw: string) => {
-    if (digitsOnly) setV(raw.replace(/\D/g, ""));
+    if (digitsOnly) setV(sanitizeDigitsLike(raw));
     else setV(raw);
   };
   const commit = () => {
-    if (digitsOnly) onSave(v.replace(/\D/g, ""));
+    if (digitsOnly) onSave(sanitizeDigitsLike(v));
     else onSave(v.trim());
   };
   // Allow empty save when digitsOnly (clearing the field is meaningful)
