@@ -892,17 +892,12 @@ const TableRow = ({
         anchorEl={pickerAnchor}
       />
 
-      {/* Tracking — text */}
-      <EditableCell
-        cellKey={`${card.id}:trackingRef`}
-        mode="text"
-        align="left"
-        display={<span className="tabular">{proj.trackingRef ?? "—"}</span>}
-        title={proj.trackingRef ?? ""}
-        muted={!proj.trackingRef}
-        value={proj.trackingRef ?? ""}
-        placeholder="Tracking"
-        onCommit={(v) => saveText("trackingRef", v)}
+      {/* Tracking — opens BottomSheet TrackingEditor; disabled until Mode is set */}
+      <TrackingCellTrigger
+        value={proj.trackingRef}
+        modeSet={!!proj.shippingMode}
+        flash={flashFor("trackingRef")}
+        onClick={() => proj.shippingMode && setTrackingEditorOpen(true)}
       />
 
       {/* Rep — multi popover */}
