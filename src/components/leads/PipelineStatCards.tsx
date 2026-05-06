@@ -206,7 +206,7 @@ export const PipelineStatCards = ({
       <div className="grid w-full" style={{ gridTemplateColumns: gridCols, columnGap: 0 }}>
         <RowLabel variant="tight">All</RowLabel>
         {/* Offset the STAGE label past the divider's 1px + 14px+14px margins so it sits over the first stage card */}
-        <RowLabel style={{ paddingLeft: 29 }}>Stage</RowLabel>
+        <RowLabel variant="tight" style={{ paddingLeft: 29 }}>Stage</RowLabel>
       </div>
 
       {/* Card row — Active | divider | 7 stage cards */}

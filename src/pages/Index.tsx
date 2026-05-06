@@ -615,7 +615,7 @@ const Index = () => {
               const hasSub = activeTab === "sales" || activeTab === "design" || activeTab === "finance";
               return (
                 <div style={{ marginTop: 10, maxWidth: "70%" }}>
-                  <RowLabel dim={!hasSub}>Sub-stage</RowLabel>
+                  <RowLabel variant="tight" dim={!hasSub}>Sub-stage</RowLabel>
                   <SubStageRow
                     activeTab={activeTab}
                     selectedStage={subStage}
