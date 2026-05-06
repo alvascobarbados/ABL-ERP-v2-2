@@ -53,7 +53,7 @@ import type { TabId } from "./PipelineTabs";
 
 type SortKey =
   | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
-  | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline";
+  | "quote" | "amount" | "weight" | "cbm" | "pkgs" | "mode" | "tracking" | "rep" | "deadline";
 
 interface Props {
   activeTab: TabId;
