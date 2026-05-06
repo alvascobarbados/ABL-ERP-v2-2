@@ -746,6 +746,32 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onSave={savePackages}
       />
       <TextEditor
+        open={editor?.kind === "designBrief"}
+        onClose={() => setEditor(null)}
+        title="Design brief"
+        value={live.designBrief ?? ""}
+        placeholder="Describe the creative brief…"
+        multiline
+        onSave={saveDesignBrief}
+      />
+      <DateEditor
+        open={editor?.kind === "completionDate"}
+        onClose={() => setEditor(null)}
+        title="Completion date"
+        value={live.completionDate ?? undefined}
+        onSave={saveCompletionDate}
+      />
+      <TextEditor
+        open={editor?.kind === "outstandingBalance"}
+        onClose={() => setEditor(null)}
+        title="Outstanding balance (BBD)"
+        value={live.outstandingBalance != null ? String(live.outstandingBalance) : ""}
+        placeholder="0"
+        digitsOnly
+        allowDecimal
+        onSave={saveOutstandingBalance}
+      />
+      <TextEditor
         open={editor?.kind === "addNote"}
         onClose={() => setEditor(null)}
         title="Add note"
