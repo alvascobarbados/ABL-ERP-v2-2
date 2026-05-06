@@ -286,14 +286,22 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
           }}
         >
           <div style={{ minWidth: totalWidth }}>
-          {/* Header — sticky to outer scroll container; fully opaque */}
+          {/* Header — sticky to outer scroll container; white masking band wraps an inner pill */}
           <div
-            className="sticky top-0 z-20 grid items-center text-[11px] font-semibold uppercase tracking-[0.05em] rounded-t-2xl"
+            className="sticky top-0 z-20"
+            style={{
+              backgroundColor: "#FFFFFF",
+              padding: "8px 10px",
+            }}
+          >
+          <div
+            className="grid items-center text-[11px] font-semibold uppercase tracking-[0.05em] overflow-hidden"
             style={{
               gridTemplateColumns: gridCols,
               backgroundColor: "#D8DCE5",
-              color: "hsl(var(--brand-navy) / 0.6)",
+              color: "#1B2A4E",
               borderBottom: "1px solid rgba(27, 42, 78, 0.30)",
+              borderRadius: 999,
             }}
           >
             {COLS.map((c) => {
@@ -328,6 +336,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
               );
             })}
             <div className="h-11" />
+          </div>
           </div>
 
           {/* Rows */}
