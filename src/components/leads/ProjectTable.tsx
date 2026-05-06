@@ -317,14 +317,20 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-10 px-4 inline-flex items-center gap-1 transition-colors text-left truncate w-full text-[11px] font-semibold uppercase",
+                      "h-10 px-4 inline-flex items-center gap-1 transition-colors truncate w-full text-[11px] font-semibold uppercase",
                       sortable ? "hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
-                      c.align === "right" ? "justify-end" : "justify-start",
+                      c.key === "flagged"
+                        ? "justify-center"
+                        : c.align === "right" ? "justify-end text-left" : "justify-start text-left",
                     )}
                     style={{ color: "hsl(var(--brand-navy) / 0.55)", letterSpacing: "0.06em" }}
-                    title={c.label}
+                    title={c.key === "flagged" ? "Flag" : c.label}
                   >
-                    <span className="truncate">{c.label}</span>
+                    {c.key === "flagged" ? (
+                      <Flag className="h-3.5 w-3.5 shrink-0" aria-label="Flag" />
+                    ) : (
+                      <span className="truncate">{c.label}</span>
+                    )}
                     {Arrow && <Arrow className="h-3 w-3 shrink-0" style={{ opacity: 1, color: "hsl(var(--brand-navy))" }} />}
                   </button>
                   {resizable && (
