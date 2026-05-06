@@ -331,7 +331,7 @@ export interface MoveValidation {
 
 /** Forward order of stages across all pipelines. `archive` is treated as a terminal exit (not part of the linear flow). */
 export const STAGE_ORDER: StageId[] = [
-  "proposal", "quote", "confirming",
+  "sourcing", "proposal", "quote", "confirming",
   "design", "proof",
   "purchasing", "production",
   // legacy stage IDs kept in the order so historical log entries still rank correctly
