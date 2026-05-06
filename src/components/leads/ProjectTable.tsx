@@ -291,15 +291,22 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 180 },
+  { key: "designBrief", label: "Design Brief", defaultPx: 200 },
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
+  { key: "po", label: "PO#", defaultPx: 92 },
+  { key: "invoice", label: "INV#", defaultPx: 96 },
   { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
+  { key: "balance", label: "Inv Balance", defaultPx: 120, align: "right" },
   { key: "weight", label: "Weight", defaultPx: 80, align: "right" },
   { key: "cbm", label: "CBM", defaultPx: 70, align: "right" },
   { key: "pkgs", label: "Pkgs", defaultPx: 60, align: "right" },
   { key: "mode", label: "Mode", defaultPx: 96 },
   { key: "tracking", label: "Tracking", defaultPx: 120 },
+  // TODO(auth): Rep currently reads from `point_person` (comma-separated initials text).
+  // When real auth + team_members FK lands, migrate to `sales_rep_id` and update this column.
   { key: "rep", label: "Rep", defaultPx: 60 },
+  { key: "completionDate", label: "Completed", defaultPx: 110 },
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
