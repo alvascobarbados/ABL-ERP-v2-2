@@ -886,7 +886,7 @@ export const SectionCard = ({ children, className }: { children: React.ReactNode
   </div>
 );
 
-const SectionHeaderWithAction = ({
+export const SectionHeaderWithAction = ({
   children, onAction,
 }: { children: React.ReactNode; onAction: () => void }) => (
   <div className="flex items-center justify-between mb-3 px-1">
