@@ -72,6 +72,9 @@ type EditorKind =
   | { kind: "po" }
   | { kind: "invoice" }
   | { kind: "tracking" }
+  | { kind: "weight" }
+  | { kind: "cbm" }
+  | { kind: "packages" }
   | { kind: "addNote" }
   | { kind: "addLineItem" }
   | { kind: "editLineItem"; index: number }
@@ -217,6 +220,22 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { trackingRef: v.trim() || undefined });
     setEditor(null);
   };
+  const saveNumeric = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) => (raw: string) => {
+    const cleaned = (raw ?? "").replace(integer ? /[^\d]/g : /[^\d.]/g, "");
+    if (cleaned === "") {
+      updateProject(live.id, { [field]: undefined } as any);
+      setEditor(null);
+      return;
+    }
+    const n = Number(cleaned);
+    if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
+    const value = integer ? Math.floor(n) : n;
+    updateProject(live.id, { [field]: value } as any);
+    setEditor(null);
+  };
+  const saveWeight = saveNumeric("weightKg", false);
+  const saveCbm = saveNumeric("cbm", false);
+  const savePackages = saveNumeric("numPackages", true);
 
   const submitNote = (text: string) => { addNote(live.id, text); setEditor(null); };
 
@@ -403,15 +422,53 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── DETAILS ── */}
+          {/* ── PROJECT DETAILS ── */}
           <section>
-            <SectionHeader>Details</SectionHeader>
+            <SectionHeader>Project Details</SectionHeader>
             <SectionCard>
               <DetailRow label="Customer" value={live.customer} locked />
+              <DetailRow label="Contact Person" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
               <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
               <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
-              <DetailRow label="Mode" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
+              <DetailRow
+                label="Amount"
+                value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
+                onClick={() => setEditor({ kind: "amount" })}
+              />
+              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
+              <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
+              <DetailRow
+                label="Deadline"
+                value={deadlineDisplay}
+                onClick={() => setEditor({ kind: "deadline" })}
+                valueColor={u?.color}
+              />
+            </SectionCard>
+          </section>
+
+          {/* ── SHIPPING DETAILS ── */}
+          <section>
+            <SectionHeader>Shipping Details</SectionHeader>
+            <SectionCard>
+              <DetailRow
+                label="Weight (kg)"
+                value={live.weightKg != null ? String(live.weightKg) : undefined}
+                onClick={() => setEditor({ kind: "weight" })}
+              />
+              <DetailRow
+                label="CBM"
+                value={live.cbm != null ? String(live.cbm) : undefined}
+                onClick={() => setEditor({ kind: "cbm" })}
+              />
+              <DetailRow
+                label="No. of Packages"
+                value={live.numPackages != null ? String(live.numPackages) : undefined}
+                onClick={() => setEditor({ kind: "packages" })}
+              />
+              <DetailRow label="Mode of Shipping" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
               <DetailRow
                 label="Tracking"
                 value={live.trackingRef ? live.trackingRef.toUpperCase() : undefined}
@@ -427,22 +484,6 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                     View shipment
                   </button>
                 ) : null}
-              />
-              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
-              <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
-              <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
-              <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
-              <DetailRow label="Contact" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
-              <DetailRow
-                label="Amount"
-                value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
-                onClick={() => setEditor({ kind: "amount" })}
-              />
-              <DetailRow
-                label="Deadline"
-                value={deadlineDisplay}
-                onClick={() => setEditor({ kind: "deadline" })}
-                valueColor={u?.color}
               />
             </SectionCard>
           </section>
@@ -623,6 +664,35 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         value={live.trackingRef ?? ""}
         placeholder="—"
         onSave={saveTracking}
+      />
+      <TextEditor
+        open={editor?.kind === "weight"}
+        onClose={() => setEditor(null)}
+        title="Weight (kg)"
+        value={live.weightKg != null ? String(live.weightKg) : ""}
+        placeholder="0"
+        digitsOnly
+        allowDecimal
+        onSave={saveWeight}
+      />
+      <TextEditor
+        open={editor?.kind === "cbm"}
+        onClose={() => setEditor(null)}
+        title="CBM"
+        value={live.cbm != null ? String(live.cbm) : ""}
+        placeholder="0"
+        digitsOnly
+        allowDecimal
+        onSave={saveCbm}
+      />
+      <TextEditor
+        open={editor?.kind === "packages"}
+        onClose={() => setEditor(null)}
+        title="No. of Packages"
+        value={live.numPackages != null ? String(live.numPackages) : ""}
+        placeholder="0"
+        digitsOnly
+        onSave={savePackages}
       />
       <TextEditor
         open={editor?.kind === "addNote"}

@@ -53,7 +53,7 @@ import type { TabId } from "./PipelineTabs";
 
 type SortKey =
   | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
-  | "quote" | "amount" | "mode" | "tracking" | "rep" | "deadline";
+  | "quote" | "amount" | "weight" | "cbm" | "pkgs" | "mode" | "tracking" | "rep" | "deadline";
 
 interface Props {
   activeTab: TabId;
@@ -191,8 +191,33 @@ function compareCards(
       if (av && !bv) return -1;
       return dir * av.localeCompare(bv, undefined, { numeric: true });
     }
-    case "amount":
-      return dir * ((a.project.value ?? 0) - (b.project.value ?? 0));
+    case "amount": {
+      const av = a.project.value, bv = b.project.value;
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * ((av ?? 0) - (bv ?? 0));
+    }
+    case "weight": {
+      const av = a.project.weightKg, bv = b.project.weightKg;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
+    }
+    case "cbm": {
+      const av = a.project.cbm, bv = b.project.cbm;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
+    }
+    case "pkgs": {
+      const av = a.project.numPackages, bv = b.project.numPackages;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
+    }
     case "mode": {
       const av = a.project.shippingMode ?? "";
       const bv = b.project.shippingMode ?? "";
@@ -228,6 +253,9 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
   { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
+  { key: "weight", label: "Weight", defaultPx: 80, align: "right" },
+  { key: "cbm", label: "CBM", defaultPx: 70, align: "right" },
+  { key: "pkgs", label: "Pkgs", defaultPx: 60, align: "right" },
   { key: "mode", label: "Mode", defaultPx: 96 },
   { key: "tracking", label: "Tracking", defaultPx: 120 },
   { key: "rep", label: "Rep", defaultPx: 60 },
@@ -559,6 +587,29 @@ const TableRow = ({
       return { ok: false };
     }
   };
+  // Numeric shipping fields. Empty input → clear to undefined. Negatives rejected silently.
+  const saveNumberField = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) =>
+    async (raw: string): Promise<SaveResult> => {
+      const re = integer ? /[^\d]/g : /[^\d.]/g;
+      const cleaned = (raw ?? "").replace(re, "");
+      try {
+        if (cleaned === "") {
+          await store.updateProject(proj.id, { [field]: undefined } as any);
+          return { ok: true };
+        }
+        const n = Number(cleaned);
+        if (!Number.isFinite(n) || n < 0) return { ok: false };
+        const value = integer ? Math.floor(n) : n;
+        await store.updateProject(proj.id, { [field]: value } as any);
+        return { ok: true };
+      } catch (err: any) {
+        toast.error(err?.message ?? "Save failed");
+        return { ok: false, reason: err?.message };
+      }
+    };
+  const saveWeight = saveNumberField("weightKg", false);
+  const saveCbm = saveNumberField("cbm", false);
+  const savePackages = saveNumberField("numPackages", true);
 
   // ── Entity-save helpers (called from popover onPick) ─────────────────
   const pickCustomer = async (name: string) => {
@@ -760,6 +811,42 @@ const TableRow = ({
         value={proj.value ? String(proj.value) : ""}
         placeholder="0"
         onCommit={saveValue}
+      />
+
+      {/* Weight (kg) — numeric, decimals allowed */}
+      <EditableCell
+        cellKey={`${card.id}:weightKg`}
+        mode="number"
+        align="right"
+        display={<span className="tabular">{proj.weightKg != null ? String(proj.weightKg) : "—"}</span>}
+        muted={proj.weightKg == null}
+        value={proj.weightKg != null ? String(proj.weightKg) : ""}
+        placeholder="0"
+        onCommit={saveWeight}
+      />
+
+      {/* CBM — numeric, decimals allowed */}
+      <EditableCell
+        cellKey={`${card.id}:cbm`}
+        mode="number"
+        align="right"
+        display={<span className="tabular">{proj.cbm != null ? String(proj.cbm) : "—"}</span>}
+        muted={proj.cbm == null}
+        value={proj.cbm != null ? String(proj.cbm) : ""}
+        placeholder="0"
+        onCommit={saveCbm}
+      />
+
+      {/* Pkgs — integer */}
+      <EditableCell
+        cellKey={`${card.id}:numPackages`}
+        mode="number"
+        align="right"
+        display={<span className="tabular">{proj.numPackages != null ? String(proj.numPackages) : "—"}</span>}
+        muted={proj.numPackages == null}
+        value={proj.numPackages != null ? String(proj.numPackages) : ""}
+        placeholder="0"
+        onCommit={savePackages}
       />
 
       {/* Mode — enum popover */}
