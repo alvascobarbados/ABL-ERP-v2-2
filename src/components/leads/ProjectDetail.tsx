@@ -239,6 +239,16 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const saveWeight = saveNumeric("weightKg", false);
   const saveCbm = saveNumeric("cbm", false);
   const savePackages = saveNumeric("numPackages", true);
+  const saveDesignBrief = (v: string) => { updateProject(live.id, { designBrief: v.trim() || undefined }); setEditor(null); };
+  const saveCompletionDate = (d: Date) => { updateProject(live.id, { completionDate: d }); setEditor(null); };
+  const saveOutstandingBalance = (v: string) => {
+    const cleaned = (v ?? "").replace(/[^\d.]/g, "");
+    if (cleaned === "") { updateProject(live.id, { outstandingBalance: undefined }); setEditor(null); return; }
+    const n = Number(cleaned);
+    if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
+    updateProject(live.id, { outstandingBalance: n });
+    setEditor(null);
+  };
 
   const submitNote = (text: string) => { addNote(live.id, text); setEditor(null); };
 
