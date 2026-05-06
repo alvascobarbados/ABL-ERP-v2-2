@@ -211,6 +211,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          cbm: number | null
           contact_person: string | null
           created_at: string
           customer: string
@@ -226,6 +227,7 @@ export type Database = {
           invoice_issued_date_assumed: boolean | null
           invoice_number: string | null
           invoice_required_entered_at: string | null
+          num_packages: number | null
           order_type: string
           paid_on_date: string | null
           payment_method: string | null
@@ -249,8 +251,10 @@ export type Database = {
           tracking_ref: string | null
           updated_at: string
           value: number
+          weight_kg: number | null
         }
         Insert: {
+          cbm?: number | null
           contact_person?: string | null
           created_at?: string
           customer: string
@@ -266,6 +270,7 @@ export type Database = {
           invoice_issued_date_assumed?: boolean | null
           invoice_number?: string | null
           invoice_required_entered_at?: string | null
+          num_packages?: number | null
           order_type?: string
           paid_on_date?: string | null
           payment_method?: string | null
@@ -289,8 +294,10 @@ export type Database = {
           tracking_ref?: string | null
           updated_at?: string
           value?: number
+          weight_kg?: number | null
         }
         Update: {
+          cbm?: number | null
           contact_person?: string | null
           created_at?: string
           customer?: string
@@ -306,6 +313,7 @@ export type Database = {
           invoice_issued_date_assumed?: boolean | null
           invoice_number?: string | null
           invoice_required_entered_at?: string | null
+          num_packages?: number | null
           order_type?: string
           paid_on_date?: string | null
           payment_method?: string | null
@@ -329,6 +337,7 @@ export type Database = {
           tracking_ref?: string | null
           updated_at?: string
           value?: number
+          weight_kg?: number | null
         }
         Relationships: [
           {
