@@ -488,9 +488,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow
                 label="Tracking"
                 value={live.trackingRef ? live.trackingRef.toUpperCase() : undefined}
-                onClick={live.shippingMode === "Local" ? undefined : () => setEditor({ kind: "tracking" })}
-                locked={live.shippingMode === "Local"}
-                lockedHint={live.shippingMode === "Local" ? "Local — no tracking" : undefined}
+                onClick={live.shippingMode ? () => setEditor({ kind: "tracking" }) : undefined}
+                locked={!live.shippingMode}
+                lockedHint={!live.shippingMode ? "Set Mode first to enable Tracking" : undefined}
                 trailing={hasShipmentLink ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenShipment(live.shipmentId!); }}
