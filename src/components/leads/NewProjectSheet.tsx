@@ -208,7 +208,6 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
             </div>
             <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
               Sales · {PIPELINES.find((p) => p.id === "sales")?.stages.find((s) => s.id === initialStage)?.title ?? initialStage}
-              {(initialStage === "quote" || initialStage === "confirming") && " — quote number auto-generated"}
             </p>
           </div>
 
