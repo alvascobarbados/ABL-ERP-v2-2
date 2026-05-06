@@ -60,6 +60,8 @@ interface Props {
   visible: PipelineCard[];
   onOpenCard: (c: PipelineCard) => void;
   onOpenPicker: (c: PipelineCard) => void;
+  /** Inline stage transition from the Stage·State popover. Reuses Index.performMove. */
+  onPickStage?: (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => void;
   hasActiveFilter?: boolean;
   onClearFilters?: () => void;
   /** When true (sub-chevron stage selected), drop the Stage column entirely. */
@@ -232,7 +234,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
-export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters, hideStageColumn: _ignored }: Props) => {
+export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onPickStage, hasActiveFilter, onClearFilters, hideStageColumn: _ignored }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
@@ -364,6 +366,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, has
                 onToggleFlag={() => store.toggleFlag(card.project.id)}
                 onEdit={() => setEditingCard(card)}
                 onMoveStage={() => onOpenPicker(card)}
+                onPickStage={onPickStage}
                 onDuplicate={() => store.duplicateProject(card.project.id)}
                 onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
                 onDelete={() => store.deleteProject(card.project.id)}
@@ -406,6 +409,7 @@ interface RowProps {
   onToggleFlag: () => void;
   onEdit: () => void;
   onMoveStage: () => void;
+  onPickStage?: (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => void;
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
@@ -415,7 +419,7 @@ type EntityKindKey = "customer" | "supplier" | "rep";
 
 const TableRow = ({
   index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
-  onOpen, onToggleFlag, onEdit, onMoveStage, onDuplicate, onArchive, onDelete,
+  onOpen, onToggleFlag, onEdit, onMoveStage, onPickStage, onDuplicate, onArchive, onDelete,
 }: RowProps) => {
   const proj = card.project;
   const flagged = !!proj.flagged;
@@ -426,7 +430,7 @@ const TableRow = ({
 
   // ── Inline-edit state ────────────────────────────────────────────────
   // Active entity popover: which kind is open (only one at a time).
-  const [openPicker, setOpenPicker] = useState<EntityKindKey | "mode" | null>(null);
+  const [openPicker, setOpenPicker] = useState<EntityKindKey | "mode" | "stage" | null>(null);
   const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null);
   // Per-cell flash override (for entity/enum saves where popover closes first).
   const [flashCell, setFlashCell] = useState<{ key: string; tone: "success" | "error" } | null>(null);
@@ -623,10 +627,29 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Stage · State — always shown. Compact pill, color shaded by stage progression. */}
-      <ReadOnlyCell title={stageLabel(card, activeTab)}>
-        <StageStatePill pipeline={card.pipeline} stage={card.stage} accent={accent} />
-      </ReadOnlyCell>
+      {/* Stage · State — inline-editable pill. Three-state cell; popover lists all stages. */}
+      <StageCell
+        cellKey={`${card.id}:stage`}
+        pipeline={card.pipeline}
+        stage={card.stage}
+        accent={accent}
+        active={openPicker === "stage"}
+        flash={flashFor("stage")}
+        onActivate={(el) => { setPickerAnchor(el); setOpenPicker("stage"); }}
+        open={openPicker === "stage"}
+        onClose={() => setOpenPicker(null)}
+        anchorEl={pickerAnchor}
+        onPick={(target) => {
+          setOpenPicker(null);
+          if (target.pipeline === card.pipeline && target.stage === card.stage) return;
+          if (onPickStage) {
+            onPickStage(card, target);
+          } else {
+            store.moveCard(card.id, target);
+          }
+          triggerFlash("stage", "success");
+        }}
+      />
 
       {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
       <EditableCell
@@ -1003,3 +1026,119 @@ const ModeBadge = ({ mode }: { mode: ShippingMode }) => {
   );
 };
 
+
+// ── Stage · State cell (inline-editable) ─────────────────────────────
+// Three-state EditableCell wrapping the StageStatePill, with a popover
+// listing all stages grouped by pipeline. Mirrors the ModeCell pattern.
+interface StageCellProps {
+  cellKey: string;
+  pipeline: PipelineId;
+  stage: StageId;
+  accent: string;
+  active: boolean;
+  flash: "success" | "error" | null;
+  onActivate: (el: HTMLElement) => void;
+  onPick: (target: { pipeline: PipelineId; stage: StageId }) => void;
+  open: boolean;
+  onClose: () => void;
+  anchorEl: HTMLElement | null;
+}
+
+// User-facing stage list per pipeline (Shipping collapses to one row).
+const STAGE_PICKER_GROUPS: { pipeline: PipelineId; stages: { id: StageId; title: string }[] }[] = [
+  { pipeline: "sales",      stages: [{ id: "proposal", title: "Proposal" }, { id: "quote", title: "Quote" }, { id: "confirming", title: "Confirming" }] },
+  { pipeline: "design",     stages: [{ id: "design", title: "Design" }, { id: "proof", title: "Proof" }] },
+  { pipeline: "purchasing", stages: [{ id: "purchasing", title: "Purchasing" }] },
+  { pipeline: "production", stages: [{ id: "production", title: "Production" }] },
+  { pipeline: "shipping",   stages: [{ id: "shipment_required", title: "Shipping" }] },
+  { pipeline: "finance",    stages: [{ id: "invoice_required", title: "To Invoice" }, { id: "invoiced", title: "To Collect" }] },
+  { pipeline: "completed",  stages: [{ id: "completed", title: "Completed" }] },
+];
+
+const StageCell = ({
+  cellKey, pipeline, stage, accent, active, flash, onActivate,
+  onPick, open, onClose, anchorEl,
+}: StageCellProps) => {
+  return (
+    <>
+      <EditableCell
+        cellKey={cellKey}
+        mode="custom"
+        align="left"
+        display={<StageStatePill pipeline={pipeline} stage={stage} accent={accent} />}
+        active={active}
+        flash={flash}
+        onActivate={onActivate}
+      />
+      {open && (
+        <Popover open onOpenChange={(o) => { if (!o) onClose(); }}>
+          <PopoverTrigger asChild>
+            <span
+              style={{
+                position: "fixed",
+                left: anchorEl?.getBoundingClientRect().left ?? 0,
+                top: anchorEl?.getBoundingClientRect().bottom ?? 0,
+                width: anchorEl?.getBoundingClientRect().width ?? 0,
+                height: 0,
+                pointerEvents: "none",
+              }}
+            />
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            side="bottom"
+            sideOffset={2}
+            className="w-[260px] p-1.5 max-h-[420px] overflow-y-auto"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {STAGE_PICKER_GROUPS.map((grp) => {
+              const grpAccent = pipelineAccent(grp.pipeline);
+              const grpTitle = PIPELINES.find((p) => p.id === grp.pipeline)?.title ?? grp.pipeline;
+              return (
+                <div key={grp.pipeline} className="mb-1.5 last:mb-0">
+                  <div
+                    className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em]"
+                    style={{ color: "hsl(var(--brand-navy) / 0.45)" }}
+                  >
+                    {grpTitle}
+                  </div>
+                  {grp.stages.map((s) => {
+                    const isCurrent = grp.pipeline === pipeline && s.id === stage;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => onPick({ pipeline: grp.pipeline, stage: s.id })}
+                        className={cn(
+                          "w-full text-left px-2 py-1.5 rounded-md text-[13px] hover:bg-muted/60 transition-colors flex items-center gap-2",
+                          isCurrent && "bg-muted/60 font-medium",
+                        )}
+                        style={{ color: "hsl(var(--brand-navy))" }}
+                      >
+                        <span
+                          className="inline-block h-2 w-2 rounded-full shrink-0"
+                          style={{ backgroundColor: grpAccent }}
+                          aria-hidden
+                        />
+                        <span className="flex-1 truncate">{s.title}</span>
+                        {isCurrent && (
+                          <span
+                            className="text-[10px] uppercase tracking-wider"
+                            style={{ color: "hsl(var(--brand-navy) / 0.5)" }}
+                          >
+                            Current
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </PopoverContent>
+        </Popover>
+      )}
+    </>
+  );
+};
