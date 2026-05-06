@@ -526,10 +526,16 @@ export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: 
         toast.success(`Supplier "${s.name}" added`);
         onCreated(s.id);
       } else if (kind === "team") {
+        const emailNorm = teamEmail.trim().toLowerCase();
+        if (emailNorm && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+          toast.error("Invalid email format");
+          return;
+        }
         const t = await md.addTeamMember({
           initials: initials.trim().toUpperCase(),
           full_name: fullName.trim(),
-        });
+          email: emailNorm || undefined,
+        } as any);
         toast.success(`${t.initials} — ${t.full_name} added`);
         onCreated(t.initials);
       } else {
