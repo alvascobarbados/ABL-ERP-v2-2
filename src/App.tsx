@@ -53,6 +53,7 @@ const App = () => (
                 </BrowserRouter>
                 </SidebarCollapsedProvider>
               </ExpandedCardsProvider>
+              </ColumnVisibilityProvider>
             </ColumnWidthsProvider>
           </MasterDataProvider>
         </PipelineStoreProvider>
