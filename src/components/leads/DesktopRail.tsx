@@ -8,7 +8,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users, Factory, UserCircle2, Trash2, HelpCircle, Settings,
-  Archive, KanbanSquare, ChevronLeft,
+  Archive, KanbanSquare, ChevronLeft, Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,7 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
 
   const mainItems: Item[] = [
     { icon: KanbanSquare, label: "Pipeline", to: "/" },
+    { icon: Activity, label: "Activity Log", to: "/activity" },
   ];
   const teamItems: Item[] = [
     { icon: Users, label: "Customers", to: "/customers" },

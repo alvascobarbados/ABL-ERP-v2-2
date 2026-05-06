@@ -274,20 +274,25 @@ const Index = () => {
   // Reset search when switching tabs
   useEffect(() => { setSearch(""); setSearchScopeAll(false); }, [activeTab]);
 
-  // Open project detail when arriving from /spreadsheet?project=prj-X.
+  // Open project detail when arriving with ?project=ID (from Activity Log,
+  // notifications, deep links, etc.). Re-runs when the param changes.
+  // Waits for projects to load before warning about missing IDs.
   useEffect(() => {
     const id = searchParams.get("project");
     if (!id) return;
+    if (loading) return;
     const proj = projects.find((p) => p.id === id);
     if (proj) {
       setActiveTab(proj.pipeline);
       setTimeout(() => { setSelectedCard(buildCard(proj)); setSelectedShipment(null); }, 0);
+    } else {
+      toast.error("Project not found");
     }
     const next = new URLSearchParams(searchParams);
     next.delete("project");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, loading, projects.length]);
 
   // Index for stable secondary ordering
   const idIndex = useMemo(() => {
