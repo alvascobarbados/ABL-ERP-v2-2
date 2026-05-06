@@ -12,8 +12,10 @@ export interface ActivityPdfRow {
   id: string;
   ts: Date;
   actorDisplayName: string;
-  description: string;       // already-formatted, actor name stripped
-  projectLabel: string;      // "Customer · Project Name" or "" if not found
+  pre: string;               // text between actor and project (e.g. "moved ")
+  projectLabel: string;      // "Customer · Project Name" / fallback
+  post: string;              // text after project (e.g. " from X → Y")
+  astTime: string;           // "3:09 AM AST"
 }
 
 export interface ActivityPdfGroup {
