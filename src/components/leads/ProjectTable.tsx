@@ -116,7 +116,7 @@ const STAGE_RANK: Record<StageId, number> = {
 // Number of user-facing stages per pipeline (used for shade ramp).
 // Single-state pipelines stay at full saturation.
 const STAGE_COUNT: Record<PipelineId, number> = {
-  sales: 3, design: 2, purchasing: 1, production: 1,
+  sales: 4, design: 2, purchasing: 1, production: 1,
   shipping: 1, finance: 2, completed: 1, operations: 1,
 };
 
@@ -1050,7 +1050,7 @@ interface StageCellProps {
 
 // User-facing stage list per pipeline (Shipping collapses to one row).
 const STAGE_PICKER_GROUPS: { pipeline: PipelineId; stages: { id: StageId; title: string }[] }[] = [
-  { pipeline: "sales",      stages: [{ id: "proposal", title: "Proposal" }, { id: "quote", title: "Quote" }, { id: "confirming", title: "Confirming" }] },
+  { pipeline: "sales",      stages: [{ id: "sourcing", title: "Sourcing" }, { id: "proposal", title: "Proposal" }, { id: "quote", title: "Quote" }, { id: "confirming", title: "Confirming" }] },
   { pipeline: "design",     stages: [{ id: "design", title: "Design" }, { id: "proof", title: "Proof" }] },
   { pipeline: "purchasing", stages: [{ id: "purchasing", title: "Purchasing" }] },
   { pipeline: "production", stages: [{ id: "production", title: "Production" }] },
