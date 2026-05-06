@@ -19,7 +19,7 @@ import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { useMasterData } from "@/hooks/useMasterData";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
-import { cn } from "@/lib/utils";
+import { cn, shortNameFromFull } from "@/lib/utils";
 import { DateRangeFilter, ALL_TIME, DateRangeValue } from "@/components/leads/DateRangeFilter";
 import { exportActivityPdf, ActivityPdfGroup } from "@/lib/activityPdf";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
