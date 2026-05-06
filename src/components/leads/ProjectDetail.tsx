@@ -673,12 +673,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         digitsOnly
         onSave={saveInvoice}
       />
-      <TextEditor
+      <TrackingEditor
         open={editor?.kind === "tracking"}
         onClose={() => setEditor(null)}
-        title="Tracking reference"
+        shippingMode={live.shippingMode}
         value={live.trackingRef ?? ""}
-        placeholder="—"
         onSave={saveTracking}
       />
       <TextEditor
