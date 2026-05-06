@@ -204,7 +204,7 @@ interface DateEditorProps {
   open: boolean;
   onClose: () => void;
   title: string;
-  value: Date;
+  value?: Date;
   onSave: (d: Date) => void;
 }
 export const DateEditor = ({ open, onClose, title, value, onSave }: DateEditorProps) => {
