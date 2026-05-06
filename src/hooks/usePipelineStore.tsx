@@ -771,7 +771,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       detailSummary: input.detailSummary,
       pointPerson: input.pointPerson ?? "AV",
       pipeline: "sales", stage: initialStage,
-      deadline: deadlineLabel,
+      deadline: deadlineLabel ?? "—",
       deadlineDate,
       value: 0, orderType: "New", priority: "Standard",
       createdAt: new Date(),
