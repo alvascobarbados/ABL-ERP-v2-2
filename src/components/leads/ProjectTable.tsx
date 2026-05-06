@@ -813,6 +813,42 @@ const TableRow = ({
         onCommit={saveValue}
       />
 
+      {/* Weight (kg) — numeric, decimals allowed */}
+      <EditableCell
+        cellKey={`${card.id}:weightKg`}
+        mode="number"
+        align="right"
+        display={<span className="tabular">{proj.weightKg != null ? String(proj.weightKg) : "—"}</span>}
+        muted={proj.weightKg == null}
+        value={proj.weightKg != null ? String(proj.weightKg) : ""}
+        placeholder="0"
+        onCommit={saveWeight}
+      />
+
+      {/* CBM — numeric, decimals allowed */}
+      <EditableCell
+        cellKey={`${card.id}:cbm`}
+        mode="number"
+        align="right"
+        display={<span className="tabular">{proj.cbm != null ? String(proj.cbm) : "—"}</span>}
+        muted={proj.cbm == null}
+        value={proj.cbm != null ? String(proj.cbm) : ""}
+        placeholder="0"
+        onCommit={saveCbm}
+      />
+
+      {/* Pkgs — integer */}
+      <EditableCell
+        cellKey={`${card.id}:numPackages`}
+        mode="number"
+        align="right"
+        display={<span className="tabular">{proj.numPackages != null ? String(proj.numPackages) : "—"}</span>}
+        muted={proj.numPackages == null}
+        value={proj.numPackages != null ? String(proj.numPackages) : ""}
+        placeholder="0"
+        onCommit={savePackages}
+      />
+
       {/* Mode — enum popover */}
       <ModeCell
         cellKey={`${card.id}:mode`}
