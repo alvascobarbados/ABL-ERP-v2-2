@@ -194,6 +194,8 @@ export default function ActivityPage() {
       const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
       if (tm) q = q.eq("actor_display_name", tm.full_name);
     }
+    if (dateRange.from) q = q.gte("ts", dateRange.from.toISOString());
+    if (dateRange.to) q = q.lte("ts", dateRange.to.toISOString());
     const { data } = await q;
     const list = (data ?? []) as LogRow[];
     setRows((prev) => [...prev, ...list]);
@@ -201,7 +203,7 @@ export default function ActivityPage() {
     setPage(next);
     setLoadingMore(false);
     if (list.length < PAGE_SIZE) setEndReached(true);
-  }, [loadingMore, endReached, page, search, memberFilter, md.teamMembers]);
+  }, [loadingMore, endReached, page, search, memberFilter, dateRange.from, dateRange.to, md.teamMembers]);
 
   // Realtime subscription — dedicated channel for this page
   useEffect(() => {
