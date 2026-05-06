@@ -455,7 +455,7 @@ export default function ActivityPage() {
               </p>
               {filtersActive && (
                 <button
-                  onClick={() => { setSearchInput(""); setSearch(""); setMemberFilter(""); }}
+                  onClick={clearAll}
                   className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[12px] font-medium"
                   style={{ borderColor: "hsl(var(--brand-navy) / 0.2)", color: "hsl(var(--brand-navy))" }}
                 >
