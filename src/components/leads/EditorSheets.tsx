@@ -400,77 +400,140 @@ export const SupplierPicker = ({
   );
 };
 
-// ─────────── Tracking reference editor ───────────
-// Air → DHL / FedEx / Other (free-text carrier name)
-// Ocean → FCL / LCL
+// ─────────── Tracking reference editor (mode-gated, format-enforced) ───────────
+import {
+  AIR_CARRIERS, OCEAN_CARRIERS, carriersFor, parseTracking,
+  sanitizeCustomPrefix, sanitizeDigits, validateAndCompose,
+} from "@/lib/tracking";
+
 interface TrackingEditorProps {
   open: boolean;
   onClose: () => void;
-  shippingMode: "Air" | "Ocean";
-  value?: string; // canonical PREFIX-number, e.g. "DHL-373747" or "FCL-125"
-  onSave: (v: string | undefined) => void;
+  /** null/undefined → editor opens disabled with helper text. */
+  shippingMode: ShippingMode | null | undefined;
+  value?: string | null;
+  onSave: (v: string | null) => void;
 }
-const parseTracking = (raw?: string) => {
-  if (!raw) return { prefix: "", number: "" };
-  const m = raw.match(/^([A-Za-z][A-Za-z0-9]*)-(.*)$/);
-  if (m) return { prefix: m[1].toUpperCase(), number: m[2] };
-  return { prefix: "", number: raw };
-};
+
 export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: TrackingEditorProps) => {
-  const air = ["DHL", "FedEx", "Other"] as const;
-  const ocean = ["FCL", "LCL"] as const;
-  const initial = parseTracking(value);
-  const initialChoice = shippingMode === "Air"
-    ? (air.includes(initial.prefix as any) ? initial.prefix : (initial.prefix ? "Other" : ""))
-    : (ocean.includes(initial.prefix as any) ? initial.prefix : "");
-  const [choice, setChoice] = useState<string>(initialChoice);
-  const [otherCarrier, setOtherCarrier] = useState<string>(
-    shippingMode === "Air" && initialChoice === "Other" ? initial.prefix : ""
-  );
-  const [number, setNumber] = useState<string>(initial.number);
+  const mode = shippingMode ?? null;
+  const knownCarriers = carriersFor(mode);
+
+  // Initial parse — always run to derive defaults; effect re-syncs when (re)opened.
+  const initial = parseTracking(value ?? "");
+  const initialCarrier = (() => {
+    if (mode === "Local") return "";
+    if (initial.prefix && knownCarriers.includes(initial.prefix as any)) return initial.prefix;
+    if (initial.prefix || (initial.number && !initial.prefix)) return "Other";
+    return "";
+  })();
+  const initialCustom = initialCarrier === "Other" ? initial.prefix : "";
+  const initialNumber = mode === "Ocean"
+    ? sanitizeDigits(initial.number, 3)
+    : sanitizeDigits(initial.number);
+  const initialLocal = mode === "Local" ? (value ?? "") : "";
+
+  const [carrier, setCarrier] = useState<string>(initialCarrier);
+  const [customPrefix, setCustomPrefix] = useState<string>(initialCustom);
+  const [number, setNumber] = useState<string>(initialNumber);
+  const [localText, setLocalText] = useState<string>(initialLocal);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    const p = parseTracking(value);
-    const c = shippingMode === "Air"
-      ? (air.includes(p.prefix as any) ? p.prefix : (p.prefix ? "Other" : ""))
-      : (ocean.includes(p.prefix as any) ? p.prefix : "");
-    setChoice(c);
-    setOtherCarrier(shippingMode === "Air" && c === "Other" ? p.prefix : "");
-    setNumber(p.number);
-  }, [open, value, shippingMode]);
+    const p = parseTracking(value ?? "");
+    if (mode === "Local") {
+      setCarrier(""); setCustomPrefix(""); setNumber("");
+      setLocalText(value ?? "");
+    } else if (mode === "Air" || mode === "Ocean") {
+      const known = carriersFor(mode);
+      const c = p.prefix && known.includes(p.prefix as any)
+        ? p.prefix
+        : (p.prefix || p.number ? "Other" : "");
+      setCarrier(c);
+      setCustomPrefix(c === "Other" ? p.prefix : "");
+      setNumber(mode === "Ocean" ? sanitizeDigits(p.number, 3) : sanitizeDigits(p.number));
+      setLocalText("");
+    } else {
+      setCarrier(""); setCustomPrefix(""); setNumber(""); setLocalText("");
+    }
+    setError(null);
+  }, [open, value, mode]);
 
-  const effectivePrefix = shippingMode === "Air"
-    ? (choice === "Other" ? otherCarrier.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") : choice)
-    : choice;
-  const cleanNumber = number.trim();
-  const valid = !!effectivePrefix && !!cleanNumber;
-  const canonical = valid ? `${effectivePrefix}-${cleanNumber}` : undefined;
-  const options = shippingMode === "Air" ? air : ocean;
+  const handleSave = () => {
+    if (!mode) return;
+    const result = validateAndCompose({ mode, carrier, customPrefix, number, localText });
+    if (!result.ok) { setError(result.error ?? "Invalid"); return; }
+    onSave(result.value === undefined ? null : (result.value ?? null));
+  };
+
+  // ── Disabled state ────────────────────────────────────────────────────
+  if (!mode) {
+    return (
+      <BottomSheet open={open} onClose={onClose} title="Tracking">
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-4 py-6 text-center">
+          <div className="text-[13px] text-muted-foreground">
+            Set Mode first to enable Tracking.
+          </div>
+        </div>
+      </BottomSheet>
+    );
+  }
+
+  // ── Local: free-text ──────────────────────────────────────────────────
+  if (mode === "Local") {
+    return (
+      <BottomSheet open={open} onClose={onClose} title="Local tracking" onSave={handleSave}>
+        <div>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+            Tracking note
+          </label>
+          <input
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            placeholder="Driver name, reference, etc."
+            className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+            style={{ minHeight: 48 }}
+            autoFocus
+          />
+          <p className="mt-1.5 text-[11px] text-muted-foreground">Anything goes — leave blank to clear.</p>
+        </div>
+      </BottomSheet>
+    );
+  }
+
+  // ── Air / Ocean: carrier dropdown + number ────────────────────────────
+  const options: string[] = [...knownCarriers, "Other"];
+  const isOther = carrier === "Other";
+  const numberMax = mode === "Ocean" ? 3 : undefined;
+  const previewPrefix = isOther
+    ? sanitizeCustomPrefix(customPrefix).replace(/-+$/, "")
+    : carrier;
+  const previewNumber = sanitizeDigits(number, numberMax);
+  const preview = previewPrefix && previewNumber ? `${previewPrefix}-${previewNumber}` : "";
 
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={shippingMode === "Air" ? "Air tracking" : "Ocean tracking"}
-      onSave={() => onSave(canonical)}
-      saveDisabled={!valid}
+      title={mode === "Air" ? "Air tracking" : "Ocean tracking"}
+      onSave={handleSave}
     >
       <div className="space-y-4">
         <div>
           <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
-            {shippingMode === "Air" ? "Carrier" : "Container"}
+            Carrier
           </label>
           <div className="grid grid-cols-3 gap-2">
             {options.map((o) => (
               <button
                 key={o}
-                onClick={() => setChoice(o)}
+                onClick={() => { setCarrier(o); setError(null); }}
                 className={cn(
                   "px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors hover:bg-muted/40",
-                  choice === o ? "bg-muted/60" : "bg-card border-border/60",
+                  carrier === o ? "bg-muted/60" : "bg-card border-border/60",
                 )}
-                style={{ minHeight: 48, borderColor: choice === o ? "hsl(var(--brand-navy) / 0.45)" : undefined }}
+                style={{ minHeight: 48, borderColor: carrier === o ? "hsl(var(--brand-navy) / 0.45)" : undefined }}
               >
                 {o}
               </button>
@@ -478,41 +541,51 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
           </div>
         </div>
 
-        {shippingMode === "Air" && choice === "Other" && (
+        {isOther && (
           <div>
             <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
-              Carrier name
+              Carrier code
             </label>
             <input
-              value={otherCarrier}
-              onChange={(e) => setOtherCarrier(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-              placeholder="e.g. UPS"
+              value={customPrefix}
+              onChange={(e) => { setCustomPrefix(sanitizeCustomPrefix(e.target.value)); setError(null); }}
+              placeholder="e.g. MAERSK"
               className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tracking-wide focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
               style={{ minHeight: 48 }}
               autoFocus
             />
-            <p className="mt-1.5 text-[11px] text-muted-foreground">Letters and digits only — uppercased automatically.</p>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">Uppercase letters, digits, hyphens.</p>
           </div>
         )}
 
         <div>
           <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
-            {shippingMode === "Air" ? "Tracking number" : "Container / booking number"}
+            {mode === "Ocean" ? "Number (3 digits)" : "Tracking number"}
           </label>
           <input
             value={number}
-            onChange={(e) => setNumber(e.target.value)}
-            placeholder={shippingMode === "Air" ? "373747" : "125"}
-            inputMode={shippingMode === "Air" ? "text" : "text"}
+            onChange={(e) => { setNumber(sanitizeDigits(e.target.value, numberMax)); setError(null); }}
+            onPaste={(e) => {
+              e.preventDefault();
+              const txt = e.clipboardData.getData("text");
+              setNumber(sanitizeDigits(txt, numberMax));
+              setError(null);
+            }}
+            inputMode="numeric"
+            placeholder={mode === "Ocean" ? "124" : "9876543210"}
             className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
             style={{ minHeight: 48 }}
           />
         </div>
 
+        {error && (
+          <div className="text-[12px] font-medium" style={{ color: "hsl(var(--urgent))" }}>{error}</div>
+        )}
+
         <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-3 py-2.5">
           <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1">Preview</div>
           <div className="text-[15px] font-semibold tabular" style={{ color: "hsl(var(--brand-navy))" }}>
-            {canonical ?? <span className="italic text-muted-foreground font-normal">PREFIX-number</span>}
+            {preview || <span className="italic text-muted-foreground font-normal">PREFIX-number</span>}
           </div>
         </div>
       </div>
