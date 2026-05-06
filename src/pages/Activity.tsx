@@ -11,7 +11,7 @@
  * Pagination: initial 50, infinite scroll +50 within 200px of bottom.
  */
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, ChevronUp, X as XIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
