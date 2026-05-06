@@ -49,6 +49,8 @@ import {
 } from "@/components/ui/tooltip";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
+import { TrackingEditor } from "./EditorSheets";
+import { ConfirmDialog } from "./ConfirmDialog";
 import type { TabId } from "./PipelineTabs";
 
 type SortKey =
