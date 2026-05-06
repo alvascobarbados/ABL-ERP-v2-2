@@ -314,9 +314,10 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
-  // Stage column is now ALWAYS shown — the redundancy with sub-chevron is
-  // intentional (consistent column set across filtered & unfiltered views).
-  const COLS = ALL_COLS;
+  const visibility = useColumnVisibility();
+  const visibleSet = visibility.visibleFor(activeTab);
+  const COLS = useMemo(() => ALL_COLS.filter((c) => visibleSet.has(c.key as ColumnId)), [visibleSet]);
+  const visibleKeys = useMemo(() => new Set(COLS.map((c) => c.key)), [COLS]);
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
   const totalWidth = colWidths.reduce((a, b) => a + b, 0) + 36;
