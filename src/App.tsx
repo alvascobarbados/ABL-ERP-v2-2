@@ -14,6 +14,7 @@ import Index from "./pages/Index.tsx";
 import MasterList from "./pages/MasterList.tsx";
 import ArchivePage from "./pages/Archive.tsx";
 import TrashPage from "./pages/Trash.tsx";
+import ActivityPage from "./pages/Activity.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
                 <BrowserRouter>
                   <Routes>
                     <Route path="/" element={<Index />} />
+                    <Route path="/activity" element={<ActivityPage />} />
                     <Route path="/customers" element={<MasterList kind="customer" />} />
                     <Route path="/suppliers" element={<MasterList kind="supplier" />} />
                     <Route path="/team" element={<MasterList kind="team" />} />
