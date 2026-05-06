@@ -115,13 +115,13 @@ const StatCard = ({ id, title, count, active, accent, onClick, pulse, loading, v
 
   const fillBg = active ? accent : "#FFFFFF";
   const fillBorder = active ? accent : "hsl(var(--brand-navy) / 0.1)";
-  const titleColor = active ? "rgba(255,255,255,0.85)" : "hsl(var(--brand-navy) / 0.65)";
+  const titleColor = active ? "rgba(255,255,255,0.90)" : "hsl(var(--brand-navy) / 0.75)";
   const countColor = active ? "#fff" : "hsl(var(--brand-navy))";
   const iconColor = active ? "rgba(255,255,255,0.95)" : accent;
   const iconOpacity = active ? 1 : 0.85;
 
-  const titleSize = isCompact ? 10 : 11;
-  const countSize = isCompact ? 20 : 28;
+  const titleSize = 14;
+  const countSize = isCompact ? 20 : 24;
   const iconSize = isCompact ? 16 : 20;
   const padding = isCompact ? "12px" : "14px 16px";
 
@@ -141,7 +141,7 @@ const StatCard = ({ id, title, count, active, accent, onClick, pulse, loading, v
       <div className="flex items-start justify-between gap-2 w-full">
         <span
           className="font-medium tracking-tight truncate"
-          style={{ color: titleColor, fontSize: titleSize }}
+          style={{ color: titleColor, fontSize: titleSize, fontWeight: 500, lineHeight: 1.1 }}
         >
           {title}
         </span>
@@ -150,7 +150,7 @@ const StatCard = ({ id, title, count, active, accent, onClick, pulse, loading, v
           style={{ width: iconSize, height: iconSize, color: iconColor, opacity: iconOpacity }}
         />
       </div>
-      <div className="mt-2 tabular leading-none" style={{ color: countColor }}>
+      <div className="tabular leading-none" style={{ color: countColor, marginTop: 4 }}>
         <CountSlot value={count} loading={loading} fontSize={countSize} />
       </div>
     </button>
