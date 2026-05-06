@@ -243,6 +243,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
   const COLS = ALL_COLS;
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
+  const totalWidth = colWidths.reduce((a, b) => a + b, 0) + 36;
   // null = no local override; rows render in the order Index.tsx provides
   // (which respects the global sort/default for the current scope).
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
