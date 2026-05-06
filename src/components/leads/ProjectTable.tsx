@@ -612,6 +612,14 @@ const TableRow = ({
     }
   };
 
+  const rowBg = flagged ? "hsl(var(--brand-orange) / 0.05)" : (index % 2 === 0 ? "hsl(var(--background))" : "hsl(var(--brand-navy) / 0.018)");
+  const stickyBase = (i: number): React.CSSProperties => ({
+    position: "sticky",
+    left: stickyLefts[i],
+    zIndex: 10,
+    backgroundColor: rowBg,
+    boxShadow: i === 3 ? "4px 0 6px -4px rgba(27,42,78,0.15)" : undefined,
+  });
   return (
     <div
       role="row"
@@ -622,24 +630,23 @@ const TableRow = ({
       onMouseLeave={cancelLongPress}
       className={cn(
         "grid items-stretch text-[13.5px] cursor-pointer transition-colors group select-none relative",
-        "hover:bg-[hsl(var(--brand-orange)/0.045)]",
       )}
       style={{
         gridTemplateColumns: gridCols,
         minHeight: 44,
-        backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
+        backgroundColor: rowBg,
         borderBottom: "1px solid hsl(var(--brand-navy) / 0.05)",
-        boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}`,
         color: "hsl(var(--brand-navy))",
       }}
     >
-      {/* Flag — single click toggles (special-case column) */}
+      {/* Flag — sticky col 0; pipeline accent stripe lives here */}
       <div
-        className="px-3 flex items-center justify-center cursor-pointer hover:bg-[hsl(var(--brand-orange)/0.08)]"
+        className="px-3 flex items-center justify-center cursor-pointer"
         onClick={(e) => { e.stopPropagation(); onToggleFlag(); }}
         onMouseDown={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
         title={flagged ? "Unflag" : "Flag"}
+        style={{ ...stickyBase(0), boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}` }}
       >
         {flagged ? (
           <Flag className="h-3.5 w-3.5 fill-current" style={{ color: "hsl(var(--brand-orange))" }} />
@@ -648,7 +655,8 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Stage · State — inline-editable pill. Three-state cell; popover lists all stages. */}
+      {/* Stage · State — sticky col 1 */}
+      <div style={stickyBase(1)}>
       <StageCell
         cellKey={`${card.id}:stage`}
         pipeline={card.pipeline}
@@ -671,8 +679,10 @@ const TableRow = ({
           triggerFlash("stage", "success");
         }}
       />
+      </div>
 
-      {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
+      {/* Customer — sticky col 2 */}
+      <div style={stickyBase(2)}>
       <EditableCell
         cellKey={`${card.id}:customer`}
         mode="custom"
@@ -683,8 +693,10 @@ const TableRow = ({
         flash={flashFor("customer")}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("customer"); }}
       />
+      </div>
 
-      {/* Project name — text */}
+      {/* Project name — sticky col 3 (last sticky; gets right shadow) */}
+      <div style={stickyBase(3)}>
       <EditableCell
         cellKey={`${card.id}:projectName`}
         mode="text"
@@ -694,6 +706,7 @@ const TableRow = ({
         value={proj.projectName}
         onCommit={saveProjectName}
       />
+      </div>
 
       {/* Detail summary — text */}
       <EditableCell
