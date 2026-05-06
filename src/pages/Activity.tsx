@@ -165,6 +165,8 @@ export default function ActivityPage() {
       const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
       if (tm) q = q.eq("actor_display_name", tm.full_name);
     }
+    if (dateRange.from) q = q.gte("ts", dateRange.from.toISOString());
+    if (dateRange.to) q = q.lte("ts", dateRange.to.toISOString());
     const { data, count } = await q;
     const list = (data ?? []) as LogRow[];
     setRows(list);
@@ -172,7 +174,7 @@ export default function ActivityPage() {
     setTotal(count ?? 0);
     setEndReached(list.length < PAGE_SIZE);
     knownIdsRef.current = new Set(list.map((r) => r.id));
-  }, [search, memberFilter, md.teamMembers]);
+  }, [search, memberFilter, dateRange.from, dateRange.to, md.teamMembers]);
 
   useEffect(() => { loadInitial(); }, [loadInitial]);
 
