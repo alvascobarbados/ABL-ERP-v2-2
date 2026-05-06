@@ -234,7 +234,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
-export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, hasActiveFilter, onClearFilters, hideStageColumn: _ignored }: Props) => {
+export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onPickStage, hasActiveFilter, onClearFilters, hideStageColumn: _ignored }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
