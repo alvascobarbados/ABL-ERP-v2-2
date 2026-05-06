@@ -12,13 +12,17 @@
  */
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronUp, X as XIcon } from "lucide-react";
+import { Search, ChevronUp, X as XIcon, Download } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { useMasterData } from "@/hooks/useMasterData";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
 import { cn } from "@/lib/utils";
+import { DateRangeFilter, ALL_TIME, DateRangeValue } from "@/components/leads/DateRangeFilter";
+import { exportActivityPdf, ActivityPdfGroup } from "@/lib/activityPdf";
+import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 
 const PAGE_SIZE = 50;
 
@@ -131,6 +135,9 @@ export default function ActivityPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState<string>(""); // initials, "" = all
+  const [dateRange, setDateRange] = useState<DateRangeValue>(ALL_TIME);
+  const [exporting, setExporting] = useState(false);
+  const [confirmLargeExport, setConfirmLargeExport] = useState<number | null>(null);
 
   const [newCount, setNewCount] = useState(0);
   const [scrolledDown, setScrolledDown] = useState(false);
@@ -158,6 +165,8 @@ export default function ActivityPage() {
       const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
       if (tm) q = q.eq("actor_display_name", tm.full_name);
     }
+    if (dateRange.from) q = q.gte("ts", dateRange.from.toISOString());
+    if (dateRange.to) q = q.lte("ts", dateRange.to.toISOString());
     const { data, count } = await q;
     const list = (data ?? []) as LogRow[];
     setRows(list);
@@ -165,7 +174,7 @@ export default function ActivityPage() {
     setTotal(count ?? 0);
     setEndReached(list.length < PAGE_SIZE);
     knownIdsRef.current = new Set(list.map((r) => r.id));
-  }, [search, memberFilter, md.teamMembers]);
+  }, [search, memberFilter, dateRange.from, dateRange.to, md.teamMembers]);
 
   useEffect(() => { loadInitial(); }, [loadInitial]);
 
@@ -185,6 +194,8 @@ export default function ActivityPage() {
       const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
       if (tm) q = q.eq("actor_display_name", tm.full_name);
     }
+    if (dateRange.from) q = q.gte("ts", dateRange.from.toISOString());
+    if (dateRange.to) q = q.lte("ts", dateRange.to.toISOString());
     const { data } = await q;
     const list = (data ?? []) as LogRow[];
     setRows((prev) => [...prev, ...list]);
@@ -192,7 +203,7 @@ export default function ActivityPage() {
     setPage(next);
     setLoadingMore(false);
     if (list.length < PAGE_SIZE) setEndReached(true);
-  }, [loadingMore, endReached, page, search, memberFilter, md.teamMembers]);
+  }, [loadingMore, endReached, page, search, memberFilter, dateRange.from, dateRange.to, md.teamMembers]);
 
   // Realtime subscription — dedicated channel for this page
   useEffect(() => {
@@ -208,6 +219,9 @@ export default function ActivityPage() {
           const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
           if (!tm || r.actor_display_name !== tm.full_name) return;
         }
+        const ts = new Date(r.ts).getTime();
+        if (dateRange.from && ts < dateRange.from.getTime()) return;
+        if (dateRange.to && ts > dateRange.to.getTime()) return;
         setRows((prev) => [r, ...prev]);
         setTotal((t) => t + 1);
         if (scrolledDown) {
@@ -221,7 +235,7 @@ export default function ActivityPage() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [search, memberFilter, md.teamMembers, scrolledDown]);
+  }, [search, memberFilter, dateRange.from, dateRange.to, md.teamMembers, scrolledDown]);
 
   // Scroll handling: track position + infinite scroll
   const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -253,7 +267,87 @@ export default function ActivityPage() {
     return Array.from(map.values()).sort((a, b) => a.spec.sort - b.spec.sort);
   }, [rows]);
 
-  const filtersActive = !!search || !!memberFilter;
+  const filtersActive = !!search || !!memberFilter || dateRange.presetKey !== "all";
+
+  const clearAll = () => {
+    setSearchInput(""); setSearch(""); setMemberFilter(""); setDateRange(ALL_TIME);
+  };
+
+  // ─── Export PDF ─────────────────────────────────────────────────────────
+  const memberFullName = useMemo(() => {
+    if (!memberFilter) return "";
+    return md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter)?.full_name ?? "";
+  }, [memberFilter, md.teamMembers]);
+
+  const fetchAllForExport = async (cap: number): Promise<LogRow[]> => {
+    let q = supabase
+      .from("project_log_entries")
+      .select("*")
+      .order("ts", { ascending: false })
+      .range(0, cap - 1);
+    if (search) q = q.ilike("description", `%${search}%`);
+    if (memberFullName) q = q.eq("actor_display_name", memberFullName);
+    if (dateRange.from) q = q.gte("ts", dateRange.from.toISOString());
+    if (dateRange.to) q = q.lte("ts", dateRange.to.toISOString());
+    const { data } = await q;
+    return (data ?? []) as LogRow[];
+  };
+
+  const runExport = async () => {
+    setExporting(true);
+    try {
+      const list = await fetchAllForExport(5001);
+      if (list.length > 5000) {
+        toast.error("Too many entries — please narrow your filter to under 5000");
+        return;
+      }
+      const now = new Date();
+      const groupMap = new Map<GroupKey, { spec: GroupSpec; rows: LogRow[] }>();
+      list.forEach((r) => {
+        const spec = groupForDate(new Date(r.ts), now);
+        const g = groupMap.get(spec.key) ?? { spec, rows: [] };
+        g.rows.push(r); groupMap.set(spec.key, g);
+      });
+      const groups: ActivityPdfGroup[] = Array.from(groupMap.values())
+        .sort((a, b) => a.spec.sort - b.spec.sort)
+        .map((g) => ({
+          label: g.spec.label,
+          rows: g.rows.map((r) => {
+            const proj = projectMap.get(r.project_id);
+            return {
+              id: r.id,
+              ts: new Date(r.ts),
+              actorDisplayName: r.actor_display_name,
+              description: formatDescription(r),
+              projectLabel: proj ? `${proj.customer} · ${proj.projectName}` : "",
+            };
+          }),
+        }));
+      exportActivityPdf(groups, {
+        member: memberFullName,
+        search,
+        dateRangeLabel: dateRange.label,
+        totalCount: list.length,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't generate PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const startExport = () => {
+    if (total > 5000) {
+      toast.error("Too many entries — please narrow your filter to under 5000");
+      return;
+    }
+    if (total >= 1000) {
+      setConfirmLargeExport(total);
+      return;
+    }
+    runExport();
+  };
 
   return (
     <DesktopAppShell contentScroll={false}>
@@ -294,6 +388,7 @@ export default function ActivityPage() {
                   style={{ borderColor: "hsl(var(--brand-navy) / 0.15)", color: "hsl(var(--brand-navy))" }}
                 />
               </div>
+              <DateRangeFilter value={dateRange} onChange={setDateRange} />
               <select
                 value={memberFilter}
                 onChange={(e) => setMemberFilter(e.target.value)}
@@ -305,9 +400,19 @@ export default function ActivityPage() {
                   <option key={t.id} value={t.initials.toUpperCase()}>{t.full_name}</option>
                 ))}
               </select>
+              <button
+                onClick={startExport}
+                disabled={exporting || total === 0}
+                title={total === 0 ? "No activity to export" : "Export filtered entries to PDF"}
+                className="h-9 inline-flex items-center gap-1.5 px-3 rounded-md border bg-white text-[13px] font-medium outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[hsl(var(--brand-navy)/0.04)]"
+                style={{ borderColor: "hsl(var(--brand-navy) / 0.15)", color: "hsl(var(--brand-navy))" }}
+              >
+                <Download className="h-3.5 w-3.5" />
+                {exporting ? "Generating..." : "Export PDF"}
+              </button>
               {filtersActive && (
                 <button
-                  onClick={() => { setSearchInput(""); setSearch(""); setMemberFilter(""); }}
+                  onClick={clearAll}
                   className="text-[12px] underline"
                   style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
                 >
@@ -345,7 +450,7 @@ export default function ActivityPage() {
               </p>
               {filtersActive && (
                 <button
-                  onClick={() => { setSearchInput(""); setSearch(""); setMemberFilter(""); }}
+                  onClick={clearAll}
                   className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[12px] font-medium"
                   style={{ borderColor: "hsl(var(--brand-navy) / 0.2)", color: "hsl(var(--brand-navy))" }}
                 >
@@ -395,6 +500,15 @@ export default function ActivityPage() {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmLargeExport !== null}
+        title="Export large activity log?"
+        description={`Export ${confirmLargeExport?.toLocaleString()} entries to PDF? This may take a moment.`}
+        confirmLabel="Export"
+        cancelLabel="Cancel"
+        onConfirm={() => { const _t = confirmLargeExport; setConfirmLargeExport(null); if (_t) runExport(); }}
+        onCancel={() => setConfirmLargeExport(null)}
+      />
     </DesktopAppShell>
   );
 }
