@@ -196,11 +196,47 @@ function compareCards(
       if (av && !bv) return -1;
       return dir * av.localeCompare(bv, undefined, { numeric: true });
     }
+    case "po": {
+      const av = a.project.poNumber ?? "";
+      const bv = b.project.poNumber ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv, undefined, { numeric: true });
+    }
+    case "invoice": {
+      const av = a.project.invoiceNumber ?? "";
+      const bv = b.project.invoiceNumber ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv, undefined, { numeric: true });
+    }
     case "amount": {
       const av = a.project.value, bv = b.project.value;
       if (!av && bv) return 1;
       if (av && !bv) return -1;
       return dir * ((av ?? 0) - (bv ?? 0));
+    }
+    case "balance": {
+      const av = a.project.outstandingBalance, bv = b.project.outstandingBalance;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
+    }
+    case "designBrief": {
+      const av = a.project.designBrief?.trim() ?? "";
+      const bv = b.project.designBrief?.trim() ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv);
+    }
+    case "completionDate": {
+      const av = a.project.completionDate?.getTime?.() ?? null;
+      const bv = b.project.completionDate?.getTime?.() ?? null;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
     }
     case "weight": {
       const av = a.project.weightKg, bv = b.project.weightKg;
