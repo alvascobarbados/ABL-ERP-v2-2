@@ -52,6 +52,7 @@ import { CardEditOverlay } from "./CardEditOverlay";
 import { TrackingEditor } from "./EditorSheets";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { TabId } from "./PipelineTabs";
+import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility";
 
 type SortKey =
   | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
