@@ -395,12 +395,15 @@ export default function ActivityPage() {
           label: g.spec.label,
           rows: g.rows.map((r) => {
             const proj = projectMap.get(r.project_id);
+            const sentence = buildSentence(r);
             return {
               id: r.id,
               ts: new Date(r.ts),
               actorDisplayName: r.actor_display_name,
-              description: formatDescription(r),
-              projectLabel: proj ? `${proj.customer} · ${proj.projectName}` : "",
+              pre: sentence.pre,
+              post: sentence.post,
+              projectLabel: projectFallbackLabel(proj, r.project_id),
+              astTime: fmtAstTime(new Date(r.ts)),
             };
           }),
         }));
