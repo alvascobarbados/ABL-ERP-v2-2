@@ -14,7 +14,10 @@ import { BottomSheet } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
-import { Project } from "@/data/pipelines";
+import { Project, PIPELINES } from "@/data/pipelines";
+
+type InitialStageId = "sourcing" | "proposal" | "quote" | "confirming";
+const INITIAL_STAGES: InitialStageId[] = ["sourcing", "proposal", "quote", "confirming"];
 import { DEFAULT_USER_INITIALS } from "./UserMenu";
 
 interface Props {
