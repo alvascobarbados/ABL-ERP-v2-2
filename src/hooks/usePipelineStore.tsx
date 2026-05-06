@@ -394,7 +394,7 @@ interface PipelineStoreCtx {
   updateLineItem: (projectId: string, index: number, item: LineItem) => Promise<void>;
   removeLineItem: (projectId: string, index: number) => Promise<void>;
   duplicateProject: (projectId: string) => Promise<Project | null>;
-  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string; initialStage?: "sourcing" | "proposal" | "quote" | "confirming" }) => Promise<Project | null>;
+  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string; initialStage?: "sourcing" | "proposal" | "quote" | "confirming"; deadlineDate?: Date }) => Promise<Project | null>;
   toggleFlag: (projectId: string) => Promise<void>;
   softDeleteProject: (projectId: string) => Promise<{ restoredFrom: { pipeline: PipelineId; stage: StageId } } | null>;
   restoreProject: (projectId: string) => Promise<{ pipeline: PipelineId; stage: StageId } | null>;
