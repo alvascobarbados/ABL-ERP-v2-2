@@ -393,6 +393,7 @@ export default function ActivityPage() {
                   style={{ borderColor: "hsl(var(--brand-navy) / 0.15)", color: "hsl(var(--brand-navy))" }}
                 />
               </div>
+              <DateRangeFilter value={dateRange} onChange={setDateRange} />
               <select
                 value={memberFilter}
                 onChange={(e) => setMemberFilter(e.target.value)}
@@ -404,9 +405,19 @@ export default function ActivityPage() {
                   <option key={t.id} value={t.initials.toUpperCase()}>{t.full_name}</option>
                 ))}
               </select>
+              <button
+                onClick={startExport}
+                disabled={exporting || total === 0}
+                title={total === 0 ? "No activity to export" : "Export filtered entries to PDF"}
+                className="h-9 inline-flex items-center gap-1.5 px-3 rounded-md border bg-white text-[13px] font-medium outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[hsl(var(--brand-navy)/0.04)]"
+                style={{ borderColor: "hsl(var(--brand-navy) / 0.15)", color: "hsl(var(--brand-navy))" }}
+              >
+                <Download className="h-3.5 w-3.5" />
+                {exporting ? "Generating..." : "Export PDF"}
+              </button>
               {filtersActive && (
                 <button
-                  onClick={() => { setSearchInput(""); setSearch(""); setMemberFilter(""); }}
+                  onClick={clearAll}
                   className="text-[12px] underline"
                   style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
                 >
