@@ -243,6 +243,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
   const COLS = ALL_COLS;
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
+  const totalWidth = colWidths.reduce((a, b) => a + b, 0) + 36;
   // null = no local override; rows render in the order Index.tsx provides
   // (which respects the global sort/default for the current scope).
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -274,15 +275,17 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
     <SelectionProvider outsideRef={tableRootRef}>
     <TooltipProvider delayDuration={300}>
     <div className="flex-1 min-h-0 flex flex-col">
-      <div ref={tableRootRef} className="flex-1 min-h-0 overflow-auto px-6 lg:px-8 pt-2 pb-3">
+      <div className="flex-1 min-h-0 flex flex-col px-6 lg:px-8 pt-2 pb-3 overflow-hidden">
         <div
-          className="rounded-2xl border"
+          ref={tableRootRef}
+          className="rounded-2xl border flex-1 min-h-0 overflow-auto"
           style={{
             borderColor: "hsl(var(--brand-navy) / 0.08)",
             backgroundColor: "#FFFFFF",
             boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(27,42,78,0.04)",
           }}
         >
+          <div style={{ minWidth: totalWidth }}>
           {/* Header — sticky to outer scroll container; fully opaque */}
           <div
             className="sticky top-0 z-20 grid items-center text-[11px] font-semibold uppercase tracking-[0.05em] rounded-t-2xl"
@@ -374,6 +377,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
 
             ))
           )}
+          </div>
         </div>
       </div>
 
