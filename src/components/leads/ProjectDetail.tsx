@@ -250,10 +250,26 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   };
   const handlePickShippingMode = (id: string) => {
     const mode = (id === "Air" || id === "Ocean" || id === "Local") ? (id as ShippingMode) : undefined;
-    const patch: Partial<typeof live> = { shippingMode: mode, salesShippingLabel: undefined };
-    if (mode === "Local") patch.trackingRef = undefined;
-    updateProject(live.id, patch);
-    setEditor(null);
+    const oldMode = live.shippingMode;
+    if (mode === oldMode) { setEditor(null); return; }
+    const hasTracking = !!live.trackingRef && live.trackingRef.trim() !== "";
+    const apply = (clearTracking: boolean) => {
+      const patch: Partial<typeof live> = { shippingMode: mode, salesShippingLabel: undefined };
+      if (clearTracking || mode === "Local") patch.trackingRef = undefined;
+      updateProject(live.id, patch);
+      setEditor(null);
+    };
+    if (hasTracking) {
+      setEditor(null);
+      setConfirm({
+        title: "Change shipping mode?",
+        description: `Changing mode from ${oldMode ?? "—"} to ${mode ?? "—"} will clear the current tracking number (${live.trackingRef}).`,
+        confirmLabel: "Confirm and Clear",
+        onConfirm: () => { apply(true); setConfirm(null); },
+      });
+      return;
+    }
+    apply(false);
   };
 
   // ─── ⋮ menu actions ────────────────────────────────────────────────────
