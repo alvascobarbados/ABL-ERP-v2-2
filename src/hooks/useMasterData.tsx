@@ -48,7 +48,7 @@ export interface TeamMember {
   id: string;
   initials: string;
   full_name: string;
-  role?: "Sales" | "Production" | "Finance" | "Admin" | "Mixed" | null;
+  role?: "Sales" | "Production" | "Finance" | "Admin" | "Mixed" | "Design" | "Other" | string | null;
   email?: string | null;
   created_at: string;
   updated_at: string;
