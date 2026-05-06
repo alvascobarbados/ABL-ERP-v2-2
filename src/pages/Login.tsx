@@ -3,7 +3,7 @@
  */
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 
 const GoogleG = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -19,12 +19,11 @@ export default function Login() {
 
   const onGoogle = async () => {
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
-    if (error) {
-      toast.error(error.message);
+    if (result.error) {
+      toast.error(result.error.message ?? "Sign-in failed");
       setBusy(false);
     }
   };
