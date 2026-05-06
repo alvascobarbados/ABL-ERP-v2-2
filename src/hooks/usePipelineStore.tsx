@@ -759,7 +759,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const createProject = useCallback<PipelineStoreCtx["createProject"]>(async (input) => {
     const u = userRef.current;
-    const initialStage: StageId = input.initialStage ?? "proposal";
+    const initialStage: StageId = input.initialStage ?? "sourcing";
     const needsQuote = initialStage === "quote" || initialStage === "confirming";
     let newProj: Project = {
       id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
