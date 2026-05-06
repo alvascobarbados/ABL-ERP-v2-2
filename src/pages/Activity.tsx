@@ -135,6 +135,9 @@ export default function ActivityPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState<string>(""); // initials, "" = all
+  const [dateRange, setDateRange] = useState<DateRangeValue>(ALL_TIME);
+  const [exporting, setExporting] = useState(false);
+  const [confirmLargeExport, setConfirmLargeExport] = useState<number | null>(null);
 
   const [newCount, setNewCount] = useState(0);
   const [scrolledDown, setScrolledDown] = useState(false);
