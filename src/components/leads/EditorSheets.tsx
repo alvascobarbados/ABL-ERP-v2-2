@@ -72,7 +72,6 @@ interface TextEditorProps {
   allowDecimal?: boolean;
   onSave: (v: string) => void;
 }
-export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, onSave }: TextEditorProps) => {
 export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, onSave }: TextEditorProps) => {
   const sanitizeDigitsLike = (raw: string): string => {
     if (!digitsOnly) return raw;
