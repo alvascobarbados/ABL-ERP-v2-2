@@ -505,6 +505,15 @@ export default function ActivityPage() {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmLargeExport !== null}
+        title="Export large activity log?"
+        description={`Export ${confirmLargeExport?.toLocaleString()} entries to PDF? This may take a moment.`}
+        confirmLabel="Export"
+        cancelLabel="Cancel"
+        onConfirm={() => { const _t = confirmLargeExport; setConfirmLargeExport(null); if (_t) runExport(); }}
+        onCancel={() => setConfirmLargeExport(null)}
+      />
     </DesktopAppShell>
   );
 }
