@@ -409,6 +409,7 @@ interface RowProps {
   onToggleFlag: () => void;
   onEdit: () => void;
   onMoveStage: () => void;
+  onPickStage?: (card: PipelineCard, target: { pipeline: PipelineId; stage: StageId }) => void;
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
