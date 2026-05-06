@@ -659,6 +659,22 @@ const TableRow = ({
         return { ok: false, reason: err?.message };
       }
     };
+  const saveBalance = async (raw: string): Promise<SaveResult> => {
+    const cleaned = (raw ?? "").replace(/[^0-9.]/g, "");
+    try {
+      if (cleaned === "") {
+        await store.updateProject(proj.id, { outstandingBalance: undefined });
+        return { ok: true };
+      }
+      const n = Number(cleaned);
+      if (!Number.isFinite(n) || n < 0) return { ok: false };
+      await store.updateProject(proj.id, { outstandingBalance: n });
+      return { ok: true };
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      return { ok: false, reason: err?.message };
+    }
+  };
   const saveWeight = saveNumberField("weightKg", false);
   const saveCbm = saveNumberField("cbm", false);
   const savePackages = saveNumberField("numPackages", true);
