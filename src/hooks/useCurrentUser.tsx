@@ -3,6 +3,8 @@
  * resolves the signed-in Google account against `team_members.email`
  * (case-insensitive) for the allowlist gate.
  *
+ * Hardened: verbose logging, try/catch, 5s loading-state timeout.
+ *
  * TODO: enforce allowlist via RLS policies, not client-side. Current
  * implementation is gate-only — a determined attacker with any valid
  * Google JWT could hit the API directly until RLS is tightened.
@@ -56,10 +58,14 @@ export const CurrentUserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const resolvedFor = useRef<string | null>(null);
 
+  console.log("[auth] Render with status:", status);
+
   // 1) Listener BEFORE getSession (Supabase pattern).
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      // Synchronous-only inside the listener — defer DB work.
+    console.log("[auth] Provider mounted; useEffect running");
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      console.log("[auth] onAuthStateChange:", event, "hasSession=", !!s, "email=", s?.user?.email);
+      // Synchronous-only inside the listener — defer DB work to the resolve effect.
       setSession(s);
       if (!s) {
         setUser(null);
@@ -67,10 +73,17 @@ export const CurrentUserProvider = ({ children }: { children: ReactNode }) => {
         setStatus("anon");
       }
     });
-    supabase.auth.getSession().then(({ data }) => {
+    console.log("[auth] Listener registered");
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      console.log("[auth] getSession returned:", { hasSession: !!data.session, email: data.session?.user?.email, error: error?.message });
       setSession(data.session);
       if (!data.session) setStatus("anon");
+    }).catch((e) => {
+      console.error("[auth] getSession threw:", e);
+      setStatus("anon");
     });
+
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -78,36 +91,71 @@ export const CurrentUserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!session?.user) return;
     const email = (session.user.email ?? "").toLowerCase();
-    if (!email) return;
+    if (!email) {
+      console.warn("[auth] session has no email; signing out");
+      setStatus("anon");
+      void supabase.auth.signOut();
+      return;
+    }
     if (resolvedFor.current === email) return;
     resolvedFor.current = email;
 
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("team_members")
-        .select("id, full_name, initials, email, role")
-        .ilike("email", email)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error || !data) {
-        toast.error("This Google account isn't authorized. Contact your admin to be added to the team.");
-        await supabase.auth.signOut();
-        return;
+      try {
+        console.log("[auth] querying team_members for email:", email);
+        const { data, error } = await supabase
+          .from("team_members")
+          .select("id, full_name, initials, email, role")
+          .ilike("email", email)
+          .maybeSingle();
+        if (cancelled) return;
+        console.log("[auth] team_members query result:", { found: !!data, error: error?.message });
+        if (error) {
+          console.error("[auth] team_members query error:", error);
+          toast.error("Couldn't verify your team membership. Please try again.");
+          await supabase.auth.signOut();
+          setStatus("anon");
+          return;
+        }
+        if (!data) {
+          toast.error("This Google account isn't authorized. Contact your admin to be added to the team.");
+          await supabase.auth.signOut();
+          setStatus("anon");
+          return;
+        }
+        setUser({
+          userId: data.id,
+          fullName: data.full_name,
+          shortName: shortNameOf(data.full_name),
+          initials: (data.initials || data.full_name.slice(0, 2)).toUpperCase(),
+          email: data.email ?? email,
+          role: data.role,
+          signOut: async () => { await supabase.auth.signOut(); },
+        });
+        console.log("[auth] Setting status to: authed");
+        setStatus("authed");
+      } catch (e) {
+        if (cancelled) return;
+        console.error("[auth] resolve threw:", e);
+        setStatus("anon");
+        try { await supabase.auth.signOut(); } catch {}
       }
-      setUser({
-        userId: data.id,
-        fullName: data.full_name,
-        shortName: shortNameOf(data.full_name),
-        initials: (data.initials || data.full_name.slice(0, 2)).toUpperCase(),
-        email: data.email ?? email,
-        role: data.role,
-        signOut: async () => { await supabase.auth.signOut(); },
-      });
-      setStatus("authed");
     })();
     return () => { cancelled = true; };
   }, [session]);
+
+  // 3) Hard 5s timeout on the loading state — never let users get stuck.
+  useEffect(() => {
+    if (status !== "loading") return;
+    const t = setTimeout(() => {
+      console.warn("[auth] Loading timed out after 5s; forcing anon");
+      toast.error("Authentication check timed out. Please sign in again.");
+      void supabase.auth.signOut();
+      setStatus("anon");
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [status]);
 
   if (status === "loading") {
     return (
