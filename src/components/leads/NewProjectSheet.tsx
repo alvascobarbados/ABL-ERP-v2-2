@@ -151,6 +151,17 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
           </div>
 
           <div>
+            <label className={labelCls}>Deadline (optional)</label>
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className={inputCls}
+              style={{ minHeight: 48 }}
+            />
+          </div>
+
+          <div>
             <label className={labelCls}>Initial stage</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {(() => {
