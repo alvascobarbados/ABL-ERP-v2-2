@@ -864,7 +864,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
 // ───────────────────── Layout primitives ─────────────────────
 
-const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+export const SectionHeader = ({ children }: { children: React.ReactNode }) => (
   <h2
     className="text-[11px] uppercase font-semibold mb-3 px-1"
     style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
