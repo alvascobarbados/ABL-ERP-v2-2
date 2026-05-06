@@ -439,7 +439,7 @@ interface RowProps {
 type EntityKindKey = "customer" | "supplier" | "rep";
 
 const TableRow = ({
-  index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
+  index, card, activeTab, gridCols, stickyLefts, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onPickStage, onDuplicate, onArchive, onDelete,
 }: RowProps) => {
   const proj = card.project;
