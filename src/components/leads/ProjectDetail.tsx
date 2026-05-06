@@ -907,7 +907,7 @@ export const SectionHeaderWithAction = ({
 );
 
 // Single label/value row used by DETAILS and TIMELINE.
-const DetailRow = ({
+export const DetailRow = ({
   label, value, placeholder, onClick, locked, lockedHint, trailing, valueColor,
 }: {
   label: string;
