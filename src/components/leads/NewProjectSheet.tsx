@@ -40,7 +40,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
       setCustomer("");
       setProjectName("");
       setDetail("");
-      setInitialStage("proposal");
+      setInitialStage("sourcing");
       setPickerOpen(false);
       setDiscardOpen(false);
     }
