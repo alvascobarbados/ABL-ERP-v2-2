@@ -465,6 +465,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
+              <DetailRow
+                label="Outstanding Balance"
+                value={live.outstandingBalance != null ? `$${live.outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BBD` : undefined}
+                onClick={() => setEditor({ kind: "outstandingBalance" })}
+              />
               <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
               <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
               <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
@@ -474,6 +479,24 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 value={deadlineDisplay}
                 onClick={() => setEditor({ kind: "deadline" })}
                 valueColor={u?.color}
+              />
+              <DetailRow
+                label="Completion Date"
+                value={live.completionDate ? fmtLong(live.completionDate) : undefined}
+                onClick={() => setEditor({ kind: "completionDate" })}
+              />
+            </SectionCard>
+          </section>
+
+          {/* ── DESIGN BRIEF ── */}
+          <section>
+            <SectionHeader>Design Brief</SectionHeader>
+            <SectionCard>
+              <DetailRow
+                label="Brief"
+                value={live.designBrief}
+                placeholder="Add design brief…"
+                onClick={() => setEditor({ kind: "designBrief" })}
               />
             </SectionCard>
           </section>
