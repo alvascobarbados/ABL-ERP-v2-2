@@ -12,13 +12,17 @@
  */
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronUp, X as XIcon } from "lucide-react";
+import { Search, ChevronUp, X as XIcon, Download } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { useMasterData } from "@/hooks/useMasterData";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
 import { cn } from "@/lib/utils";
+import { DateRangeFilter, ALL_TIME, DateRangeValue } from "@/components/leads/DateRangeFilter";
+import { exportActivityPdf, ActivityPdfGroup } from "@/lib/activityPdf";
+import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 
 const PAGE_SIZE = 50;
 
