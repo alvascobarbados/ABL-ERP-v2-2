@@ -330,7 +330,6 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             })}
             <div className="h-10" />
           </div>
-          </div>
 
           {/* Rows */}
           {sorted.length === 0 ? (
