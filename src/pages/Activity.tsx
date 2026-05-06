@@ -11,7 +11,7 @@
  * Pagination: initial 50, infinite scroll +50 within 200px of bottom.
  */
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, ChevronUp, X as XIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -215,7 +215,8 @@ export default function ActivityPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [memberFilter, setMemberFilter] = useState<string>(""); // initials, "" = all
+  const [searchParams] = useSearchParams();
+  const [memberFilter, setMemberFilter] = useState<string>(() => (searchParams.get("member") ?? "").toUpperCase()); // initials, "" = all
   const [dateRange, setDateRange] = useState<DateRangeValue>(ALL_TIME);
   const [exporting, setExporting] = useState(false);
   const [confirmLargeExport, setConfirmLargeExport] = useState<number | null>(null);

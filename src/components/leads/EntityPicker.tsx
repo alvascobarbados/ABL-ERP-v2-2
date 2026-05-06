@@ -489,13 +489,14 @@ export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: 
   const [mode, setMode] = useState<ShippingMode>("Ocean");
   const [initials, setInitials] = useState("");
   const [fullName, setFullName] = useState("");
+  const [teamEmail, setTeamEmail] = useState("");
   const [industry, setIndustry] = useState("");
   const [unit, setUnit] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setName(initialName);
-    setCountry(""); setMode("Ocean"); setInitials(""); setFullName("");
+    setCountry(""); setMode("Ocean"); setInitials(""); setFullName(""); setTeamEmail("");
     setIndustry(""); setUnit("");
   }, [open, initialName]);
 
@@ -525,10 +526,16 @@ export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: 
         toast.success(`Supplier "${s.name}" added`);
         onCreated(s.id);
       } else if (kind === "team") {
+        const emailNorm = teamEmail.trim().toLowerCase();
+        if (emailNorm && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+          toast.error("Invalid email format");
+          return;
+        }
         const t = await md.addTeamMember({
           initials: initials.trim().toUpperCase(),
           full_name: fullName.trim(),
-        });
+          email: emailNorm || undefined,
+        } as any);
         toast.success(`${t.initials} — ${t.full_name} added`);
         onCreated(t.initials);
       } else {
@@ -596,6 +603,17 @@ export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: 
             <div>
               <label className={labelCls}>Full name</label>
               <input value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputCls} style={{ minHeight: 48 }} placeholder="Alvasco Admin" />
+            </div>
+            <div>
+              <label className={labelCls}>Email (optional)</label>
+              <input
+                type="email"
+                value={teamEmail}
+                onChange={(e) => setTeamEmail(e.target.value)}
+                className={inputCls}
+                style={{ minHeight: 48 }}
+                placeholder="name@alvasco.com"
+              />
             </div>
           </>
         )}

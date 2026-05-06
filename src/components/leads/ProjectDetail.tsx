@@ -864,7 +864,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
 // ───────────────────── Layout primitives ─────────────────────
 
-const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+export const SectionHeader = ({ children }: { children: React.ReactNode }) => (
   <h2
     className="text-[11px] uppercase font-semibold mb-3 px-1"
     style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
@@ -873,7 +873,7 @@ const SectionHeader = ({ children }: { children: React.ReactNode }) => (
   </h2>
 );
 
-const SectionCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+export const SectionCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div
     className={cn("rounded-2xl px-5 py-5 lg:px-6 lg:py-6", className)}
     style={{
@@ -886,7 +886,7 @@ const SectionCard = ({ children, className }: { children: React.ReactNode; class
   </div>
 );
 
-const SectionHeaderWithAction = ({
+export const SectionHeaderWithAction = ({
   children, onAction,
 }: { children: React.ReactNode; onAction: () => void }) => (
   <div className="flex items-center justify-between mb-3 px-1">
@@ -907,7 +907,7 @@ const SectionHeaderWithAction = ({
 );
 
 // Single label/value row used by DETAILS and TIMELINE.
-const DetailRow = ({
+export const DetailRow = ({
   label, value, placeholder, onClick, locked, lockedHint, trailing, valueColor,
 }: {
   label: string;
