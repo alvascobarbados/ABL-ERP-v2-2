@@ -275,34 +275,43 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
     <SelectionProvider outsideRef={tableRootRef}>
     <TooltipProvider delayDuration={300}>
     <div className="flex-1 min-h-0 min-w-0 flex flex-col">
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col px-6 lg:px-8 pt-2 pb-3 overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col px-6 lg:px-8 pt-3 pb-0 overflow-hidden">
         <div
           ref={tableRootRef}
-          className="rounded-2xl border flex-1 min-h-0 overflow-auto"
+          className="border flex-1 min-h-0 overflow-auto"
           style={{
             borderColor: "hsl(var(--brand-navy) / 0.08)",
+            borderBottom: "none",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
             backgroundColor: "#FFFFFF",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(27,42,78,0.04)",
+            padding: "16px 16px 0 16px",
           }}
         >
           <div style={{ minWidth: totalWidth }}>
           {/* Header — sticky; full-width band */}
           <div
-            className="sticky top-0 z-20 grid items-center border-b"
+            className="sticky z-20 grid items-center border-b"
             style={{
+              top: -16, // offset container's 16px top padding so header pins flush
               gridTemplateColumns: gridCols,
               backgroundColor: "#FFFFFF",
               borderColor: "hsl(var(--brand-navy) / 0.08)",
             }}
           >
 
-            {COLS.map((c) => {
+            {COLS.map((c, idx) => {
               const sortable = !(activeTab === "completed" && c.key === "stage");
               const isActive = sortable && sortKey === c.key;
               const Arrow = isActive ? (sortDir === 1 ? ArrowUp : ArrowDown) : null;
               const resizable = c.resizable !== false;
+              const isLast = idx === COLS.length - 1;
               return (
-                <div key={c.key} className="relative">
+                <div
+                  key={c.key}
+                  className="relative"
+                  style={!isLast ? { boxShadow: "inset -1px 0 0 0 rgba(27,42,78,0.12)" } : undefined}
+                >
                   <button
                     type="button"
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
@@ -378,16 +387,19 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             ))
           )}
           </div>
+          {/* Footer — inside the white container */}
+          <div
+            className="text-right text-[12px] tabular"
+            style={{
+              color: "hsl(var(--brand-navy) / 0.6)",
+              marginTop: 14,
+              paddingBottom: 12,
+            }}
+          >
+            {sorted.length} project{sorted.length === 1 ? "" : "s"}
+            {totalAmount > 0 && <> · ${totalAmount.toLocaleString()} BBD total</>}
+          </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div
-        className="px-6 lg:px-8 pb-4 pt-2 text-right text-[12px] tabular"
-        style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
-      >
-        {sorted.length} project{sorted.length === 1 ? "" : "s"}
-        {totalAmount > 0 && <> · ${totalAmount.toLocaleString()} BBD total</>}
       </div>
 
       {editingCard && (
