@@ -293,6 +293,12 @@ export interface Project {
   weightKg?: number;            // physical shipment weight (kg, decimal)
   cbm?: number;                 // cubic meters (decimal)
   numPackages?: number;         // integer count
+  /** Long-form creative brief; rendered as its own section on the project detail page. */
+  designBrief?: string;
+  /** Date the project was/will be completed (informational; not used for stage logic). */
+  completionDate?: Date | null;
+  /** Remaining unpaid amount (BBD). Same display rules as `value`. */
+  outstandingBalance?: number;
   pipeline: PipelineId;
   stage: StageId;
   deadline?: string;
