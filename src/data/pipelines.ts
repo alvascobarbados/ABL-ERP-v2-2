@@ -16,7 +16,7 @@ export type PipelineId =
 
 export type StageId =
   // sales
-  | "proposal" | "quote" | "confirming" | "archive"
+  | "sourcing" | "proposal" | "quote" | "confirming" | "archive"
   // design
   | "design" | "proof"
   // purchasing — single-state pipeline (procurement: POs, supplier confirmation, deposits)
