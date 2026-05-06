@@ -286,24 +286,16 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
           }}
         >
           <div style={{ minWidth: totalWidth }}>
-          {/* Header — sticky; styled to match DesktopFilterBar container */}
+          {/* Header — sticky; full-width band */}
           <div
-            className="sticky top-0 z-20"
-            style={{
-              backgroundColor: "#FFFFFF",
-              padding: "8px 10px",
-            }}
-          >
-          <div
-            className="grid items-center rounded-2xl border overflow-hidden"
+            className="sticky top-0 z-20 grid items-center border-b"
             style={{
               gridTemplateColumns: gridCols,
               backgroundColor: "#FFFFFF",
               borderColor: "hsl(var(--brand-navy) / 0.08)",
-              paddingTop: 4,
-              paddingBottom: 4,
             }}
           >
+
             {COLS.map((c) => {
               const sortable = !(activeTab === "completed" && c.key === "stage");
               const isActive = sortable && sortKey === c.key;
@@ -337,7 +329,6 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
               );
             })}
             <div className="h-10" />
-          </div>
           </div>
 
           {/* Rows */}
