@@ -48,28 +48,12 @@ export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }:
     return min + ((1 - min) * i) / (total - 1);
   };
 
-  const labelText = `${pipeline.title} stages`;
-
   return (
     <div
       className="flex items-center w-full"
-      style={{ height: ROW_HEIGHT, gap: 14 }}
+      style={{ height: ROW_HEIGHT }}
     >
-      {/* Left label */}
-      <div
-        className="shrink-0 font-semibold uppercase tracking-wider"
-        style={{
-          width: 130,
-          fontSize: 11,
-          color: `color-mix(in srgb, ${accent} 70%, hsl(var(--brand-navy)))`,
-          letterSpacing: "0.06em",
-        }}
-      >
-        {labelText}
-      </div>
-
-      {/* Pills */}
-      <div className="flex-1 min-w-0 flex items-center gap-10px" style={{ gap: 10 }}>
+      <div className="flex-1 min-w-0 flex items-center" style={{ gap: 8 }}>
         {pipeline.stages.map((s, i) => {
           const isActive = selectedStage === s.id;
           const count = stageCounts[s.id] ?? 0;
@@ -92,27 +76,25 @@ export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }:
               key={s.id}
               type="button"
               onClick={() => onSelect(isActive ? null : s.id)}
-              className="flex-1 min-w-0 flex items-center justify-between rounded-lg transition-colors"
+              className="flex items-center justify-between rounded-full transition-colors"
               style={{
-                height: 40,
-                padding: "6px 14px",
+                padding: "7px 14px",
                 backgroundColor: fill,
                 border: `1px solid ${border}`,
                 cursor: "pointer",
                 boxShadow: isActive ? `0 1px 2px color-mix(in srgb, ${accent} 30%, transparent)` : "none",
-                minWidth: 140,
-                maxWidth: 220,
+                gap: 10,
               }}
             >
               <span
                 className="font-medium tracking-tight truncate"
-                style={{ fontSize: 13, color: labelColor }}
+                style={{ fontSize: 12, color: labelColor }}
               >
                 {s.title}
               </span>
               <span
-                className="font-semibold tabular shrink-0 ml-2"
-                style={{ fontSize: 15, color: countColor, opacity: countOpacity, lineHeight: 1 }}
+                className="font-semibold tabular shrink-0"
+                style={{ fontSize: 12, color: countColor, opacity: countOpacity, lineHeight: 1 }}
               >
                 {count}
               </span>
