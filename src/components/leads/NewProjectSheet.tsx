@@ -35,6 +35,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
   const [initialStage, setInitialStage] = useState<InitialStageId>("sourcing");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [debouncedName, setDebouncedName] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -45,21 +46,36 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
       setInitialStage("sourcing");
       setPickerOpen(false);
       setDiscardOpen(false);
+      setDebouncedName("");
     }
   }, [open]);
+
+  // Debounce the project name (~250ms) so the duplicate warning doesn't
+  // flicker on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedName(projectName), 250);
+    return () => clearTimeout(t);
+  }, [projectName]);
 
   const dirty = !!customer || !!projectName.trim() || !!detail.trim();
   const valid = !!customer && projectName.trim().length >= 2;
 
   const dupHint = useMemo(() => {
-    const trimmed = projectName.trim();
-    if (trimmed.length < 2) return null;
+    // Require both a selected customer AND a non-trivial debounced name.
+    const trimmed = debouncedName.trim();
+    if (!customer || trimmed.length < 2) return null;
+    const target = trimmed.toLowerCase();
+    const targetCustomer = customer.toLowerCase();
     const existing = store.projects.find(
-      (p) => p.projectName.toLowerCase() === trimmed.toLowerCase(),
+      (p) =>
+        !p.deletedAt &&
+        !(p.pipeline === "sales" && p.stage === "archive") &&
+        p.customer.toLowerCase() === targetCustomer &&
+        p.projectName.trim().toLowerCase() === target,
     );
     if (!existing) return null;
-    return `"${existing.projectName}" already exists on ${existing.customer}. Editing the project name will sync across both.`;
-  }, [projectName, store.projects]);
+    return `Project "${existing.projectName}" already exists on ${existing.customer}. Editing this name will rename both projects.`;
+  }, [debouncedName, customer, store.projects]);
 
   const handleCancel = () => {
     if (dirty) setDiscardOpen(true);
