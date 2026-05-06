@@ -587,6 +587,29 @@ const TableRow = ({
       return { ok: false };
     }
   };
+  // Numeric shipping fields. Empty input → clear to undefined. Negatives rejected silently.
+  const saveNumberField = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) =>
+    async (raw: string): Promise<SaveResult> => {
+      const re = integer ? /[^\d]/g : /[^\d.]/g;
+      const cleaned = (raw ?? "").replace(re, "");
+      try {
+        if (cleaned === "") {
+          await store.updateProject(proj.id, { [field]: undefined } as any);
+          return { ok: true };
+        }
+        const n = Number(cleaned);
+        if (!Number.isFinite(n) || n < 0) return { ok: false };
+        const value = integer ? Math.floor(n) : n;
+        await store.updateProject(proj.id, { [field]: value } as any);
+        return { ok: true };
+      } catch (err: any) {
+        toast.error(err?.message ?? "Save failed");
+        return { ok: false, reason: err?.message };
+      }
+    };
+  const saveWeight = saveNumberField("weightKg", false);
+  const saveCbm = saveNumberField("cbm", false);
+  const savePackages = saveNumberField("numPackages", true);
 
   // ── Entity-save helpers (called from popover onPick) ─────────────────
   const pickCustomer = async (name: string) => {
