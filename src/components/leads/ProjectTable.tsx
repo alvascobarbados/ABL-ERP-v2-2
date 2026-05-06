@@ -244,9 +244,6 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
   const totalWidth = colWidths.reduce((a, b) => a + b, 0) + 36;
-  // Sticky-left offsets for the first 4 columns (Flag, Stage, Customer, Project).
-  // Index by column position in COLS — these stay pinned during horizontal scroll.
-  const stickyLefts: number[] = [0, colWidths[0], colWidths[0] + colWidths[1], colWidths[0] + colWidths[1] + colWidths[2]];
   // null = no local override; rows render in the order Index.tsx provides
   // (which respects the global sort/default for the current scope).
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -299,25 +296,13 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             }}
           >
 
-            {COLS.map((c, ci) => {
+            {COLS.map((c) => {
               const sortable = !(activeTab === "completed" && c.key === "stage");
               const isActive = sortable && sortKey === c.key;
               const Arrow = isActive ? (sortDir === 1 ? ArrowUp : ArrowDown) : null;
               const resizable = c.resizable !== false;
-              const sticky = ci < 4;
-              const isLastSticky = ci === 3;
               return (
-                <div
-                  key={c.key}
-                  className="relative"
-                  style={sticky ? {
-                    position: "sticky",
-                    left: stickyLefts[ci],
-                    zIndex: 30,
-                    backgroundColor: "#FFFFFF",
-                    boxShadow: isLastSticky ? "4px 0 6px -4px rgba(27,42,78,0.15)" : undefined,
-                  } : undefined}
-                >
+                <div key={c.key} className="relative">
                   <button
                     type="button"
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
@@ -378,7 +363,6 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                 card={card}
                 activeTab={activeTab}
                 gridCols={gridCols}
-                stickyLefts={stickyLefts}
                 isMenuOpen={menuFor === card.id}
                 onMenuOpenChange={(open) => setMenuFor(open ? card.id : null)}
                 onOpen={() => onOpenCard(card)}
@@ -423,7 +407,6 @@ interface RowProps {
   card: PipelineCard;
   activeTab: TabId;
   gridCols: string;
-  stickyLefts: number[];
   isMenuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
@@ -439,7 +422,7 @@ interface RowProps {
 type EntityKindKey = "customer" | "supplier" | "rep";
 
 const TableRow = ({
-  index, card, activeTab, gridCols, stickyLefts, isMenuOpen, onMenuOpenChange,
+  index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onPickStage, onDuplicate, onArchive, onDelete,
 }: RowProps) => {
   const proj = card.project;
@@ -612,14 +595,6 @@ const TableRow = ({
     }
   };
 
-  const rowBg = flagged ? "hsl(var(--brand-orange) / 0.05)" : (index % 2 === 0 ? "hsl(var(--background))" : "hsl(var(--brand-navy) / 0.018)");
-  const stickyBase = (i: number): React.CSSProperties => ({
-    position: "sticky",
-    left: stickyLefts[i],
-    zIndex: 10,
-    backgroundColor: rowBg,
-    boxShadow: i === 3 ? "4px 0 6px -4px rgba(27,42,78,0.15)" : undefined,
-  });
   return (
     <div
       role="row"
@@ -630,23 +605,24 @@ const TableRow = ({
       onMouseLeave={cancelLongPress}
       className={cn(
         "grid items-stretch text-[13.5px] cursor-pointer transition-colors group select-none relative",
+        "hover:bg-[hsl(var(--brand-orange)/0.045)]",
       )}
       style={{
         gridTemplateColumns: gridCols,
         minHeight: 44,
-        backgroundColor: rowBg,
+        backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
         borderBottom: "1px solid hsl(var(--brand-navy) / 0.05)",
+        boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}`,
         color: "hsl(var(--brand-navy))",
       }}
     >
-      {/* Flag — sticky col 0; pipeline accent stripe lives here */}
+      {/* Flag — single click toggles (special-case column) */}
       <div
-        className="px-3 flex items-center justify-center cursor-pointer"
+        className="px-3 flex items-center justify-center cursor-pointer hover:bg-[hsl(var(--brand-orange)/0.08)]"
         onClick={(e) => { e.stopPropagation(); onToggleFlag(); }}
         onMouseDown={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
         title={flagged ? "Unflag" : "Flag"}
-        style={{ ...stickyBase(0), boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}` }}
       >
         {flagged ? (
           <Flag className="h-3.5 w-3.5 fill-current" style={{ color: "hsl(var(--brand-orange))" }} />
@@ -655,8 +631,7 @@ const TableRow = ({
         )}
       </div>
 
-      {/* Stage · State — sticky col 1 */}
-      <div style={stickyBase(1)}>
+      {/* Stage · State — inline-editable pill. Three-state cell; popover lists all stages. */}
       <StageCell
         cellKey={`${card.id}:stage`}
         pipeline={card.pipeline}
@@ -679,10 +654,8 @@ const TableRow = ({
           triggerFlash("stage", "success");
         }}
       />
-      </div>
 
-      {/* Customer — sticky col 2 */}
-      <div style={stickyBase(2)}>
+      {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
       <EditableCell
         cellKey={`${card.id}:customer`}
         mode="custom"
@@ -693,10 +666,8 @@ const TableRow = ({
         flash={flashFor("customer")}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("customer"); }}
       />
-      </div>
 
-      {/* Project name — sticky col 3 (last sticky; gets right shadow) */}
-      <div style={stickyBase(3)}>
+      {/* Project name — text */}
       <EditableCell
         cellKey={`${card.id}:projectName`}
         mode="text"
@@ -706,7 +677,6 @@ const TableRow = ({
         value={proj.projectName}
         onCommit={saveProjectName}
       />
-      </div>
 
       {/* Detail summary — text */}
       <EditableCell
