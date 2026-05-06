@@ -216,8 +216,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { invoiceNumber: t });
     setEditor(null);
   };
-  const saveTracking = (v: string) => {
-    updateProject(live.id, { trackingRef: v.trim() || undefined });
+  const saveTracking = (v: string | null) => {
+    updateProject(live.id, { trackingRef: v ?? undefined });
     setEditor(null);
   };
   const saveNumeric = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) => (raw: string) => {
