@@ -366,6 +366,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                 onToggleFlag={() => store.toggleFlag(card.project.id)}
                 onEdit={() => setEditingCard(card)}
                 onMoveStage={() => onOpenPicker(card)}
+                onPickStage={onPickStage}
                 onDuplicate={() => store.duplicateProject(card.project.id)}
                 onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
                 onDelete={() => store.deleteProject(card.project.id)}
