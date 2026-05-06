@@ -377,6 +377,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
 
             ))
           )}
+          </div>
         </div>
       </div>
 
