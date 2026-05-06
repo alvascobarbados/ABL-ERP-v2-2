@@ -191,8 +191,33 @@ function compareCards(
       if (av && !bv) return -1;
       return dir * av.localeCompare(bv, undefined, { numeric: true });
     }
-    case "amount":
-      return dir * ((a.project.value ?? 0) - (b.project.value ?? 0));
+    case "amount": {
+      const av = a.project.value, bv = b.project.value;
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * ((av ?? 0) - (bv ?? 0));
+    }
+    case "weight": {
+      const av = a.project.weightKg, bv = b.project.weightKg;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
+    }
+    case "cbm": {
+      const av = a.project.cbm, bv = b.project.cbm;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
+    }
+    case "pkgs": {
+      const av = a.project.numPackages, bv = b.project.numPackages;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
+    }
     case "mode": {
       const av = a.project.shippingMode ?? "";
       const bv = b.project.shippingMode ?? "";
