@@ -267,7 +267,92 @@ export default function ActivityPage() {
     return Array.from(map.values()).sort((a, b) => a.spec.sort - b.spec.sort);
   }, [rows]);
 
-  const filtersActive = !!search || !!memberFilter;
+  const filtersActive = !!search || !!memberFilter || dateRange.presetKey !== "all";
+
+  const clearAll = () => {
+    setSearchInput(""); setSearch(""); setMemberFilter(""); setDateRange(ALL_TIME);
+  };
+
+  // ─── Export PDF ─────────────────────────────────────────────────────────
+  const memberFullName = useMemo(() => {
+    if (!memberFilter) return "";
+    return md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter)?.full_name ?? "";
+  }, [memberFilter, md.teamMembers]);
+
+  const fetchAllForExport = async (cap: number): Promise<LogRow[]> => {
+    let q = supabase
+      .from("project_log_entries")
+      .select("*")
+      .order("ts", { ascending: false })
+      .range(0, cap - 1);
+    if (search) q = q.ilike("description", `%${search}%`);
+    if (memberFullName) q = q.eq("actor_display_name", memberFullName);
+    if (dateRange.from) q = q.gte("ts", dateRange.from.toISOString());
+    if (dateRange.to) q = q.lte("ts", dateRange.to.toISOString());
+    const { data } = await q;
+    return (data ?? []) as LogRow[];
+  };
+
+  const runExport = async () => {
+    setExporting(true);
+    try {
+      const list = await fetchAllForExport(5001);
+      if (list.length > 5000) {
+        toast.error("Too many entries — please narrow your filter to under 5000");
+        return;
+      }
+      const now = new Date();
+      const groupMap = new Map<GroupKey, { spec: GroupSpec; rows: LogRow[] }>();
+      list.forEach((r) => {
+        const spec = groupForDate(new Date(r.ts), now);
+        const g = groupMap.get(spec.key) ?? { spec, rows: [] };
+        g.rows.push(r); groupMap.set(spec.key, g);
+      });
+      const groups: ActivityPdfGroup[] = Array.from(groupMap.values())
+        .sort((a, b) => a.spec.sort - b.spec.sort)
+        .map((g) => ({
+          label: g.spec.label,
+          rows: g.rows.map((r) => {
+            const proj = projectMap.get(r.project_id);
+            const desc = (() => {
+              const prefix = r.actor_display_name + " ";
+              const d = formatDescription({ ...r, metadata: r.metadata } as any);
+              return d.startsWith(prefix) ? d.slice(prefix.length) : d;
+            })();
+            return {
+              id: r.id,
+              ts: new Date(r.ts),
+              actorDisplayName: r.actor_display_name,
+              description: desc,
+              projectLabel: proj ? `${proj.customer} · ${proj.projectName}` : "",
+            };
+          }),
+        }));
+      exportActivityPdf(groups, {
+        member: memberFullName,
+        search,
+        dateRangeLabel: dateRange.label,
+        totalCount: list.length,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't generate PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const startExport = () => {
+    if (total > 5000) {
+      toast.error("Too many entries — please narrow your filter to under 5000");
+      return;
+    }
+    if (total >= 1000) {
+      setConfirmLargeExport(total);
+      return;
+    }
+    runExport();
+  };
 
   return (
     <DesktopAppShell contentScroll={false}>
