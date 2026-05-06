@@ -88,7 +88,7 @@ export const RowLabel = ({
         fontWeight: tight ? 600 : 500,
         letterSpacing: tight ? "0.12em" : "0.10em",
         color: dim ? dimmed : baseColor,
-        marginBottom: tight ? 4 : 7,
+        marginBottom: tight ? 3 : 4,
         ...style,
       }}
     >
