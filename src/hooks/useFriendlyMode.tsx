@@ -113,6 +113,7 @@ export const FRIENDLY_PIPELINE_SUBTITLES: Record<PipelineId, string> = {
 };
 
 export const FRIENDLY_STAGE_HELP: Record<StageId, string> = {
+  sourcing: "New leads where you don't yet know what supplier or product to use. Research what's available and at what cost, then move to Proposal once you can write one.",
   proposal: "New enquiries that need a written proposal. Once you've sent the proposal, move forward to Quote.",
   quote: "Projects that need pricing worked out and sent to the customer. Once you've sent the quote, move forward to Confirming.",
   confirming: "Quote sent. Waiting for the customer to say yes. When they confirm, the project splits into items and moves into Purchasing.",
