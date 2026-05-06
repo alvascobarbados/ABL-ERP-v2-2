@@ -234,7 +234,7 @@ export const TeamMemberPage = ({ memberId }: { memberId: string }) => {
                             color: "hsl(var(--brand-navy))",
                           }}
                         >
-                          {p.pipelineId} · {p.stageId}
+                          {p.pipeline} · {p.stage}
                         </span>
                       </button>
                     </li>
