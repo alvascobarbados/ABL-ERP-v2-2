@@ -1007,7 +1007,81 @@ const TableRow = ({
           onConfirm={pickReps}
         />
       )}
+
+      {/* Tracking editor sheet (mode-gated, format-enforced) */}
+      <TrackingEditor
+        open={trackingEditorOpen}
+        onClose={() => setTrackingEditorOpen(false)}
+        shippingMode={proj.shippingMode}
+        value={proj.trackingRef ?? ""}
+        onSave={saveTracking}
+      />
+
+      {/* Mode-change confirmation when tracking would be cleared */}
+      <ConfirmDialog
+        open={!!modeChangeConfirm}
+        title="Change shipping mode?"
+        description={
+          modeChangeConfirm
+            ? `Changing mode from ${modeChangeConfirm.from ?? "—"} to ${modeChangeConfirm.to} will clear the current tracking number (${modeChangeConfirm.tracking}).`
+            : ""
+        }
+        confirmLabel="Confirm and Clear"
+        cancelLabel="Cancel"
+        onCancel={() => setModeChangeConfirm(null)}
+        onConfirm={async () => {
+          if (!modeChangeConfirm) return;
+          const m = modeChangeConfirm.to;
+          setModeChangeConfirm(null);
+          try {
+            await store.updateProject(proj.id, { shippingMode: m, trackingRef: undefined });
+            triggerFlash("mode", "success");
+          } catch (err: any) {
+            toast.error(err?.message ?? "Save failed");
+            triggerFlash("mode", "error");
+          }
+        }}
+      />
     </div>
+  );
+};
+
+// ── Tracking cell trigger (opens BottomSheet; disabled when no Mode) ──
+interface TrackingCellTriggerProps {
+  value: string | undefined;
+  modeSet: boolean;
+  flash: "success" | "error" | null;
+  onClick: () => void;
+}
+const TrackingCellTrigger = ({ value, modeSet, flash, onClick }: TrackingCellTriggerProps) => {
+  const ringStyle: React.CSSProperties =
+    flash === "success" ? { boxShadow: "inset 0 0 0 2px hsl(var(--brand-navy) / 0.5)", backgroundColor: "hsl(140 50% 50% / 0.12)" }
+    : flash === "error" ? { boxShadow: "inset 0 0 0 2px hsl(var(--urgent))", backgroundColor: "hsl(0 70% 50% / 0.10)" }
+    : {};
+  const cell = (
+    <div
+      onClick={(e) => { e.stopPropagation(); if (modeSet) onClick(); }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      className={cn(
+        "relative px-3 py-1.5 truncate transition-colors h-full flex items-center justify-start text-left",
+        modeSet ? "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer" : "cursor-not-allowed",
+      )}
+      style={{
+        ...ringStyle,
+        color: !value || !modeSet ? "hsl(var(--brand-navy) / 0.28)" : undefined,
+      }}
+      title={!modeSet ? undefined : (value ?? "")}
+    >
+      <span className="truncate w-full tabular">{value ?? "—"}</span>
+    </div>
+  );
+  if (modeSet) return cell;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{cell}</TooltipTrigger>
+      <TooltipContent side="top">Set Mode first to enable Tracking</TooltipContent>
+    </Tooltip>
   );
 };
 
