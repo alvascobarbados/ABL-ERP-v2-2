@@ -286,7 +286,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
           }}
         >
           <div style={{ minWidth: totalWidth }}>
-          {/* Header — sticky to outer scroll container; white masking band wraps an inner pill */}
+          {/* Header — sticky; styled to match DesktopFilterBar container */}
           <div
             className="sticky top-0 z-20"
             style={{
@@ -295,13 +295,13 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             }}
           >
           <div
-            className="grid items-center text-[11px] font-semibold uppercase tracking-[0.05em] overflow-hidden"
+            className="grid items-center rounded-2xl border overflow-hidden"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "#D8DCE5",
-              color: "#1B2A4E",
-              borderBottom: "1px solid rgba(27, 42, 78, 0.30)",
-              borderRadius: 999,
+              backgroundColor: "#FFFFFF",
+              borderColor: "hsl(var(--brand-navy) / 0.08)",
+              paddingTop: 4,
+              paddingBottom: 4,
             }}
           >
             {COLS.map((c) => {
@@ -316,10 +316,11 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-11 px-3 inline-flex items-center gap-1 transition-colors text-left truncate w-full",
-                      sortable ? "hover:bg-[hsl(var(--brand-navy)/0.05)] hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
+                      "h-10 px-4 inline-flex items-center gap-1 transition-colors text-left truncate w-full text-[11px] font-semibold uppercase",
+                      sortable ? "hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
                       c.align === "right" ? "justify-end" : "justify-start",
                     )}
+                    style={{ color: "hsl(var(--brand-navy) / 0.55)", letterSpacing: "0.06em" }}
                     title={c.label}
                   >
                     <span className="truncate">{c.label}</span>
@@ -335,7 +336,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                 </div>
               );
             })}
-            <div className="h-11" />
+            <div className="h-10" />
           </div>
           </div>
 
