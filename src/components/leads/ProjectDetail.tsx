@@ -422,15 +422,53 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── DETAILS ── */}
+          {/* ── PROJECT DETAILS ── */}
           <section>
-            <SectionHeader>Details</SectionHeader>
+            <SectionHeader>Project Details</SectionHeader>
             <SectionCard>
               <DetailRow label="Customer" value={live.customer} locked />
+              <DetailRow label="Contact Person" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
               <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
               <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
-              <DetailRow label="Mode" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
+              <DetailRow
+                label="Amount"
+                value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
+                onClick={() => setEditor({ kind: "amount" })}
+              />
+              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
+              <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
+              <DetailRow
+                label="Deadline"
+                value={deadlineDisplay}
+                onClick={() => setEditor({ kind: "deadline" })}
+                valueColor={u?.color}
+              />
+            </SectionCard>
+          </section>
+
+          {/* ── SHIPPING DETAILS ── */}
+          <section>
+            <SectionHeader>Shipping Details</SectionHeader>
+            <SectionCard>
+              <DetailRow
+                label="Weight (kg)"
+                value={live.weightKg != null ? String(live.weightKg) : undefined}
+                onClick={() => setEditor({ kind: "weight" })}
+              />
+              <DetailRow
+                label="CBM"
+                value={live.cbm != null ? String(live.cbm) : undefined}
+                onClick={() => setEditor({ kind: "cbm" })}
+              />
+              <DetailRow
+                label="No. of Packages"
+                value={live.numPackages != null ? String(live.numPackages) : undefined}
+                onClick={() => setEditor({ kind: "packages" })}
+              />
+              <DetailRow label="Mode of Shipping" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
               <DetailRow
                 label="Tracking"
                 value={live.trackingRef ? live.trackingRef.toUpperCase() : undefined}
@@ -446,22 +484,6 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                     View shipment
                   </button>
                 ) : null}
-              />
-              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
-              <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
-              <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
-              <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
-              <DetailRow label="Contact" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
-              <DetailRow
-                label="Amount"
-                value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
-                onClick={() => setEditor({ kind: "amount" })}
-              />
-              <DetailRow
-                label="Deadline"
-                value={deadlineDisplay}
-                onClick={() => setEditor({ kind: "deadline" })}
-                valueColor={u?.color}
               />
             </SectionCard>
           </section>
