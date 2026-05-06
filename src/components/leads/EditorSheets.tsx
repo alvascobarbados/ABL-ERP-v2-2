@@ -68,6 +68,8 @@ interface TextEditorProps {
   prefix?: string;
   /** Restrict input to digits only (paste is sanitized; prefix stripped). */
   digitsOnly?: boolean;
+  /** Allow one decimal point in addition to digits (only when digitsOnly is true). */
+  allowDecimal?: boolean;
   onSave: (v: string) => void;
 }
 export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, onSave }: TextEditorProps) => {
