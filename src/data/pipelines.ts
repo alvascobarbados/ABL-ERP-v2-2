@@ -16,7 +16,7 @@ export type PipelineId =
 
 export type StageId =
   // sales
-  | "proposal" | "quote" | "confirming" | "archive"
+  | "sourcing" | "proposal" | "quote" | "confirming" | "archive"
   // design
   | "design" | "proof"
   // purchasing — single-state pipeline (procurement: POs, supplier confirmation, deposits)
@@ -72,6 +72,7 @@ export const PIPELINES: PipelineConfig[] = [
     // in the left rail (see ArchiveView). Pipeline views, counts, and the
     // StagePicker hide archived projects entirely.
     stages: [
+      { id: "sourcing", title: "Sourcing" },
       { id: "proposal", title: "Proposal" },
       { id: "quote", title: "Quote" },
       { id: "confirming", title: "Confirming" },
@@ -142,7 +143,7 @@ export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) 
   p.pipeline === "completed" || (p.pipeline === "finance" && p.stage === "paid");
 
 export const STAGE_ACCENT: Record<StageId, string> = {
-  proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
+  sourcing: "amber", proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
   design: "magenta", proof: "magenta",
   purchasing: "slate", production: "navy",
   // legacy — kept for historical log-entry rendering

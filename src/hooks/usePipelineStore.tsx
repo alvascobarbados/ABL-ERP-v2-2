@@ -331,7 +331,7 @@ export interface MoveValidation {
 
 /** Forward order of stages across all pipelines. `archive` is treated as a terminal exit (not part of the linear flow). */
 export const STAGE_ORDER: StageId[] = [
-  "proposal", "quote", "confirming",
+  "sourcing", "proposal", "quote", "confirming",
   "design", "proof",
   "purchasing", "production",
   // legacy stage IDs kept in the order so historical log entries still rank correctly
@@ -394,7 +394,7 @@ interface PipelineStoreCtx {
   updateLineItem: (projectId: string, index: number, item: LineItem) => Promise<void>;
   removeLineItem: (projectId: string, index: number) => Promise<void>;
   duplicateProject: (projectId: string) => Promise<Project | null>;
-  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string; initialStage?: "proposal" | "quote" | "confirming" }) => Promise<Project | null>;
+  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string; initialStage?: "sourcing" | "proposal" | "quote" | "confirming" }) => Promise<Project | null>;
   toggleFlag: (projectId: string) => Promise<void>;
   softDeleteProject: (projectId: string) => Promise<{ restoredFrom: { pipeline: PipelineId; stage: StageId } } | null>;
   restoreProject: (projectId: string) => Promise<{ pipeline: PipelineId; stage: StageId } | null>;
@@ -759,7 +759,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const createProject = useCallback<PipelineStoreCtx["createProject"]>(async (input) => {
     const u = userRef.current;
-    const initialStage: StageId = input.initialStage ?? "proposal";
+    const initialStage: StageId = input.initialStage ?? "sourcing";
     const needsQuote = initialStage === "quote" || initialStage === "confirming";
     let newProj: Project = {
       id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,

@@ -167,7 +167,7 @@ function projectMatchesSearch(p: Project, q: string): boolean {
 
 function projectHasMissingData(p: Project): boolean {
   const stageRank: Record<StageId, number> = {
-    proposal: 0, quote: 1, confirming: 2, archive: 0,
+    sourcing: 0, proposal: 0, quote: 1, confirming: 2, archive: 0,
     design: 2, proof: 2,
     purchasing: 3, production: 4,
     preproduction: 3, in_production: 4, // legacy
@@ -772,7 +772,8 @@ const Index = () => {
               onSwipeBack={onSwipeBack}
               onOpenPicker={onOpenPicker}
               emptyHint={
-                stage.id === "proposal" ? "No projects here yet. New leads will appear in Proposal."
+                stage.id === "sourcing" ? "No projects here yet. New leads will appear in Sourcing."
+                : stage.id === "proposal" ? "No projects here. Move a sourced lead forward when you're ready to write the proposal."
                 : stage.id === "archive" ? "Nothing archived. Cold or lost projects will land here."
                 : stage.id === "invoice_required" ? "No projects awaiting an invoice."
                 : undefined

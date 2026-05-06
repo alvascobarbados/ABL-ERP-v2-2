@@ -104,7 +104,7 @@ function stageLabel(c: PipelineCard, _activeTab: TabId): string {
 // Stage progression rank within each pipeline. Lower = earlier in the flow.
 // Shipping collapses to a single rank (only one user-facing stage).
 const STAGE_RANK: Record<StageId, number> = {
-  proposal: 0, quote: 1, confirming: 2, archive: 99,
+  sourcing: 0, proposal: 1, quote: 2, confirming: 3, archive: 99,
   design: 0, proof: 1,
   purchasing: 0, production: 0,
   preproduction: 0, in_production: 1, // legacy

@@ -1,0 +1,2 @@
+ALTER TABLE public.projects DROP CONSTRAINT projects_stage_chk;
+ALTER TABLE public.projects ADD CONSTRAINT projects_stage_chk CHECK (stage_id = ANY (ARRAY['sourcing'::text, 'proposal'::text, 'quote'::text, 'confirming'::text, 'archive'::text, 'design'::text, 'proof'::text, 'purchasing'::text, 'production'::text, 'shipment_required'::text, 'shipment_assigned'::text, 'invoice_required'::text, 'invoiced'::text, 'paid'::text, 'preproduction'::text, 'in_production'::text, 'completed'::text]));
