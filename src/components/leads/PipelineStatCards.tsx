@@ -1,12 +1,12 @@
 /**
- * Pipeline stat cards — desktop, restructured into labeled rows.
+ * Pipeline stat cards — desktop, single-row layout.
  *
- * Renders TWO of the three rows in the new top-of-pipeline layout:
- *   Row 1 — "ACTIVE" label + a single compact Active card (left-aligned).
- *   Row 2 — "STAGE" label + 7 equal-width workflow cards (Sales → … → Completed)
- *           with ChevronRight arrows between adjacent cards.
+ * Row 1: [ALL label]              [STAGE label]
+ *        [Active card] | [Sales › Design › Purchasing › Production › Shipping › Finance › Completed]
  *
- * Row 3 (sub-stage) is rendered separately by Index.tsx via SubStageRow.
+ * A single 2-column CSS grid (95px / 1fr) drives label-to-card alignment so
+ * "ALL" sits perfectly above the 95px Active card. Row 2 (sub-stage) is
+ * rendered separately by Index.tsx via SubStageRow.
  */
 import { cn } from "@/lib/utils";
 import {
@@ -24,7 +24,7 @@ interface Props {
   completedCount?: number;
   pulse?: PipelineId | null;
   loading?: boolean;
-  /** Unused in new layout — kept for API compatibility. */
+  /** Unused — kept for API compatibility. */
   showFin?: boolean;
 }
 
@@ -41,6 +41,7 @@ const ICON_FOR: Record<TabId, typeof Radio> = {
 };
 
 const SAGE = "#6B8E5A";
+const ACTIVE_COL_WIDTH = 95;
 
 const CountSlot = ({ value, loading, fontSize }: { value: number; loading?: boolean; fontSize: number }) => {
   if (loading) {
@@ -60,20 +61,41 @@ const CountSlot = ({ value, loading, fontSize }: { value: number; loading?: bool
   return <span style={{ fontSize, lineHeight: 1, fontWeight: 500 }}>{value}</span>;
 };
 
-const RowLabel = ({ children }: { children: React.ReactNode }) => (
-  <div
-    className="uppercase"
-    style={{
-      fontSize: 10,
-      fontWeight: 500,
-      letterSpacing: "0.10em",
-      color: "rgba(27, 42, 78, 0.5)",
-      marginBottom: 7,
-    }}
-  >
-    {children}
-  </div>
-);
+/**
+ * Shared row-label primitive. Two visual variants:
+ * - "section" (default) — 10px / 500 / navy 50% / 0.10em — used for STAGE, SUB-STAGE.
+ * - "tight"             — 8px  / 600 / navy 100% / 0.12em — used for ALL.
+ */
+export const RowLabel = ({
+  children,
+  variant = "section",
+  dim = false,
+  style,
+}: {
+  children: React.ReactNode;
+  variant?: "section" | "tight";
+  dim?: boolean;
+  style?: React.CSSProperties;
+}) => {
+  const tight = variant === "tight";
+  const baseColor = tight ? "rgba(27,42,78,1)" : "rgba(27,42,78,0.5)";
+  const dimmed = "rgba(27,42,78,0.35)";
+  return (
+    <div
+      className="uppercase"
+      style={{
+        fontSize: tight ? 8 : 10,
+        fontWeight: tight ? 600 : 500,
+        letterSpacing: tight ? "0.12em" : "0.10em",
+        color: dim ? dimmed : baseColor,
+        marginBottom: tight ? 4 : 7,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+};
 
 interface CardProps {
   id: TabId;
@@ -98,16 +120,16 @@ const StatCard = ({ id, title, count, active, accent, onClick, pulse, loading, v
   const iconColor = active ? "rgba(255,255,255,0.95)" : accent;
   const iconOpacity = active ? 1 : 0.85;
 
-  const titleSize = 11;
-  const countSize = isCompact ? 22 : 28;
-  const iconSize = isCompact ? 17 : 20;
-  const padding = isCompact ? "9px 14px" : "14px 16px";
+  const titleSize = isCompact ? 10 : 11;
+  const countSize = isCompact ? 20 : 28;
+  const iconSize = isCompact ? 16 : 20;
+  const padding = isCompact ? "12px" : "14px 16px";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={cn("relative flex flex-col text-left transition-all rounded-xl border hover:shadow-sm w-full")}
+      className={cn("relative flex flex-col text-left transition-all rounded-xl border hover:shadow-sm w-full h-full")}
       style={{
         padding,
         backgroundColor: fillBg,
@@ -152,6 +174,19 @@ const FlowArrow = () => (
   </div>
 );
 
+const Divider = () => (
+  <div
+    aria-hidden
+    className="shrink-0 self-stretch"
+    style={{
+      width: 1,
+      backgroundColor: "rgba(27,42,78,0.18)",
+      marginLeft: 14,
+      marginRight: 14,
+    }}
+  />
+);
+
 export const PipelineStatCards = ({
   active, onChange, counts, completedCount = 0, pulse, loading,
 }: Props) => {
@@ -163,12 +198,20 @@ export const PipelineStatCards = ({
     "sales", "design", "purchasing", "production", "shipping", "finance", "completed",
   ];
 
+  const gridCols = `${ACTIVE_COL_WIDTH}px 1fr`;
+
   return (
-    <div className="w-full flex flex-col" style={{ gap: 14 }}>
-      {/* Row 1 — ACTIVE */}
-      <div>
-        <RowLabel>Active</RowLabel>
-        <div style={{ width: 200 }}>
+    <div className="w-full">
+      {/* Label row — two zones aligned over the cards below */}
+      <div className="grid w-full" style={{ gridTemplateColumns: gridCols, columnGap: 0 }}>
+        <RowLabel variant="tight">All</RowLabel>
+        {/* Offset the STAGE label past the divider's 1px + 14px+14px margins so it sits over the first stage card */}
+        <RowLabel style={{ paddingLeft: 29 }}>Stage</RowLabel>
+      </div>
+
+      {/* Card row — Active | divider | 7 stage cards */}
+      <div className="grid w-full items-stretch" style={{ gridTemplateColumns: gridCols, columnGap: 0 }}>
+        <div style={{ width: ACTIVE_COL_WIDTH }}>
           <StatCard
             id="all"
             title="Active"
@@ -180,41 +223,40 @@ export const PipelineStatCards = ({
             variant="compact"
           />
         </div>
-      </div>
 
-      {/* Row 2 — STAGE */}
-      <div>
-        <RowLabel>Stage</RowLabel>
-        <div className="flex items-stretch w-full" style={{ gap: 0 }}>
-          {workflowIds.map((p, i) => {
-            const isCompletedCard = p === "completed";
-            const meta = isCompletedCard
-              ? { id: "completed" as PipelineId, title: "Completed" }
-              : PIPELINES.find((x) => x.id === p);
-            if (!meta) return null;
-            const isActive = isCompletedCard ? active === "completed" : active === p;
-            const accent = isCompletedCard ? SAGE : PIPELINE_ACCENT[p].hex;
-            const count = isCompletedCard ? completedCount : counts[p];
-            const tabId: TabId = isCompletedCard ? "completed" : p;
-            return (
-              <div key={p} className="flex items-stretch" style={{ flex: "1 1 0%", minWidth: 0 }}>
-                {i > 0 && <FlowArrow />}
-                <div className="flex-1 min-w-0 flex">
-                  <StatCard
-                    id={tabId}
-                    title={meta.title}
-                    count={count}
-                    active={isActive}
-                    accent={accent}
-                    onClick={() => onChange(tabId)}
-                    pulse={!isCompletedCard && pulse === p}
-                    loading={loading}
-                    variant="stage"
-                  />
+        <div className="flex items-stretch min-w-0">
+          <Divider />
+          <div className="flex items-stretch flex-1 min-w-0" style={{ gap: 0 }}>
+            {workflowIds.map((p, i) => {
+              const isCompletedCard = p === "completed";
+              const meta = isCompletedCard
+                ? { id: "completed" as PipelineId, title: "Completed" }
+                : PIPELINES.find((x) => x.id === p);
+              if (!meta) return null;
+              const isActive = isCompletedCard ? active === "completed" : active === p;
+              const accent = isCompletedCard ? SAGE : PIPELINE_ACCENT[p].hex;
+              const count = isCompletedCard ? completedCount : counts[p];
+              const tabId: TabId = isCompletedCard ? "completed" : p;
+              return (
+                <div key={p} className="flex items-stretch" style={{ flex: "1 1 0%", minWidth: 0 }}>
+                  {i > 0 && <FlowArrow />}
+                  <div className="flex-1 min-w-0 flex">
+                    <StatCard
+                      id={tabId}
+                      title={meta.title}
+                      count={count}
+                      active={isActive}
+                      accent={accent}
+                      onClick={() => onChange(tabId)}
+                      pulse={!isCompletedCard && pulse === p}
+                      loading={loading}
+                      variant="stage"
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

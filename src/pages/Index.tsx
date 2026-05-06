@@ -11,7 +11,7 @@ import { usePipelineStore, getStageTitle, validateMove, isForwardMove } from "@/
 import { StageSection } from "@/components/leads/StageSection";
 import { ProjectCard } from "@/components/leads/ProjectCard";
 import { PipelineTabs } from "@/components/leads/PipelineTabs";
-import { PipelineStatCards } from "@/components/leads/PipelineStatCards";
+import { PipelineStatCards, RowLabel } from "@/components/leads/PipelineStatCards";
 import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
 import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
@@ -611,28 +611,20 @@ const Index = () => {
               loading={loading}
               showFin={activeTab === "sales" || activeTab === "design" || activeTab === "finance"}
             />
-            <div style={{ marginTop: 14 }}>
-              <div
-                className="uppercase"
-                style={{
-                  fontSize: 10,
-                  fontWeight: 500,
-                  letterSpacing: "0.10em",
-                  color: "rgba(27, 42, 78, 0.5)",
-                  marginBottom: 7,
-                }}
-              >
-                Sub-stage
-              </div>
-              <div style={{ width: "70%" }}>
-                <SubStageRow
-                  activeTab={activeTab}
-                  selectedStage={subStage}
-                  onSelect={setSubStage}
-                  stageCounts={stageCounts}
-                />
-              </div>
-            </div>
+            {(() => {
+              const hasSub = activeTab === "sales" || activeTab === "design" || activeTab === "finance";
+              return (
+                <div style={{ marginTop: 14, maxWidth: "70%" }}>
+                  <RowLabel dim={!hasSub}>Sub-stage</RowLabel>
+                  <SubStageRow
+                    activeTab={activeTab}
+                    selectedStage={subStage}
+                    onSelect={setSubStage}
+                    stageCounts={stageCounts}
+                  />
+                </div>
+              );
+            })()}
           </div>
         </div>
 
