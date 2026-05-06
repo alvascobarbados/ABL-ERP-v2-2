@@ -290,6 +290,9 @@ export interface Project {
   salesShippingLabel?: SalesShippingLabel; // Sales-only display string
   shipmentId?: string;          // assigned in Shipping
   trackingRef?: string;         // free-form / FCL- / LCL- / carrier digits
+  weightKg?: number;            // physical shipment weight (kg, decimal)
+  cbm?: number;                 // cubic meters (decimal)
+  numPackages?: number;         // integer count
   pipeline: PipelineId;
   stage: StageId;
   deadline?: string;
