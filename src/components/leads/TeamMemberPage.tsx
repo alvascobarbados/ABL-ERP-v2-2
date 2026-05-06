@@ -82,7 +82,7 @@ export const TeamMemberPage = ({ memberId }: { memberId: string }) => {
       const { data } = await supabase
         .from("project_log_entries")
         .select("*")
-        .eq("actor_display_name", member.full_name)
+        .eq("actor_display_name", shortNameFromFull(member.full_name))
         .order("ts", { ascending: false })
         .limit(25);
       if (!cancel) {
