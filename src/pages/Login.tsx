@@ -1,9 +1,10 @@
 /**
- * Austere internal-team login. Wordmark, subtitle, Google button.
+ * Austere internal-team login. Wordmark, subtitle, Google + Magic Link.
  */
 import { useState } from "react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 
 const GoogleG = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -14,8 +15,31 @@ const GoogleG = () => (
   </svg>
 );
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const friendlyError = (msg?: string): string => {
+  const m = (msg ?? "").toLowerCase();
+  if (m.includes("rate") || m.includes("seconds") || m.includes("only request")) {
+    return "Too many attempts. Wait a moment and try again.";
+  }
+  if (m.includes("disabled") || m.includes("not enabled") || m.includes("signups not allowed")) {
+    return "Email sign-in is currently unavailable. Use Google or contact your admin.";
+  }
+  if (m.includes("network") || m.includes("fetch") || m.includes("failed to fetch")) {
+    return "Connection error. Try again.";
+  }
+  return "Something went wrong. Try again.";
+};
+
 export default function Login() {
   const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  const cleanEmail = email.trim().toLowerCase();
+  const validEmail = EMAIL_RE.test(cleanEmail);
 
   const onGoogle = async () => {
     setBusy(true);
@@ -25,6 +49,28 @@ export default function Login() {
     if (result.error) {
       toast.error(result.error.message ?? "Sign-in failed");
       setBusy(false);
+    }
+  };
+
+  const onSendLink = async () => {
+    if (!validEmail || sending) return;
+    setSending(true);
+    setEmailError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) {
+        setEmailError(friendlyError(error.message));
+        setSending(false);
+        return;
+      }
+      setSentTo(cleanEmail);
+    } catch (e) {
+      setEmailError(friendlyError(e instanceof Error ? e.message : ""));
+    } finally {
+      setSending(false);
     }
   };
 
@@ -52,6 +98,63 @@ export default function Login() {
           <GoogleG />
           {busy ? "Redirecting…" : "Sign in with Google"}
         </button>
+
+        {/* Divider */}
+        <div className="mt-6 mb-4 w-full flex items-center gap-3" aria-hidden="true">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-[13px] text-muted-foreground">or</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
+        {sentTo ? (
+          <div
+            className="w-full rounded-xl border px-4 py-3 text-[13px] text-left"
+            style={{ borderColor: "hsl(var(--brand-navy) / 0.2)", color: "hsl(var(--brand-navy))" }}
+          >
+            <div className="font-medium">✓ Sign-in link sent to {sentTo}</div>
+            <div className="mt-1 text-muted-foreground">Check your inbox. The link expires in 1 hour.</div>
+            <button
+              onClick={() => { setSentTo(null); setEmail(""); }}
+              className="mt-2 text-[12px] underline text-muted-foreground hover:text-foreground"
+            >
+              Use a different email
+            </button>
+          </div>
+        ) : (
+          <div className="w-full flex flex-col gap-2">
+            <label className="text-left text-[12px] text-muted-foreground" htmlFor="login-email">
+              Email address
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(null); }}
+              onBlur={() => setEmail((v) => v.trim().toLowerCase())}
+              onKeyDown={(e) => { if (e.key === "Enter") void onSendLink(); }}
+              placeholder="you@alvas.co"
+              className="w-full rounded-xl border bg-white px-3 py-3 text-[14px] outline-none focus:ring-2 focus:ring-offset-1"
+              style={{ borderColor: "hsl(var(--brand-navy) / 0.2)", minHeight: 48 }}
+            />
+            {emailError && (
+              <div className="text-left text-[12px] text-destructive">{emailError}</div>
+            )}
+            <button
+              onClick={onSendLink}
+              disabled={!validEmail || sending}
+              className="mt-1 w-full inline-flex items-center justify-center rounded-xl px-4 py-3 text-[14px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: "hsl(var(--brand-navy))",
+                color: "white",
+                minHeight: 48,
+              }}
+            >
+              {sending ? "Sending…" : "Send sign-in link"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
