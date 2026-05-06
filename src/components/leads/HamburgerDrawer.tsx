@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Factory, Users, HelpCircle, LogOut, Trash2, UserCircle2, Archive } from "lucide-react";
+import { X, Factory, Users, HelpCircle, LogOut, Trash2, UserCircle2, Archive, KanbanSquare, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -87,6 +87,11 @@ export const HamburgerDrawer = ({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+          <div className="px-5 pb-1 text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70 font-medium">Main</div>
+          <MenuItem icon={KanbanSquare} label="Pipeline"     onClick={() => { onClose(); navigate("/"); }} />
+          <MenuItem icon={Activity}     label="Activity Log" onClick={() => { onClose(); navigate("/activity"); }} />
+
+          <div className="my-3 mx-3 border-t" style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }} />
           <div className="px-5 pb-1 text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70 font-medium">Lists</div>
           <MenuItem icon={Users}        label="Customers" onClick={() => { onClose(); navigate("/customers"); }} />
           <MenuItem icon={Factory}      label="Suppliers" onClick={() => { onClose(); navigate("/suppliers"); }} />
