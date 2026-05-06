@@ -666,6 +666,35 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         onSave={saveTracking}
       />
       <TextEditor
+        open={editor?.kind === "weight"}
+        onClose={() => setEditor(null)}
+        title="Weight (kg)"
+        value={live.weightKg != null ? String(live.weightKg) : ""}
+        placeholder="0"
+        digitsOnly
+        allowDecimal
+        onSave={saveWeight}
+      />
+      <TextEditor
+        open={editor?.kind === "cbm"}
+        onClose={() => setEditor(null)}
+        title="CBM"
+        value={live.cbm != null ? String(live.cbm) : ""}
+        placeholder="0"
+        digitsOnly
+        allowDecimal
+        onSave={saveCbm}
+      />
+      <TextEditor
+        open={editor?.kind === "packages"}
+        onClose={() => setEditor(null)}
+        title="No. of Packages"
+        value={live.numPackages != null ? String(live.numPackages) : ""}
+        placeholder="0"
+        digitsOnly
+        onSave={savePackages}
+      />
+      <TextEditor
         open={editor?.kind === "addNote"}
         onClose={() => setEditor(null)}
         title="Add note"
