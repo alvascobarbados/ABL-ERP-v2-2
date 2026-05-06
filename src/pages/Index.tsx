@@ -670,6 +670,14 @@ const Index = () => {
             />
             <div className="flex items-center gap-3">
               <ViewSwitcher value={desktopView} onChange={setDesktopView} />
+              {desktopView === "table" && (() => {
+                const tabLabel = activeTab === "all"
+                  ? "Active"
+                  : activeTab === "completed"
+                    ? "Completed"
+                    : (PIPELINES.find((p) => p.id === activeTab)?.title ?? activeTab);
+                return <ColumnsPopover activeTab={activeTab} tabLabel={tabLabel} />;
+              })()}
               <div className="flex-1 min-w-0">
               <TopControls
                   filter={filters}
