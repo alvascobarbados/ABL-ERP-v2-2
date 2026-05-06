@@ -489,13 +489,14 @@ export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: 
   const [mode, setMode] = useState<ShippingMode>("Ocean");
   const [initials, setInitials] = useState("");
   const [fullName, setFullName] = useState("");
+  const [teamEmail, setTeamEmail] = useState("");
   const [industry, setIndustry] = useState("");
   const [unit, setUnit] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setName(initialName);
-    setCountry(""); setMode("Ocean"); setInitials(""); setFullName("");
+    setCountry(""); setMode("Ocean"); setInitials(""); setFullName(""); setTeamEmail("");
     setIndustry(""); setUnit("");
   }, [open, initialName]);
 
