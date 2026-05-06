@@ -26,7 +26,8 @@ interface ProjectCardProps {
 
 const DAY = 86400000;
 
-function getUrgency(date: Date) {
+function getUrgency(date?: Date | null) {
+  if (!date) return { label: "—", tone: "neutral" as const };
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const diff = Math.round((d.getTime() - today.getTime()) / DAY);
@@ -707,12 +708,16 @@ export const ProjectCard = ({
                   className="text-[12px] font-medium tabular"
                   style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
                 >
-                  {card.deadline}
+                  {card.deadline ?? "—"}
                 </span>
-                <span style={{ color: "hsl(var(--brand-navy) / 0.30)" }}>·</span>
-                <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
-                  {u.label}
-                </span>
+                {card.deadlineDate && (
+                  <>
+                    <span style={{ color: "hsl(var(--brand-navy) / 0.30)" }}>·</span>
+                    <span className="text-[12px] font-semibold tabular" style={{ color: urgencyHex(u.tone) }}>
+                      {u.label}
+                    </span>
+                  </>
+                )}
               </span>
             </div>
           </div>
