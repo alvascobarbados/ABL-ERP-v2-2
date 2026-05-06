@@ -873,7 +873,7 @@ export const SectionHeader = ({ children }: { children: React.ReactNode }) => (
   </h2>
 );
 
-const SectionCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+export const SectionCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div
     className={cn("rounded-2xl px-5 py-5 lg:px-6 lg:py-6", className)}
     style={{
