@@ -167,7 +167,7 @@ function projectMatchesSearch(p: Project, q: string): boolean {
 
 function projectHasMissingData(p: Project): boolean {
   const stageRank: Record<StageId, number> = {
-    proposal: 0, quote: 1, confirming: 2, archive: 0,
+    sourcing: 0, proposal: 0, quote: 1, confirming: 2, archive: 0,
     design: 2, proof: 2,
     purchasing: 3, production: 4,
     preproduction: 3, in_production: 4, // legacy
