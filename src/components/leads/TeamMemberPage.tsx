@@ -19,6 +19,7 @@ import { BottomSheet } from "@/components/leads/EditorSheets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMasterData, parseInitials, type TeamMember } from "@/hooks/useMasterData";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { shortNameFromFull } from "@/lib/utils";
 
 
 const ROLE_OPTIONS = ["Sales", "Mixed", "Production", "Finance", "Design", "Other"] as const;
@@ -82,7 +83,7 @@ export const TeamMemberPage = ({ memberId }: { memberId: string }) => {
       const { data } = await supabase
         .from("project_log_entries")
         .select("*")
-        .eq("actor_display_name", member.full_name)
+        .eq("actor_display_name", shortNameFromFull(member.full_name))
         .order("ts", { ascending: false })
         .limit(25);
       if (!cancel) {

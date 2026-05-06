@@ -19,7 +19,7 @@ import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { useMasterData } from "@/hooks/useMasterData";
 import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
-import { cn } from "@/lib/utils";
+import { cn, shortNameFromFull } from "@/lib/utils";
 import { DateRangeFilter, ALL_TIME, DateRangeValue } from "@/components/leads/DateRangeFilter";
 import { exportActivityPdf, ActivityPdfGroup } from "@/lib/activityPdf";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
@@ -245,7 +245,7 @@ export default function ActivityPage() {
     if (search) q = q.ilike("description", `%${search}%`);
     if (memberFilter) {
       const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
-      if (tm) q = q.eq("actor_display_name", tm.full_name);
+      if (tm) q = q.eq("actor_display_name", shortNameFromFull(tm.full_name));
     }
     if (dateRange.from) q = q.gte("ts", dateRange.from.toISOString());
     if (dateRange.to) q = q.lte("ts", dateRange.to.toISOString());
@@ -274,7 +274,7 @@ export default function ActivityPage() {
     if (search) q = q.ilike("description", `%${search}%`);
     if (memberFilter) {
       const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
-      if (tm) q = q.eq("actor_display_name", tm.full_name);
+      if (tm) q = q.eq("actor_display_name", shortNameFromFull(tm.full_name));
     }
     if (dateRange.from) q = q.gte("ts", dateRange.from.toISOString());
     if (dateRange.to) q = q.lte("ts", dateRange.to.toISOString());
@@ -299,7 +299,7 @@ export default function ActivityPage() {
         if (search && !(r.description ?? "").toLowerCase().includes(search.toLowerCase())) return;
         if (memberFilter) {
           const tm = md.teamMembers.find((t) => t.initials.toUpperCase() === memberFilter);
-          if (!tm || r.actor_display_name !== tm.full_name) return;
+          if (!tm || r.actor_display_name !== shortNameFromFull(tm.full_name)) return;
         }
         const ts = new Date(r.ts).getTime();
         if (dateRange.from && ts < dateRange.from.getTime()) return;
