@@ -503,6 +503,7 @@ interface RowProps {
   card: PipelineCard;
   activeTab: TabId;
   gridCols: string;
+  visibleKeys: Set<SortKey>;
   isMenuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
