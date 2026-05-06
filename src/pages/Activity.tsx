@@ -611,7 +611,10 @@ function ActivityRow({
   const tm = teamMembers.find((t) => t.full_name === row.actor_display_name);
   const initials = (tm?.initials ?? row.actor_display_name.slice(0, 2)).toUpperCase();
   const avatarColor = colorForInitials(initials);
-  const desc = formatDescription(row);
+  const sentence = buildSentence(row);
+  const projectLabel = projectFallbackLabel(project, row.project_id);
+  const projectClickable = !!project;
+  const astTime = fmtAstTime(new Date(row.ts));
 
   return (
     <li
@@ -634,19 +637,21 @@ function ActivityRow({
         </div>
         <div className="flex-1 min-w-0 truncate text-[13px]" style={{ color: "hsl(var(--brand-navy) / 0.9)" }}>
           <span style={{ fontWeight: 600 }}>{row.actor_display_name}</span>{" "}
-          <span>{desc}</span>
-          {project && (
-            <>
-              <span style={{ color: "hsl(var(--brand-navy) / 0.4)" }}> · </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); onOpenProject(row.project_id); }}
-                className="hover:underline"
-                style={{ color: "hsl(var(--brand-navy))", fontWeight: 500 }}
-              >
-                {project.customer} · {project.projectName}
-              </button>
-            </>
+          <span>{sentence.pre}</span>
+          {projectClickable ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenProject(row.project_id); }}
+              className="hover:underline"
+              style={{ color: "hsl(var(--brand-navy))", fontWeight: 500 }}
+            >
+              {projectLabel}
+            </button>
+          ) : (
+            <span style={{ color: "hsl(var(--brand-navy) / 0.5)", fontStyle: "italic" }}>{projectLabel}</span>
           )}
+          {sentence.post && <span>{sentence.post}</span>}
+          <span style={{ color: "hsl(var(--brand-navy) / 0.4)" }}> · </span>
+          <span style={{ color: "hsl(var(--brand-navy) / 0.55)" }}>{astTime}</span>
         </div>
         <div className="text-[11px] tabular-nums shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.5)" }}>
           {fmtTime(new Date(row.ts), now)}
