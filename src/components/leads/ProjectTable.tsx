@@ -291,10 +291,9 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             className="sticky top-0 z-20 grid items-center text-[11px] font-semibold uppercase tracking-[0.05em] rounded-t-2xl"
             style={{
               gridTemplateColumns: gridCols,
-              backgroundColor: "#F7F4ED",
+              backgroundColor: "rgba(27, 42, 78, 0.06)",
               color: "hsl(var(--brand-navy) / 0.6)",
-              borderBottom: "1px solid hsl(var(--brand-navy) / 0.1)",
-              boxShadow: "0 1px 0 hsl(var(--brand-navy) / 0.04)",
+              borderBottom: "1px solid rgba(27, 42, 78, 0.10)",
             }}
           >
             {COLS.map((c) => {
