@@ -22,7 +22,7 @@ interface Props {
 }
 
 const MULTI_STAGE: PipelineId[] = ["sales", "design", "finance"];
-const ROW_HEIGHT = 54;
+const ROW_HEIGHT = 40;
 const ORANGE = "#E97B2C";
 const PILL_BG = "rgba(233,123,44,0.12)";
 const PILL_BORDER = "rgba(233,123,44,0.35)";
