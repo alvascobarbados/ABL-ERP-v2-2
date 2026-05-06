@@ -8,11 +8,12 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users, Factory, UserCircle2, Trash2, HelpCircle, Settings,
-  Archive, KanbanSquare, ChevronLeft, Activity,
+  Archive, KanbanSquare, ChevronLeft, Activity, LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface Props {
   trashCount: number;
@@ -114,6 +115,7 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
   };
 
   const { collapsed, toggle } = useSidebarCollapsed();
+  const user = useCurrentUser();
   if (collapsed) return null;
 
   return (
@@ -179,19 +181,20 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
               color: "#fff",
             }}
           >
-            AV
+            {user.initials}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-semibold truncate" style={{ color: "#fff" }}>
-              Avinash
+              {user.shortName}
             </div>
             <div className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
-              Admin
+              {user.role ?? "Team"}
             </div>
           </div>
         </div>
         {renderItem({ icon: HelpCircle, label: "Help", onClick: () => toast("Help docs coming soon") }, "fh")}
         {renderItem({ icon: Settings, label: "Settings", onClick: () => toast("Settings coming soon") }, "fs")}
+        {renderItem({ icon: LogOut, label: "Sign out", onClick: () => { void user.signOut(); } }, "fo")}
       </div>
     </aside>
   );
