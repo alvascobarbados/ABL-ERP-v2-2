@@ -80,6 +80,7 @@ export const useFriendlyMode = () => {
 
 // ─── Plain-language labels ───
 export const FRIENDLY_STAGE_LABELS: Record<StageId, string> = {
+  sourcing: "Sourcing — finding the right supplier",
   proposal: "Proposal — needs writing",
   quote: "Quote — needs pricing",
   confirming: "Waiting for customer to confirm",
