@@ -584,7 +584,7 @@ const Index = () => {
 
         {/* Desktop identity strip — skinny, right-aligned, above chevron */}
         <div className="hidden lg:block border-b border-border/60" style={{ backgroundColor: "hsl(var(--background))" }}>
-          <div className="max-w-none px-4 sm:px-6 h-10 flex items-center justify-end gap-2">
+          <div className="max-w-none px-4 sm:px-6 h-8 flex items-center justify-end gap-2">
             <UserMenu />
             <SettingsMenu />
           </div>
@@ -601,7 +601,7 @@ const Index = () => {
           {/* Desktop pipeline stat cards + persistent sub-stage row.
               Sub-stage row always exists (empty when active pipeline has no
               sub-stages) so the filter row never shifts vertically. */}
-          <div className="hidden lg:block max-w-none px-6 lg:px-8 pt-3 pb-2">
+          <div className="hidden lg:block max-w-none px-6 lg:px-8" style={{ paddingTop: 5, paddingBottom: 4 }}>
             <PipelineStatCards
               active={activeTab}
               onChange={setActiveTab}
@@ -614,7 +614,7 @@ const Index = () => {
             {(() => {
               const hasSub = activeTab === "sales" || activeTab === "design" || activeTab === "finance";
               return (
-                <div style={{ marginTop: 14, maxWidth: "70%" }}>
+                <div style={{ marginTop: 10, maxWidth: "70%" }}>
                   <RowLabel dim={!hasSub}>Sub-stage</RowLabel>
                   <SubStageRow
                     activeTab={activeTab}
