@@ -604,6 +604,17 @@ export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: 
               <label className={labelCls}>Full name</label>
               <input value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputCls} style={{ minHeight: 48 }} placeholder="Alvasco Admin" />
             </div>
+            <div>
+              <label className={labelCls}>Email (optional)</label>
+              <input
+                type="email"
+                value={teamEmail}
+                onChange={(e) => setTeamEmail(e.target.value)}
+                className={inputCls}
+                style={{ minHeight: 48 }}
+                placeholder="name@alvasco.com"
+              />
+            </div>
           </>
         )}
         {kind === "product" && (
