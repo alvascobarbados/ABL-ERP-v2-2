@@ -378,6 +378,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                 card={card}
                 activeTab={activeTab}
                 gridCols={gridCols}
+                stickyLefts={stickyLefts}
                 isMenuOpen={menuFor === card.id}
                 onMenuOpenChange={(open) => setMenuFor(open ? card.id : null)}
                 onOpen={() => onOpenCard(card)}
