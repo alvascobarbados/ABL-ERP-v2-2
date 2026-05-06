@@ -611,13 +611,27 @@ const Index = () => {
               loading={loading}
               showFin={activeTab === "sales" || activeTab === "design" || activeTab === "finance"}
             />
-            <div style={{ marginTop: 10 }}>
-              <SubStageRow
-                activeTab={activeTab}
-                selectedStage={subStage}
-                onSelect={setSubStage}
-                stageCounts={stageCounts}
-              />
+            <div style={{ marginTop: 14 }}>
+              <div
+                className="uppercase"
+                style={{
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: "0.10em",
+                  color: "rgba(27, 42, 78, 0.5)",
+                  marginBottom: 7,
+                }}
+              >
+                Sub-stage
+              </div>
+              <div style={{ width: "70%" }}>
+                <SubStageRow
+                  activeTab={activeTab}
+                  selectedStage={subStage}
+                  onSelect={setSubStage}
+                  stageCounts={stageCounts}
+                />
+              </div>
             </div>
           </div>
         </div>
