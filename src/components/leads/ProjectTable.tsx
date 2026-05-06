@@ -430,7 +430,7 @@ const TableRow = ({
 
   // ── Inline-edit state ────────────────────────────────────────────────
   // Active entity popover: which kind is open (only one at a time).
-  const [openPicker, setOpenPicker] = useState<EntityKindKey | "mode" | null>(null);
+  const [openPicker, setOpenPicker] = useState<EntityKindKey | "mode" | "stage" | null>(null);
   const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null);
   // Per-cell flash override (for entity/enum saves where popover closes first).
   const [flashCell, setFlashCell] = useState<{ key: string; tone: "success" | "error" } | null>(null);
