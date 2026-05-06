@@ -657,12 +657,40 @@ const TableRow = ({
   };
   const pickShippingMode = async (m: ShippingMode) => {
     setOpenPicker(null);
+    if (m === proj.shippingMode) return;
+    const hasTracking = !!proj.trackingRef && proj.trackingRef.trim() !== "";
+    const apply = async (clearTracking: boolean) => {
+      try {
+        const patch: any = { shippingMode: m };
+        if (clearTracking || m === "Local") patch.trackingRef = undefined;
+        await store.updateProject(proj.id, patch);
+        triggerFlash("mode", "success");
+      } catch (err: any) {
+        toast.error(err?.message ?? "Save failed");
+        triggerFlash("mode", "error");
+      }
+    };
+    if (hasTracking) {
+      setModeChangeConfirm({ from: proj.shippingMode, to: m, tracking: proj.trackingRef! });
+      return;
+    }
+    apply(false);
+  };
+
+  // Mode-change confirmation state (when tracking would be cleared).
+  const [modeChangeConfirm, setModeChangeConfirm] = useState<
+    { from: ShippingMode | undefined; to: ShippingMode; tracking: string } | null
+  >(null);
+  // Tracking editor (BottomSheet) — opened from inline cell click.
+  const [trackingEditorOpen, setTrackingEditorOpen] = useState(false);
+  const saveTracking = async (v: string | null) => {
+    setTrackingEditorOpen(false);
     try {
-      await store.updateProject(proj.id, { shippingMode: m });
-      triggerFlash("mode", "success");
+      await store.updateProject(proj.id, { trackingRef: v ?? undefined });
+      triggerFlash("trackingRef", "success");
     } catch (err: any) {
       toast.error(err?.message ?? "Save failed");
-      triggerFlash("mode", "error");
+      triggerFlash("trackingRef", "error");
     }
   };
 
