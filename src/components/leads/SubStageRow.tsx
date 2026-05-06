@@ -1,14 +1,17 @@
 /**
- * SubStageRow — full-width persistent sub-stage pill row.
+ * SubStageRow — persistent sub-stage pill row.
  *
  * Always rendered (reserves vertical space) so the filter row never jumps
- * vertically when switching between tabs that do/don't have sub-stages.
+ * between tabs that do/don't have sub-stages.
  *
  * Populated for: sales, design, finance.
- * Empty (neutral background) for: all, purchasing, production, shipping, completed.
+ * For pipelines without sub-stages, renders an inline "No sub-stages for X"
+ * hint (the parent row label dims separately in Index.tsx).
+ *
+ * All pills share a uniform soft-orange treatment regardless of position.
+ * The selected pill flips to solid orange + white text.
  */
 import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
-import { PIPELINE_ACCENT } from "@/lib/brand";
 import type { TabId } from "./PipelineTabs";
 
 interface Props {
@@ -20,6 +23,17 @@ interface Props {
 
 const MULTI_STAGE: PipelineId[] = ["sales", "design", "finance"];
 const ROW_HEIGHT = 54;
+const ORANGE = "#E97B2C";
+const PILL_BG = "rgba(233,123,44,0.12)";
+const PILL_BORDER = "rgba(233,123,44,0.35)";
+
+const PIPELINE_LABEL: Partial<Record<TabId, string>> = {
+  all: "All",
+  purchasing: "Purchasing",
+  production: "Production",
+  shipping: "Shipping",
+  completed: "Completed",
+};
 
 export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }: Props) => {
   const isMulti =
@@ -28,25 +42,27 @@ export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }:
     MULTI_STAGE.includes(activeTab as PipelineId);
 
   if (!isMulti) {
-    // Empty placeholder — preserves layout
+    const label = PIPELINE_LABEL[activeTab] ?? "this pipeline";
     return (
       <div
-        aria-hidden
+        className="flex items-center w-full"
         style={{ height: ROW_HEIGHT }}
-      />
+      >
+        <span
+          style={{
+            fontSize: 11,
+            fontStyle: "italic",
+            color: "rgba(27,42,78,0.35)",
+          }}
+        >
+          No sub-stages for {label}
+        </span>
+      </div>
     );
   }
 
   const pipelineId = activeTab as PipelineId;
   const pipeline = PIPELINES.find((p) => p.id === pipelineId)!;
-  const accent = PIPELINE_ACCENT[pipelineId].hex;
-  const total = pipeline.stages.length;
-
-  const ramp = (i: number) => {
-    if (total <= 1) return 1;
-    const min = 0.32;
-    return min + ((1 - min) * i) / (total - 1);
-  };
 
   return (
     <div
@@ -54,22 +70,13 @@ export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }:
       style={{ height: ROW_HEIGHT }}
     >
       <div className="flex-1 min-w-0 flex items-center" style={{ gap: 8 }}>
-        {pipeline.stages.map((s, i) => {
+        {pipeline.stages.map((s) => {
           const isActive = selectedStage === s.id;
           const count = stageCounts[s.id] ?? 0;
-          const shade = ramp(i);
-          const pct = Math.round(shade * 100);
-          const fill = isActive
-            ? `color-mix(in srgb, ${accent} ${pct}%, #FFFFFF)`
-            : "#FFFFFF";
-          const border = isActive
-            ? "transparent"
-            : `color-mix(in srgb, ${accent} ${Math.round(shade * 45)}%, transparent)`;
-          const labelColor = isActive
-            ? "#FFFFFF"
-            : `color-mix(in srgb, ${accent} ${pct}%, hsl(var(--brand-navy)))`;
-          const countColor = isActive ? "#FFFFFF" : accent;
-          const countOpacity = isActive ? 1 : 0.85;
+          const fill = isActive ? ORANGE : PILL_BG;
+          const border = isActive ? ORANGE : PILL_BORDER;
+          const labelColor = isActive ? "#FFFFFF" : ORANGE;
+          const countColor = isActive ? "#FFFFFF" : ORANGE;
 
           return (
             <button
@@ -82,7 +89,7 @@ export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }:
                 backgroundColor: fill,
                 border: `1px solid ${border}`,
                 cursor: "pointer",
-                boxShadow: isActive ? `0 1px 2px color-mix(in srgb, ${accent} 30%, transparent)` : "none",
+                boxShadow: isActive ? `0 1px 2px rgba(233,123,44,0.30)` : "none",
                 gap: 10,
               }}
             >
@@ -94,7 +101,7 @@ export const SubStageRow = ({ activeTab, selectedStage, onSelect, stageCounts }:
               </span>
               <span
                 className="font-semibold tabular shrink-0"
-                style={{ fontSize: 12, color: countColor, opacity: countOpacity, lineHeight: 1 }}
+                style={{ fontSize: 12, color: countColor, lineHeight: 1 }}
               >
                 {count}
               </span>
