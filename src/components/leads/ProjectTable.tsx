@@ -419,7 +419,7 @@ type EntityKindKey = "customer" | "supplier" | "rep";
 
 const TableRow = ({
   index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
-  onOpen, onToggleFlag, onEdit, onMoveStage, onDuplicate, onArchive, onDelete,
+  onOpen, onToggleFlag, onEdit, onMoveStage, onPickStage, onDuplicate, onArchive, onDelete,
 }: RowProps) => {
   const proj = card.project;
   const flagged = !!proj.flagged;
