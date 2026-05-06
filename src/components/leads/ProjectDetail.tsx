@@ -72,6 +72,9 @@ type EditorKind =
   | { kind: "po" }
   | { kind: "invoice" }
   | { kind: "tracking" }
+  | { kind: "weight" }
+  | { kind: "cbm" }
+  | { kind: "packages" }
   | { kind: "addNote" }
   | { kind: "addLineItem" }
   | { kind: "editLineItem"; index: number }
