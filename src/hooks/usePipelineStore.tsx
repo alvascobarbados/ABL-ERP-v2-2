@@ -181,7 +181,7 @@ function projectToRow(p: Project): any {
     tracking_ref: p.trackingRef ?? null,
     pipeline_id: p.pipeline,
     stage_id: p.stage,
-    deadline: p.deadline ?? null,
+    deadline: p.deadline ?? "—",
     deadline_date: p.deadlineDate ? p.deadlineDate.toISOString() : null,
     value: p.value,
     order_type: p.orderType,
