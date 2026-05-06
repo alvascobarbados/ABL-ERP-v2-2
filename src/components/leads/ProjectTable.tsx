@@ -423,6 +423,7 @@ interface RowProps {
   card: PipelineCard;
   activeTab: TabId;
   gridCols: string;
+  stickyLefts: number[];
   isMenuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
