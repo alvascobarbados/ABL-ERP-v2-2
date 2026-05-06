@@ -45,6 +45,7 @@ import { ProjectTable } from "@/components/leads/ProjectTable";
 import { SubChevron } from "@/components/leads/SubChevron";
 import { SubStageRow } from "@/components/leads/SubStageRow";
 import { ViewSwitcher } from "@/components/leads/ViewSwitcher";
+import { ColumnsPopover } from "@/components/leads/ColumnsPopover";
 import { useViewMode } from "@/hooks/useViewMode";
 import { NewProjectFAB } from "@/components/leads/NewProjectFAB";
 import { NewProjectSheet } from "@/components/leads/NewProjectSheet";
@@ -669,6 +670,14 @@ const Index = () => {
             />
             <div className="flex items-center gap-3">
               <ViewSwitcher value={desktopView} onChange={setDesktopView} />
+              {desktopView === "table" && (() => {
+                const tabLabel = activeTab === "all"
+                  ? "Active"
+                  : activeTab === "completed"
+                    ? "Completed"
+                    : (PIPELINES.find((p) => p.id === activeTab)?.title ?? activeTab);
+                return <ColumnsPopover activeTab={activeTab} tabLabel={tabLabel} />;
+              })()}
               <div className="flex-1 min-w-0">
               <TopControls
                   filter={filters}

@@ -52,6 +52,7 @@ import { CardEditOverlay } from "./CardEditOverlay";
 import { TrackingEditor } from "./EditorSheets";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { TabId } from "./PipelineTabs";
+import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility";
 
 type SortKey =
   | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
@@ -195,11 +196,47 @@ function compareCards(
       if (av && !bv) return -1;
       return dir * av.localeCompare(bv, undefined, { numeric: true });
     }
+    case "po": {
+      const av = a.project.poNumber ?? "";
+      const bv = b.project.poNumber ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv, undefined, { numeric: true });
+    }
+    case "invoice": {
+      const av = a.project.invoiceNumber ?? "";
+      const bv = b.project.invoiceNumber ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv, undefined, { numeric: true });
+    }
     case "amount": {
       const av = a.project.value, bv = b.project.value;
       if (!av && bv) return 1;
       if (av && !bv) return -1;
       return dir * ((av ?? 0) - (bv ?? 0));
+    }
+    case "balance": {
+      const av = a.project.outstandingBalance, bv = b.project.outstandingBalance;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
+    }
+    case "designBrief": {
+      const av = a.project.designBrief?.trim() ?? "";
+      const bv = b.project.designBrief?.trim() ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv);
+    }
+    case "completionDate": {
+      const av = a.project.completionDate?.getTime?.() ?? null;
+      const bv = b.project.completionDate?.getTime?.() ?? null;
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir * (av - bv);
     }
     case "weight": {
       const av = a.project.weightKg, bv = b.project.weightKg;
@@ -254,15 +291,22 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 180 },
+  { key: "designBrief", label: "Design Brief", defaultPx: 200 },
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
+  { key: "po", label: "PO#", defaultPx: 92 },
+  { key: "invoice", label: "INV#", defaultPx: 96 },
   { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
+  { key: "balance", label: "Inv Balance", defaultPx: 120, align: "right" },
   { key: "weight", label: "Weight", defaultPx: 80, align: "right" },
   { key: "cbm", label: "CBM", defaultPx: 70, align: "right" },
   { key: "pkgs", label: "Pkgs", defaultPx: 60, align: "right" },
   { key: "mode", label: "Mode", defaultPx: 96 },
   { key: "tracking", label: "Tracking", defaultPx: 120 },
+  // TODO(auth): Rep currently reads from `point_person` (comma-separated initials text).
+  // When real auth + team_members FK lands, migrate to `sales_rep_id` and update this column.
   { key: "rep", label: "Rep", defaultPx: 60 },
+  { key: "completionDate", label: "Completed", defaultPx: 110 },
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
@@ -270,9 +314,10 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
-  // Stage column is now ALWAYS shown — the redundancy with sub-chevron is
-  // intentional (consistent column set across filtered & unfiltered views).
-  const COLS = ALL_COLS;
+  const visibility = useColumnVisibility();
+  const visibleSet = visibility.visibleFor(activeTab);
+  const COLS = useMemo(() => ALL_COLS.filter((c) => visibleSet.has(c.key as ColumnId)), [visibleSet]);
+  const visibleKeys = useMemo(() => new Set(COLS.map((c) => c.key)), [COLS]);
   const colWidths = COLS.map((c) => cw.widthFor(c.key, c.defaultPx));
   const gridCols = colWidths.map((w) => `${w}px`).join(" ") + " 36px";
   const totalWidth = colWidths.reduce((a, b) => a + b, 0) + 36;
@@ -410,6 +455,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                 card={card}
                 activeTab={activeTab}
                 gridCols={gridCols}
+                visibleKeys={visibleKeys}
                 isMenuOpen={menuFor === card.id}
                 onMenuOpenChange={(open) => setMenuFor(open ? card.id : null)}
                 onOpen={() => onOpenCard(card)}
@@ -457,6 +503,7 @@ interface RowProps {
   card: PipelineCard;
   activeTab: TabId;
   gridCols: string;
+  visibleKeys: Set<SortKey>;
   isMenuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
@@ -472,9 +519,10 @@ interface RowProps {
 type EntityKindKey = "customer" | "supplier" | "rep";
 
 const TableRow = ({
-  index, card, activeTab, gridCols, isMenuOpen, onMenuOpenChange,
+  index, card, activeTab, gridCols, visibleKeys, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onPickStage, onDuplicate, onArchive, onDelete,
 }: RowProps) => {
+  const has = (k: SortKey) => visibleKeys.has(k);
   const proj = card.project;
   const flagged = !!proj.flagged;
   const u = urgencyLabel(card.deadlineDate);
@@ -611,6 +659,22 @@ const TableRow = ({
         return { ok: false, reason: err?.message };
       }
     };
+  const saveBalance = async (raw: string): Promise<SaveResult> => {
+    const cleaned = (raw ?? "").replace(/[^0-9.]/g, "");
+    try {
+      if (cleaned === "") {
+        await store.updateProject(proj.id, { outstandingBalance: undefined });
+        return { ok: true };
+      }
+      const n = Number(cleaned);
+      if (!Number.isFinite(n) || n < 0) return { ok: false };
+      await store.updateProject(proj.id, { outstandingBalance: n });
+      return { ok: true };
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      return { ok: false, reason: err?.message };
+    }
+  };
   const saveWeight = saveNumberField("weightKg", false);
   const saveCbm = saveNumberField("cbm", false);
   const savePackages = saveNumberField("numPackages", true);
@@ -718,6 +782,7 @@ const TableRow = ({
       }}
     >
       {/* Flag — single click toggles (special-case column) */}
+      {has("flagged") && (
       <div
         className="px-3 flex items-center justify-center cursor-pointer hover:bg-[hsl(var(--brand-orange)/0.08)]"
         onClick={(e) => { e.stopPropagation(); onToggleFlag(); }}
@@ -731,8 +796,9 @@ const TableRow = ({
           <Flag className="h-3.5 w-3.5 opacity-0 hover:opacity-30" style={{ color: "hsl(var(--brand-orange))" }} />
         )}
       </div>
+      )}
 
-      {/* Stage · State — inline-editable pill. Three-state cell; popover lists all stages. */}
+      {has("stage") && (
       <StageCell
         cellKey={`${card.id}:stage`}
         pipeline={card.pipeline}
@@ -755,8 +821,9 @@ const TableRow = ({
           triggerFlash("stage", "success");
         }}
       />
+      )}
 
-      {/* Customer — entity popover (primary anchor: medium weight, slightly larger) */}
+      {has("customer") && (
       <EditableCell
         cellKey={`${card.id}:customer`}
         mode="custom"
@@ -767,8 +834,9 @@ const TableRow = ({
         flash={flashFor("customer")}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("customer"); }}
       />
+      )}
 
-      {/* Project name — text */}
+      {has("project") && (
       <EditableCell
         cellKey={`${card.id}:projectName`}
         mode="text"
@@ -778,8 +846,9 @@ const TableRow = ({
         value={proj.projectName}
         onCommit={saveProjectName}
       />
+      )}
 
-      {/* Detail summary — text */}
+      {has("detail") && (
       <EditableCell
         cellKey={`${card.id}:detailSummary`}
         mode="text"
@@ -791,8 +860,23 @@ const TableRow = ({
         placeholder="Add detail…"
         onCommit={(v) => saveText("detailSummary", v)}
       />
+      )}
 
-      {/* Supplier — entity popover */}
+      {has("designBrief") && (
+      <EditableCell
+        cellKey={`${card.id}:designBrief`}
+        mode="text"
+        align="left"
+        display={proj.designBrief?.trim() || "—"}
+        title={proj.designBrief?.trim() || undefined}
+        muted={!proj.designBrief?.trim()}
+        value={proj.designBrief ?? ""}
+        placeholder="Add brief…"
+        onCommit={(v) => saveText("designBrief", v)}
+      />
+      )}
+
+      {has("supplier") && (
       <EditableCell
         cellKey={`${card.id}:supplier`}
         mode="custom"
@@ -804,8 +888,9 @@ const TableRow = ({
         flash={flashFor("supplier")}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("supplier"); }}
       />
+      )}
 
-      {/* Quote # — text with fixed "Q-" prefix in edit mode */}
+      {has("quote") && (
       <EditableCell
         cellKey={`${card.id}:quoteNumber`}
         mode="text"
@@ -821,8 +906,45 @@ const TableRow = ({
           return saveText("quoteNumber", trimmed);
         }}
       />
+      )}
 
-      {/* Amount — number, proportional visual weight */}
+      {has("po") && (
+      <EditableCell
+        cellKey={`${card.id}:poNumber`}
+        mode="text"
+        align="left"
+        display={<span className="tabular">{proj.poNumber ? `PO-${proj.poNumber}` : "—"}</span>}
+        title={proj.poNumber ? `PO-${proj.poNumber}` : ""}
+        muted={!proj.poNumber}
+        value={proj.poNumber ?? ""}
+        placeholder="####"
+        prefix="PO-"
+        onCommit={(v) => {
+          const trimmed = v.replace(/^\s*PO-?/i, "").replace(/\D/g, "").trim();
+          return saveText("poNumber", trimmed);
+        }}
+      />
+      )}
+
+      {has("invoice") && (
+      <EditableCell
+        cellKey={`${card.id}:invoiceNumber`}
+        mode="text"
+        align="left"
+        display={<span className="tabular">{proj.invoiceNumber ? `INV-${proj.invoiceNumber}` : "—"}</span>}
+        title={proj.invoiceNumber ? `INV-${proj.invoiceNumber}` : ""}
+        muted={!proj.invoiceNumber}
+        value={proj.invoiceNumber ?? ""}
+        placeholder="####"
+        prefix="INV-"
+        onCommit={(v) => {
+          const trimmed = v.replace(/^\s*INV-?/i, "").replace(/\D/g, "").trim();
+          return saveText("invoiceNumber", trimmed);
+        }}
+      />
+      )}
+
+      {has("amount") && (
       <EditableCell
         cellKey={`${card.id}:value`}
         mode="number"
@@ -844,8 +966,28 @@ const TableRow = ({
         placeholder="0"
         onCommit={saveValue}
       />
+      )}
 
-      {/* Weight (kg) — numeric, decimals allowed */}
+      {has("balance") && (
+      <EditableCell
+        cellKey={`${card.id}:outstandingBalance`}
+        mode="number"
+        align="right"
+        display={
+          <span className="tabular">
+            {proj.outstandingBalance != null
+              ? `$${proj.outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : "—"}
+          </span>
+        }
+        muted={proj.outstandingBalance == null}
+        value={proj.outstandingBalance != null ? String(proj.outstandingBalance) : ""}
+        placeholder="0.00"
+        onCommit={saveBalance}
+      />
+      )}
+
+      {has("weight") && (
       <EditableCell
         cellKey={`${card.id}:weightKg`}
         mode="number"
@@ -856,8 +998,9 @@ const TableRow = ({
         placeholder="0"
         onCommit={saveWeight}
       />
+      )}
 
-      {/* CBM — numeric, decimals allowed */}
+      {has("cbm") && (
       <EditableCell
         cellKey={`${card.id}:cbm`}
         mode="number"
@@ -868,8 +1011,9 @@ const TableRow = ({
         placeholder="0"
         onCommit={saveCbm}
       />
+      )}
 
-      {/* Pkgs — integer */}
+      {has("pkgs") && (
       <EditableCell
         cellKey={`${card.id}:numPackages`}
         mode="number"
@@ -880,8 +1024,9 @@ const TableRow = ({
         placeholder="0"
         onCommit={savePackages}
       />
+      )}
 
-      {/* Mode — enum popover */}
+      {has("mode") && (
       <ModeCell
         cellKey={`${card.id}:mode`}
         value={proj.shippingMode}
@@ -893,16 +1038,20 @@ const TableRow = ({
         onClose={() => setOpenPicker(null)}
         anchorEl={pickerAnchor}
       />
+      )}
 
-      {/* Tracking — opens BottomSheet TrackingEditor; disabled until Mode is set */}
+      {has("tracking") && (
       <TrackingCellTrigger
         value={proj.trackingRef}
         modeSet={!!proj.shippingMode}
         flash={flashFor("trackingRef")}
         onClick={() => proj.shippingMode && setTrackingEditorOpen(true)}
       />
+      )}
 
-      {/* Rep — multi popover */}
+      {/* TODO(auth): Rep currently reads point_person initials text;
+          migrate to sales_rep_id FK after auth + team_members lands. */}
+      {has("rep") && (
       <EditableCell
         cellKey={`${card.id}:rep`}
         mode="custom"
@@ -913,8 +1062,15 @@ const TableRow = ({
         flash={flashFor("rep")}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("rep"); }}
       />
+      )}
 
-      {/* Deadline — date + urgency dot (combined) */}
+      {has("completionDate") && (
+      <ReadOnlyCell muted={!proj.completionDate}>
+        <span className="tabular">{proj.completionDate ? fmtDeadline(proj.completionDate) : "—"}</span>
+      </ReadOnlyCell>
+      )}
+
+      {has("deadline") && (
       <ReadOnlyCell muted={!card.deadlineDate}>
         {card.deadlineDate ? (
           <Tooltip>
@@ -947,6 +1103,7 @@ const TableRow = ({
           <span className="tabular">—</span>
         )}
       </ReadOnlyCell>
+      )}
 
       {/* Actions */}
       <div className="px-1 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
