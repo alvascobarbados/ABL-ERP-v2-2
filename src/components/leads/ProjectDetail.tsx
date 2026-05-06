@@ -289,8 +289,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   };
 
   // ─── Derived display helpers ───────────────────────────────────────────
-  const u = getUrgency(live.deadlineDate);
-  const deadlineDisplay = `${fmtLong(live.deadlineDate)} (${u.label})`;
+  const u = live.deadlineDate ? getUrgency(live.deadlineDate) : null;
+  const deadlineDisplay = live.deadlineDate && u ? `${fmtLong(live.deadlineDate)} (${u.label})` : undefined;
   const repInitials = parseInitials(live.pointPerson);
   const repNames = repInitials.length === 0 ? undefined :
     repInitials.map((i) => md.getTeamByInitials(i)?.full_name ?? i).join(", ");
@@ -442,7 +442,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 label="Deadline"
                 value={deadlineDisplay}
                 onClick={() => setEditor({ kind: "deadline" })}
-                valueColor={u.color}
+                valueColor={u?.color}
               />
             </SectionCard>
           </section>
@@ -583,7 +583,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         open={editor?.kind === "deadline"}
         onClose={() => setEditor(null)}
         title="Deadline"
-        value={live.deadlineDate}
+        value={live.deadlineDate ?? undefined}
         onSave={saveDeadline}
       />
       <TextEditor

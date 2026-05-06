@@ -215,7 +215,7 @@ export type Database = {
           created_at: string
           customer: string
           deadline: string
-          deadline_date: string
+          deadline_date: string | null
           deleted_at: string | null
           deleted_from_pipeline: string | null
           deleted_from_stage: string | null
@@ -255,7 +255,7 @@ export type Database = {
           created_at?: string
           customer: string
           deadline: string
-          deadline_date: string
+          deadline_date?: string | null
           deleted_at?: string | null
           deleted_from_pipeline?: string | null
           deleted_from_stage?: string | null
@@ -295,7 +295,7 @@ export type Database = {
           created_at?: string
           customer?: string
           deadline?: string
-          deadline_date?: string
+          deadline_date?: string | null
           deleted_at?: string | null
           deleted_from_pipeline?: string | null
           deleted_from_stage?: string | null

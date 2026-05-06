@@ -92,7 +92,8 @@ function startOfDay(d: Date) {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   return x;
 }
-function daysToDeadline(d: Date) {
+function daysToDeadline(d?: Date | null) {
+  if (!d) return Number.POSITIVE_INFINITY;
   return Math.round((startOfDay(d).getTime() - startOfToday().getTime()) / DAY_MS);
 }
 
@@ -107,8 +108,11 @@ function compareCards(
     return 0;
   };
   switch (sort.field) {
-    case "deadline":
-      return dir * (a.deadlineDate.getTime() - b.deadlineDate.getTime());
+    case "deadline": {
+      const at = a.deadlineDate?.getTime() ?? Number.POSITIVE_INFINITY;
+      const bt = b.deadlineDate?.getTime() ?? Number.POSITIVE_INFINITY;
+      return dir * (at - bt);
+    }
     case "daysToDeadline":
       return dir * (daysToDeadline(a.deadlineDate) - daysToDeadline(b.deadlineDate));
     case "created": {
@@ -204,11 +208,15 @@ function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
   }
   if (f.stages.length && !f.stages.includes(p.stage)) return false;
   if (f.urgency) {
-    const days = daysToDeadline(c.deadlineDate);
-    if (f.urgency === "overdue" && days >= 0) return false;
-    if (f.urgency === "this_week" && (days < 0 || days > 7)) return false;
-    if (f.urgency === "this_month" && (days < 0 || days > 30)) return false;
-    if (f.urgency === "no_deadline") return false;
+    if (f.urgency === "no_deadline") {
+      if (c.deadlineDate) return false;
+    } else {
+      if (!c.deadlineDate) return false;
+      const days = daysToDeadline(c.deadlineDate);
+      if (f.urgency === "overdue" && days >= 0) return false;
+      if (f.urgency === "this_week" && (days < 0 || days > 7)) return false;
+      if (f.urgency === "this_month" && (days < 0 || days > 30)) return false;
+    }
   }
   if (f.missingOnly && !projectHasMissingData(p)) return false;
   if (f.flagged === true && !p.flagged) return false;

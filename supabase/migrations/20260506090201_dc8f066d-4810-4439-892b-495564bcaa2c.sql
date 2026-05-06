@@ -1,0 +1,1 @@
+UPDATE public.projects SET quote_number = NULL WHERE id = 'prj-new-1778057479516-tz0a';

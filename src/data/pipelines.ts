@@ -292,8 +292,8 @@ export interface Project {
   trackingRef?: string;         // free-form / FCL- / LCL- / carrier digits
   pipeline: PipelineId;
   stage: StageId;
-  deadline: string;
-  deadlineDate: Date;
+  deadline?: string;
+  deadlineDate?: Date | null;
   value: number;
   orderType: OrderType;
   priority: Priority;
@@ -405,8 +405,8 @@ export interface PipelineCard {
   shipment?: Shipment;
   pipeline: PipelineId;
   stage: StageId;
-  deadline: string;
-  deadlineDate: Date;
+  deadline?: string;
+  deadlineDate?: Date | null;
   shippingMode?: ShippingMode;
   orderType: OrderType;
   priority: Priority;
