@@ -31,6 +31,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
   const [customer, setCustomer] = useState<string>("");
   const [projectName, setProjectName] = useState("");
   const [detail, setDetail] = useState("");
+  const [deadline, setDeadline] = useState(""); // yyyy-mm-dd or ""
   const [initialStage, setInitialStage] = useState<InitialStageId>("sourcing");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -40,6 +41,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
       setCustomer("");
       setProjectName("");
       setDetail("");
+      setDeadline("");
       setInitialStage("sourcing");
       setPickerOpen(false);
       setDiscardOpen(false);
@@ -72,6 +74,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
       detailSummary: detail.trim() || undefined,
       pointPerson: DEFAULT_USER_INITIALS,
       initialStage,
+      deadlineDate: deadline ? new Date(`${deadline}T00:00:00`) : undefined,
     });
     if (!proj) return;
     toast.success(`Project created · ${proj.customer} · ${proj.projectName}`, {
@@ -142,6 +145,17 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
               placeholder="Short summary"
+              className={inputCls}
+              style={{ minHeight: 48 }}
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>Deadline (optional)</label>
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
               className={inputCls}
               style={{ minHeight: 48 }}
             />

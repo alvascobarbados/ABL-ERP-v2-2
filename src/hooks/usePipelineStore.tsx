@@ -394,7 +394,7 @@ interface PipelineStoreCtx {
   updateLineItem: (projectId: string, index: number, item: LineItem) => Promise<void>;
   removeLineItem: (projectId: string, index: number) => Promise<void>;
   duplicateProject: (projectId: string) => Promise<Project | null>;
-  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string; initialStage?: "sourcing" | "proposal" | "quote" | "confirming" }) => Promise<Project | null>;
+  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string; initialStage?: "sourcing" | "proposal" | "quote" | "confirming"; deadlineDate?: Date }) => Promise<Project | null>;
   toggleFlag: (projectId: string) => Promise<void>;
   softDeleteProject: (projectId: string) => Promise<{ restoredFrom: { pipeline: PipelineId; stage: StageId } } | null>;
   restoreProject: (projectId: string) => Promise<{ pipeline: PipelineId; stage: StageId } | null>;
@@ -761,6 +761,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const u = userRef.current;
     const initialStage: StageId = input.initialStage ?? "sourcing";
     const needsQuote = initialStage === "quote" || initialStage === "confirming";
+    const userSetDeadline = !!input.deadlineDate;
+    const deadlineDate = input.deadlineDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const deadlineLabel = deadlineDate.toLocaleDateString(undefined, { day: "numeric", month: "short" });
     let newProj: Project = {
       id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       customer: input.customer,
@@ -768,8 +771,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       detailSummary: input.detailSummary,
       pointPerson: input.pointPerson ?? "AV",
       pipeline: "sales", stage: initialStage,
-      deadline: "—",
-      deadlineDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      deadline: userSetDeadline ? deadlineLabel : "—",
+      deadlineDate,
       value: 0, orderType: "New", priority: "Standard",
       createdAt: new Date(),
       paymentTerms: "Net 30",
@@ -777,8 +780,10 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       quoteNumber: needsQuote ? `Q-${2040 + Math.floor(Math.random() * 41)}` : undefined,
     };
     const stageTitle = getStageTitle("sales", initialStage);
-    const r = appendLog(newProj, { actor: actorOf(u), actionType: "project_created",
-      description: `${u.shortName} created this project in Sales · ${stageTitle}` });
+    const desc = userSetDeadline
+      ? `${u.shortName} created this project in Sales · ${stageTitle} with deadline ${deadlineLabel}`
+      : `${u.shortName} created this project in Sales · ${stageTitle}`;
+    const r = appendLog(newProj, { actor: actorOf(u), actionType: "project_created", description: desc });
     const ok = await commitProjectChange(r.project, [r.entry]);
     return ok ? r.project : null;
   }, []);
