@@ -30,6 +30,7 @@ const App = () => (
         <PipelineStoreProvider>
           <MasterDataProvider>
             <ColumnWidthsProvider>
+              <ColumnVisibilityProvider>
               <ExpandedCardsProvider>
                 <SidebarCollapsedProvider>
                 <BrowserRouter>
