@@ -314,16 +314,11 @@ export default function ActivityPage() {
           label: g.spec.label,
           rows: g.rows.map((r) => {
             const proj = projectMap.get(r.project_id);
-            const desc = (() => {
-              const prefix = r.actor_display_name + " ";
-              const d = formatDescription({ ...r, metadata: r.metadata } as any);
-              return d.startsWith(prefix) ? d.slice(prefix.length) : d;
-            })();
             return {
               id: r.id,
               ts: new Date(r.ts),
               actorDisplayName: r.actor_display_name,
-              description: desc,
+              description: formatDescription(r),
               projectLabel: proj ? `${proj.customer} · ${proj.projectName}` : "",
             };
           }),
