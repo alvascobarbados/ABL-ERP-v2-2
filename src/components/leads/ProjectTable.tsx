@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { CardEditOverlay } from "./CardEditOverlay";
-import { TrackingEditor } from "./EditorSheets";
+import { TrackingEditor, ShipmentNumberEditor } from "./EditorSheets";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { TabId } from "./PipelineTabs";
 import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility";
@@ -58,7 +58,7 @@ type SortKey =
   | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
   | "quote" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate"
-  | "weight" | "cbm" | "pkgs" | "mode" | "tracking" | "rep" | "deadline";
+  | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
 
 interface Props {
   activeTab: TabId;
@@ -273,6 +273,13 @@ function compareCards(
       if (av && !bv) return -1;
       return dir * av.localeCompare(bv, undefined, { numeric: true });
     }
+    case "shipmentNumber": {
+      const av = a.project.shipmentNumber ?? "";
+      const bv = b.project.shipmentNumber ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv, undefined, { numeric: true });
+    }
     case "rep":
       return dir * (a.project.pointPerson ?? "").localeCompare(b.project.pointPerson ?? "");
     case "deadline":
@@ -302,6 +309,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "cbm", label: "CBM", defaultPx: 70, align: "right" },
   { key: "pkgs", label: "Pkgs", defaultPx: 60, align: "right" },
   { key: "mode", label: "Mode", defaultPx: 96 },
+  { key: "shipmentNumber", label: "Shipment #", defaultPx: 110 },
   { key: "tracking", label: "Tracking", defaultPx: 120 },
   // TODO(auth): Rep currently reads from `point_person` (comma-separated initials text).
   // When real auth + team_members FK lands, migrate to `sales_rep_id` and update this column.
@@ -759,6 +767,18 @@ const TableRow = ({
       triggerFlash("trackingRef", "error");
     }
   };
+  // Shipment Number editor (BottomSheet) — opened from inline cell click.
+  const [shipmentNumberEditorOpen, setShipmentNumberEditorOpen] = useState(false);
+  const saveShipmentNumber = async (v: string | null) => {
+    setShipmentNumberEditorOpen(false);
+    try {
+      await store.updateProject(proj.id, { shipmentNumber: v });
+      triggerFlash("shipmentNumber", "success");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+      triggerFlash("shipmentNumber", "error");
+    }
+  };
 
   return (
     <div
@@ -1040,6 +1060,15 @@ const TableRow = ({
       />
       )}
 
+      {has("shipmentNumber") && (
+      <TrackingCellTrigger
+        value={proj.shipmentNumber ?? undefined}
+        modeSet={!!proj.shippingMode && proj.shippingMode !== "Local"}
+        flash={flashFor("shipmentNumber")}
+        onClick={() => proj.shippingMode && proj.shippingMode !== "Local" && setShipmentNumberEditorOpen(true)}
+      />
+      )}
+
       {has("tracking") && (
       <TrackingCellTrigger
         value={proj.trackingRef}
@@ -1174,6 +1203,15 @@ const TableRow = ({
         shippingMode={proj.shippingMode}
         value={proj.trackingRef ?? ""}
         onSave={saveTracking}
+      />
+
+      {/* Shipment Number editor sheet */}
+      <ShipmentNumberEditor
+        open={shipmentNumberEditorOpen}
+        onClose={() => setShipmentNumberEditorOpen(false)}
+        shippingMode={proj.shippingMode}
+        value={proj.shipmentNumber ?? ""}
+        onSave={saveShipmentNumber}
       />
 
       {/* Mode-change confirmation when tracking would be cleared */}
