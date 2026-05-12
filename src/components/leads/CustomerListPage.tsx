@@ -213,6 +213,8 @@ export const CustomerListPage = () => {
                     onView={() => navigate(`/customers?customer=${customer.id}`)}
                     onAddBuyer={() => setAddBuyerOpen(true)}
                     onDelete={() => setConfirmDelete(customer)}
+                    onRequestCustomerMerge={requestCustomerMerge}
+                    onRequestBuyerMerge={requestBuyerMerge}
                   />
                 ))}
                 {groups.length === 0 && (
