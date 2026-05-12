@@ -857,6 +857,36 @@ const TableRow = ({
       />
       )}
 
+      {has("buyer") && (() => {
+        const buyer = proj.buyerId ? md.buyers.find((b) => b.id === proj.buyerId) : null;
+        const buyerCustomerId = md.findCustomerByName(proj.customer)?.id ?? null;
+        return (
+          <EditableCell
+            cellKey={`${card.id}:buyer`}
+            mode="custom"
+            align="left"
+            display={
+              buyer
+                ? <span className="text-[13px] truncate block">{buyer.name}</span>
+                : <span className="text-[12.5px] text-muted-foreground italic truncate block">
+                    {buyerCustomerId ? "+ Buyer" : "—"}
+                  </span>
+            }
+            title={buyer?.name}
+            active={openPicker === "buyer"}
+            flash={flashFor("buyer")}
+            onActivate={(el) => {
+              if (!buyerCustomerId) {
+                toast.error("Pick a customer first");
+                return;
+              }
+              setPickerAnchor(el);
+              setOpenPicker("buyer");
+            }}
+          />
+        );
+      })()}
+
       {has("project") && (
       <EditableCell
         cellKey={`${card.id}:projectName`}
