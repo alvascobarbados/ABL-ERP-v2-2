@@ -10,11 +10,14 @@ import { toast } from "sonner";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { SectionHeader, SectionCard, DetailRow } from "@/components/leads/ProjectDetail";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { MergeDialog } from "@/components/leads/MergeDialog";
 import { BottomSheet } from "@/components/leads/EditorSheets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useMasterData, type Buyer, type CustomerCountry, type CustomerIncoterms } from "@/hooks/useMasterData";
+import { useMasterData, type Buyer, type Customer, type CustomerCountry, type CustomerIncoterms } from "@/hooks/useMasterData";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { AddBuyerSheet } from "@/components/leads/CustomerListPage";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
