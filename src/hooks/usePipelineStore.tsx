@@ -63,6 +63,7 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
   completionDate: "completion date",
   outstandingBalance: "outstanding balance",
   contactPerson: "contact",
+  buyerId: "buyer",
   pointPerson: "sales rep",
   deadline: "deadline",
   deadlineDate: "deadline",
@@ -88,6 +89,12 @@ function fmtVal(field: keyof Project, val: unknown, suppliers: Supplier[]): stri
   if (val == null || val === "") return "—";
   if (field === "supplierId") {
     return suppliers.find((s) => s.id === val)?.name ?? String(val);
+  }
+  if (field === "buyerId") {
+    // Buyer names aren't accessible from the store. The detail-page caller
+    // augments the patch with a synthetic field beforehand if it wants name
+    // resolution; here we fall back to a generic placeholder for IDs.
+    return typeof val === "string" && val.length === 36 ? "(buyer)" : String(val);
   }
   if (val instanceof Date) {
     return `${val.getDate()} ${val.toLocaleString("en-US", { month: "short" })} ${val.getFullYear()}`;
@@ -131,6 +138,7 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     id: row.id,
     customer: row.customer,
     contactPerson: row.contact_person ?? undefined,
+    buyerId: row.buyer_id ?? null,
     pointPerson: row.point_person,
     projectName: row.project_name,
     detailSummary: row.detail_summary ?? undefined,
@@ -184,6 +192,7 @@ function projectToRow(p: Project): any {
     id: p.id,
     customer: p.customer,
     contact_person: p.contactPerson ?? null,
+    buyer_id: p.buyerId ?? null,
     point_person: p.pointPerson,
     project_name: p.projectName ?? "(untitled)",
     detail_summary: p.detailSummary ?? null,
@@ -415,7 +424,7 @@ interface PipelineStoreCtx {
   updateLineItem: (projectId: string, index: number, item: LineItem) => Promise<void>;
   removeLineItem: (projectId: string, index: number) => Promise<void>;
   duplicateProject: (projectId: string) => Promise<Project | null>;
-  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string; initialStage?: "sourcing" | "proposal" | "quote" | "confirming"; deadlineDate?: Date }) => Promise<Project | null>;
+  createProject: (input: { customer: string; projectName: string; detailSummary?: string; pointPerson?: string; initialStage?: "sourcing" | "proposal" | "quote" | "confirming"; deadlineDate?: Date; buyerId?: string | null }) => Promise<Project | null>;
   toggleFlag: (projectId: string) => Promise<void>;
   softDeleteProject: (projectId: string) => Promise<{ restoredFrom: { pipeline: PipelineId; stage: StageId } } | null>;
   restoreProject: (projectId: string) => Promise<{ pipeline: PipelineId; stage: StageId } | null>;
@@ -635,8 +644,25 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const proj = projectsRef.current.find((p) => p.id === id);
     if (!proj) return;
     const u = userRef.current;
-    const entries = buildFieldEditEntries(proj, patch, u, suppliersRef.current);
-    let next = touch({ ...proj, ...patch });
+    // Auto-clear buyer when customer changes (the buyer no longer belongs
+    // to the new customer). Skipped if the caller already set buyerId
+    // explicitly in the same patch.
+    let effectivePatch = patch;
+    if (
+      typeof patch.customer === "string" &&
+      patch.customer !== proj.customer &&
+      proj.buyerId &&
+      !("buyerId" in patch)
+    ) {
+      effectivePatch = { ...patch, buyerId: null };
+      // Defer toast to next tick so callers can compose their own
+      // success toasts first.
+      setTimeout(() => {
+        toast.info("Buyer was cleared because the customer changed");
+      }, 0);
+    }
+    const entries = buildFieldEditEntries(proj, effectivePatch, u, suppliersRef.current);
+    let next = touch({ ...proj, ...effectivePatch });
     const newEntries: ProjectLogEntry[] = [];
     for (const e of entries) {
       const r = appendLog(next, e);
@@ -788,6 +814,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     let newProj: Project = {
       id: `prj-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       customer: input.customer,
+      buyerId: input.buyerId ?? null,
       projectName: input.projectName,
       detailSummary: input.detailSummary,
       pointPerson: input.pointPerson ?? "AV",

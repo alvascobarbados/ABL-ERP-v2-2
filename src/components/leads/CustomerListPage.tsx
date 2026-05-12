@@ -661,8 +661,8 @@ const AddCustomerSheet = ({ open, onClose }: { open: boolean; onClose: () => voi
 
 // ─── Add Buyer sheet ───────────────────────────────────────────────────
 export const AddBuyerSheet = ({
-  open, onClose, fixedCustomerId,
-}: { open: boolean; onClose: () => void; fixedCustomerId?: string }) => {
+  open, onClose, fixedCustomerId, onCreated,
+}: { open: boolean; onClose: () => void; fixedCustomerId?: string; onCreated?: (buyerId: string) => void }) => {
   const md = useMasterData();
   const [customerId, setCustomerId] = useState<string>(fixedCustomerId ?? "");
   const [name, setName] = useState("");
@@ -699,12 +699,13 @@ export const AddBuyerSheet = ({
     if (email.trim() && !emailOk(email.trim())) { toast.error("Invalid email"); return; }
     setSaving(true);
     try {
-      await md.addBuyer(customerId, {
+      const created = await md.addBuyer(customerId, {
         name: t,
         email: email.trim().toLowerCase() || null,
         contact: contact.trim() || null,
       });
       toast.success(`Buyer "${t}" added`);
+      onCreated?.(created.id);
       onClose();
     } catch (err: any) {
       toast.error(err?.message ?? "Save failed");

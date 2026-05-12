@@ -13,6 +13,7 @@ import {
   TextEditor, DateEditor, ListPicker, ListOption, BottomSheet, TrackingEditor, ShipmentNumberEditor,
 } from "./EditorSheets";
 import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
+import { BuyerPicker } from "./BuyerPicker";
 import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -64,7 +65,7 @@ function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
 type EditorKind =
   | { kind: "projectName" }
   | { kind: "detailSummary" }
-  | { kind: "contact" }
+  | { kind: "buyer" }
   | { kind: "amount" }
   | { kind: "salesRep" }
   | { kind: "deadline" }
