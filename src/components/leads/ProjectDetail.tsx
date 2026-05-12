@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { usePipelineStore, getStageTitle, getNextStage } from "@/hooks/usePipelineStore";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
-  TextEditor, DateEditor, ListPicker, ListOption, BottomSheet, TrackingEditor,
+  TextEditor, DateEditor, ListPicker, ListOption, BottomSheet, TrackingEditor, ShipmentNumberEditor,
 } from "./EditorSheets";
 import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
 import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterData";
@@ -72,6 +72,7 @@ type EditorKind =
   | { kind: "po" }
   | { kind: "invoice" }
   | { kind: "tracking" }
+  | { kind: "shipmentNumber" }
   | { kind: "weight" }
   | { kind: "cbm" }
   | { kind: "packages" }
@@ -221,6 +222,10 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   };
   const saveTracking = (v: string | null) => {
     updateProject(live.id, { trackingRef: v ?? undefined });
+    setEditor(null);
+  };
+  const saveShipmentNumber = (v: string | null) => {
+    updateProject(live.id, { shipmentNumber: v });
     setEditor(null);
   };
   const saveNumeric = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) => (raw: string) => {
@@ -522,6 +527,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               />
               <DetailRow label="Mode of Shipping" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
               <DetailRow
+                label="Shipment Number"
+                value={live.shipmentNumber ?? undefined}
+                onClick={live.shippingMode && live.shippingMode !== "Local" ? () => setEditor({ kind: "shipmentNumber" }) : undefined}
+                locked={!live.shippingMode || live.shippingMode === "Local"}
+                lockedHint={!live.shippingMode ? "Set Mode first to enable Shipment Number" : (live.shippingMode === "Local" ? "Shipment Number not yet supported for Local mode" : undefined)}
+              />
+              <DetailRow
                 label="Tracking"
                 value={live.trackingRef ? live.trackingRef.toUpperCase() : undefined}
                 onClick={live.shippingMode ? () => setEditor({ kind: "tracking" }) : undefined}
@@ -715,6 +727,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         shippingMode={live.shippingMode}
         value={live.trackingRef ?? ""}
         onSave={saveTracking}
+      />
+      <ShipmentNumberEditor
+        open={editor?.kind === "shipmentNumber"}
+        onClose={() => setEditor(null)}
+        shippingMode={live.shippingMode}
+        value={live.shipmentNumber ?? ""}
+        onSave={saveShipmentNumber}
       />
       <TextEditor
         open={editor?.kind === "weight"}

@@ -402,8 +402,10 @@ export const SupplierPicker = ({
 
 // ─────────── Tracking reference editor (mode-gated, format-enforced) ───────────
 import {
-  AIR_CARRIERS, OCEAN_CARRIERS, carriersFor, parseTracking,
-  sanitizeCustomPrefix, sanitizeDigits, validateAndCompose,
+  AIR_CARRIERS, OCEAN_TRACKING_PREFIX, SHIPMENT_AIR_PREFIX, SHIPMENT_OCEAN_PREFIXES,
+  parseTracking, parseShipmentNumber,
+  sanitizeCustomPrefix, sanitizeDigits, sanitizeAlnum,
+  validateAndCompose, validateShipmentNumber,
 } from "@/lib/tracking";
 
 interface TrackingEditorProps {
@@ -417,25 +419,26 @@ interface TrackingEditorProps {
 
 export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: TrackingEditorProps) => {
   const mode = shippingMode ?? null;
-  const knownCarriers = carriersFor(mode);
 
-  // Initial parse — always run to derive defaults; effect re-syncs when (re)opened.
+  // Initial parse — Air uses carrier dropdown, Ocean uses BL- text, Local is free.
   const initial = parseTracking(value ?? "");
   const initialCarrier = (() => {
-    if (mode === "Local") return "";
-    if (initial.prefix && knownCarriers.includes(initial.prefix as any)) return initial.prefix;
-    if (initial.prefix || (initial.number && !initial.prefix)) return "Other";
+    if (mode !== "Air") return "";
+    if (initial.prefix && (AIR_CARRIERS as readonly string[]).includes(initial.prefix)) return initial.prefix;
+    if (initial.prefix || initial.number) return "Other";
     return "";
   })();
   const initialCustom = initialCarrier === "Other" ? initial.prefix : "";
-  const initialNumber = mode === "Ocean"
-    ? sanitizeDigits(initial.number, 3)
-    : sanitizeDigits(initial.number);
+  const initialNumber = mode === "Air" ? sanitizeDigits(initial.number) : "";
+  const initialOceanBl = mode === "Ocean" && initial.prefix === OCEAN_TRACKING_PREFIX
+    ? sanitizeAlnum(initial.number)
+    : "";
   const initialLocal = mode === "Local" ? (value ?? "") : "";
 
   const [carrier, setCarrier] = useState<string>(initialCarrier);
   const [customPrefix, setCustomPrefix] = useState<string>(initialCustom);
   const [number, setNumber] = useState<string>(initialNumber);
+  const [oceanBl, setOceanBl] = useState<string>(initialOceanBl);
   const [localText, setLocalText] = useState<string>(initialLocal);
   const [error, setError] = useState<string | null>(null);
 
@@ -443,26 +446,30 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
     if (!open) return;
     const p = parseTracking(value ?? "");
     if (mode === "Local") {
-      setCarrier(""); setCustomPrefix(""); setNumber("");
+      setCarrier(""); setCustomPrefix(""); setNumber(""); setOceanBl("");
       setLocalText(value ?? "");
-    } else if (mode === "Air" || mode === "Ocean") {
-      const known = carriersFor(mode);
-      const c = p.prefix && known.includes(p.prefix as any)
+    } else if (mode === "Air") {
+      const c = p.prefix && (AIR_CARRIERS as readonly string[]).includes(p.prefix)
         ? p.prefix
         : (p.prefix || p.number ? "Other" : "");
       setCarrier(c);
       setCustomPrefix(c === "Other" ? p.prefix : "");
-      setNumber(mode === "Ocean" ? sanitizeDigits(p.number, 3) : sanitizeDigits(p.number));
+      setNumber(sanitizeDigits(p.number));
+      setOceanBl("");
+      setLocalText("");
+    } else if (mode === "Ocean") {
+      setCarrier(""); setCustomPrefix(""); setNumber("");
+      setOceanBl(p.prefix === OCEAN_TRACKING_PREFIX ? sanitizeAlnum(p.number) : "");
       setLocalText("");
     } else {
-      setCarrier(""); setCustomPrefix(""); setNumber(""); setLocalText("");
+      setCarrier(""); setCustomPrefix(""); setNumber(""); setOceanBl(""); setLocalText("");
     }
     setError(null);
   }, [open, value, mode]);
 
   const handleSave = () => {
     if (!mode) return;
-    const result = validateAndCompose({ mode, carrier, customPrefix, number, localText });
+    const result = validateAndCompose({ mode, carrier, customPrefix, number, localText, oceanBlSuffix: oceanBl });
     if (!result.ok) { setError(result.error ?? "Invalid"); return; }
     onSave(result.value === undefined ? null : (result.value ?? null));
   };
@@ -502,23 +509,70 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
     );
   }
 
-  // ── Air / Ocean: carrier dropdown + number ────────────────────────────
-  const options: string[] = [...knownCarriers, "Other"];
+  // ── Ocean: BL- prefix locked + alphanumeric suffix ────────────────────
+  if (mode === "Ocean") {
+    const preview = oceanBl ? `${OCEAN_TRACKING_PREFIX}-${oceanBl}` : "";
+    return (
+      <BottomSheet open={open} onClose={onClose} title="Ocean tracking (B/L)" onSave={handleSave}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+              B/L number
+            </label>
+            <div
+              className="flex items-center w-full rounded-xl border border-border bg-card px-3 py-2.5 focus-within:ring-2 focus-within:ring-[hsl(var(--brand-navy)/0.4)]"
+              style={{ minHeight: 48 }}
+            >
+              <span
+                aria-hidden
+                className="text-[15px] tabular select-none pointer-events-none shrink-0 mr-0.5"
+                style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
+              >
+                {OCEAN_TRACKING_PREFIX}-
+              </span>
+              <input
+                value={oceanBl}
+                onChange={(e) => { setOceanBl(sanitizeAlnum(e.target.value)); setError(null); }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const txt = e.clipboardData.getData("text") ?? "";
+                  const stripped = txt.trim().replace(/^\s*BL-?/i, "");
+                  setOceanBl(sanitizeAlnum(stripped));
+                  setError(null);
+                }}
+                placeholder="ZIMUHAI80204723"
+                className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[15px] tabular p-0"
+                style={{ color: "hsl(var(--brand-navy))" }}
+                autoFocus
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">Letters and digits only — no spaces.</p>
+          </div>
+          {error && (
+            <div className="text-[12px] font-medium" style={{ color: "hsl(var(--urgent))" }}>{error}</div>
+          )}
+          <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-3 py-2.5">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1">Preview</div>
+            <div className="text-[15px] font-semibold tabular" style={{ color: "hsl(var(--brand-navy))" }}>
+              {preview || <span className="italic text-muted-foreground font-normal">BL-number</span>}
+            </div>
+          </div>
+        </div>
+      </BottomSheet>
+    );
+  }
+
+  // ── Air: carrier dropdown + digits ────────────────────────────────────
+  const options: string[] = [...AIR_CARRIERS, "Other"];
   const isOther = carrier === "Other";
-  const numberMax = mode === "Ocean" ? 3 : undefined;
   const previewPrefix = isOther
     ? sanitizeCustomPrefix(customPrefix).replace(/-+$/, "")
     : carrier;
-  const previewNumber = sanitizeDigits(number, numberMax);
+  const previewNumber = sanitizeDigits(number);
   const preview = previewPrefix && previewNumber ? `${previewPrefix}-${previewNumber}` : "";
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={mode === "Air" ? "Air tracking" : "Ocean tracking"}
-      onSave={handleSave}
-    >
+    <BottomSheet open={open} onClose={onClose} title="Air tracking" onSave={handleSave}>
       <div className="space-y-4">
         <div>
           <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
@@ -549,7 +603,7 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
             <input
               value={customPrefix}
               onChange={(e) => { setCustomPrefix(sanitizeCustomPrefix(e.target.value)); setError(null); }}
-              placeholder="e.g. MAERSK"
+              placeholder="e.g. ARAMEX"
               className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tracking-wide focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
               style={{ minHeight: 48 }}
               autoFocus
@@ -560,19 +614,19 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
 
         <div>
           <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
-            {mode === "Ocean" ? "Number (3 digits)" : "Tracking number"}
+            Tracking number
           </label>
           <input
             value={number}
-            onChange={(e) => { setNumber(sanitizeDigits(e.target.value, numberMax)); setError(null); }}
+            onChange={(e) => { setNumber(sanitizeDigits(e.target.value)); setError(null); }}
             onPaste={(e) => {
               e.preventDefault();
               const txt = e.clipboardData.getData("text");
-              setNumber(sanitizeDigits(txt, numberMax));
+              setNumber(sanitizeDigits(txt));
               setError(null);
             }}
             inputMode="numeric"
-            placeholder={mode === "Ocean" ? "124" : "9876543210"}
+            placeholder="9876543210"
             className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
             style={{ minHeight: 48 }}
           />
@@ -582,6 +636,158 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
           <div className="text-[12px] font-medium" style={{ color: "hsl(var(--urgent))" }}>{error}</div>
         )}
 
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-3 py-2.5">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1">Preview</div>
+          <div className="text-[15px] font-semibold tabular" style={{ color: "hsl(var(--brand-navy))" }}>
+            {preview || <span className="italic text-muted-foreground font-normal">PREFIX-number</span>}
+          </div>
+        </div>
+      </div>
+    </BottomSheet>
+  );
+};
+
+// ─────────── Shipment Number editor (mode-gated, format-enforced) ───────────
+//
+// Internal company-assigned number. AIR-#### (4 digits) or FCL-### / LCL-### (3 digits).
+// Local mode is not supported in v1.
+interface ShipmentNumberEditorProps {
+  open: boolean;
+  onClose: () => void;
+  shippingMode: ShippingMode | null | undefined;
+  value?: string | null;
+  onSave: (v: string | null) => void;
+}
+
+export const ShipmentNumberEditor = ({ open, onClose, shippingMode, value, onSave }: ShipmentNumberEditorProps) => {
+  const mode = shippingMode ?? null;
+  const parsed = parseShipmentNumber(value ?? null);
+
+  const initialOceanPrefix: "FCL" | "LCL" =
+    mode === "Ocean" && (parsed?.prefix === "FCL" || parsed?.prefix === "LCL")
+      ? (parsed.prefix as "FCL" | "LCL")
+      : "FCL";
+  const initialNumber = parsed
+    ? sanitizeDigits(parsed.number, mode === "Air" ? 4 : 3)
+    : "";
+
+  const [oceanPrefix, setOceanPrefix] = useState<"FCL" | "LCL">(initialOceanPrefix);
+  const [number, setNumber] = useState<string>(initialNumber);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const p = parseShipmentNumber(value ?? null);
+    if (mode === "Air") {
+      setNumber(p?.prefix === "AIR" ? sanitizeDigits(p.number, 4) : "");
+      setOceanPrefix("FCL");
+    } else if (mode === "Ocean") {
+      setOceanPrefix(p?.prefix === "LCL" ? "LCL" : "FCL");
+      setNumber(p && (p.prefix === "FCL" || p.prefix === "LCL") ? sanitizeDigits(p.number, 3) : "");
+    } else {
+      setNumber("");
+      setOceanPrefix("FCL");
+    }
+    setError(null);
+  }, [open, value, mode]);
+
+  const handleSave = () => {
+    if (!mode) return;
+    if (number === "") { onSave(null); return; }
+    const composed = mode === "Air"
+      ? `${SHIPMENT_AIR_PREFIX}-${number}`
+      : `${oceanPrefix}-${number}`;
+    const v = validateShipmentNumber(mode, composed);
+    if (!v.ok) { setError(v.error ?? "Invalid"); return; }
+    onSave(v.value === undefined ? null : (v.value ?? null));
+  };
+
+  if (!mode) {
+    return (
+      <BottomSheet open={open} onClose={onClose} title="Shipment Number">
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-4 py-6 text-center">
+          <div className="text-[13px] text-muted-foreground">Set Mode first to enable Shipment Number.</div>
+        </div>
+      </BottomSheet>
+    );
+  }
+
+  if (mode === "Local") {
+    return (
+      <BottomSheet open={open} onClose={onClose} title="Shipment Number">
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-4 py-6 text-center">
+          <div className="text-[13px] text-muted-foreground">Shipment Number not yet supported for Local mode.</div>
+        </div>
+      </BottomSheet>
+    );
+  }
+
+  const maxLen = mode === "Air" ? 4 : 3;
+  const lockedPrefix = mode === "Air" ? `${SHIPMENT_AIR_PREFIX}-` : `${oceanPrefix}-`;
+  const preview = number ? `${lockedPrefix}${number}` : "";
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title={mode === "Air" ? "Air shipment number" : "Ocean shipment number"} onSave={handleSave}>
+      <div className="space-y-4">
+        {mode === "Ocean" && (
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+              Container type
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {SHIPMENT_OCEAN_PREFIXES.map((o) => (
+                <button
+                  key={o}
+                  onClick={() => { setOceanPrefix(o); setError(null); }}
+                  className={cn(
+                    "px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors hover:bg-muted/40",
+                    oceanPrefix === o ? "bg-muted/60" : "bg-card border-border/60",
+                  )}
+                  style={{ minHeight: 48, borderColor: oceanPrefix === o ? "hsl(var(--brand-navy) / 0.45)" : undefined }}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
+            {mode === "Air" ? "Number (4 digits)" : "Number (3 digits)"}
+          </label>
+          <div
+            className="flex items-center w-full rounded-xl border border-border bg-card px-3 py-2.5 focus-within:ring-2 focus-within:ring-[hsl(var(--brand-navy)/0.4)]"
+            style={{ minHeight: 48 }}
+          >
+            <span
+              aria-hidden
+              className="text-[15px] tabular select-none pointer-events-none shrink-0 mr-0.5"
+              style={{ color: "hsl(var(--brand-navy) / 0.6)" }}
+            >
+              {lockedPrefix}
+            </span>
+            <input
+              value={number}
+              onChange={(e) => { setNumber(sanitizeDigits(e.target.value, maxLen)); setError(null); }}
+              onPaste={(e) => {
+                e.preventDefault();
+                const txt = e.clipboardData.getData("text") ?? "";
+                const stripped = txt.trim().replace(/^\s*(AIR|FCL|LCL)-?/i, "");
+                setNumber(sanitizeDigits(stripped, maxLen));
+                setError(null);
+              }}
+              inputMode="numeric"
+              placeholder={mode === "Air" ? "1224" : "124"}
+              className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[15px] tabular p-0"
+              style={{ color: "hsl(var(--brand-navy))" }}
+              autoFocus
+            />
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">Leave blank to clear.</p>
+        </div>
+        {error && (
+          <div className="text-[12px] font-medium" style={{ color: "hsl(var(--urgent))" }}>{error}</div>
+        )}
         <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-3 py-2.5">
           <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1">Preview</div>
           <div className="text-[15px] font-semibold tabular" style={{ color: "hsl(var(--brand-navy))" }}>

@@ -22,7 +22,7 @@ export type ColumnId =
   | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
   | "quote" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate"
-  | "weight" | "cbm" | "pkgs" | "mode" | "tracking" | "rep" | "deadline";
+  | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
 
 // Columns that must always be visible (workflow anchors). These cannot
 // be unchecked in the popover.
@@ -33,16 +33,16 @@ export const ALWAYS_ON: ReadonlySet<ColumnId> = new Set([
 // Per-tab default visible columns. Order in the array is irrelevant —
 // rendering order comes from ALL_COLS in ProjectTable.
 export const DEFAULT_VISIBLE: Record<TabId, ColumnId[]> = {
-  all: ["flagged", "stage", "customer", "project", "detail", "supplier", "amount", "mode", "rep", "deadline"],
+  all: ["flagged", "stage", "customer", "project", "detail", "supplier", "amount", "mode", "shipmentNumber", "tracking", "rep", "deadline"],
   sales: ["flagged", "stage", "customer", "project", "detail", "quote", "amount", "rep", "deadline"],
   design: ["flagged", "stage", "customer", "project", "designBrief", "supplier", "rep", "deadline"],
   purchasing: ["flagged", "stage", "customer", "project", "supplier", "po", "amount", "mode", "rep", "deadline"],
-  production: ["flagged", "stage", "customer", "project", "supplier", "po", "weight", "cbm", "pkgs", "rep", "deadline"],
-  shipping: ["flagged", "stage", "customer", "project", "supplier", "mode", "tracking", "weight", "cbm", "pkgs", "deadline"],
-  finance: ["flagged", "stage", "customer", "project", "invoice", "amount", "balance", "rep", "deadline"],
-  completed: ["flagged", "stage", "customer", "project", "invoice", "amount", "completionDate", "rep"],
+  production: ["flagged", "stage", "customer", "project", "supplier", "po", "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking", "rep", "deadline"],
+  shipping: ["flagged", "stage", "customer", "project", "supplier", "mode", "shipmentNumber", "tracking", "weight", "cbm", "pkgs", "deadline"],
+  finance: ["flagged", "stage", "customer", "project", "invoice", "amount", "balance", "shipmentNumber", "tracking", "rep", "deadline"],
+  completed: ["flagged", "stage", "customer", "project", "invoice", "amount", "completionDate", "shipmentNumber", "tracking", "rep"],
   // legacy alias — same as production
-  operations: ["flagged", "stage", "customer", "project", "supplier", "po", "weight", "cbm", "pkgs", "rep", "deadline"],
+  operations: ["flagged", "stage", "customer", "project", "supplier", "po", "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking", "rep", "deadline"],
 };
 
 const STORAGE_PREFIX = "alvasco.colVis.v1";

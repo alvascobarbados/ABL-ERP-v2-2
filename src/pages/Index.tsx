@@ -164,7 +164,7 @@ function projectMatchesSearch(p: Project, q: string): boolean {
   const fields = [
     p.customer, p.projectName, p.detailSummary ?? "", p.contactPerson ?? "",
     p.pointPerson ?? "",
-    p.quoteNumber ?? "", p.poNumber ?? "", p.invoiceNumber ?? "", p.trackingRef ?? "",
+    p.quoteNumber ?? "", p.poNumber ?? "", p.invoiceNumber ?? "", p.trackingRef ?? "", p.shipmentNumber ?? "",
     lineItemText,
   ];
   return fields.some((f) => (f ?? "").toLowerCase().includes(needle));
