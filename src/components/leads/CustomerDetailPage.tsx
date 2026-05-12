@@ -29,6 +29,7 @@ export const CustomerDetailPage = ({ customerId }: { customerId: string }) => {
   const [, setSearchParams] = useSearchParams();
   const md = useMasterData();
   const store = usePipelineStore();
+  const user = useCurrentUser();
 
   const customer = md.customers.find((c) => c.id === customerId);
   const buyers = useMemo(() => md.buyersByCustomer(customerId), [md, customerId]);
@@ -42,6 +43,60 @@ export const CustomerDetailPage = ({ customerId }: { customerId: string }) => {
   const [addBuyerOpen, setAddBuyerOpen] = useState(false);
   const [editingBuyer, setEditingBuyer] = useState<Buyer | null>(null);
   const [confirmDeleteBuyer, setConfirmDeleteBuyer] = useState<Buyer | null>(null);
+  const [customerMerge, setCustomerMerge] = useState<{ source: Customer; target: Customer; projectsCount: number; buyersCount: number } | null>(null);
+  const [buyerMerge, setBuyerMerge] = useState<{ source: Buyer; target: Buyer } | null>(null);
+  const [merging, setMerging] = useState(false);
+
+  const requestCustomerMerge = (target: Customer) => {
+    if (!customer) return;
+    setCustomerMerge({
+      source: customer, target,
+      projectsCount: projects.length,
+      buyersCount: buyers.length,
+    });
+  };
+  const requestBuyerMerge = (source: Buyer, target: Buyer) => {
+    setBuyerMerge({ source, target });
+  };
+
+  const handleConfirmCustomerMerge = async () => {
+    if (!customerMerge) return;
+    setMerging(true);
+    try {
+      const targetId = customerMerge.target.id;
+      const targetName = customerMerge.target.name;
+      const sourceName = customerMerge.source.name;
+      await md.mergeCustomers(customerMerge.source.id, targetId, {
+        userId: user.userId, displayName: user.fullName, shortName: user.shortName,
+      });
+      toast.success(`Merged ${sourceName} into ${targetName}.`);
+      setCustomerMerge(null);
+      setEditor(null);
+      // Source customer is gone — navigate to the survivor.
+      navigate(`/customers?customer=${targetId}`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Merge failed");
+    }
+    setMerging(false);
+  };
+
+  const handleConfirmBuyerMerge = async () => {
+    if (!buyerMerge || !customer) return;
+    setMerging(true);
+    try {
+      await md.mergeBuyers(
+        buyerMerge.source.id, buyerMerge.target.id,
+        { userId: user.userId, displayName: user.fullName, shortName: user.shortName },
+        customer.name,
+      );
+      toast.success(`Merged ${buyerMerge.source.name} with ${buyerMerge.target.name}.`);
+      setBuyerMerge(null);
+      setEditingBuyer(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Merge failed");
+    }
+    setMerging(false);
+  };
 
   if (!customer) {
     return (
