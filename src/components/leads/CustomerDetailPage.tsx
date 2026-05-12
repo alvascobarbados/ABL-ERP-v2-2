@@ -371,12 +371,13 @@ export const CustomerDetailPage = ({ customerId }: { customerId: string }) => {
 
 // ─── Customer single-field editor ──────────────────────────────────────
 const CustomerFieldEditor = ({
-  open, kind, customer, onClose,
+  open, kind, customer, onClose, onRequestMerge,
 }: {
   open: boolean;
   kind: EditorKind;
   customer: { id: string; name: string; country: CustomerCountry; incoterms?: CustomerIncoterms | null };
   onClose: () => void;
+  onRequestMerge: (target: Customer) => void;
 }) => {
   const md = useMasterData();
   const [val, setVal] = useState("");
@@ -397,9 +398,17 @@ const CustomerFieldEditor = ({
       if (kind === "name") {
         const t = val.trim();
         if (!t) { toast.error("Name is required"); setSaving(false); return; }
-        const dup = md.customers.find((c) => c.id !== customer.id && c.name.toLowerCase() === t.toLowerCase());
-        if (dup) { toast.error(`"${t}" already exists`); setSaving(false); return; }
+        if (t.toLowerCase() === customer.name.toLowerCase()) { onClose(); setSaving(false); return; }
+        const dup = md.findCustomerByName(t, customer.id);
+        if (dup) {
+          onRequestMerge(dup);
+          setSaving(false);
+          return;
+        }
+        const oldName = customer.name;
         await md.updateCustomer(customer.id, { name: t });
+        // Keep free-text project references in sync.
+        await supabase.from("projects").update({ customer: t }).eq("customer", oldName);
       } else if (kind === "country") {
         await md.updateCustomer(customer.id, { country: val as CustomerCountry });
       } else if (kind === "incoterms") {
