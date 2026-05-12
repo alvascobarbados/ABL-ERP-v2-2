@@ -175,6 +175,13 @@ function compareCards(
     }
     case "customer":
       return dir * a.project.customer.localeCompare(b.project.customer);
+    case "buyer": {
+      const av = buyerLookup?.(a.project.buyerId)?.name ?? "";
+      const bv = buyerLookup?.(b.project.buyerId)?.name ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv);
+    }
     case "project":
       return dir * a.project.projectName.localeCompare(b.project.projectName);
     case "detail": {
