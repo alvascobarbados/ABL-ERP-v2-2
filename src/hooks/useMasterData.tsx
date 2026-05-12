@@ -146,7 +146,7 @@ interface Ctx {
     targetId: string,
     actor: { userId: string; displayName: string; shortName: string },
     customerName: string,
-  ) => Promise<{ fieldsCopied: string[] }>;
+  ) => Promise<{ fieldsCopied: string[]; projectsMoved: number }>;
 }
 
 const MasterDataCtx = createContext<Ctx | null>(null);
