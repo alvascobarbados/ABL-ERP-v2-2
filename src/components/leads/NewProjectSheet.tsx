@@ -12,8 +12,10 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BottomSheet } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
+import { BuyerPicker } from "./BuyerPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { useMasterData } from "@/hooks/useMasterData";
 import { Project, PIPELINES } from "@/data/pipelines";
 
 type InitialStageId = "sourcing" | "proposal" | "quote" | "confirming";
