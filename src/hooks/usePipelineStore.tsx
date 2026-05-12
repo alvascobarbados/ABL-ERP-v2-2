@@ -90,6 +90,12 @@ function fmtVal(field: keyof Project, val: unknown, suppliers: Supplier[]): stri
   if (field === "supplierId") {
     return suppliers.find((s) => s.id === val)?.name ?? String(val);
   }
+  if (field === "buyerId") {
+    // Buyer names aren't accessible from the store. The detail-page caller
+    // augments the patch with a synthetic field beforehand if it wants name
+    // resolution; here we fall back to a generic placeholder for IDs.
+    return typeof val === "string" && val.length === 36 ? "(buyer)" : String(val);
+  }
   if (val instanceof Date) {
     return `${val.getDate()} ${val.toLocaleString("en-US", { month: "short" })} ${val.getFullYear()}`;
   }
@@ -638,8 +644,25 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const proj = projectsRef.current.find((p) => p.id === id);
     if (!proj) return;
     const u = userRef.current;
-    const entries = buildFieldEditEntries(proj, patch, u, suppliersRef.current);
-    let next = touch({ ...proj, ...patch });
+    // Auto-clear buyer when customer changes (the buyer no longer belongs
+    // to the new customer). Skipped if the caller already set buyerId
+    // explicitly in the same patch.
+    let effectivePatch = patch;
+    if (
+      typeof patch.customer === "string" &&
+      patch.customer !== proj.customer &&
+      proj.buyerId &&
+      !("buyerId" in patch)
+    ) {
+      effectivePatch = { ...patch, buyerId: null };
+      // Defer toast to next tick so callers can compose their own
+      // success toasts first.
+      setTimeout(() => {
+        toast.info("Buyer was cleared because the customer changed");
+      }, 0);
+    }
+    const entries = buildFieldEditEntries(proj, effectivePatch, u, suppliersRef.current);
+    let next = touch({ ...proj, ...effectivePatch });
     const newEntries: ProjectLogEntry[] = [];
     for (const e of entries) {
       const r = appendLog(next, e);
