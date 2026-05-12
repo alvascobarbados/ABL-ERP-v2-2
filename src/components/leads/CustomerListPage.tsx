@@ -96,6 +96,49 @@ export const CustomerListPage = () => {
     setConfirmDelete(null);
   };
 
+  // Open the customer merge prompt. Counts are computed at prompt time.
+  const requestCustomerMerge = (source: Customer, target: Customer) => {
+    const projectsCount = store.projects.filter((p) => p.customer === source.name).length;
+    const buyersCount = md.buyersByCustomer(source.id).length;
+    setCustomerMerge({ source, target, projectsCount, buyersCount });
+  };
+
+  const requestBuyerMerge = (source: Buyer, target: Buyer, customerName: string) => {
+    setBuyerMerge({ source, target, customerName });
+  };
+
+  const handleConfirmCustomerMerge = async () => {
+    if (!customerMerge) return;
+    setMerging(true);
+    try {
+      await md.mergeCustomers(customerMerge.source.id, customerMerge.target.id, {
+        userId: user.userId, displayName: user.fullName, shortName: user.shortName,
+      });
+      toast.success(`Merged ${customerMerge.source.name} into ${customerMerge.target.name}.`);
+      setCustomerMerge(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Merge failed");
+    }
+    setMerging(false);
+  };
+
+  const handleConfirmBuyerMerge = async () => {
+    if (!buyerMerge) return;
+    setMerging(true);
+    try {
+      await md.mergeBuyers(
+        buyerMerge.source.id, buyerMerge.target.id,
+        { userId: user.userId, displayName: user.fullName, shortName: user.shortName },
+        buyerMerge.customerName,
+      );
+      toast.success(`Merged ${buyerMerge.source.name} with ${buyerMerge.target.name}.`);
+      setBuyerMerge(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Merge failed");
+    }
+    setMerging(false);
+  };
+
   return (
     <DesktopAppShell>
       <div className="min-h-dvh" style={{ backgroundColor: "hsl(var(--background))" }}>
