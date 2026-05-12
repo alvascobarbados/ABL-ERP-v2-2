@@ -667,13 +667,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         multiline
         onSave={saveDetail}
       />
-      <TextEditor
-        open={editor?.kind === "contact"}
+      <BuyerPicker
+        open={editor?.kind === "buyer"}
         onClose={() => setEditor(null)}
-        title="Edit contact"
-        value={live.contactPerson ?? ""}
-        placeholder="Contact name"
-        onSave={saveContact}
+        customerId={md.findCustomerByName(live.customer)?.id ?? null}
+        selectedId={live.buyerId ?? null}
+        onPick={saveBuyer}
       />
       <TeamMultiPicker
         open={editor?.kind === "salesRep"}
