@@ -45,11 +45,13 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
   useEffect(() => {
     if (open) {
       setCustomer("");
+      setBuyerId(null);
       setProjectName("");
       setDetail("");
       setDeadline("");
       setInitialStage("sourcing");
       setPickerOpen(false);
+      setBuyerPickerOpen(false);
       setDiscardOpen(false);
       setDebouncedName("");
     }
