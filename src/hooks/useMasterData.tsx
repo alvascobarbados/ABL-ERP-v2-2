@@ -464,11 +464,20 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
         if (error) throw error;
       }
 
-      // 2. Delete source buyer
+      // 2. Re-attribute projects.buyer_id from source → target BEFORE deletion
+      const { data: movedProjects, error: mErr } = await supabase
+        .from("projects")
+        .update({ buyer_id: targetId })
+        .eq("buyer_id", sourceId)
+        .select("id");
+      if (mErr) throw mErr;
+      const projectsMoved = movedProjects?.length ?? 0;
+
+      // 3. Delete source buyer (FK ON DELETE SET NULL would orphan otherwise)
       const { error: dErr } = await supabase.from("buyers").delete().eq("id", sourceId);
       if (dErr) throw dErr;
 
-      // 3. Audit log — attach to first project under the customer (best-effort, optional)
+      // 4. Audit log — attach to first project under the customer (best-effort, optional)
       const { data: anchor } = await supabase
         .from("projects")
         .select("id")
@@ -482,13 +491,14 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
           actor_user_id: actor.userId,
           actor_display_name: actor.displayName,
           action_type: "field_edit",
-          description: `${actor.shortName} merged buyer ${source.name} with ${target.name} under ${customerName}`,
+          description: `${actor.shortName} merged buyer ${source.name} with ${target.name} under ${customerName} (${projectsMoved} project${projectsMoved === 1 ? "" : "s"} reassigned)`,
           metadata: {
             customer_name: customerName,
             kept_buyer_id: targetId,
             deleted_buyer_id: sourceId,
             source_name: source.name,
             fields_copied: fieldsCopied,
+            projects_moved: projectsMoved,
           } as any,
         });
         if (lErr) console.warn("Merge-buyer audit log insert failed", lErr);
@@ -501,7 +511,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
           .map((b) => (b.id === targetId ? { ...b, ...patch } : b)),
       );
 
-      return { fieldsCopied };
+      return { fieldsCopied, projectsMoved };
     },
     [buyers],
   );
