@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 export type ViewMode = "board" | "table";
 
 const STORAGE_KEY = "alvasco.viewMode.global.v1";
-const DEFAULT: ViewMode = "board";
+const DEFAULT: ViewMode = "table";
 
 function load(): ViewMode {
   try {
