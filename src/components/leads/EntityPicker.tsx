@@ -93,7 +93,7 @@ const PickerBody = ({
     if (kind === "customer") {
       return md.customers
         .filter((c) => !term || c.name.toLowerCase().includes(term))
-        .map((c) => ({ id: c.name, label: c.name, sub: c.industry ?? undefined }));
+        .map((c) => ({ id: c.name, label: c.name, sub: c.country ?? undefined }));
     }
     if (kind === "supplier") {
       return md.suppliers
@@ -485,19 +485,20 @@ interface InlineAddProps {
 export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: InlineAddProps) => {
   const md = useMasterData();
   const [name, setName] = useState(initialName);
-  const [country, setCountry] = useState("");
+  const [country, setCountry] = useState<"Local" | "Regional">("Local");
+  const [incoterms, setIncoterms] = useState<"" | "FOB" | "CIF" | "LDP" | "LDF">("");
+  const [supCountry, setSupCountry] = useState("");
   const [mode, setMode] = useState<ShippingMode>("Ocean");
   const [initials, setInitials] = useState("");
   const [fullName, setFullName] = useState("");
   const [teamEmail, setTeamEmail] = useState("");
-  const [industry, setIndustry] = useState("");
   const [unit, setUnit] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setName(initialName);
-    setCountry(""); setMode("Ocean"); setInitials(""); setFullName(""); setTeamEmail("");
-    setIndustry(""); setUnit("");
+    setCountry("Local"); setIncoterms(""); setSupCountry(""); setMode("Ocean");
+    setInitials(""); setFullName(""); setTeamEmail(""); setUnit("");
   }, [open, initialName]);
 
   const titles: Record<EntityKind, string> = {
@@ -514,13 +515,17 @@ export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: 
   const submit = async () => {
     try {
       if (kind === "customer") {
-        const c = await md.addCustomer({ name: name.trim(), industry: industry.trim() || undefined });
+        const c = await md.addCustomer({
+          name: name.trim(),
+          country,
+          incoterms: (incoterms || null) as any,
+        });
         toast.success(`Customer "${c.name}" added`);
         onCreated(c.name);
       } else if (kind === "supplier") {
         const s = await md.addSupplier({
           name: name.trim(),
-          country: country.trim() || undefined,
+          country: supCountry.trim() || undefined,
           default_shipping_mode: mode,
         });
         toast.success(`Supplier "${s.name}" added`);
@@ -573,16 +578,31 @@ export const InlineAdd = ({ open, kind, initialName = "", onClose, onCreated }: 
           </div>
         )}
         {kind === "customer" && (
-          <div>
-            <label className={labelCls}>Industry (optional)</label>
-            <input value={industry} onChange={(e) => setIndustry(e.target.value)} className={inputCls} style={{ minHeight: 48 }} placeholder="e.g. Beverage" />
-          </div>
+          <>
+            <div>
+              <label className={labelCls}>Country</label>
+              <select value={country} onChange={(e) => setCountry(e.target.value as any)} className={inputCls} style={{ minHeight: 48 }}>
+                <option value="Local">Local</option>
+                <option value="Regional">Regional</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Incoterms (optional)</label>
+              <select value={incoterms} onChange={(e) => setIncoterms(e.target.value as any)} className={inputCls} style={{ minHeight: 48 }}>
+                <option value="">—</option>
+                <option value="FOB">FOB</option>
+                <option value="CIF">CIF</option>
+                <option value="LDP">LDP</option>
+                <option value="LDF">LDF</option>
+              </select>
+            </div>
+          </>
         )}
         {kind === "supplier" && (
           <>
             <div>
               <label className={labelCls}>Country (optional)</label>
-              <input value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls} style={{ minHeight: 48 }} placeholder="e.g. China" />
+              <input value={supCountry} onChange={(e) => setSupCountry(e.target.value)} className={inputCls} style={{ minHeight: 48 }} placeholder="e.g. China" />
             </div>
             <div>
               <label className={labelCls}>Default shipping</label>
