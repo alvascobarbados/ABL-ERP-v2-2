@@ -14,14 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      buyers: {
+        Row: {
+          contact: string | null
+          created_at: string
+          customer_id: string
+          email: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string
+          customer_id: string
+          email?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string
+          customer_id?: string
+          email?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           contact_name: string | null
+          country: string
           created_at: string
           default_shipping_mode: string | null
           email: string | null
           id: string
-          industry: string | null
+          incoterms: string | null
           name: string
           notes: string | null
           payment_terms: string
@@ -31,11 +70,12 @@ export type Database = {
         }
         Insert: {
           contact_name?: string | null
+          country?: string
           created_at?: string
           default_shipping_mode?: string | null
           email?: string | null
           id?: string
-          industry?: string | null
+          incoterms?: string | null
           name: string
           notes?: string | null
           payment_terms?: string
@@ -45,11 +85,12 @@ export type Database = {
         }
         Update: {
           contact_name?: string | null
+          country?: string
           created_at?: string
           default_shipping_mode?: string | null
           email?: string | null
           id?: string
-          industry?: string | null
+          incoterms?: string | null
           name?: string
           notes?: string | null
           payment_terms?: string
