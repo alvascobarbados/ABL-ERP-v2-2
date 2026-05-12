@@ -35,7 +35,7 @@ export const ALWAYS_ON: ReadonlySet<ColumnId> = new Set([
 // Temporary: every tab defaults to ALL columns visible. Order mirrors
 // ALL_COLS in src/components/leads/ProjectTable.tsx.
 const ALL_COLUMNS: ColumnId[] = [
-  "flagged", "stage", "customer", "project", "detail", "designBrief",
+  "flagged", "stage", "customer", "buyer", "project", "detail", "designBrief",
   "supplier", "quote", "po", "invoice", "amount", "balance",
   "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking",
   "rep", "completionDate", "deadline",
