@@ -94,12 +94,15 @@ interface Ctx {
   suppliers: SupplierRecord[];
   teamMembers: TeamMember[];
   products: ProductRecord[];
+  buyers: Buyer[];
   loading: boolean;
 
   // Resolve a supplier by either its UUID id or its legacy "sup-…" id.
   getSupplierByAnyId: (id?: string | null) => SupplierRecord | undefined;
   // Resolve a team member by initials (case-insensitive).
   getTeamByInitials: (initials: string) => TeamMember | undefined;
+  // Buyers belonging to a given customer.
+  buyersByCustomer: (customerId: string) => Buyer[];
 
   // Usage counts (live projects, excluding trashed).
   customerUsage: (name: string) => number;
@@ -123,6 +126,10 @@ interface Ctx {
   addProduct: (input: { name: string; default_unit?: string; notes?: string }) => Promise<ProductRecord>;
   updateProduct: (id: string, patch: Partial<ProductRecord>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+
+  addBuyer: (customerId: string, input: { name: string; email?: string | null; contact?: string | null }) => Promise<Buyer>;
+  updateBuyer: (id: string, patch: Partial<Pick<Buyer, "name" | "email" | "contact">>) => Promise<void>;
+  deleteBuyer: (id: string) => Promise<void>;
 }
 
 const MasterDataCtx = createContext<Ctx | null>(null);
