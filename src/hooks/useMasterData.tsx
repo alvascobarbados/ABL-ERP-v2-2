@@ -22,15 +22,30 @@ import { usePipelineStore } from "@/hooks/usePipelineStore";
 import type { ShippingMode } from "@/data/pipelines";
 
 // ─── Entity shapes ────────────────────────────────────────────────────────
+export type CustomerCountry = "Local" | "Regional";
+export type CustomerIncoterms = "FOB" | "CIF" | "LDP" | "LDF";
+
 export interface Customer {
   id: string;
   name: string;
-  industry?: string | null;
+  country: CustomerCountry;
+  incoterms?: CustomerIncoterms | null;
+  // Legacy fields retained for now; not surfaced in the new UI.
   contact_name?: string | null;
   phone?: string | null;
   email?: string | null;
   default_shipping_mode?: ShippingMode | null;
   notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Buyer {
+  id: string;
+  customer_id: string;
+  name: string;
+  email?: string | null;
+  contact?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -79,12 +94,15 @@ interface Ctx {
   suppliers: SupplierRecord[];
   teamMembers: TeamMember[];
   products: ProductRecord[];
+  buyers: Buyer[];
   loading: boolean;
 
   // Resolve a supplier by either its UUID id or its legacy "sup-…" id.
   getSupplierByAnyId: (id?: string | null) => SupplierRecord | undefined;
   // Resolve a team member by initials (case-insensitive).
   getTeamByInitials: (initials: string) => TeamMember | undefined;
+  // Buyers belonging to a given customer.
+  buyersByCustomer: (customerId: string) => Buyer[];
 
   // Usage counts (live projects, excluding trashed).
   customerUsage: (name: string) => number;
@@ -108,6 +126,10 @@ interface Ctx {
   addProduct: (input: { name: string; default_unit?: string; notes?: string }) => Promise<ProductRecord>;
   updateProduct: (id: string, patch: Partial<ProductRecord>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+
+  addBuyer: (customerId: string, input: { name: string; email?: string | null; contact?: string | null }) => Promise<Buyer>;
+  updateBuyer: (id: string, patch: Partial<Pick<Buyer, "name" | "email" | "contact">>) => Promise<void>;
+  deleteBuyer: (id: string) => Promise<void>;
 }
 
 const MasterDataCtx = createContext<Ctx | null>(null);
@@ -117,23 +139,26 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Initial fetch + realtime
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [c, s, t, p] = await Promise.all([
+      const [c, s, t, p, b] = await Promise.all([
         supabase.from("customers").select("*").order("name"),
         supabase.from("suppliers").select("*").order("name"),
         supabase.from("team_members").select("*").order("initials"),
         supabase.from("products").select("*").order("name"),
+        supabase.from("buyers").select("*").order("name"),
       ]);
       if (!mounted) return;
       if (c.data) setCustomers(c.data as Customer[]);
       if (s.data) setSuppliers(s.data as SupplierRecord[]);
       if (t.data) setTeamMembers(t.data as TeamMember[]);
       if (p.data) setProducts(p.data as ProductRecord[]);
+      if (b.data) setBuyers(b.data as Buyer[]);
       setLoading(false);
     })();
 
@@ -154,6 +179,10 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, async () => {
         const { data } = await supabase.from("products").select("*").order("name");
         if (data) setProducts(data as ProductRecord[]);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "buyers" }, async () => {
+        const { data } = await supabase.from("buyers").select("*").order("name");
+        if (data) setBuyers(data as Buyer[]);
       })
       .subscribe();
 
@@ -289,22 +318,48 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
+  // ─── Buyers ─────────────────────────────────────────────────────────────
+  const buyersByCustomer = useCallback(
+    (customerId: string) => buyers.filter((b) => b.customer_id === customerId),
+    [buyers],
+  );
+  const addBuyer = useCallback(async (customerId: string, input: { name: string; email?: string | null; contact?: string | null }) => {
+    const { data, error } = await supabase
+      .from("buyers")
+      .insert({ customer_id: customerId, name: input.name, email: input.email ?? null, contact: input.contact ?? null })
+      .select().single();
+    if (error) throw error;
+    setBuyers((prev) => [...prev.filter((b) => b.id !== data.id), data as Buyer].sort((a, b) => a.name.localeCompare(b.name)));
+    return data as Buyer;
+  }, []);
+  const updateBuyer = useCallback(async (id: string, patch: Partial<Pick<Buyer, "name" | "email" | "contact">>) => {
+    const { error } = await supabase.from("buyers").update(patch).eq("id", id);
+    if (error) throw error;
+  }, []);
+  const deleteBuyer = useCallback(async (id: string) => {
+    const { error } = await supabase.from("buyers").delete().eq("id", id);
+    if (error) throw error;
+    setBuyers((prev) => prev.filter((b) => b.id !== id));
+  }, []);
+
   const value = useMemo<Ctx>(() => ({
-    customers, suppliers, teamMembers, products, loading,
-    getSupplierByAnyId, getTeamByInitials,
+    customers, suppliers, teamMembers, products, buyers, loading,
+    getSupplierByAnyId, getTeamByInitials, buyersByCustomer,
     customerUsage, supplierUsage, teamUsage, productUsage,
     addCustomer, updateCustomer, deleteCustomer,
     addSupplier, updateSupplier, deleteSupplier,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addProduct, updateProduct, deleteProduct,
+    addBuyer, updateBuyer, deleteBuyer,
   }), [
-    customers, suppliers, teamMembers, products, loading,
-    getSupplierByAnyId, getTeamByInitials,
+    customers, suppliers, teamMembers, products, buyers, loading,
+    getSupplierByAnyId, getTeamByInitials, buyersByCustomer,
     customerUsage, supplierUsage, teamUsage, productUsage,
     addCustomer, updateCustomer, deleteCustomer,
     addSupplier, updateSupplier, deleteSupplier,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addProduct, updateProduct, deleteProduct,
+    addBuyer, updateBuyer, deleteBuyer,
   ]);
 
   return <MasterDataCtx.Provider value={value}>{children}</MasterDataCtx.Provider>;

@@ -54,15 +54,15 @@ export const MasterListPage = ({ kind }: Props) => {
     if (kind === "customer") {
       const cols: Column[] = [
         { key: "name", label: "Name" },
-        { key: "industry", label: "Industry" },
+        { key: "country", label: "Country" },
         { key: "usage", label: "Used in", align: "right" },
       ];
       const r: Row[] = md.customers
-        .filter((c) => !term || c.name.toLowerCase().includes(term) || (c.industry ?? "").toLowerCase().includes(term))
+        .filter((c) => !term || c.name.toLowerCase().includes(term) || (c.country ?? "").toLowerCase().includes(term))
         .map((c) => ({
           id: c.id, raw: c,
           usage: md.customerUsage(c.name),
-          cells: [c.name, c.industry ?? "—", md.customerUsage(c.name)],
+          cells: [c.name, c.country ?? "—", md.customerUsage(c.name)],
         }));
       return { columns: cols, rows: r };
     }
@@ -346,10 +346,9 @@ const EditEntitySheet = ({ kind, row, onClose, onDelete }: EditProps) => {
     try {
       if (kind === "customer") {
         await md.updateCustomer(ent.id, {
-          name: form.name, industry: form.industry || null,
-          contact_name: form.contact_name || null, phone: form.phone || null,
-          email: form.email || null, default_shipping_mode: form.default_shipping_mode || null,
-          notes: form.notes || null,
+          name: form.name,
+          country: (form.country || "Local") as any,
+          incoterms: (form.incoterms || null) as any,
         });
       } else if (kind === "supplier") {
         await md.updateSupplier(ent.id, {
@@ -392,13 +391,19 @@ const EditEntitySheet = ({ kind, row, onClose, onDelete }: EditProps) => {
         {kind === "customer" && (
           <>
             <Field label="Name"><input className={inputCls} style={{ minHeight: 48 }} value={form.name ?? ""} onChange={(e) => setField("name", e.target.value)} /></Field>
-            <Field label="Industry"><input className={inputCls} style={{ minHeight: 48 }} value={form.industry ?? ""} onChange={(e) => setField("industry", e.target.value)} /></Field>
-            <Field label="Contact"><input className={inputCls} style={{ minHeight: 48 }} value={form.contact_name ?? ""} onChange={(e) => setField("contact_name", e.target.value)} /></Field>
-            <Field label="Phone"><input className={inputCls} style={{ minHeight: 48 }} value={form.phone ?? ""} onChange={(e) => setField("phone", e.target.value)} /></Field>
-            <Field label="Email"><input className={inputCls} style={{ minHeight: 48 }} value={form.email ?? ""} onChange={(e) => setField("email", e.target.value)} /></Field>
-            <Field label="Default shipping">
-              <select className={inputCls} style={{ minHeight: 48 }} value={form.default_shipping_mode ?? ""} onChange={(e) => setField("default_shipping_mode", e.target.value || null)}>
-                <option value="">—</option><option value="Air">Air</option><option value="Ocean">Ocean</option><option value="Local">Local</option>
+            <Field label="Country">
+              <select className={inputCls} style={{ minHeight: 48 }} value={form.country ?? "Local"} onChange={(e) => setField("country", e.target.value)}>
+                <option value="Local">Local</option>
+                <option value="Regional">Regional</option>
+              </select>
+            </Field>
+            <Field label="Incoterms">
+              <select className={inputCls} style={{ minHeight: 48 }} value={form.incoterms ?? ""} onChange={(e) => setField("incoterms", e.target.value || null)}>
+                <option value="">—</option>
+                <option value="FOB">FOB</option>
+                <option value="CIF">CIF</option>
+                <option value="LDP">LDP</option>
+                <option value="LDF">LDF</option>
               </select>
             </Field>
           </>
