@@ -684,10 +684,18 @@ export const AddBuyerSheet = ({
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [md.customers, search]);
 
+  const selectedCustomer = md.customers.find((c) => c.id === customerId);
+  const buyerConflict = useMemo(() => {
+    const t = name.trim();
+    if (!t || !customerId) return null;
+    return md.findBuyerByName(customerId, t) ?? null;
+  }, [md, customerId, name]);
+
   const submit = async () => {
     if (!customerId) { toast.error("Pick a customer"); return; }
     const t = name.trim();
     if (!t) { toast.error("Buyer name required"); return; }
+    if (buyerConflict) return; // inline error already shown
     if (email.trim() && !emailOk(email.trim())) { toast.error("Invalid email"); return; }
     setSaving(true);
     try {
@@ -706,7 +714,6 @@ export const AddBuyerSheet = ({
 
   const inputCls = "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]";
   const labelCls = "block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5";
-  const selectedCustomer = md.customers.find((c) => c.id === customerId);
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Add buyer" onSave={submit} saveLabel="Add" saveDisabled={saving}>
