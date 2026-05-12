@@ -382,6 +382,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           {supplierField}
           {poField}
           {shippingField}
+          {shipmentNumberField}
           {trackingField}
           {deadlineField}
         </div>
@@ -394,6 +395,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           <FieldRow fieldKey="projectName" label="Project name" value={proj.projectName} locked
             onTap={() => setLockedTip("projectName")} />
           {shippingField}
+          {shipmentNumberField}
           {trackingField}
           <FieldRow fieldKey="etd" label="ETD" value={ship ? fmtDate(ship.etd) : "—"} placeholder={!ship}
             onTap={() => ship && setEditing("etd")} />
