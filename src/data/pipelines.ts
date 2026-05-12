@@ -289,7 +289,10 @@ export interface Project {
   shippingMode?: ShippingMode;  // required from Confirming on
   salesShippingLabel?: SalesShippingLabel; // Sales-only display string
   shipmentId?: string;          // assigned in Shipping
-  trackingRef?: string;         // free-form / FCL- / LCL- / carrier digits
+  /** Carrier-issued tracking / B/L: Air = CARRIER-digits, Ocean = BL-alnum, Local = free text. */
+  trackingRef?: string;
+  /** Internal company-assigned shipment number: Air = AIR-####, Ocean = FCL-### / LCL-###. */
+  shipmentNumber?: string | null;
   weightKg?: number;            // physical shipment weight (kg, decimal)
   cbm?: number;                 // cubic meters (decimal)
   numPackages?: number;         // integer count
