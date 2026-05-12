@@ -246,6 +246,7 @@ export type Database = {
           quote_number: string | null
           sales_shipping_label: string | null
           shipment_id: string | null
+          shipment_number: string | null
           shipping_mode: string | null
           stage_id: string
           supplier_id: string | null
@@ -292,6 +293,7 @@ export type Database = {
           quote_number?: string | null
           sales_shipping_label?: string | null
           shipment_id?: string | null
+          shipment_number?: string | null
           shipping_mode?: string | null
           stage_id: string
           supplier_id?: string | null
@@ -338,6 +340,7 @@ export type Database = {
           quote_number?: string | null
           sales_shipping_label?: string | null
           shipment_id?: string | null
+          shipment_number?: string | null
           shipping_mode?: string | null
           stage_id?: string
           supplier_id?: string | null
