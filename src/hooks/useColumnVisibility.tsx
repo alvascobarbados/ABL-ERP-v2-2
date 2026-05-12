@@ -32,17 +32,26 @@ export const ALWAYS_ON: ReadonlySet<ColumnId> = new Set([
 
 // Per-tab default visible columns. Order in the array is irrelevant —
 // rendering order comes from ALL_COLS in ProjectTable.
+// Temporary: every tab defaults to ALL columns visible. Order mirrors
+// ALL_COLS in src/components/leads/ProjectTable.tsx.
+const ALL_COLUMNS: ColumnId[] = [
+  "flagged", "stage", "customer", "project", "detail", "designBrief",
+  "supplier", "quote", "po", "invoice", "amount", "balance",
+  "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking",
+  "rep", "completionDate", "deadline",
+];
+
 export const DEFAULT_VISIBLE: Record<TabId, ColumnId[]> = {
-  all: ["flagged", "stage", "customer", "project", "detail", "supplier", "amount", "mode", "shipmentNumber", "tracking", "rep", "deadline"],
-  sales: ["flagged", "stage", "customer", "project", "detail", "quote", "amount", "rep", "deadline"],
-  design: ["flagged", "stage", "customer", "project", "designBrief", "supplier", "rep", "deadline"],
-  purchasing: ["flagged", "stage", "customer", "project", "supplier", "po", "amount", "mode", "rep", "deadline"],
-  production: ["flagged", "stage", "customer", "project", "supplier", "po", "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking", "rep", "deadline"],
-  shipping: ["flagged", "stage", "customer", "project", "supplier", "mode", "shipmentNumber", "tracking", "weight", "cbm", "pkgs", "deadline"],
-  finance: ["flagged", "stage", "customer", "project", "invoice", "amount", "balance", "shipmentNumber", "tracking", "rep", "deadline"],
-  completed: ["flagged", "stage", "customer", "project", "invoice", "amount", "completionDate", "shipmentNumber", "tracking", "rep"],
-  // legacy alias — same as production
-  operations: ["flagged", "stage", "customer", "project", "supplier", "po", "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking", "rep", "deadline"],
+  all: ALL_COLUMNS,
+  sales: ALL_COLUMNS,
+  design: ALL_COLUMNS,
+  purchasing: ALL_COLUMNS,
+  production: ALL_COLUMNS,
+  shipping: ALL_COLUMNS,
+  finance: ALL_COLUMNS,
+  completed: ALL_COLUMNS,
+  // legacy alias
+  operations: ALL_COLUMNS,
 };
 
 const STORAGE_PREFIX = "alvasco.colVis.v1";
