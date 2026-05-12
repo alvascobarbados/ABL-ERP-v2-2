@@ -17,6 +17,7 @@ import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
 import { EditableCell, SaveResult, SelectionProvider } from "./EditableCell";
 import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
+import { BuyerPicker } from "./BuyerPicker";
 import {
   Popover,
   PopoverContent,
