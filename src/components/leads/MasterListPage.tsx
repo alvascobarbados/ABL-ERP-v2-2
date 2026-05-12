@@ -346,10 +346,9 @@ const EditEntitySheet = ({ kind, row, onClose, onDelete }: EditProps) => {
     try {
       if (kind === "customer") {
         await md.updateCustomer(ent.id, {
-          name: form.name, industry: form.industry || null,
-          contact_name: form.contact_name || null, phone: form.phone || null,
-          email: form.email || null, default_shipping_mode: form.default_shipping_mode || null,
-          notes: form.notes || null,
+          name: form.name,
+          country: (form.country || "Local") as any,
+          incoterms: (form.incoterms || null) as any,
         });
       } else if (kind === "supplier") {
         await md.updateSupplier(ent.id, {
