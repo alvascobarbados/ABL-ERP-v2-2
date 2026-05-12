@@ -305,24 +305,40 @@ const Th = ({ children, className }: { children?: React.ReactNode; className?: s
 // ─── Customer row group ────────────────────────────────────────────────
 const CustomerGroup = ({
   customer, buyers, onView, onAddBuyer, onDelete,
+  onRequestCustomerMerge, onRequestBuyerMerge,
 }: {
   customer: Customer;
   buyers: Buyer[];
   onView: () => void;
   onAddBuyer: () => void;
   onDelete: () => void;
+  onRequestCustomerMerge: (source: Customer, target: Customer) => void;
+  onRequestBuyerMerge: (source: Buyer, target: Buyer, customerName: string) => void;
 }) => {
   const md = useMasterData();
   const rowCount = Math.max(1, buyers.length);
 
+  // Bumped each time we want EditableText to revert its internal draft to
+  // the prop value (e.g. after the user cancels a merge prompt).
+  const [nameRevert, setNameRevert] = useState(0);
+
   const updateName = async (v: string) => {
     const trimmed = v.trim();
-    if (!trimmed) { toast.error("Name is required"); return; }
-    if (trimmed === customer.name) return;
-    const dup = md.customers.find((c) => c.id !== customer.id && c.name.toLowerCase() === trimmed.toLowerCase());
-    if (dup) { toast.error(`"${trimmed}" already exists`); return; }
-    try { await md.updateCustomer(customer.id, { name: trimmed }); }
-    catch (err: any) { toast.error(err?.message ?? "Save failed"); }
+    if (!trimmed) { toast.error("Name is required"); setNameRevert((n) => n + 1); return; }
+    if (trimmed.toLowerCase() === customer.name.toLowerCase()) { setNameRevert((n) => n + 1); return; }
+    const dup = md.findCustomerByName(trimmed, customer.id);
+    if (dup) {
+      onRequestCustomerMerge(customer, dup);
+      setNameRevert((n) => n + 1);
+      return;
+    }
+    try {
+      await md.updateCustomer(customer.id, { name: trimmed });
+      // Also update free-text customer references on projects so they don't
+      // become orphaned after a casual rename.
+      await supabase.from("projects").update({ customer: trimmed }).eq("customer", customer.name);
+    }
+    catch (err: any) { toast.error(err?.message ?? "Save failed"); setNameRevert((n) => n + 1); }
   };
   const updateCountry = async (v: string) => {
     try { await md.updateCustomer(customer.id, { country: v as CustomerCountry }); }
