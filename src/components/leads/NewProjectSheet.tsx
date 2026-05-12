@@ -251,7 +251,21 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
         kind="customer"
         selectedId={customer || null}
         onClose={() => setPickerOpen(false)}
-        onPick={(name) => setCustomer(name)}
+        onPick={(name) => {
+          if (name !== customer && buyerId) {
+            setBuyerId(null);
+            toast("Buyer cleared — pick one for the new customer", { duration: 2500 });
+          }
+          setCustomer(name);
+        }}
+      />
+
+      <BuyerPicker
+        open={buyerPickerOpen}
+        onClose={() => setBuyerPickerOpen(false)}
+        customerId={customer ? (md.findCustomerByName(customer)?.id ?? null) : null}
+        selectedId={buyerId}
+        onPick={(id) => setBuyerId(id)}
       />
 
       <ConfirmDialog
