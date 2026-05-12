@@ -1227,6 +1227,26 @@ const TableRow = ({
           onConfirm={pickReps}
         />
       )}
+      {openPicker === "buyer" && (
+        <BuyerPicker
+          open
+          onClose={() => setOpenPicker(null)}
+          presentation="popover"
+          anchorEl={pickerAnchor}
+          customerId={md.findCustomerByName(proj.customer)?.id ?? null}
+          selectedId={proj.buyerId ?? null}
+          onPick={async (buyerId) => {
+            setOpenPicker(null);
+            try {
+              await store.updateProject(proj.id, { buyerId });
+              triggerFlash("buyer", "success");
+            } catch (err: any) {
+              toast.error(err?.message ?? "Save failed");
+              triggerFlash("buyer", "error");
+            }
+          }}
+        />
+      )}
 
       {/* Tracking editor sheet (mode-gated, format-enforced) */}
       <TrackingEditor
