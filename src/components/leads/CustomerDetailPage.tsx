@@ -10,11 +10,14 @@ import { toast } from "sonner";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { SectionHeader, SectionCard, DetailRow } from "@/components/leads/ProjectDetail";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { MergeDialog } from "@/components/leads/MergeDialog";
 import { BottomSheet } from "@/components/leads/EditorSheets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useMasterData, type Buyer, type CustomerCountry, type CustomerIncoterms } from "@/hooks/useMasterData";
+import { useMasterData, type Buyer, type Customer, type CustomerCountry, type CustomerIncoterms } from "@/hooks/useMasterData";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { AddBuyerSheet } from "@/components/leads/CustomerListPage";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -26,6 +29,7 @@ export const CustomerDetailPage = ({ customerId }: { customerId: string }) => {
   const [, setSearchParams] = useSearchParams();
   const md = useMasterData();
   const store = usePipelineStore();
+  const user = useCurrentUser();
 
   const customer = md.customers.find((c) => c.id === customerId);
   const buyers = useMemo(() => md.buyersByCustomer(customerId), [md, customerId]);
@@ -39,6 +43,60 @@ export const CustomerDetailPage = ({ customerId }: { customerId: string }) => {
   const [addBuyerOpen, setAddBuyerOpen] = useState(false);
   const [editingBuyer, setEditingBuyer] = useState<Buyer | null>(null);
   const [confirmDeleteBuyer, setConfirmDeleteBuyer] = useState<Buyer | null>(null);
+  const [customerMerge, setCustomerMerge] = useState<{ source: Customer; target: Customer; projectsCount: number; buyersCount: number } | null>(null);
+  const [buyerMerge, setBuyerMerge] = useState<{ source: Buyer; target: Buyer } | null>(null);
+  const [merging, setMerging] = useState(false);
+
+  const requestCustomerMerge = (target: Customer) => {
+    if (!customer) return;
+    setCustomerMerge({
+      source: customer, target,
+      projectsCount: projects.length,
+      buyersCount: buyers.length,
+    });
+  };
+  const requestBuyerMerge = (source: Buyer, target: Buyer) => {
+    setBuyerMerge({ source, target });
+  };
+
+  const handleConfirmCustomerMerge = async () => {
+    if (!customerMerge) return;
+    setMerging(true);
+    try {
+      const targetId = customerMerge.target.id;
+      const targetName = customerMerge.target.name;
+      const sourceName = customerMerge.source.name;
+      await md.mergeCustomers(customerMerge.source.id, targetId, {
+        userId: user.userId, displayName: user.fullName, shortName: user.shortName,
+      });
+      toast.success(`Merged ${sourceName} into ${targetName}.`);
+      setCustomerMerge(null);
+      setEditor(null);
+      // Source customer is gone — navigate to the survivor.
+      navigate(`/customers?customer=${targetId}`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Merge failed");
+    }
+    setMerging(false);
+  };
+
+  const handleConfirmBuyerMerge = async () => {
+    if (!buyerMerge || !customer) return;
+    setMerging(true);
+    try {
+      await md.mergeBuyers(
+        buyerMerge.source.id, buyerMerge.target.id,
+        { userId: user.userId, displayName: user.fullName, shortName: user.shortName },
+        customer.name,
+      );
+      toast.success(`Merged ${buyerMerge.source.name} with ${buyerMerge.target.name}.`);
+      setBuyerMerge(null);
+      setEditingBuyer(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Merge failed");
+    }
+    setMerging(false);
+  };
 
   if (!customer) {
     return (
@@ -236,15 +294,52 @@ export const CustomerDetailPage = ({ customerId }: { customerId: string }) => {
           kind={editor}
           customer={customer}
           onClose={() => setEditor(null)}
+          onRequestMerge={requestCustomerMerge}
         />
 
         <BuyerEditorSheet
           open={!!editingBuyer}
           buyer={editingBuyer}
           onClose={() => setEditingBuyer(null)}
+          onRequestMerge={requestBuyerMerge}
         />
 
         <AddBuyerSheet open={addBuyerOpen} onClose={() => setAddBuyerOpen(false)} fixedCustomerId={customer.id} />
+
+        <MergeDialog
+          open={!!customerMerge}
+          busy={merging}
+          title={customerMerge ? `Merge ${customerMerge.source.name} into ${customerMerge.target.name}?` : ""}
+          intro={customerMerge ? `A customer named ${customerMerge.target.name} already exists.\n\nIf you merge them, the following will happen:` : ""}
+          bullets={customerMerge ? [
+            `${customerMerge.projectsCount} project${customerMerge.projectsCount === 1 ? "" : "s"} currently under ${customerMerge.source.name} will move to ${customerMerge.target.name}`,
+            `${customerMerge.buyersCount} buyer${customerMerge.buyersCount === 1 ? "" : "s"} currently under ${customerMerge.source.name} will move to ${customerMerge.target.name}`,
+            `${customerMerge.source.name} will be permanently deleted`,
+            `Country, Incoterms, and other fields on ${customerMerge.target.name} will be kept as-is — ${customerMerge.source.name}'s values will be discarded`,
+            `Activity Log history will remain intact (no rewriting)`,
+          ] : []}
+          footer="This cannot be undone."
+          confirmLabel={customerMerge ? `Merge into ${customerMerge.target.name}` : "Merge"}
+          onCancel={() => !merging && setCustomerMerge(null)}
+          onConfirm={handleConfirmCustomerMerge}
+        />
+
+        <MergeDialog
+          open={!!buyerMerge}
+          busy={merging}
+          title={buyerMerge ? `Merge ${buyerMerge.source.name} with ${buyerMerge.target.name}?` : ""}
+          intro={buyerMerge && customer ? `A buyer named ${buyerMerge.target.name} already exists under ${customer.name}.\n\nIf you merge them:` : ""}
+          bullets={buyerMerge ? [
+            `${buyerMerge.target.name} will be kept`,
+            `${buyerMerge.source.name} will be deleted`,
+            `Any email or contact phone on ${buyerMerge.source.name} that ${buyerMerge.target.name} doesn't have will be copied over`,
+            `Existing fields on ${buyerMerge.target.name} are not overwritten`,
+          ] : []}
+          footer="This cannot be undone."
+          confirmLabel="Merge buyers"
+          onCancel={() => !merging && setBuyerMerge(null)}
+          onConfirm={handleConfirmBuyerMerge}
+        />
 
         <ConfirmDialog
           open={confirmDelete}
@@ -276,12 +371,13 @@ export const CustomerDetailPage = ({ customerId }: { customerId: string }) => {
 
 // ─── Customer single-field editor ──────────────────────────────────────
 const CustomerFieldEditor = ({
-  open, kind, customer, onClose,
+  open, kind, customer, onClose, onRequestMerge,
 }: {
   open: boolean;
   kind: EditorKind;
   customer: { id: string; name: string; country: CustomerCountry; incoterms?: CustomerIncoterms | null };
   onClose: () => void;
+  onRequestMerge: (target: Customer) => void;
 }) => {
   const md = useMasterData();
   const [val, setVal] = useState("");
@@ -302,9 +398,17 @@ const CustomerFieldEditor = ({
       if (kind === "name") {
         const t = val.trim();
         if (!t) { toast.error("Name is required"); setSaving(false); return; }
-        const dup = md.customers.find((c) => c.id !== customer.id && c.name.toLowerCase() === t.toLowerCase());
-        if (dup) { toast.error(`"${t}" already exists`); setSaving(false); return; }
+        if (t.toLowerCase() === customer.name.toLowerCase()) { onClose(); setSaving(false); return; }
+        const dup = md.findCustomerByName(t, customer.id);
+        if (dup) {
+          onRequestMerge(dup);
+          setSaving(false);
+          return;
+        }
+        const oldName = customer.name;
         await md.updateCustomer(customer.id, { name: t });
+        // Keep free-text project references in sync.
+        await supabase.from("projects").update({ customer: t }).eq("customer", oldName);
       } else if (kind === "country") {
         await md.updateCustomer(customer.id, { country: val as CustomerCountry });
       } else if (kind === "incoterms") {
@@ -351,8 +455,13 @@ const CustomerFieldEditor = ({
 
 // ─── Buyer editor sheet ────────────────────────────────────────────────
 const BuyerEditorSheet = ({
-  open, buyer, onClose,
-}: { open: boolean; buyer: Buyer | null; onClose: () => void }) => {
+  open, buyer, onClose, onRequestMerge,
+}: {
+  open: boolean;
+  buyer: Buyer | null;
+  onClose: () => void;
+  onRequestMerge: (source: Buyer, target: Buyer) => void;
+}) => {
   const md = useMasterData();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -374,6 +483,10 @@ const BuyerEditorSheet = ({
     const t = name.trim();
     if (!t) { toast.error("Name required"); return; }
     if (email.trim() && !emailOk(email.trim())) { toast.error("Invalid email"); return; }
+    if (t.toLowerCase() !== buyer.name.toLowerCase()) {
+      const dup = md.findBuyerByName(buyer.customer_id, t, buyer.id);
+      if (dup) { onRequestMerge(buyer, dup); return; }
+    }
     setSaving(true);
     try {
       await md.updateBuyer(buyer.id, {

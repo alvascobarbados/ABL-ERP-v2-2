@@ -18,21 +18,44 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { MergeDialog } from "@/components/leads/MergeDialog";
 import { BottomSheet } from "@/components/leads/EditorSheets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMasterData, type Customer, type Buyer, type CustomerCountry, type CustomerIncoterms } from "@/hooks/useMasterData";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { supabase } from "@/integrations/supabase/client";
 
 const COUNTRIES: CustomerCountry[] = ["Local", "Regional"];
 const INCOTERMS: (CustomerIncoterms | "")[] = ["", "FOB", "CIF", "LDP", "LDF"];
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
+/** State for the customer-merge confirmation modal. */
+type CustomerMergePending = {
+  source: Customer;
+  target: Customer;
+  projectsCount: number;
+  buyersCount: number;
+};
+/** State for the buyer-merge confirmation modal. */
+type BuyerMergePending = {
+  source: Buyer;
+  target: Buyer;
+  customerName: string;
+};
+
 export const CustomerListPage = () => {
   const navigate = useNavigate();
   const md = useMasterData();
+  const user = useCurrentUser();
+  const store = usePipelineStore();
   const [q, setQ] = useState("");
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [addBuyerOpen, setAddBuyerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Customer | null>(null);
+  const [customerMerge, setCustomerMerge] = useState<CustomerMergePending | null>(null);
+  const [buyerMerge, setBuyerMerge] = useState<BuyerMergePending | null>(null);
+  const [merging, setMerging] = useState(false);
 
   // Filter: customer matches if its own fields OR any of its buyers match
   const groups = useMemo(() => {
@@ -72,6 +95,49 @@ export const CustomerListPage = () => {
       toast.error(err?.message ?? "Delete failed");
     }
     setConfirmDelete(null);
+  };
+
+  // Open the customer merge prompt. Counts are computed at prompt time.
+  const requestCustomerMerge = (source: Customer, target: Customer) => {
+    const projectsCount = store.projects.filter((p) => p.customer === source.name).length;
+    const buyersCount = md.buyersByCustomer(source.id).length;
+    setCustomerMerge({ source, target, projectsCount, buyersCount });
+  };
+
+  const requestBuyerMerge = (source: Buyer, target: Buyer, customerName: string) => {
+    setBuyerMerge({ source, target, customerName });
+  };
+
+  const handleConfirmCustomerMerge = async () => {
+    if (!customerMerge) return;
+    setMerging(true);
+    try {
+      await md.mergeCustomers(customerMerge.source.id, customerMerge.target.id, {
+        userId: user.userId, displayName: user.fullName, shortName: user.shortName,
+      });
+      toast.success(`Merged ${customerMerge.source.name} into ${customerMerge.target.name}.`);
+      setCustomerMerge(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Merge failed");
+    }
+    setMerging(false);
+  };
+
+  const handleConfirmBuyerMerge = async () => {
+    if (!buyerMerge) return;
+    setMerging(true);
+    try {
+      await md.mergeBuyers(
+        buyerMerge.source.id, buyerMerge.target.id,
+        { userId: user.userId, displayName: user.fullName, shortName: user.shortName },
+        buyerMerge.customerName,
+      );
+      toast.success(`Merged ${buyerMerge.source.name} with ${buyerMerge.target.name}.`);
+      setBuyerMerge(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Merge failed");
+    }
+    setMerging(false);
   };
 
   return (
@@ -148,6 +214,8 @@ export const CustomerListPage = () => {
                     onView={() => navigate(`/customers?customer=${customer.id}`)}
                     onAddBuyer={() => setAddBuyerOpen(true)}
                     onDelete={() => setConfirmDelete(customer)}
+                    onRequestCustomerMerge={requestCustomerMerge}
+                    onRequestBuyerMerge={requestBuyerMerge}
                   />
                 ))}
                 {groups.length === 0 && (
@@ -184,6 +252,43 @@ export const CustomerListPage = () => {
           destructive
           onConfirm={handleDeleteCustomer}
         />
+
+        {/* Customer merge confirm */}
+        <MergeDialog
+          open={!!customerMerge}
+          busy={merging}
+          title={customerMerge ? `Merge ${customerMerge.source.name} into ${customerMerge.target.name}?` : ""}
+          intro={customerMerge ? `A customer named ${customerMerge.target.name} already exists.\n\nIf you merge them, the following will happen:` : ""}
+          bullets={customerMerge ? [
+            `${customerMerge.projectsCount} project${customerMerge.projectsCount === 1 ? "" : "s"} currently under ${customerMerge.source.name} will move to ${customerMerge.target.name}`,
+            `${customerMerge.buyersCount} buyer${customerMerge.buyersCount === 1 ? "" : "s"} currently under ${customerMerge.source.name} will move to ${customerMerge.target.name}`,
+            `${customerMerge.source.name} will be permanently deleted`,
+            `Country, Incoterms, and other fields on ${customerMerge.target.name} will be kept as-is — ${customerMerge.source.name}'s values will be discarded`,
+            `Activity Log history will remain intact (no rewriting)`,
+          ] : []}
+          footer="This cannot be undone."
+          confirmLabel={customerMerge ? `Merge into ${customerMerge.target.name}` : "Merge"}
+          onCancel={() => !merging && setCustomerMerge(null)}
+          onConfirm={handleConfirmCustomerMerge}
+        />
+
+        {/* Buyer merge confirm */}
+        <MergeDialog
+          open={!!buyerMerge}
+          busy={merging}
+          title={buyerMerge ? `Merge ${buyerMerge.source.name} with ${buyerMerge.target.name}?` : ""}
+          intro={buyerMerge ? `A buyer named ${buyerMerge.target.name} already exists under ${buyerMerge.customerName}.\n\nIf you merge them:` : ""}
+          bullets={buyerMerge ? [
+            `${buyerMerge.target.name} will be kept`,
+            `${buyerMerge.source.name} will be deleted`,
+            `Any email or contact phone on ${buyerMerge.source.name} that ${buyerMerge.target.name} doesn't have will be copied over`,
+            `Existing fields on ${buyerMerge.target.name} are not overwritten`,
+          ] : []}
+          footer="This cannot be undone."
+          confirmLabel="Merge buyers"
+          onCancel={() => !merging && setBuyerMerge(null)}
+          onConfirm={handleConfirmBuyerMerge}
+        />
       </div>
     </DesktopAppShell>
   );
@@ -201,24 +306,40 @@ const Th = ({ children, className }: { children?: React.ReactNode; className?: s
 // ─── Customer row group ────────────────────────────────────────────────
 const CustomerGroup = ({
   customer, buyers, onView, onAddBuyer, onDelete,
+  onRequestCustomerMerge, onRequestBuyerMerge,
 }: {
   customer: Customer;
   buyers: Buyer[];
   onView: () => void;
   onAddBuyer: () => void;
   onDelete: () => void;
+  onRequestCustomerMerge: (source: Customer, target: Customer) => void;
+  onRequestBuyerMerge: (source: Buyer, target: Buyer, customerName: string) => void;
 }) => {
   const md = useMasterData();
   const rowCount = Math.max(1, buyers.length);
 
+  // Bumped each time we want EditableText to revert its internal draft to
+  // the prop value (e.g. after the user cancels a merge prompt).
+  const [nameRevert, setNameRevert] = useState(0);
+
   const updateName = async (v: string) => {
     const trimmed = v.trim();
-    if (!trimmed) { toast.error("Name is required"); return; }
-    if (trimmed === customer.name) return;
-    const dup = md.customers.find((c) => c.id !== customer.id && c.name.toLowerCase() === trimmed.toLowerCase());
-    if (dup) { toast.error(`"${trimmed}" already exists`); return; }
-    try { await md.updateCustomer(customer.id, { name: trimmed }); }
-    catch (err: any) { toast.error(err?.message ?? "Save failed"); }
+    if (!trimmed) { toast.error("Name is required"); setNameRevert((n) => n + 1); return; }
+    if (trimmed.toLowerCase() === customer.name.toLowerCase()) { setNameRevert((n) => n + 1); return; }
+    const dup = md.findCustomerByName(trimmed, customer.id);
+    if (dup) {
+      onRequestCustomerMerge(customer, dup);
+      setNameRevert((n) => n + 1);
+      return;
+    }
+    try {
+      await md.updateCustomer(customer.id, { name: trimmed });
+      // Also update free-text customer references on projects so they don't
+      // become orphaned after a casual rename.
+      await supabase.from("projects").update({ customer: trimmed }).eq("customer", customer.name);
+    }
+    catch (err: any) { toast.error(err?.message ?? "Save failed"); setNameRevert((n) => n + 1); }
   };
   const updateCountry = async (v: string) => {
     try { await md.updateCustomer(customer.id, { country: v as CustomerCountry }); }
@@ -233,7 +354,7 @@ const CustomerGroup = ({
   if (buyers.length === 0) {
     return (
       <tr style={{ borderBottom: "1px solid hsl(var(--brand-navy) / 0.07)" }} className="hover:bg-muted/20 transition-colors">
-        <Td><EditableText value={customer.name} onSave={updateName} bold /></Td>
+        <Td><EditableText key={`name-${nameRevert}`} value={customer.name} onSave={updateName} bold /></Td>
         <Td><EditableSelect value={customer.country} options={COUNTRIES} onSave={updateCountry} /></Td>
         <Td><EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" /></Td>
         <Td className="text-muted-foreground italic">—</Td>
@@ -261,7 +382,7 @@ const CustomerGroup = ({
           {idx === 0 && (
             <>
               <Td rowSpan={rowCount} className="align-top">
-                <EditableText value={customer.name} onSave={updateName} bold />
+                <EditableText key={`name-${nameRevert}`} value={customer.name} onSave={updateName} bold />
               </Td>
               <Td rowSpan={rowCount} className="align-top">
                 <EditableSelect value={customer.country} options={COUNTRIES} onSave={updateCountry} />
@@ -271,7 +392,7 @@ const CustomerGroup = ({
               </Td>
             </>
           )}
-          <Td><BuyerNameCell buyer={buyer} /></Td>
+          <Td><BuyerNameCell buyer={buyer} customerName={customer.name} onRequestMerge={onRequestBuyerMerge} /></Td>
           <Td><BuyerEmailCell buyer={buyer} /></Td>
           <Td><BuyerContactCell buyer={buyer} /></Td>
           {idx === 0 && (
@@ -292,17 +413,27 @@ const Td = ({ children, className, rowSpan }: { children?: React.ReactNode; clas
 );
 
 // ─── Buyer cell editors ────────────────────────────────────────────────
-const BuyerNameCell = ({ buyer }: { buyer: Buyer }) => {
+const BuyerNameCell = ({
+  buyer, customerName, onRequestMerge,
+}: {
+  buyer: Buyer;
+  customerName: string;
+  onRequestMerge: (source: Buyer, target: Buyer, customerName: string) => void;
+}) => {
   const md = useMasterData();
+  const [revert, setRevert] = useState(0);
   return (
     <EditableText
+      key={`bn-${revert}`}
       value={buyer.name}
       onSave={async (v) => {
         const t = v.trim();
-        if (!t) { toast.error("Buyer name required"); return; }
-        if (t === buyer.name) return;
+        if (!t) { toast.error("Buyer name required"); setRevert((n) => n + 1); return; }
+        if (t.toLowerCase() === buyer.name.toLowerCase()) { setRevert((n) => n + 1); return; }
+        const dup = md.findBuyerByName(buyer.customer_id, t, buyer.id);
+        if (dup) { onRequestMerge(buyer, dup, customerName); setRevert((n) => n + 1); return; }
         try { await md.updateBuyer(buyer.id, { name: t }); }
-        catch (err: any) { toast.error(err?.message ?? "Save failed"); }
+        catch (err: any) { toast.error(err?.message ?? "Save failed"); setRevert((n) => n + 1); }
       }}
     />
   );
@@ -426,6 +557,7 @@ const MenuItem = ({ icon, label, onClick, destructive }: { icon: React.ReactNode
 // ─── Add Customer sheet ────────────────────────────────────────────────
 const AddCustomerSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const md = useMasterData();
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [country, setCountry] = useState<CustomerCountry>("Local");
   const [incoterms, setIncoterms] = useState<"" | CustomerIncoterms>("");
@@ -433,18 +565,26 @@ const AddCustomerSheet = ({ open, onClose }: { open: boolean; onClose: () => voi
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerContact, setBuyerContact] = useState("");
   const [saving, setSaving] = useState(false);
+  const [conflict, setConflict] = useState<Customer | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setName(""); setCountry("Local"); setIncoterms("");
     setBuyerName(""); setBuyerEmail(""); setBuyerContact("");
+    setConflict(null);
   }, [open]);
+
+  // Live conflict detection — clear/refresh on every keystroke.
+  useEffect(() => {
+    const t = name.trim();
+    if (!t) { setConflict(null); return; }
+    setConflict(md.findCustomerByName(t) ?? null);
+  }, [name, md]);
 
   const submit = async () => {
     const t = name.trim();
     if (!t) { toast.error("Name is required"); return; }
-    const dup = md.customers.find((c) => c.name.toLowerCase() === t.toLowerCase());
-    if (dup) { toast.error(`"${t}" already exists`); return; }
+    if (conflict) return; // inline error already shown
     if (buyerEmail.trim() && !emailOk(buyerEmail.trim())) { toast.error("Invalid buyer email"); return; }
     setSaving(true);
     try {
@@ -468,11 +608,29 @@ const AddCustomerSheet = ({ open, onClose }: { open: boolean; onClose: () => voi
   const labelCls = "block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add customer" onSave={submit} saveLabel="Add" saveDisabled={saving}>
+    <BottomSheet open={open} onClose={onClose} title="Add customer" onSave={submit} saveLabel="Add" saveDisabled={saving || !!conflict}>
       <div className="space-y-3">
         <div>
           <label className={labelCls}>Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} style={{ minHeight: 48 }} autoFocus />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={cn(inputCls, conflict && "border-[hsl(var(--urgent))]")}
+            style={{ minHeight: 48 }}
+            autoFocus
+          />
+          {conflict && (
+            <div className="mt-1.5 text-[12px]" style={{ color: "hsl(var(--urgent))" }}>
+              A customer named <span className="font-semibold">{conflict.name}</span> already exists.{" "}
+              <button
+                type="button"
+                onClick={() => { onClose(); navigate(`/customers?customer=${conflict.id}`); }}
+                className="underline font-medium"
+              >
+                Open it
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <label className={labelCls}>Country</label>
@@ -526,10 +684,18 @@ export const AddBuyerSheet = ({
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [md.customers, search]);
 
+  const selectedCustomer = md.customers.find((c) => c.id === customerId);
+  const buyerConflict = useMemo(() => {
+    const t = name.trim();
+    if (!t || !customerId) return null;
+    return md.findBuyerByName(customerId, t) ?? null;
+  }, [md, customerId, name]);
+
   const submit = async () => {
     if (!customerId) { toast.error("Pick a customer"); return; }
     const t = name.trim();
     if (!t) { toast.error("Buyer name required"); return; }
+    if (buyerConflict) return; // inline error already shown
     if (email.trim() && !emailOk(email.trim())) { toast.error("Invalid email"); return; }
     setSaving(true);
     try {
@@ -548,10 +714,9 @@ export const AddBuyerSheet = ({
 
   const inputCls = "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]";
   const labelCls = "block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5";
-  const selectedCustomer = md.customers.find((c) => c.id === customerId);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add buyer" onSave={submit} saveLabel="Add" saveDisabled={saving}>
+    <BottomSheet open={open} onClose={onClose} title="Add buyer" onSave={submit} saveLabel="Add" saveDisabled={saving || !!buyerConflict}>
       <div className="space-y-3">
         {!fixedCustomerId && (
           <div>
@@ -592,7 +757,18 @@ export const AddBuyerSheet = ({
         )}
         <div>
           <label className={labelCls}>Buyer name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} style={{ minHeight: 48 }} />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={cn(inputCls, buyerConflict && "border-[hsl(var(--urgent))]")}
+            style={{ minHeight: 48 }}
+          />
+          {buyerConflict && selectedCustomer && (
+            <div className="mt-1.5 text-[12px]" style={{ color: "hsl(var(--urgent))" }}>
+              <span className="font-semibold">{buyerConflict.name}</span> is already a buyer for{" "}
+              <span className="font-semibold">{selectedCustomer.name}</span>.
+            </div>
+          )}
         </div>
         <div>
           <label className={labelCls}>Email (optional)</label>
