@@ -348,9 +348,12 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
 
   const sorted = useMemo(() => {
     if (!sortKey) return visible;
-    const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId));
+    const buyerById = new Map(md.buyers.map((b) => [b.id, b]));
+    const list = [...visible].sort((a, b) =>
+      compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId, (id) => (id ? buyerById.get(id) : undefined)),
+    );
     return list;
-  }, [visible, sortKey, sortDir, md.getSupplierByAnyId]);
+  }, [visible, sortKey, sortDir, md.getSupplierByAnyId, md.buyers]);
 
   const totalAmount = useMemo(
     () => sorted.reduce((sum, c) => sum + (c.project.value ?? 0), 0),
