@@ -154,6 +154,7 @@ function repInitials(name?: string): string {
 function compareCards(
   a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1,
   lookup?: (id?: string | null) => { name: string } | undefined,
+  buyerLookup?: (id?: string | null) => { name: string } | undefined,
 ): number {
   const dl = (c: PipelineCard) => c.deadlineDate?.getTime?.() ?? Number.POSITIVE_INFINITY;
   switch (key) {
