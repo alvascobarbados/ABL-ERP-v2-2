@@ -176,7 +176,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   };
 
   // ─── Save handlers ─────────────────────────────────────────────────────
-  const saveContact = (v: string) => { updateProject(live.id, { contactPerson: v.trim() || undefined }); setEditor(null); };
+  const saveBuyer = (buyerId: string | null) => { updateProject(live.id, { buyerId }); setEditor(null); };
   const saveProjectName = (v: string) => {
     const t = v.trim();
     if (t) updateProject(live.id, { projectName: t });
