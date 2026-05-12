@@ -252,6 +252,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          buyer_id: string | null
           cbm: number | null
           completion_date: string | null
           contact_person: string | null
@@ -299,6 +300,7 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          buyer_id?: string | null
           cbm?: number | null
           completion_date?: string | null
           contact_person?: string | null
@@ -346,6 +348,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          buyer_id?: string | null
           cbm?: number | null
           completion_date?: string | null
           contact_person?: string | null
@@ -393,6 +396,13 @@ export type Database = {
           weight_kg?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_shipment_fk"
             columns: ["shipment_id"]
