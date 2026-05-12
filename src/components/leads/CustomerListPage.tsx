@@ -413,17 +413,27 @@ const Td = ({ children, className, rowSpan }: { children?: React.ReactNode; clas
 );
 
 // ─── Buyer cell editors ────────────────────────────────────────────────
-const BuyerNameCell = ({ buyer }: { buyer: Buyer }) => {
+const BuyerNameCell = ({
+  buyer, customerName, onRequestMerge,
+}: {
+  buyer: Buyer;
+  customerName: string;
+  onRequestMerge: (source: Buyer, target: Buyer, customerName: string) => void;
+}) => {
   const md = useMasterData();
+  const [revert, setRevert] = useState(0);
   return (
     <EditableText
+      key={`bn-${revert}`}
       value={buyer.name}
       onSave={async (v) => {
         const t = v.trim();
-        if (!t) { toast.error("Buyer name required"); return; }
-        if (t === buyer.name) return;
+        if (!t) { toast.error("Buyer name required"); setRevert((n) => n + 1); return; }
+        if (t.toLowerCase() === buyer.name.toLowerCase()) { setRevert((n) => n + 1); return; }
+        const dup = md.findBuyerByName(buyer.customer_id, t, buyer.id);
+        if (dup) { onRequestMerge(buyer, dup, customerName); setRevert((n) => n + 1); return; }
         try { await md.updateBuyer(buyer.id, { name: t }); }
-        catch (err: any) { toast.error(err?.message ?? "Save failed"); }
+        catch (err: any) { toast.error(err?.message ?? "Save failed"); setRevert((n) => n + 1); }
       }}
     />
   );
