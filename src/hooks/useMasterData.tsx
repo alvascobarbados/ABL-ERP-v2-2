@@ -130,6 +130,23 @@ interface Ctx {
   addBuyer: (customerId: string, input: { name: string; email?: string | null; contact?: string | null }) => Promise<Buyer>;
   updateBuyer: (id: string, patch: Partial<Pick<Buyer, "name" | "email" | "contact">>) => Promise<void>;
   deleteBuyer: (id: string) => Promise<void>;
+
+  // Case-insensitive lookups (used by merge prompts + add validation)
+  findCustomerByName: (name: string, excludeId?: string) => Customer | undefined;
+  findBuyerByName: (customerId: string, name: string, excludeId?: string) => Buyer | undefined;
+
+  // Merge operations
+  mergeCustomers: (
+    sourceId: string,
+    targetId: string,
+    actor: { userId: string; displayName: string; shortName: string },
+  ) => Promise<{ projectsMoved: number; buyersMoved: number }>;
+  mergeBuyers: (
+    sourceId: string,
+    targetId: string,
+    actor: { userId: string; displayName: string; shortName: string },
+    customerName: string,
+  ) => Promise<{ fieldsCopied: string[] }>;
 }
 
 const MasterDataCtx = createContext<Ctx | null>(null);
