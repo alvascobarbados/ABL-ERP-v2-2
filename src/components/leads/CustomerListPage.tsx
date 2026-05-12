@@ -392,7 +392,7 @@ const CustomerGroup = ({
               </Td>
             </>
           )}
-          <Td><BuyerNameCell buyer={buyer} /></Td>
+          <Td><BuyerNameCell buyer={buyer} customerName={customer.name} onRequestMerge={onRequestBuyerMerge} /></Td>
           <Td><BuyerEmailCell buyer={buyer} /></Td>
           <Td><BuyerContactCell buyer={buyer} /></Td>
           {idx === 0 && (
