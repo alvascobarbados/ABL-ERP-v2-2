@@ -54,15 +54,15 @@ export const MasterListPage = ({ kind }: Props) => {
     if (kind === "customer") {
       const cols: Column[] = [
         { key: "name", label: "Name" },
-        { key: "industry", label: "Industry" },
+        { key: "country", label: "Country" },
         { key: "usage", label: "Used in", align: "right" },
       ];
       const r: Row[] = md.customers
-        .filter((c) => !term || c.name.toLowerCase().includes(term) || (c.industry ?? "").toLowerCase().includes(term))
+        .filter((c) => !term || c.name.toLowerCase().includes(term) || (c.country ?? "").toLowerCase().includes(term))
         .map((c) => ({
           id: c.id, raw: c,
           usage: md.customerUsage(c.name),
-          cells: [c.name, c.industry ?? "—", md.customerUsage(c.name)],
+          cells: [c.name, c.country ?? "—", md.customerUsage(c.name)],
         }));
       return { columns: cols, rows: r };
     }
