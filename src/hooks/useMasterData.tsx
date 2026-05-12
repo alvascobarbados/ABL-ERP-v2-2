@@ -22,15 +22,30 @@ import { usePipelineStore } from "@/hooks/usePipelineStore";
 import type { ShippingMode } from "@/data/pipelines";
 
 // ─── Entity shapes ────────────────────────────────────────────────────────
+export type CustomerCountry = "Local" | "Regional";
+export type CustomerIncoterms = "FOB" | "CIF" | "LDP" | "LDF";
+
 export interface Customer {
   id: string;
   name: string;
-  industry?: string | null;
+  country: CustomerCountry;
+  incoterms?: CustomerIncoterms | null;
+  // Legacy fields retained for now; not surfaced in the new UI.
   contact_name?: string | null;
   phone?: string | null;
   email?: string | null;
   default_shipping_mode?: ShippingMode | null;
   notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Buyer {
+  id: string;
+  customer_id: string;
+  name: string;
+  email?: string | null;
+  contact?: string | null;
   created_at: string;
   updated_at: string;
 }
