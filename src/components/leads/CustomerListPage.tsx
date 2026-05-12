@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useMasterData, type Customer, type Buyer, type CustomerCountry, type CustomerIncoterms } from "@/hooks/useMasterData";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { supabase } from "@/integrations/supabase/client";
 
 const COUNTRIES: CustomerCountry[] = ["Local", "Regional"];
 const INCOTERMS: (CustomerIncoterms | "")[] = ["", "FOB", "CIF", "LDP", "LDF"];
