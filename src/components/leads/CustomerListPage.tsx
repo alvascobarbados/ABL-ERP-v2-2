@@ -716,7 +716,7 @@ export const AddBuyerSheet = ({
   const labelCls = "block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add buyer" onSave={submit} saveLabel="Add" saveDisabled={saving}>
+    <BottomSheet open={open} onClose={onClose} title="Add buyer" onSave={submit} saveLabel="Add" saveDisabled={saving || !!buyerConflict}>
       <div className="space-y-3">
         {!fixedCustomerId && (
           <div>
