@@ -29,13 +29,32 @@ const COUNTRIES: CustomerCountry[] = ["Local", "Regional"];
 const INCOTERMS: (CustomerIncoterms | "")[] = ["", "FOB", "CIF", "LDP", "LDF"];
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
+/** State for the customer-merge confirmation modal. */
+type CustomerMergePending = {
+  source: Customer;
+  target: Customer;
+  projectsCount: number;
+  buyersCount: number;
+};
+/** State for the buyer-merge confirmation modal. */
+type BuyerMergePending = {
+  source: Buyer;
+  target: Buyer;
+  customerName: string;
+};
+
 export const CustomerListPage = () => {
   const navigate = useNavigate();
   const md = useMasterData();
+  const user = useCurrentUser();
+  const store = usePipelineStore();
   const [q, setQ] = useState("");
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [addBuyerOpen, setAddBuyerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Customer | null>(null);
+  const [customerMerge, setCustomerMerge] = useState<CustomerMergePending | null>(null);
+  const [buyerMerge, setBuyerMerge] = useState<BuyerMergePending | null>(null);
+  const [merging, setMerging] = useState(false);
 
   // Filter: customer matches if its own fields OR any of its buyers match
   const groups = useMemo(() => {
