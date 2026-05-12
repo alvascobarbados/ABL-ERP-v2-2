@@ -121,7 +121,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
   return (
     <>
       <BottomSheet
-        open={open && !pickerOpen}
+        open={open && !pickerOpen && !buyerPickerOpen}
         onClose={handleCancel}
         title="New Project"
         onSave={handleCreate}
