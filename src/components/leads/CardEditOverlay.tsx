@@ -3,7 +3,7 @@ import { Lock, PencilLine } from "lucide-react";
 import { toast } from "sonner";
 import { PipelineCard, ShippingMode } from "@/data/pipelines";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
-import { TextEditor, DateEditor, ListPicker, TrackingEditor, ListOption } from "./EditorSheets";
+import { TextEditor, DateEditor, ListPicker, TrackingEditor, ShipmentNumberEditor, ListOption } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { haptics } from "@/lib/haptics";
@@ -34,7 +34,7 @@ interface CardEditOverlayProps {
 
 type FieldKey =
   | "customer" | "projectName" | "detail" | "quote" | "po" | "invoice"
-  | "supplier" | "shipping" | "tracking" | "deadline" | "etd" | "eta";
+  | "supplier" | "shipping" | "tracking" | "shipmentNumber" | "deadline" | "etd" | "eta";
 
 const fmtDate = (d: Date) => `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
 
@@ -340,6 +340,15 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
         onTap={() => setEditing("tracking")}
       />
     );
+    const shipmentNumberField = (proj.shippingMode === "Air" || proj.shippingMode === "Ocean") ? (
+      <FieldRow
+        fieldKey="shipmentNumber"
+        label="Shipment #"
+        value={proj.shipmentNumber ? proj.shipmentNumber.toUpperCase() : "—"}
+        placeholder={!proj.shipmentNumber}
+        onTap={() => setEditing("shipmentNumber")}
+      />
+    ) : null;
     const deadlineField = (
       <FieldRow
         fieldKey="deadline"
@@ -373,6 +382,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           {supplierField}
           {poField}
           {shippingField}
+          {shipmentNumberField}
           {trackingField}
           {deadlineField}
         </div>
@@ -385,6 +395,7 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           <FieldRow fieldKey="projectName" label="Project name" value={proj.projectName} locked
             onTap={() => setLockedTip("projectName")} />
           {shippingField}
+          {shipmentNumberField}
           {trackingField}
           <FieldRow fieldKey="etd" label="ETD" value={ship ? fmtDate(ship.etd) : "—"} placeholder={!ship}
             onTap={() => ship && setEditing("etd")} />
@@ -541,6 +552,20 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           value={proj.trackingRef ?? ""}
           placeholder="—"
           onSave={(v) => commitText("tracking", v)}
+        />
+      )}
+      {(proj.shippingMode === "Air" || proj.shippingMode === "Ocean") && (
+        <ShipmentNumberEditor
+          open={editing === "shipmentNumber"}
+          onClose={() => setEditing(null)}
+          shippingMode={proj.shippingMode}
+          value={proj.shipmentNumber}
+          onSave={(v) => {
+            const prev = proj.shipmentNumber;
+            store.updateProject(proj.id, { shipmentNumber: v ?? undefined });
+            setEditing(null);
+            undoToast(`Shipment # → ${v ?? "—"}`, () => store.updateProject(proj.id, { shipmentNumber: prev }));
+          }}
         />
       )}
       <DateEditor
