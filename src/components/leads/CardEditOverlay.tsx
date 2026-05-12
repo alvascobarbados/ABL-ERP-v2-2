@@ -554,6 +554,20 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
           onSave={(v) => commitText("tracking", v)}
         />
       )}
+      {(proj.shippingMode === "Air" || proj.shippingMode === "Ocean") && (
+        <ShipmentNumberEditor
+          open={editing === "shipmentNumber"}
+          onClose={() => setEditing(null)}
+          shippingMode={proj.shippingMode}
+          value={proj.shipmentNumber}
+          onSave={(v) => {
+            const prev = proj.shipmentNumber;
+            store.updateProject(proj.id, { shipmentNumber: v ?? undefined });
+            setEditing(null);
+            undoToast(`Shipment # → ${v ?? "—"}`, () => store.updateProject(proj.id, { shipmentNumber: prev }));
+          }}
+        />
+      )}
       <DateEditor
         open={editing === "deadline"}
         onClose={() => setEditing(null)}
