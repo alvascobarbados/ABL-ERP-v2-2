@@ -318,22 +318,48 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
+  // ─── Buyers ─────────────────────────────────────────────────────────────
+  const buyersByCustomer = useCallback(
+    (customerId: string) => buyers.filter((b) => b.customer_id === customerId),
+    [buyers],
+  );
+  const addBuyer = useCallback(async (customerId: string, input: { name: string; email?: string | null; contact?: string | null }) => {
+    const { data, error } = await supabase
+      .from("buyers")
+      .insert({ customer_id: customerId, name: input.name, email: input.email ?? null, contact: input.contact ?? null })
+      .select().single();
+    if (error) throw error;
+    setBuyers((prev) => [...prev.filter((b) => b.id !== data.id), data as Buyer].sort((a, b) => a.name.localeCompare(b.name)));
+    return data as Buyer;
+  }, []);
+  const updateBuyer = useCallback(async (id: string, patch: Partial<Pick<Buyer, "name" | "email" | "contact">>) => {
+    const { error } = await supabase.from("buyers").update(patch).eq("id", id);
+    if (error) throw error;
+  }, []);
+  const deleteBuyer = useCallback(async (id: string) => {
+    const { error } = await supabase.from("buyers").delete().eq("id", id);
+    if (error) throw error;
+    setBuyers((prev) => prev.filter((b) => b.id !== id));
+  }, []);
+
   const value = useMemo<Ctx>(() => ({
-    customers, suppliers, teamMembers, products, loading,
-    getSupplierByAnyId, getTeamByInitials,
+    customers, suppliers, teamMembers, products, buyers, loading,
+    getSupplierByAnyId, getTeamByInitials, buyersByCustomer,
     customerUsage, supplierUsage, teamUsage, productUsage,
     addCustomer, updateCustomer, deleteCustomer,
     addSupplier, updateSupplier, deleteSupplier,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addProduct, updateProduct, deleteProduct,
+    addBuyer, updateBuyer, deleteBuyer,
   }), [
-    customers, suppliers, teamMembers, products, loading,
-    getSupplierByAnyId, getTeamByInitials,
+    customers, suppliers, teamMembers, products, buyers, loading,
+    getSupplierByAnyId, getTeamByInitials, buyersByCustomer,
     customerUsage, supplierUsage, teamUsage, productUsage,
     addCustomer, updateCustomer, deleteCustomer,
     addSupplier, updateSupplier, deleteSupplier,
     addTeamMember, updateTeamMember, deleteTeamMember,
     addProduct, updateProduct, deleteProduct,
+    addBuyer, updateBuyer, deleteBuyer,
   ]);
 
   return <MasterDataCtx.Provider value={value}>{children}</MasterDataCtx.Provider>;
