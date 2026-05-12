@@ -139,23 +139,26 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Initial fetch + realtime
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [c, s, t, p] = await Promise.all([
+      const [c, s, t, p, b] = await Promise.all([
         supabase.from("customers").select("*").order("name"),
         supabase.from("suppliers").select("*").order("name"),
         supabase.from("team_members").select("*").order("initials"),
         supabase.from("products").select("*").order("name"),
+        supabase.from("buyers").select("*").order("name"),
       ]);
       if (!mounted) return;
       if (c.data) setCustomers(c.data as Customer[]);
       if (s.data) setSuppliers(s.data as SupplierRecord[]);
       if (t.data) setTeamMembers(t.data as TeamMember[]);
       if (p.data) setProducts(p.data as ProductRecord[]);
+      if (b.data) setBuyers(b.data as Buyer[]);
       setLoading(false);
     })();
 
@@ -176,6 +179,10 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, async () => {
         const { data } = await supabase.from("products").select("*").order("name");
         if (data) setProducts(data as ProductRecord[]);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "buyers" }, async () => {
+        const { data } = await supabase.from("buyers").select("*").order("name");
+        if (data) setBuyers(data as Buyer[]);
       })
       .subscribe();
 
