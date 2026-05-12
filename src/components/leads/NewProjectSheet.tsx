@@ -30,12 +30,15 @@ interface Props {
 
 export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
   const store = usePipelineStore();
+  const md = useMasterData();
   const [customer, setCustomer] = useState<string>("");
+  const [buyerId, setBuyerId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("");
   const [detail, setDetail] = useState("");
   const [deadline, setDeadline] = useState(""); // yyyy-mm-dd or ""
   const [initialStage, setInitialStage] = useState<InitialStageId>("sourcing");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [buyerPickerOpen, setBuyerPickerOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [debouncedName, setDebouncedName] = useState("");
 
