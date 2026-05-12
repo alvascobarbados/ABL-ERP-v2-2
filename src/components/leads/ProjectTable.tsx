@@ -55,7 +55,7 @@ import type { TabId } from "./PipelineTabs";
 import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility";
 
 type SortKey =
-  | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
+  | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
