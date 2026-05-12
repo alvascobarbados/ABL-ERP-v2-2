@@ -455,8 +455,13 @@ const CustomerFieldEditor = ({
 
 // ─── Buyer editor sheet ────────────────────────────────────────────────
 const BuyerEditorSheet = ({
-  open, buyer, onClose,
-}: { open: boolean; buyer: Buyer | null; onClose: () => void }) => {
+  open, buyer, onClose, onRequestMerge,
+}: {
+  open: boolean;
+  buyer: Buyer | null;
+  onClose: () => void;
+  onRequestMerge: (source: Buyer, target: Buyer) => void;
+}) => {
   const md = useMasterData();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -478,6 +483,10 @@ const BuyerEditorSheet = ({
     const t = name.trim();
     if (!t) { toast.error("Name required"); return; }
     if (email.trim() && !emailOk(email.trim())) { toast.error("Invalid email"); return; }
+    if (t.toLowerCase() !== buyer.name.toLowerCase()) {
+      const dup = md.findBuyerByName(buyer.customer_id, t, buyer.id);
+      if (dup) { onRequestMerge(buyer, dup); return; }
+    }
     setSaving(true);
     try {
       await md.updateBuyer(buyer.id, {
