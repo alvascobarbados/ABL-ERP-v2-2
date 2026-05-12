@@ -18,9 +18,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { MergeDialog } from "@/components/leads/MergeDialog";
 import { BottomSheet } from "@/components/leads/EditorSheets";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMasterData, type Customer, type Buyer, type CustomerCountry, type CustomerIncoterms } from "@/hooks/useMasterData";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePipelineStore } from "@/hooks/usePipelineStore";
 
 const COUNTRIES: CustomerCountry[] = ["Local", "Regional"];
 const INCOTERMS: (CustomerIncoterms | "")[] = ["", "FOB", "CIF", "LDP", "LDF"];
