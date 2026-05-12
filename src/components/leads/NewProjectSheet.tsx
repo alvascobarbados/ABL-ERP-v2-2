@@ -146,6 +146,27 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
           </div>
 
           <div>
+            <label className={labelCls}>Buyer (optional)</label>
+            <button
+              type="button"
+              disabled={!customer}
+              onClick={() => setBuyerPickerOpen(true)}
+              className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] hover:bg-muted/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ minHeight: 48 }}
+            >
+              {(() => {
+                const b = buyerId ? md.buyers.find((x) => x.id === buyerId) : null;
+                if (b) return b.name;
+                return (
+                  <span className="text-muted-foreground italic">
+                    {customer ? "Pick buyer…" : "Pick a customer first"}
+                  </span>
+                );
+              })()}
+            </button>
+          </div>
+
+          <div>
             <label className={labelCls}>
               Project name <span style={{ color: "hsl(var(--brand-orange))" }}>*</span>
             </label>
