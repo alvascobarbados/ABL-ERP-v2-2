@@ -232,7 +232,7 @@ const Index = () => {
   const { projects, shipments, moveCard, pulsePipeline, triggerPulse, loading } = store;
   const [newProjectOpen, setNewProjectOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<TabId>("sales");
+  const [activeTab, setActiveTab] = useState<TabId>("all");
   const isAll = activeTab === "all";
   const isCompleted = activeTab === "completed";
   const activePipeline: PipelineId =
