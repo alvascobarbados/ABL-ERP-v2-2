@@ -392,13 +392,19 @@ const EditEntitySheet = ({ kind, row, onClose, onDelete }: EditProps) => {
         {kind === "customer" && (
           <>
             <Field label="Name"><input className={inputCls} style={{ minHeight: 48 }} value={form.name ?? ""} onChange={(e) => setField("name", e.target.value)} /></Field>
-            <Field label="Industry"><input className={inputCls} style={{ minHeight: 48 }} value={form.industry ?? ""} onChange={(e) => setField("industry", e.target.value)} /></Field>
-            <Field label="Contact"><input className={inputCls} style={{ minHeight: 48 }} value={form.contact_name ?? ""} onChange={(e) => setField("contact_name", e.target.value)} /></Field>
-            <Field label="Phone"><input className={inputCls} style={{ minHeight: 48 }} value={form.phone ?? ""} onChange={(e) => setField("phone", e.target.value)} /></Field>
-            <Field label="Email"><input className={inputCls} style={{ minHeight: 48 }} value={form.email ?? ""} onChange={(e) => setField("email", e.target.value)} /></Field>
-            <Field label="Default shipping">
-              <select className={inputCls} style={{ minHeight: 48 }} value={form.default_shipping_mode ?? ""} onChange={(e) => setField("default_shipping_mode", e.target.value || null)}>
-                <option value="">—</option><option value="Air">Air</option><option value="Ocean">Ocean</option><option value="Local">Local</option>
+            <Field label="Country">
+              <select className={inputCls} style={{ minHeight: 48 }} value={form.country ?? "Local"} onChange={(e) => setField("country", e.target.value)}>
+                <option value="Local">Local</option>
+                <option value="Regional">Regional</option>
+              </select>
+            </Field>
+            <Field label="Incoterms">
+              <select className={inputCls} style={{ minHeight: 48 }} value={form.incoterms ?? ""} onChange={(e) => setField("incoterms", e.target.value || null)}>
+                <option value="">—</option>
+                <option value="FOB">FOB</option>
+                <option value="CIF">CIF</option>
+                <option value="LDP">LDP</option>
+                <option value="LDF">LDF</option>
               </select>
             </Field>
           </>
