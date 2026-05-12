@@ -296,6 +296,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
   { key: "stage", label: "Stage · State", defaultPx: 150 },
   { key: "customer", label: "Customer", defaultPx: 160 },
+  { key: "buyer", label: "Buyer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 180 },
   { key: "designBrief", label: "Design Brief", defaultPx: 200 },
