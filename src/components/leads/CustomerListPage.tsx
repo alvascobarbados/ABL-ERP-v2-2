@@ -557,6 +557,7 @@ const MenuItem = ({ icon, label, onClick, destructive }: { icon: React.ReactNode
 // ─── Add Customer sheet ────────────────────────────────────────────────
 const AddCustomerSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const md = useMasterData();
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [country, setCountry] = useState<CustomerCountry>("Local");
   const [incoterms, setIncoterms] = useState<"" | CustomerIncoterms>("");
@@ -564,18 +565,26 @@ const AddCustomerSheet = ({ open, onClose }: { open: boolean; onClose: () => voi
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerContact, setBuyerContact] = useState("");
   const [saving, setSaving] = useState(false);
+  const [conflict, setConflict] = useState<Customer | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setName(""); setCountry("Local"); setIncoterms("");
     setBuyerName(""); setBuyerEmail(""); setBuyerContact("");
+    setConflict(null);
   }, [open]);
+
+  // Live conflict detection — clear/refresh on every keystroke.
+  useEffect(() => {
+    const t = name.trim();
+    if (!t) { setConflict(null); return; }
+    setConflict(md.findCustomerByName(t) ?? null);
+  }, [name, md]);
 
   const submit = async () => {
     const t = name.trim();
     if (!t) { toast.error("Name is required"); return; }
-    const dup = md.customers.find((c) => c.name.toLowerCase() === t.toLowerCase());
-    if (dup) { toast.error(`"${t}" already exists`); return; }
+    if (conflict) return; // inline error already shown
     if (buyerEmail.trim() && !emailOk(buyerEmail.trim())) { toast.error("Invalid buyer email"); return; }
     setSaving(true);
     try {
@@ -599,11 +608,29 @@ const AddCustomerSheet = ({ open, onClose }: { open: boolean; onClose: () => voi
   const labelCls = "block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add customer" onSave={submit} saveLabel="Add" saveDisabled={saving}>
+    <BottomSheet open={open} onClose={onClose} title="Add customer" onSave={submit} saveLabel="Add" saveDisabled={saving || !!conflict}>
       <div className="space-y-3">
         <div>
           <label className={labelCls}>Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} style={{ minHeight: 48 }} autoFocus />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={cn(inputCls, conflict && "border-[hsl(var(--urgent))]")}
+            style={{ minHeight: 48 }}
+            autoFocus
+          />
+          {conflict && (
+            <div className="mt-1.5 text-[12px]" style={{ color: "hsl(var(--urgent))" }}>
+              A customer named <span className="font-semibold">{conflict.name}</span> already exists.{" "}
+              <button
+                type="button"
+                onClick={() => { onClose(); navigate(`/customers?customer=${conflict.id}`); }}
+                className="underline font-medium"
+              >
+                Open it
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <label className={labelCls}>Country</label>
