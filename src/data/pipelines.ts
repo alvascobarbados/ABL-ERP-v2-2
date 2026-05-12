@@ -280,7 +280,9 @@ export interface ProjectLogEntry {
 export interface Project {
   id: string;
   customer: string;
-  contactPerson?: string;       // person at the customer side
+  contactPerson?: string;       // legacy free-text — kept for back-compat (read-only)
+  /** FK → buyers.id. Source-of-truth contact for the project. */
+  buyerId?: string | null;
   pointPerson: string;          // internal Alvasco owner
   projectName: string;
   detailSummary?: string;       // optional in Sales/Proposal; required from Confirming on
