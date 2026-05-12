@@ -462,7 +462,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             <SectionHeader>Project Details</SectionHeader>
             <SectionCard>
               <DetailRow label="Customer" value={live.customer} locked />
-              <DetailRow label="Contact Person" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
+              <DetailRow
+                label="Buyer"
+                value={live.buyerId ? (md.buyers.find((b) => b.id === live.buyerId)?.name) : undefined}
+                onClick={() => setEditor({ kind: "buyer" })}
+              />
               <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
               <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
