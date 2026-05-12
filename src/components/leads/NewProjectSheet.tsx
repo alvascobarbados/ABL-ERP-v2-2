@@ -12,8 +12,10 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BottomSheet } from "./EditorSheets";
 import { EntityPicker } from "./EntityPicker";
+import { BuyerPicker } from "./BuyerPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { useMasterData } from "@/hooks/useMasterData";
 import { Project, PIPELINES } from "@/data/pipelines";
 
 type InitialStageId = "sourcing" | "proposal" | "quote" | "confirming";
@@ -28,23 +30,28 @@ interface Props {
 
 export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
   const store = usePipelineStore();
+  const md = useMasterData();
   const [customer, setCustomer] = useState<string>("");
+  const [buyerId, setBuyerId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("");
   const [detail, setDetail] = useState("");
   const [deadline, setDeadline] = useState(""); // yyyy-mm-dd or ""
   const [initialStage, setInitialStage] = useState<InitialStageId>("sourcing");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [buyerPickerOpen, setBuyerPickerOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [debouncedName, setDebouncedName] = useState("");
 
   useEffect(() => {
     if (open) {
       setCustomer("");
+      setBuyerId(null);
       setProjectName("");
       setDetail("");
       setDeadline("");
       setInitialStage("sourcing");
       setPickerOpen(false);
+      setBuyerPickerOpen(false);
       setDiscardOpen(false);
       setDebouncedName("");
     }
@@ -91,6 +98,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
       pointPerson: DEFAULT_USER_INITIALS,
       initialStage,
       deadlineDate: deadline ? new Date(`${deadline}T00:00:00`) : undefined,
+      buyerId: buyerId ?? undefined,
     });
     if (!proj) return;
     toast.success(`Project created · ${proj.customer} · ${proj.projectName}`, {
@@ -113,7 +121,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
   return (
     <>
       <BottomSheet
-        open={open && !pickerOpen}
+        open={open && !pickerOpen && !buyerPickerOpen}
         onClose={handleCancel}
         title="New Project"
         onSave={handleCreate}
@@ -134,6 +142,27 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
               {customer || (
                 <span className="text-muted-foreground italic">Pick customer…</span>
               )}
+            </button>
+          </div>
+
+          <div>
+            <label className={labelCls}>Buyer (optional)</label>
+            <button
+              type="button"
+              disabled={!customer}
+              onClick={() => setBuyerPickerOpen(true)}
+              className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] hover:bg-muted/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ minHeight: 48 }}
+            >
+              {(() => {
+                const b = buyerId ? md.buyers.find((x) => x.id === buyerId) : null;
+                if (b) return b.name;
+                return (
+                  <span className="text-muted-foreground italic">
+                    {customer ? "Pick buyer…" : "Pick a customer first"}
+                  </span>
+                );
+              })()}
             </button>
           </div>
 
@@ -222,7 +251,21 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
         kind="customer"
         selectedId={customer || null}
         onClose={() => setPickerOpen(false)}
-        onPick={(name) => setCustomer(name)}
+        onPick={(name) => {
+          if (name !== customer && buyerId) {
+            setBuyerId(null);
+            toast("Buyer cleared — pick one for the new customer", { duration: 2500 });
+          }
+          setCustomer(name);
+        }}
+      />
+
+      <BuyerPicker
+        open={buyerPickerOpen}
+        onClose={() => setBuyerPickerOpen(false)}
+        customerId={customer ? (md.findCustomerByName(customer)?.id ?? null) : null}
+        selectedId={buyerId}
+        onPick={(id) => setBuyerId(id)}
       />
 
       <ConfirmDialog

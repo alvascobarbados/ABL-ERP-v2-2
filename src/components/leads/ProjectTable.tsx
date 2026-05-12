@@ -17,6 +17,7 @@ import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
 import { EditableCell, SaveResult, SelectionProvider } from "./EditableCell";
 import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
+import { BuyerPicker } from "./BuyerPicker";
 import {
   Popover,
   PopoverContent,
@@ -55,7 +56,7 @@ import type { TabId } from "./PipelineTabs";
 import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility";
 
 type SortKey =
-  | "flagged" | "stage" | "customer" | "project" | "detail" | "supplier"
+  | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
@@ -296,6 +297,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
   { key: "stage", label: "Stage · State", defaultPx: 150 },
   { key: "customer", label: "Customer", defaultPx: 160 },
+  { key: "buyer", label: "Buyer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
   { key: "detail", label: "Detail", defaultPx: 180 },
   { key: "designBrief", label: "Design Brief", defaultPx: 200 },
@@ -540,7 +542,7 @@ const TableRow = ({
 
   // ── Inline-edit state ────────────────────────────────────────────────
   // Active entity popover: which kind is open (only one at a time).
-  const [openPicker, setOpenPicker] = useState<EntityKindKey | "mode" | "stage" | null>(null);
+  const [openPicker, setOpenPicker] = useState<EntityKindKey | "buyer" | "mode" | "stage" | null>(null);
   const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null);
   // Per-cell flash override (for entity/enum saves where popover closes first).
   const [flashCell, setFlashCell] = useState<{ key: string; tone: "success" | "error" } | null>(null);
@@ -855,6 +857,36 @@ const TableRow = ({
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("customer"); }}
       />
       )}
+
+      {has("buyer") && (() => {
+        const buyer = proj.buyerId ? md.buyers.find((b) => b.id === proj.buyerId) : null;
+        const buyerCustomerId = md.findCustomerByName(proj.customer)?.id ?? null;
+        return (
+          <EditableCell
+            cellKey={`${card.id}:buyer`}
+            mode="custom"
+            align="left"
+            display={
+              buyer
+                ? <span className="text-[13px] truncate block">{buyer.name}</span>
+                : <span className="text-[12.5px] text-muted-foreground italic truncate block">
+                    {buyerCustomerId ? "+ Buyer" : "—"}
+                  </span>
+            }
+            title={buyer?.name}
+            active={openPicker === "buyer"}
+            flash={flashFor("buyer")}
+            onActivate={(el) => {
+              if (!buyerCustomerId) {
+                toast.error("Pick a customer first");
+                return;
+              }
+              setPickerAnchor(el);
+              setOpenPicker("buyer");
+            }}
+          />
+        );
+      })()}
 
       {has("project") && (
       <EditableCell
@@ -1193,6 +1225,26 @@ const TableRow = ({
           anchorEl={pickerAnchor}
           selected={parseInitialsList(proj.pointPerson)}
           onConfirm={pickReps}
+        />
+      )}
+      {openPicker === "buyer" && (
+        <BuyerPicker
+          open
+          onClose={() => setOpenPicker(null)}
+          presentation="popover"
+          anchorEl={pickerAnchor}
+          customerId={md.findCustomerByName(proj.customer)?.id ?? null}
+          selectedId={proj.buyerId ?? null}
+          onPick={async (buyerId) => {
+            setOpenPicker(null);
+            try {
+              await store.updateProject(proj.id, { buyerId });
+              triggerFlash("buyer", "success");
+            } catch (err: any) {
+              toast.error(err?.message ?? "Save failed");
+              triggerFlash("buyer", "error");
+            }
+          }}
         />
       )}
 

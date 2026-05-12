@@ -176,7 +176,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   };
 
   // ─── Save handlers ─────────────────────────────────────────────────────
-  const saveContact = (v: string) => { updateProject(live.id, { contactPerson: v.trim() || undefined }); setEditor(null); };
+  const saveBuyer = (buyerId: string | null) => { updateProject(live.id, { buyerId }); setEditor(null); };
   const saveProjectName = (v: string) => {
     const t = v.trim();
     if (t) updateProject(live.id, { projectName: t });
@@ -462,7 +462,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             <SectionHeader>Project Details</SectionHeader>
             <SectionCard>
               <DetailRow label="Customer" value={live.customer} locked />
-              <DetailRow label="Contact Person" value={live.contactPerson} onClick={() => setEditor({ kind: "contact" })} />
+              <DetailRow
+                label="Buyer"
+                value={live.buyerId ? (md.buyers.find((b) => b.id === live.buyerId)?.name) : undefined}
+                onClick={() => setEditor({ kind: "buyer" })}
+              />
               <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
               <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
@@ -663,13 +667,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         multiline
         onSave={saveDetail}
       />
-      <TextEditor
-        open={editor?.kind === "contact"}
+      <BuyerPicker
+        open={editor?.kind === "buyer"}
         onClose={() => setEditor(null)}
-        title="Edit contact"
-        value={live.contactPerson ?? ""}
-        placeholder="Contact name"
-        onSave={saveContact}
+        customerId={md.findCustomerByName(live.customer)?.id ?? null}
+        selectedId={live.buyerId ?? null}
+        onPick={saveBuyer}
       />
       <TeamMultiPicker
         open={editor?.kind === "salesRep"}
