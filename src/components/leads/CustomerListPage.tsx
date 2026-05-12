@@ -757,7 +757,18 @@ export const AddBuyerSheet = ({
         )}
         <div>
           <label className={labelCls}>Buyer name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} style={{ minHeight: 48 }} />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={cn(inputCls, buyerConflict && "border-[hsl(var(--urgent))]")}
+            style={{ minHeight: 48 }}
+          />
+          {buyerConflict && selectedCustomer && (
+            <div className="mt-1.5 text-[12px]" style={{ color: "hsl(var(--urgent))" }}>
+              <span className="font-semibold">{buyerConflict.name}</span> is already a buyer for{" "}
+              <span className="font-semibold">{selectedCustomer.name}</span>.
+            </div>
+          )}
         </div>
         <div>
           <label className={labelCls}>Email (optional)</label>
