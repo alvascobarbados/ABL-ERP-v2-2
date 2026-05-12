@@ -154,6 +154,7 @@ function repInitials(name?: string): string {
 function compareCards(
   a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1,
   lookup?: (id?: string | null) => { name: string } | undefined,
+  buyerLookup?: (id?: string | null) => { name: string } | undefined,
 ): number {
   const dl = (c: PipelineCard) => c.deadlineDate?.getTime?.() ?? Number.POSITIVE_INFINITY;
   switch (key) {
@@ -174,6 +175,13 @@ function compareCards(
     }
     case "customer":
       return dir * a.project.customer.localeCompare(b.project.customer);
+    case "buyer": {
+      const av = buyerLookup?.(a.project.buyerId)?.name ?? "";
+      const bv = buyerLookup?.(b.project.buyerId)?.name ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv);
+    }
     case "project":
       return dir * a.project.projectName.localeCompare(b.project.projectName);
     case "detail": {
@@ -340,9 +348,12 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
 
   const sorted = useMemo(() => {
     if (!sortKey) return visible;
-    const list = [...visible].sort((a, b) => compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId));
+    const buyerById = new Map(md.buyers.map((b) => [b.id, b]));
+    const list = [...visible].sort((a, b) =>
+      compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId, (id) => (id ? buyerById.get(id) : undefined)),
+    );
     return list;
-  }, [visible, sortKey, sortDir, md.getSupplierByAnyId]);
+  }, [visible, sortKey, sortDir, md.getSupplierByAnyId, md.buyers]);
 
   const totalAmount = useMemo(
     () => sorted.reduce((sum, c) => sum + (c.project.value ?? 0), 0),
