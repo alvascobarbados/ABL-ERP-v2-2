@@ -382,7 +382,7 @@ const CustomerGroup = ({
           {idx === 0 && (
             <>
               <Td rowSpan={rowCount} className="align-top">
-                <EditableText value={customer.name} onSave={updateName} bold />
+                <EditableText key={`name-${nameRevert}`} value={customer.name} onSave={updateName} bold />
               </Td>
               <Td rowSpan={rowCount} className="align-top">
                 <EditableSelect value={customer.country} options={COUNTRIES} onSave={updateCountry} />
