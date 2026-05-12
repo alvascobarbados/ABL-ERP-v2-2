@@ -98,6 +98,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
       pointPerson: DEFAULT_USER_INITIALS,
       initialStage,
       deadlineDate: deadline ? new Date(`${deadline}T00:00:00`) : undefined,
+      buyerId: buyerId ?? undefined,
     });
     if (!proj) return;
     toast.success(`Project created · ${proj.customer} · ${proj.projectName}`, {
