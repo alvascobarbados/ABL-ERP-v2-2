@@ -359,6 +359,153 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     setBuyers((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
+  // ─── Lookups for merge prompts ──────────────────────────────────────────
+  const findCustomerByName = useCallback(
+    (name: string, excludeId?: string) => {
+      const t = name.trim().toLowerCase();
+      return customers.find((c) => c.id !== excludeId && c.name.toLowerCase() === t);
+    },
+    [customers],
+  );
+  const findBuyerByName = useCallback(
+    (customerId: string, name: string, excludeId?: string) => {
+      const t = name.trim().toLowerCase();
+      return buyers.find(
+        (b) => b.customer_id === customerId && b.id !== excludeId && b.name.toLowerCase() === t,
+      );
+    },
+    [buyers],
+  );
+
+  // ─── Merge customers ────────────────────────────────────────────────────
+  // Re-attribute projects + buyers from `sourceId` to `targetId`, delete the
+  // source customer, and append a single audit log entry to one of the moved
+  // projects (skipped if no projects are moved — see prompt rationale).
+  const mergeCustomers = useCallback(
+    async (sourceId: string, targetId: string, actor: { userId: string; displayName: string; shortName: string }) => {
+      const source = customers.find((c) => c.id === sourceId);
+      const target = customers.find((c) => c.id === targetId);
+      if (!source || !target) throw new Error("Merge target not found");
+
+      // 1. Re-attribute projects (free-text customer name)
+      const { data: movedProjects, error: pErr } = await supabase
+        .from("projects")
+        .update({ customer: target.name })
+        .eq("customer", source.name)
+        .select("id");
+      if (pErr) throw pErr;
+      const projectsMoved = movedProjects?.length ?? 0;
+
+      // 2. Re-parent buyers
+      const sourceBuyers = buyers.filter((b) => b.customer_id === sourceId);
+      const buyersMoved = sourceBuyers.length;
+      if (buyersMoved > 0) {
+        const { error: bErr } = await supabase
+          .from("buyers")
+          .update({ customer_id: targetId })
+          .eq("customer_id", sourceId);
+        if (bErr) throw bErr;
+      }
+
+      // 3. Delete source customer
+      const { error: dErr } = await supabase.from("customers").delete().eq("id", sourceId);
+      if (dErr) throw dErr;
+
+      // 4. Audit log — only if we have a project to attach to
+      if (projectsMoved > 0 && movedProjects) {
+        const anchorProjectId = movedProjects[0].id;
+        const { error: lErr } = await supabase.from("project_log_entries").insert({
+          id: `merge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          project_id: anchorProjectId,
+          ts: new Date().toISOString(),
+          actor_user_id: actor.userId,
+          actor_display_name: actor.displayName,
+          action_type: "field_edit",
+          description: `${actor.shortName} merged ${source.name} into ${target.name} (${projectsMoved} projects, ${buyersMoved} buyers reassigned)`,
+          metadata: {
+            from_customer: source.name,
+            to_customer: target.name,
+            projects_moved: projectsMoved,
+            buyers_moved: buyersMoved,
+          } as any,
+        });
+        if (lErr) console.warn("Merge audit log insert failed", lErr);
+      }
+
+      // Optimistic local state — realtime will reconcile.
+      setCustomers((prev) => prev.filter((c) => c.id !== sourceId));
+      setBuyers((prev) => prev.map((b) => (b.customer_id === sourceId ? { ...b, customer_id: targetId } : b)));
+
+      return { projectsMoved, buyersMoved };
+    },
+    [customers, buyers],
+  );
+
+  // ─── Merge buyers (within same customer) ────────────────────────────────
+  const mergeBuyers = useCallback(
+    async (
+      sourceId: string,
+      targetId: string,
+      actor: { userId: string; displayName: string; shortName: string },
+      customerName: string,
+    ) => {
+      const source = buyers.find((b) => b.id === sourceId);
+      const target = buyers.find((b) => b.id === targetId);
+      if (!source || !target) throw new Error("Merge target not found");
+      if (source.customer_id !== target.customer_id) throw new Error("Buyers must share a customer");
+
+      // 1. Backfill survivor's empty fields from source
+      const patch: Partial<Pick<Buyer, "email" | "contact">> = {};
+      const fieldsCopied: string[] = [];
+      if (!target.email && source.email) { patch.email = source.email; fieldsCopied.push("email"); }
+      if (!target.contact && source.contact) { patch.contact = source.contact; fieldsCopied.push("contact"); }
+      if (Object.keys(patch).length > 0) {
+        const { error } = await supabase.from("buyers").update(patch).eq("id", targetId);
+        if (error) throw error;
+      }
+
+      // 2. Delete source buyer
+      const { error: dErr } = await supabase.from("buyers").delete().eq("id", sourceId);
+      if (dErr) throw dErr;
+
+      // 3. Audit log — attach to first project under the customer (best-effort, optional)
+      const { data: anchor } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("customer", customerName)
+        .limit(1);
+      if (anchor && anchor.length > 0) {
+        const { error: lErr } = await supabase.from("project_log_entries").insert({
+          id: `merge-buyer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          project_id: anchor[0].id,
+          ts: new Date().toISOString(),
+          actor_user_id: actor.userId,
+          actor_display_name: actor.displayName,
+          action_type: "field_edit",
+          description: `${actor.shortName} merged buyer ${source.name} with ${target.name} under ${customerName}`,
+          metadata: {
+            customer_name: customerName,
+            kept_buyer_id: targetId,
+            deleted_buyer_id: sourceId,
+            source_name: source.name,
+            fields_copied: fieldsCopied,
+          } as any,
+        });
+        if (lErr) console.warn("Merge-buyer audit log insert failed", lErr);
+      }
+
+      // Optimistic local state
+      setBuyers((prev) =>
+        prev
+          .filter((b) => b.id !== sourceId)
+          .map((b) => (b.id === targetId ? { ...b, ...patch } : b)),
+      );
+
+      return { fieldsCopied };
+    },
+    [buyers],
+  );
+
   const value = useMemo<Ctx>(() => ({
     customers, suppliers, teamMembers, products, buyers, loading,
     getSupplierByAnyId, getTeamByInitials, buyersByCustomer,
@@ -368,6 +515,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     addTeamMember, updateTeamMember, deleteTeamMember,
     addProduct, updateProduct, deleteProduct,
     addBuyer, updateBuyer, deleteBuyer,
+    findCustomerByName, findBuyerByName, mergeCustomers, mergeBuyers,
   }), [
     customers, suppliers, teamMembers, products, buyers, loading,
     getSupplierByAnyId, getTeamByInitials, buyersByCustomer,
@@ -377,6 +525,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
     addTeamMember, updateTeamMember, deleteTeamMember,
     addProduct, updateProduct, deleteProduct,
     addBuyer, updateBuyer, deleteBuyer,
+    findCustomerByName, findBuyerByName, mergeCustomers, mergeBuyers,
   ]);
 
   return <MasterDataCtx.Provider value={value}>{children}</MasterDataCtx.Provider>;
