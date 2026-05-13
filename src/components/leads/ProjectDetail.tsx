@@ -1056,6 +1056,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Completion date"
         value={live.completionDate ?? undefined}
         onSave={saveCompletionDate}
+        onClear={clearCompletionDate}
       />
       {/* Finance — deposit */}
       <TextEditor
