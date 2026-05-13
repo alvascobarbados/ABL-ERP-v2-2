@@ -1082,6 +1082,148 @@ const ActivitySection = ({
   );
 };
 
+// ─────────── NoteCard: per-note row with three-dots edit/delete ───────────
+const NOTE_EDITED_THRESHOLD_MS = 5_000;
+
+const fmtNoteTsLocal = (d: Date) => {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dd = new Date(d); dd.setHours(0,0,0,0);
+  const t = d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (dd.getTime() === today.getTime()) return `Today · ${t}`;
+  if (today.getTime() - dd.getTime() === 86400000) return `Yesterday · ${t}`;
+  return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })} · ${t}`;
+};
+
+const NoteCard = ({
+  note, onSave, onDelete,
+}: {
+  note: ProjectNote;
+  onSave: (text: string) => Promise<void>;
+  onDelete: () => Promise<void>;
+}) => {
+  const user = useCurrentUser();
+  const canEdit = canEditNote(note, user);
+  const canDelete = canDeleteNote(note, user);
+  const showMenu = canEdit || canDelete;
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(note.text);
+  const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => { if (!editing) setDraft(note.text); }, [note.text, editing]);
+
+  const isEdited = !!note.updatedAt && note.updatedAt.getTime() - note.ts.getTime() > NOTE_EDITED_THRESHOLD_MS;
+
+  const handleSave = async () => {
+    const trimmed = draft.trim();
+    if (trimmed === "") { setError("Note can't be empty"); return; }
+    setError(null);
+    if (trimmed !== note.text) {
+      await onSave(trimmed);
+      toast.success("Note updated");
+    }
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setDraft(note.text);
+    setError(null);
+    setEditing(false);
+  };
+
+  return (
+    <li className="py-3 first:pt-0 last:pb-0 group">
+      <div className="flex items-start justify-between gap-2 mb-0.5">
+        <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
+          <span className="text-[13px] font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>{note.author}</span>
+          <span className="text-[11px] text-muted-foreground tabular">{fmtNoteTsLocal(note.ts)}</span>
+          {isEdited && (
+            <span
+              className="text-[11px] text-muted-foreground/70 italic"
+              title={note.updatedAt ? `Edited ${fmtNoteTsLocal(note.updatedAt)}` : undefined}
+            >
+              (edited)
+            </span>
+          )}
+        </div>
+        {showMenu && !editing && (
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-muted/60 transition-opacity"
+                aria-label="Note actions"
+              >
+                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={4}
+              className="w-40 p-1 rounded-lg shadow-lg bg-card"
+              style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}
+            >
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); setEditing(true); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-left rounded-md hover:bg-muted/60 text-foreground"
+                >
+                  <Pencil className="h-3.5 w-3.5 opacity-80" />
+                  <span className="font-medium">Edit</span>
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); onDelete(); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-left rounded-md hover:bg-muted/60 text-[hsl(var(--urgent))]/85 hover:text-[hsl(var(--urgent))]"
+                >
+                  <Trash2 className="h-3.5 w-3.5 opacity-80" />
+                  <span className="font-medium">Delete</span>
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
+      {editing ? (
+        <div className="space-y-2">
+          <textarea
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); if (error) setError(null); }}
+            autoFocus
+            rows={Math.max(2, draft.split("\n").length)}
+            className="w-full text-[13px] leading-snug rounded-md border bg-card px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+            style={{ borderColor: error ? "hsl(var(--urgent))" : "hsl(var(--brand-navy) / 0.18)" }}
+          />
+          {error && <div className="text-[11px]" style={{ color: "hsl(var(--urgent))" }}>{error}</div>}
+          <div className="flex items-center gap-2 justify-end">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-3 py-1.5 text-[12px] font-medium rounded-md hover:bg-muted/60 text-muted-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-3 py-1.5 text-[12px] font-medium rounded-md text-white"
+              style={{ backgroundColor: "hsl(var(--brand-navy))" }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="text-[13px] leading-snug text-foreground whitespace-pre-wrap">{note.text}</div>
+      )}
+    </li>
+  );
+};
+
 
 // ── Presence avatars (top-right of sticky header) ──────────────────────
 function PresenceAvatars({ users }: { users: import("@/hooks/usePresence").PresentUser[] }) {
