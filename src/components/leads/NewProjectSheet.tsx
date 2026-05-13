@@ -213,35 +213,47 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
 
           <div>
             <label className={labelCls}>Initial stage</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {(() => {
-                const sales = PIPELINES.find((p) => p.id === "sales");
-                const stageMap = new Map((sales?.stages ?? []).map((s) => [s.id as string, s.title]));
-                return INITIAL_STAGES.map((s) => {
-                  const selected = initialStage === s;
-                  const title = stageMap.get(s) ?? s;
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setInitialStage(s)}
-                      className="rounded-xl border px-3 py-2.5 text-[14px] transition-colors"
-                      style={{
-                        minHeight: 48,
-                        backgroundColor: selected ? "hsl(var(--brand-navy) / 0.08)" : "hsl(var(--card))",
-                        borderColor: selected ? "hsl(var(--brand-navy) / 0.4)" : "hsl(var(--border))",
-                        color: selected ? "hsl(var(--brand-navy))" : "hsl(var(--foreground))",
-                        fontWeight: selected ? 600 : 400,
-                      }}
-                    >
-                      {title}
-                    </button>
-                  );
-                });
-              })()}
+            <div className="space-y-2.5">
+              {INITIAL_PIPELINES.map((pid) => {
+                const pipe = PIPELINES.find((p) => p.id === pid);
+                if (!pipe) return null;
+                const stages = pipe.stages.filter((s) => !PICKER_SKIP.has(s.id));
+                if (!stages.length) return null;
+                return (
+                  <div key={pid}>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium mb-1.5">
+                      {pipe.title}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      {stages.map((s) => {
+                        const selected = initialPipeline === pid && initialStage === s.id;
+                        return (
+                          <button
+                            key={`${pid}-${s.id}`}
+                            type="button"
+                            onClick={() => { setInitialPipeline(pid); setInitialStage(s.id); }}
+                            className="rounded-xl border px-3 py-2.5 text-[14px] transition-colors"
+                            style={{
+                              minHeight: 44,
+                              backgroundColor: selected ? "hsl(var(--brand-navy) / 0.08)" : "hsl(var(--card))",
+                              borderColor: selected ? "hsl(var(--brand-navy) / 0.4)" : "hsl(var(--border))",
+                              color: selected ? "hsl(var(--brand-navy))" : "hsl(var(--foreground))",
+                              fontWeight: selected ? 600 : 400,
+                            }}
+                          >
+                            {s.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
-              Sales · {PIPELINES.find((p) => p.id === "sales")?.stages.find((s) => s.id === initialStage)?.title ?? initialStage}
+            <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
+              {PIPELINES.find((p) => p.id === initialPipeline)?.title ?? initialPipeline}
+              {" · "}
+              {PIPELINES.find((p) => p.id === initialPipeline)?.stages.find((s) => s.id === initialStage)?.title ?? initialStage}
             </p>
           </div>
 
