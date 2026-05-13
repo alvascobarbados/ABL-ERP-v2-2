@@ -723,7 +723,7 @@ const Index = () => {
             if (isSearching && !projectMatchesSearch(p, search.trim())) return false;
             return true;
           });
-          const intakeCount = projects.filter((p) => p.pipeline === "shipping" && p.stage === "shipment_required").length;
+          const intakeCount = projects.filter((p) => p.pipeline === "production" && p.stage === "ready_to_ship").length;
 
           if (isCompleted) {
             return (
