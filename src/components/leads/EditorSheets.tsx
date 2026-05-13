@@ -70,9 +70,12 @@ interface TextEditorProps {
   digitsOnly?: boolean;
   /** Allow one decimal point in addition to digits (only when digitsOnly is true). */
   allowDecimal?: boolean;
+  /** Optional max input length (characters). No cap when omitted. */
+  maxLength?: number;
   onSave: (v: string) => void;
 }
-export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, onSave }: TextEditorProps) => {
+export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, onSave }: TextEditorProps) => {
+  const capLen = (s: string) => (maxLength != null ? s.slice(0, maxLength) : s);
   const sanitizeDigitsLike = (raw: string): string => {
     if (!digitsOnly) return raw;
     if (!allowDecimal) return raw.replace(/\D/g, "");
