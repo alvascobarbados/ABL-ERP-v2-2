@@ -20,7 +20,7 @@ import { useCurrentUser } from "./useCurrentUser";
 // in sync with ProjectTable's ALL_COLS.
 export type ColumnId =
   | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
-  | "quote" | "po" | "invoice" | "amount" | "balance"
+  | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
 
@@ -36,7 +36,7 @@ export const ALWAYS_ON: ReadonlySet<ColumnId> = new Set([
 // ALL_COLS in src/components/leads/ProjectTable.tsx.
 const ALL_COLUMNS: ColumnId[] = [
   "flagged", "stage", "customer", "buyer", "project", "detail", "designBrief",
-  "supplier", "quote", "po", "invoice", "amount", "balance",
+  "supplier", "quote", "proof", "po", "invoice", "amount", "balance",
   "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking",
   "rep", "completionDate", "deadline",
 ];
