@@ -1083,6 +1083,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Deposit paid date"
         value={live.depositPaidDate ?? undefined}
         onSave={saveDepositPaidDate}
+        onClear={clearDepositPaidDate}
       />
       <ListPicker
         open={editor?.kind === "depositPaidMethod"}
@@ -1091,6 +1092,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         options={PAYMENT_METHOD_OPTIONS}
         selectedId={live.depositPaidMethod ?? undefined}
         onPick={saveDepositPaidMethod}
+        onClear={clearDepositPaidMethod}
       />
       <TextEditor
         open={editor?.kind === "depositPaymentRef"}
@@ -1107,6 +1109,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Paid date"
         value={live.paidOnDate ?? undefined}
         onSave={savePaidDate}
+        onClear={clearPaidDate}
       />
       <ListPicker
         open={editor?.kind === "paidMethod"}
@@ -1115,6 +1118,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         options={PAYMENT_METHOD_OPTIONS}
         selectedId={live.paymentMethod ?? undefined}
         onPick={savePaidMethod}
+        onClear={clearPaidMethod}
       />
       <TextEditor
         open={editor?.kind === "paymentRef"}
