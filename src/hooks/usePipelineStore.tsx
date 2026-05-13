@@ -731,6 +731,69 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     }
   }, []);
 
+  const updateNote = useCallback(async (projectId: string, noteId: string, newText: string) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    const idx = (proj.notes ?? []).findIndex((n) => n.id === noteId);
+    if (idx < 0) return;
+    const oldNote = proj.notes![idx];
+    if (oldNote.text === newText) return;
+    const u = userRef.current;
+    const updatedNote: ProjectNote = { ...oldNote, text: newText, updatedAt: new Date() };
+    const nextNotes = [...proj.notes!]; nextNotes[idx] = updatedNote;
+    const next = touch({ ...proj, notes: nextNotes });
+    const r = appendLog(next, {
+      actor: actorOf(u), actionType: "note_edited",
+      description: `${u.shortName} edited a note`,
+      metadata: { noteId, oldLength: oldNote.text.length, newLength: newText.length } as any,
+    });
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? r.project : p)));
+    const { error: nErr } = await supabase.from("project_notes").update({ text: newText }).eq("id", noteId);
+    if (nErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
+    if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+  }, []);
+
+  const removeNote = useCallback(async (projectId: string, noteId: string) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    const idx = (proj.notes ?? []).findIndex((n) => n.id === noteId);
+    if (idx < 0) return;
+    const removed = proj.notes![idx];
+    const u = userRef.current;
+    const nextNotes = proj.notes!.filter((n) => n.id !== noteId);
+    const next = touch({ ...proj, notes: nextNotes });
+    const preview = removed.text.length > 50 ? removed.text.slice(0, 50) + "…" : removed.text;
+    const r = appendLog(next, {
+      actor: actorOf(u), actionType: "note_deleted",
+      description: `${u.shortName} deleted a note`,
+      metadata: { noteId, deletedTextPreview: preview } as any,
+    });
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? r.project : p)));
+    const { error: nErr } = await supabase.from("project_notes").delete().eq("id", noteId);
+    if (nErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
+    if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+  }, []);
+
+  /** Re-insert a previously-deleted note with original id/ts/author. Does NOT
+   *  write an audit log entry — undo brings the note back without rewriting
+   *  history; the original note_deleted entry stays as factual record. */
+  const restoreNote = useCallback(async (projectId: string, note: ProjectNote) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    if ((proj.notes ?? []).some((n) => n.id === note.id)) return;
+    const nextNotes = [...(proj.notes ?? []), note].sort((a, b) => a.ts.getTime() - b.ts.getTime());
+    const optimistic = { ...proj, notes: nextNotes };
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? optimistic : p)));
+    const { error } = await supabase.from("project_notes").insert(noteToRow(projectId, note));
+    if (error) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+  }, []);
+
   const persistLineItemsAndCommit = async (
     projectId: string, items: LineItem[], optimistic: Project, entry: ProjectLogEntry,
   ) => {
