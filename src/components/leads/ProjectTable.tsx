@@ -1328,26 +1328,54 @@ const TableRow = ({
   );
 };
 
+// ── Selection ring helper for non-EditableCell wrappers ──────────────
+function useSelectionRing(cellKey: string, flash?: "success" | "error" | null): React.CSSProperties {
+  const focused = useCellFocused(cellKey);
+  if (flash === "success") return { boxShadow: "inset 0 0 0 2px hsl(var(--brand-navy) / 0.5)", backgroundColor: "hsl(140 50% 50% / 0.12)" };
+  if (flash === "error") return { boxShadow: "inset 0 0 0 2px hsl(var(--urgent))", backgroundColor: "hsl(0 70% 50% / 0.10)" };
+  if (focused) return { boxShadow: "inset 0 0 0 1px hsl(var(--brand-navy) / 0.55)" };
+  return {};
+}
+
 // ── Tracking cell trigger (opens BottomSheet; disabled when no Mode) ──
 interface TrackingCellTriggerProps {
+  cellKey: string;
   value: string | undefined;
   modeSet: boolean;
   flash: "success" | "error" | null;
   onClick: () => void;
+  onRowDoubleClick: () => void;
 }
-const TrackingCellTrigger = ({ value, modeSet, flash, onClick }: TrackingCellTriggerProps) => {
-  const ringStyle: React.CSSProperties =
-    flash === "success" ? { boxShadow: "inset 0 0 0 2px hsl(var(--brand-navy) / 0.5)", backgroundColor: "hsl(140 50% 50% / 0.12)" }
-    : flash === "error" ? { boxShadow: "inset 0 0 0 2px hsl(var(--urgent))", backgroundColor: "hsl(0 70% 50% / 0.10)" }
-    : {};
+const TrackingCellTrigger = ({ cellKey, value, modeSet, flash, onClick, onRowDoubleClick }: TrackingCellTriggerProps) => {
+  const sel = useCellSelection();
+  const rowId = useRowId() ?? "__no_row__";
+  const focused = useCellFocused(cellKey);
+  const ringStyle = useSelectionRing(cellKey, flash);
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!sel) return;
+    // First click → select. Second click on focused cell (and Mode set) → open editor.
+    if (focused && modeSet) {
+      sel.cancelPendingEdit();
+      onClick();
+      return;
+    }
+    sel.selectCell(rowId, cellKey, { noEdit: true });
+  };
+  const handleDouble = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    sel?.cancelPendingEdit();
+    onRowDoubleClick();
+  };
   const cell = (
     <div
-      onClick={(e) => { e.stopPropagation(); if (modeSet) onClick(); }}
+      onClick={handleClick}
       onMouseDown={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => e.stopPropagation()}
+      onDoubleClick={handleDouble}
       className={cn(
         "relative px-3 py-1.5 truncate transition-colors h-full flex items-center justify-start text-left",
-        modeSet ? "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer" : "cursor-not-allowed",
+        modeSet ? "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer" : "cursor-pointer",
       )}
       style={{
         ...ringStyle,
@@ -1373,25 +1401,36 @@ function parseInitialsList(raw: string | undefined): string[] {
   return raw.split(/[,\s]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
 }
 
-// ── Read-only cell (Pipeline·Stage, Deadline, Urgency) ─────────────────
+// ── Read-only cell (Completion, Deadline) ─────────────────────────────
 interface ReadOnlyCellProps {
+  cellKey: string;
+  onRowDoubleClick: () => void;
   children: React.ReactNode;
   title?: string;
   align?: "left" | "right";
   muted?: boolean;
 }
-const ReadOnlyCell = ({ children, title, align = "left", muted }: ReadOnlyCellProps) => (
-  <div
-    className={cn(
-      "px-3 py-1.5 truncate flex items-center",
-      align === "right" ? "justify-end text-right" : "justify-start text-left",
-    )}
-    style={muted ? { color: "hsl(var(--brand-navy) / 0.28)" } : undefined}
-    title={title}
-  >
-    <span className="truncate w-full">{children}</span>
-  </div>
-);
+const ReadOnlyCell = ({ cellKey, onRowDoubleClick, children, title, align = "left", muted }: ReadOnlyCellProps) => {
+  const sel = useCellSelection();
+  const rowId = useRowId() ?? "__no_row__";
+  const ringStyle = useSelectionRing(cellKey);
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); sel?.selectCell(rowId, cellKey, { noEdit: true }); }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => { e.stopPropagation(); e.preventDefault(); sel?.cancelPendingEdit(); onRowDoubleClick(); }}
+      className={cn(
+        "px-3 py-1.5 truncate flex items-center cursor-pointer hover:bg-[hsl(var(--brand-navy)/0.04)]",
+        align === "right" ? "justify-end text-right" : "justify-start text-left",
+      )}
+      style={{ ...ringStyle, color: muted ? "hsl(var(--brand-navy) / 0.28)" : undefined }}
+      title={title}
+    >
+      <span className="truncate w-full">{children}</span>
+    </div>
+  );
+};
+
 
 // ── Mode cell (Air / Ocean / Local enum popover) ──────────────────────
 interface ModeCellProps {
