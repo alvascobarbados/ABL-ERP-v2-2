@@ -20,6 +20,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { StagePicker } from "./StagePicker";
 import { usePresence } from "@/hooks/usePresence";
 import { formatAmountFull } from "@/lib/money";
+import { LineItemsGrid } from "./LineItemsGrid";
 
 interface Props {
   card: PipelineCard | null;
@@ -83,8 +84,6 @@ type EditorKind =
   | { kind: "completionDate" }
   | { kind: "outstandingBalance" }
   | { kind: "addNote" }
-  | { kind: "addLineItem" }
-  | { kind: "editLineItem"; index: number }
   | { kind: "supplier" }
   | { kind: "shippingMode" }
   | null;
@@ -578,50 +577,22 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
           {/* ── LINE ITEMS ── */}
           <section>
-            <SectionHeaderWithAction onAction={() => setEditor({ kind: "addLineItem" })}>Line items</SectionHeaderWithAction>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h2
+                className="text-[11px] uppercase font-semibold"
+                style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
+              >
+                Line items
+              </h2>
+            </div>
             <SectionCard>
-            {!live.lineItems || live.lineItems.length === 0 ? (
-              <div className="text-[13px] italic text-muted-foreground/70">No line items yet</div>
-            ) : (() => {
-              const items = live.lineItems;
-              const maxDigits = Math.max(...items.map((li) => li.qty.toLocaleString().length), 3);
-              const sumTotal = items.reduce((n, li) => n + (typeof li.total === "number" ? li.total : 0), 0);
-              const showSum = sumTotal > 0;
-              const fmt = (n: number) =>
-                n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-              return (
-                <>
-                  <ul className="divide-y" style={{ borderColor: "hsl(var(--brand-navy) / 0.08)" }}>
-                    {items.map((li, i) => (
-                      <li key={i}>
-                        <button
-                          onClick={() => setEditor({ kind: "editLineItem", index: i })}
-                          className="w-full flex items-center gap-3 py-2.5 text-left rounded-md hover:bg-muted/40 transition-colors px-2 -mx-2"
-                          style={{ minHeight: 40 }}
-                        >
-                          <span className="text-right tabular font-semibold text-foreground shrink-0" style={{ width: `${maxDigits + 1}ch` }}>
-                            {li.qty.toLocaleString()}
-                          </span>
-                          <span className="text-muted-foreground/60">×</span>
-                          <span className="text-foreground/90 leading-snug flex-1 min-w-0 break-words">{li.description}</span>
-                          <span className="tabular shrink-0 text-right text-[13px]" style={{ minWidth: 64, color: "hsl(var(--brand-navy) / 0.65)" }}>
-                            {typeof li.unitPrice === "number" ? `$${fmt(li.unitPrice)}` : "—"}
-                          </span>
-                          <span className="tabular shrink-0 text-right text-[13px] font-semibold" style={{ minWidth: 80, color: "hsl(var(--brand-navy))" }}>
-                            {typeof li.total === "number" ? `$${fmt(li.total)}` : "—"}
-                          </span>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-2 text-right text-[12px] tabular" style={{ color: "hsl(var(--brand-navy) / 0.65)" }}>
-                    {items.length} {items.length === 1 ? "item" : "items"}
-                    {showSum && ` · $${fmt(sumTotal)} BBD`}
-                  </div>
-                </>
-              );
-            })()}
+              <LineItemsGrid
+                projectId={live.id}
+                items={live.lineItems ?? []}
+                addLineItem={addLineItem}
+                updateLineItem={updateLineItem}
+                removeLineItem={removeLineItem}
+              />
             </SectionCard>
           </section>
 
