@@ -78,19 +78,31 @@ type EditorKind =
   | { kind: "deadline" }
   | { kind: "quote" }
   | { kind: "po" }
+  | { kind: "poAmount" }
   | { kind: "invoice" }
   | { kind: "tracking" }
   | { kind: "shipmentNumber" }
   | { kind: "weight" }
-  | { kind: "cbm" }
+  | { kind: "weightUnit" }
+  | { kind: "volume" }
+  | { kind: "volumeUnit" }
   | { kind: "packages" }
   | { kind: "designBrief" }
   | { kind: "proofNumber" }
   | { kind: "completionDate" }
-  | { kind: "outstandingBalance" }
   | { kind: "addNote" }
   | { kind: "supplier" }
   | { kind: "shippingMode" }
+  // Finance — deposit
+  | { kind: "depositInvoice" }
+  | { kind: "depositAmount" }
+  | { kind: "depositPaidDate" }
+  | { kind: "depositPaidMethod" }
+  | { kind: "depositPaymentRef" }
+  // Finance — final
+  | { kind: "paidDate" }
+  | { kind: "paidMethod" }
+  | { kind: "paymentRef" }
   | null;
 
 const SHIPPING_MODE_OPTIONS: ListOption[] = [
@@ -98,6 +110,33 @@ const SHIPPING_MODE_OPTIONS: ListOption[] = [
   { id: "Ocean", label: "Ocean" },
   { id: "Local", label: "Local" },
 ];
+const PAYMENT_METHOD_OPTIONS: ListOption[] = [
+  { id: "Transfer", label: "Transfer" },
+  { id: "Cheque",   label: "Cheque" },
+  { id: "Cash",     label: "Cash" },
+];
+const WEIGHT_UNIT_OPTIONS: ListOption[] = [
+  { id: "kg",  label: "kg" },
+  { id: "lbs", label: "lbs" },
+];
+const VOLUME_UNIT_OPTIONS: ListOption[] = [
+  { id: "CBM",  label: "CBM" },
+  { id: "CuFt", label: "CuFt" },
+];
+
+function refLabelFor(method?: PaymentMethod | null): string | null {
+  if (method === "Transfer") return "Bank Ref No.";
+  if (method === "Cheque") return "Cheque No.";
+  return null;
+}
+
+function defaultsForCountry(country?: string | null): { weight: WeightUnit; volume: VolumeUnit } {
+  if (country === "USA") return { weight: "lbs", volume: "CuFt" };
+  return { weight: "kg", volume: "CBM" };
+}
+
+const fmtCreated = (d: Date) =>
+  `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
 export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const store = usePipelineStore();
