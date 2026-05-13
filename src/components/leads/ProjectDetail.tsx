@@ -646,7 +646,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow label="PO #" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
               <DetailRow
                 label="PO Amount"
-                value={live.poAmountUsd != null ? `$${live.poAmountUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : undefined}
+                value={live.poAmount != null ? formatPoAmount(live.poAmount, live.poAmountCurrency ?? "USD") : undefined}
                 onClick={() => setEditor({ kind: "poAmount" })}
               />
             </SectionCard>
