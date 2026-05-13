@@ -996,6 +996,8 @@ const LOG_DOT: Record<ProjectLogActionType, string> = {
   field_edit: "hsl(var(--muted-foreground))",
   flag_toggle: "hsl(var(--brand-orange))",
   note_added: "hsl(var(--brand-teal))",
+  note_edited: "hsl(var(--brand-teal))",
+  note_deleted: "hsl(var(--destructive))",
   project_created: "hsl(var(--brand-navy))",
   archive: "hsl(var(--muted-foreground))",
   unarchive: "hsl(var(--muted-foreground))",
