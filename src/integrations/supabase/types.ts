@@ -221,6 +221,7 @@ export type Database = {
           project_id: string
           text: string
           ts: string
+          updated_at: string
         }
         Insert: {
           author: string
@@ -230,6 +231,7 @@ export type Database = {
           project_id: string
           text: string
           ts?: string
+          updated_at?: string
         }
         Update: {
           author?: string
@@ -239,6 +241,7 @@ export type Database = {
           project_id?: string
           text?: string
           ts?: string
+          updated_at?: string
         }
         Relationships: [
           {

@@ -240,6 +240,8 @@ export interface ProjectNote {
   /** Stable user id — survives display-name changes. */
   authorUserId?: string;
   text: string;
+  /** Bumped server-side on every UPDATE. Drives the "(edited)" badge. */
+  updatedAt?: Date;
   /** True when the system wrote the note (legacy auto-stage notes). New
    *  code should write to ProjectLogEntry instead — kept for back-compat. */
   auto?: boolean;
@@ -250,6 +252,8 @@ export type ProjectLogActionType =
   | "field_edit"
   | "flag_toggle"
   | "note_added"
+  | "note_edited"
+  | "note_deleted"
   | "project_created"
   | "archive"
   | "unarchive"

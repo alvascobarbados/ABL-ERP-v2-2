@@ -423,6 +423,9 @@ interface PipelineStoreCtx {
   updateProject: (id: string, patch: Partial<Project>) => Promise<void>;
   renameProject: (currentName: string, newName: string) => Promise<{ count: number }>;
   addNote: (projectId: string, text: string, author?: string) => Promise<void>;
+  updateNote: (projectId: string, noteId: string, newText: string) => Promise<void>;
+  removeNote: (projectId: string, noteId: string) => Promise<void>;
+  restoreNote: (projectId: string, note: ProjectNote) => Promise<void>;
   addLineItem: (projectId: string, item: LineItem) => Promise<void>;
   updateLineItem: (projectId: string, index: number, item: LineItem) => Promise<void>;
   removeLineItem: (projectId: string, index: number) => Promise<void>;
@@ -490,6 +493,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         arr.push({
           id: r.id, ts: new Date(r.ts), author: r.author,
           authorUserId: r.author_user_id ?? undefined, text: r.text, auto: r.auto,
+          updatedAt: r.updated_at ? new Date(r.updated_at) : undefined,
         });
         notesByProj.set(r.project_id, arr);
       }
@@ -725,6 +729,69 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       await supabase.from("projects").upsert(projectToRow(proj));
       toast.error(FAILURE_TOAST);
     }
+  }, []);
+
+  const updateNote = useCallback(async (projectId: string, noteId: string, newText: string) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    const idx = (proj.notes ?? []).findIndex((n) => n.id === noteId);
+    if (idx < 0) return;
+    const oldNote = proj.notes![idx];
+    if (oldNote.text === newText) return;
+    const u = userRef.current;
+    const updatedNote: ProjectNote = { ...oldNote, text: newText, updatedAt: new Date() };
+    const nextNotes = [...proj.notes!]; nextNotes[idx] = updatedNote;
+    const next = touch({ ...proj, notes: nextNotes });
+    const r = appendLog(next, {
+      actor: actorOf(u), actionType: "note_edited",
+      description: `${u.shortName} edited a note`,
+      metadata: { noteId, oldLength: oldNote.text.length, newLength: newText.length } as any,
+    });
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? r.project : p)));
+    const { error: nErr } = await supabase.from("project_notes").update({ text: newText }).eq("id", noteId);
+    if (nErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
+    if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+  }, []);
+
+  const removeNote = useCallback(async (projectId: string, noteId: string) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    const idx = (proj.notes ?? []).findIndex((n) => n.id === noteId);
+    if (idx < 0) return;
+    const removed = proj.notes![idx];
+    const u = userRef.current;
+    const nextNotes = proj.notes!.filter((n) => n.id !== noteId);
+    const next = touch({ ...proj, notes: nextNotes });
+    const preview = removed.text.length > 50 ? removed.text.slice(0, 50) + "…" : removed.text;
+    const r = appendLog(next, {
+      actor: actorOf(u), actionType: "note_deleted",
+      description: `${u.shortName} deleted a note`,
+      metadata: { noteId, deletedTextPreview: preview } as any,
+    });
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? r.project : p)));
+    const { error: nErr } = await supabase.from("project_notes").delete().eq("id", noteId);
+    if (nErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
+    if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+  }, []);
+
+  /** Re-insert a previously-deleted note with original id/ts/author. Does NOT
+   *  write an audit log entry — undo brings the note back without rewriting
+   *  history; the original note_deleted entry stays as factual record. */
+  const restoreNote = useCallback(async (projectId: string, note: ProjectNote) => {
+    const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
+    if ((proj.notes ?? []).some((n) => n.id === note.id)) return;
+    const nextNotes = [...(proj.notes ?? []), note].sort((a, b) => a.ts.getTime() - b.ts.getTime());
+    const optimistic = { ...proj, notes: nextNotes };
+    const snapshot = projectsRef.current;
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? optimistic : p)));
+    const { error } = await supabase.from("project_notes").insert(noteToRow(projectId, note));
+    if (error) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
   }, []);
 
   const persistLineItemsAndCommit = async (
@@ -998,7 +1065,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const value = useMemo<PipelineStoreCtx>(() => ({
     projects: liveProjects, trashedProjects, archivedProjects, shipments, suppliers, loading,
-    moveCard, updateProject, renameProject, addNote,
+    moveCard, updateProject, renameProject,
+    addNote, updateNote, removeNote, restoreNote,
     addLineItem, updateLineItem, removeLineItem,
     duplicateProject, createProject, toggleFlag,
     softDeleteProject, restoreProject, hardDeleteProject, deleteProject,
@@ -1006,7 +1074,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
     assignToShipment, createShipment, updateShipment, markShipmentDelivered,
     pulsePipeline, triggerPulse,
-  }), [liveProjects, trashedProjects, archivedProjects, shipments, suppliers, loading, moveCard, updateProject, renameProject, addNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, createProject, toggleFlag, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, updateShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+  }), [liveProjects, trashedProjects, archivedProjects, shipments, suppliers, loading, moveCard, updateProject, renameProject, addNote, updateNote, removeNote, restoreNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, createProject, toggleFlag, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, updateShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
 
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
