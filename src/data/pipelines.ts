@@ -235,6 +235,11 @@ export type SupplierLabelHint = "TBD" | "Various";
 export type SalesShippingLabel =
   | "Ocean FCL" | "Ocean LCL" | "DHL" | "FedEx" | "Courier" | "Mixed" | "Local";
 
+// ─────────── Block-based detail page (v1) ───────────
+export type PaymentMethod = "Transfer" | "Cheque" | "Cash";
+export type WeightUnit = "kg" | "lbs";
+export type VolumeUnit = "CBM" | "CuFt";
+
 export interface ProjectNote {
   id: string;
   ts: Date;
