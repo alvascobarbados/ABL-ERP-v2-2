@@ -263,6 +263,13 @@ function projectToRow(p: Project): any {
     paid_on_date: p.paidOnDate ? p.paidOnDate.toISOString() : null,
     payment_method: p.paymentMethod ?? null,
     payment_reference: p.paymentReference ?? null,
+    po_amount_usd: p.poAmountUsd ?? null,
+    deposit_required: !!p.depositRequired,
+    deposit_invoice_number: p.depositInvoiceNumber ?? null,
+    deposit_amount: p.depositAmount ?? null,
+    deposit_paid_date: p.depositPaidDate ? p.depositPaidDate.toISOString() : null,
+    deposit_paid_method: p.depositPaidMethod ?? null,
+    deposit_payment_reference: p.depositPaymentReference ?? null,
     updated_at: new Date().toISOString(),
   };
 }
