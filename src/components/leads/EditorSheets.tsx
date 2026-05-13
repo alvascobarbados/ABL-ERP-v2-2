@@ -228,8 +228,9 @@ interface DateEditorProps {
   title: string;
   value?: Date;
   onSave: (d: Date) => void;
+  onClear?: () => void;
 }
-export const DateEditor = ({ open, onClose, title, value, onSave }: DateEditorProps) => {
+export const DateEditor = ({ open, onClose, title, value, onSave, onClear }: DateEditorProps) => {
   const [d, setD] = useState<Date | undefined>(value);
   useEffect(() => { if (open) setD(value); }, [open, value]);
   return (
@@ -242,6 +243,17 @@ export const DateEditor = ({ open, onClose, title, value, onSave }: DateEditorPr
           className="p-3 pointer-events-auto"
         />
       </div>
+      {onClear && value && (
+        <div className="mt-3 flex justify-center">
+          <button
+            onClick={onClear}
+            className="text-[13px] italic px-3 py-2 rounded-lg hover:bg-muted/40 transition-colors"
+            style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
+          >
+            — Clear date —
+          </button>
+        </div>
+      )}
     </BottomSheet>
   );
 };
@@ -255,11 +267,26 @@ interface ListPickerProps {
   options: ListOption[];
   selectedId?: string;
   onPick: (id: string) => void;
+  onClear?: () => void;
+  clearLabel?: string;
 }
-export const ListPicker = ({ open, onClose, title, options, selectedId, onPick }: ListPickerProps) => {
+export const ListPicker = ({ open, onClose, title, options, selectedId, onPick, onClear, clearLabel }: ListPickerProps) => {
   return (
     <BottomSheet open={open} onClose={onClose} title={title}>
       <ul className="space-y-1.5">
+        {onClear && selectedId != null && (
+          <li>
+            <button
+              onClick={onClear}
+              className="w-full text-left px-3.5 py-3 rounded-xl border border-dashed transition-colors hover:bg-muted/40"
+              style={{ minHeight: 48, borderColor: "hsl(var(--brand-navy) / 0.2)" }}
+            >
+              <div className="text-sm italic" style={{ color: "hsl(var(--brand-navy) / 0.6)" }}>
+                {clearLabel ?? "— Clear selection —"}
+              </div>
+            </button>
+          </li>
+        )}
         {options.map((o) => (
           <li key={o.id}>
             <button

@@ -225,7 +225,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const saveBuyer = (buyerId: string | null) => { updateProject(live.id, { buyerId }); setEditor(null); };
   const saveProjectName = (v: string) => {
     const t = v.trim();
-    if (t) updateProject(live.id, { projectName: t });
+    if (!t) { toast.error("Project name is required"); return; }
+    updateProject(live.id, { projectName: t });
     setEditor(null);
   };
   const saveDetail = (v: string) => { updateProject(live.id, { detailSummary: v }); setEditor(null); };
@@ -364,6 +365,31 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const saveVolumeUnit = (id: string) => {
     if (id === "CBM" || id === "CuFt") updateProject(live.id, { volumeUnit: id as VolumeUnit });
     setEditor(null);
+  };
+
+
+  // ─── Clear handlers (set field to null) ────────────────────────────────
+  const clearDeadline = () => { updateProject(live.id, { deadlineDate: null, deadline: undefined } as any); setEditor(null); };
+  const clearCompletionDate = () => { updateProject(live.id, { completionDate: null } as any); setEditor(null); };
+  const clearPaidDate = () => { updateProject(live.id, { paidOnDate: null } as any); setEditor(null); };
+  const clearDepositPaidDate = () => { updateProject(live.id, { depositPaidDate: null } as any); setEditor(null); };
+  const clearPaidMethod = () => { updateProject(live.id, { paymentMethod: null, paymentReference: null } as any); setEditor(null); };
+  const clearDepositPaidMethod = () => { updateProject(live.id, { depositPaidMethod: null, depositPaymentReference: null } as any); setEditor(null); };
+  const clearShippingMode = () => {
+    if (!live.shippingMode) { setEditor(null); return; }
+    const hasTracking = !!live.trackingRef && live.trackingRef.trim() !== "";
+    const apply = () => { updateProject(live.id, { shippingMode: undefined, salesShippingLabel: undefined, trackingRef: undefined }); setEditor(null); };
+    if (hasTracking) {
+      setEditor(null);
+      setConfirm({
+        title: "Clear shipping mode?",
+        description: `Clearing the shipping mode will also clear the current tracking number (${live.trackingRef}).`,
+        confirmLabel: "Clear",
+        onConfirm: () => { apply(); setConfirm(null); },
+      });
+      return;
+    }
+    apply();
   };
 
   const submitNote = (text: string) => { addNote(live.id, text); setEditor(null); };
@@ -901,6 +927,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Deadline"
         value={live.deadlineDate ?? undefined}
         onSave={saveDeadline}
+        onClear={clearDeadline}
       />
       <TextEditor
         open={editor?.kind === "quote"}
@@ -1029,6 +1056,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Completion date"
         value={live.completionDate ?? undefined}
         onSave={saveCompletionDate}
+        onClear={clearCompletionDate}
       />
       {/* Finance — deposit */}
       <TextEditor
@@ -1055,6 +1083,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Deposit paid date"
         value={live.depositPaidDate ?? undefined}
         onSave={saveDepositPaidDate}
+        onClear={clearDepositPaidDate}
       />
       <ListPicker
         open={editor?.kind === "depositPaidMethod"}
@@ -1063,6 +1092,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         options={PAYMENT_METHOD_OPTIONS}
         selectedId={live.depositPaidMethod ?? undefined}
         onPick={saveDepositPaidMethod}
+        onClear={clearDepositPaidMethod}
       />
       <TextEditor
         open={editor?.kind === "depositPaymentRef"}
@@ -1079,6 +1109,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Paid date"
         value={live.paidOnDate ?? undefined}
         onSave={savePaidDate}
+        onClear={clearPaidDate}
       />
       <ListPicker
         open={editor?.kind === "paidMethod"}
@@ -1087,6 +1118,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         options={PAYMENT_METHOD_OPTIONS}
         selectedId={live.paymentMethod ?? undefined}
         onPick={savePaidMethod}
+        onClear={clearPaidMethod}
       />
       <TextEditor
         open={editor?.kind === "paymentRef"}
@@ -1121,6 +1153,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         options={SHIPPING_MODE_OPTIONS}
         selectedId={live.shippingMode}
         onPick={handlePickShippingMode}
+        onClear={clearShippingMode}
       />
 
       <StagePicker
