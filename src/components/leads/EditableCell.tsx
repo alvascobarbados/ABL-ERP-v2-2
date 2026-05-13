@@ -1,24 +1,20 @@
 /**
- * EditableCell — Google-Sheets-style three-state cell wrapper for ProjectTable.
+ * EditableCell — Row-selection-first cell wrapper for ProjectTable.
  *
- * State machine (per cell, single active across the whole table):
- *   Idle       → no border, hover tint on mouseover
- *   Selected   → medium navy ring (~50% opacity), display value still shown
- *   Editing    → strong navy ring + editor (input, popover, etc.) rendered
+ * Interaction model (v2):
+ *   - First click on any cell  → row SELECTED, that cell focused (no editor)
+ *   - Click different cell same row → focus moves, row stays selected
+ *   - Click different row      → previous row deselected, new row selected
+ *   - Second click same focused cell (NOT a double-click) → editor opens
+ *     (deferred ~250ms; dblclick cancels the pending edit)
+ *   - Double-click any cell    → onRowDoubleClick (opens project detail)
+ *   - Click outside table body → deselect everything
+ *   - Esc while editing        → cancel edit, return to selected
+ *   - Esc while only selected  → deselect row (handled by ProjectTable when
+ *     no detail page is open)
  *
- * Transitions:
- *   - click idle cell                       → Selected
- *   - click already-selected cell           → Editing
- *   - dblclick any cell                     → Editing (fast path)
- *   - click another cell while editing      → save current, new cell → Selected
- *   - click another cell while selected     → previous → Idle, new → Selected
- *   - Esc while editing                     → Selected (border stays)
- *   - Esc while selected (not editing)      → Idle (border gone)
- *   - click outside the table               → save (if editing), all → Idle
- *
- * Selection state is provided by the parent table via <SelectionProvider>.
- * Custom cells (Category B/C entity / enum) reuse the same state — they
- * "open" their popover on entering Editing rather than rendering an input.
+ * Custom cells (entity / enum) reuse the same state — they "open" their
+ * popover on entering Editing rather than rendering an input.
  */
 import { useEffect, useRef, useState, KeyboardEvent, MouseEvent as ReactMouseEvent, useContext, createContext, useCallback } from "react";
 import { Pencil } from "lucide-react";
@@ -26,15 +22,20 @@ import { cn } from "@/lib/utils";
 
 export type SaveResult = { ok: true } | { ok: false; reason?: string };
 
+const PENDING_EDIT_MS = 250;
+
 // ── Selection context ─────────────────────────────────────────────────
 interface SelectionState {
+  selectedRowId: string | null;
   activeKey: string | null;
   editing: boolean;
-  /** Select a cell (idle → selected, or selected → editing if same key). */
-  selectCell: (key: string) => void;
-  /** Force a cell directly into editing (dblclick fast-path). */
-  editCell: (key: string) => void;
-  /** Step down from editing → selected (same key). */
+  /** Click handler: selects cell, schedules edit if same cell re-clicked. */
+  selectCell: (rowId: string, key: string, opts?: { noEdit?: boolean }) => void;
+  /** Cancel a pending second-click-enters-edit timer (called on dblclick). */
+  cancelPendingEdit: () => void;
+  /** Force a cell directly into editing (used by custom popover open paths). */
+  editCell: (rowId: string, key: string) => void;
+  /** Step down from editing → selected (same cell). */
   stopEditing: () => void;
   /** Clear all selection (Esc when only selected, or click outside table). */
   clear: () => void;
@@ -44,6 +45,18 @@ const SelectionContext = createContext<SelectionState | null>(null);
 
 export const useCellSelection = () => useContext(SelectionContext);
 
+/** Convenience hook for row-level highlight. */
+export const useRowSelected = (rowId: string) => {
+  const sel = useCellSelection();
+  return !!sel && sel.selectedRowId === rowId;
+};
+
+/** Convenience hook for focused-cell ring style (focused cell within selected row). */
+export const useCellFocused = (cellKey: string) => {
+  const sel = useCellSelection();
+  return !!sel && sel.activeKey === cellKey;
+};
+
 interface ProviderProps {
   children: React.ReactNode;
   /** Optional ref to the table root — when provided, mousedown outside it clears selection. */
@@ -51,36 +64,78 @@ interface ProviderProps {
 }
 
 export const SelectionProvider = ({ children, outsideRef }: ProviderProps) => {
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
 
-  const selectCell = useCallback((key: string) => {
-    setActiveKey((prev) => {
-      if (prev === key) {
-        setEditing(true);
-        return key;
-      }
-      setEditing(false);
-      return key;
-    });
+  // Refs mirror state for use inside stable callbacks.
+  const rowRef = useRef<string | null>(null);
+  const keyRef = useRef<string | null>(null);
+  const editingRef = useRef(false);
+  const pendingTimer = useRef<number | null>(null);
+
+  const cancelPending = useCallback(() => {
+    if (pendingTimer.current) {
+      window.clearTimeout(pendingTimer.current);
+      pendingTimer.current = null;
+    }
   }, []);
 
-  const editCell = useCallback((key: string) => {
+  const selectCell = useCallback((rowId: string, key: string, opts?: { noEdit?: boolean }) => {
+    const sameRow = rowRef.current === rowId;
+    const sameKey = keyRef.current === key;
+    if (!sameRow || !sameKey) {
+      cancelPending();
+      rowRef.current = rowId;
+      keyRef.current = key;
+      editingRef.current = false;
+      setSelectedRowId(rowId);
+      setActiveKey(key);
+      setEditing(false);
+      return;
+    }
+    // Same focused cell — schedule edit unless suppressed or already editing.
+    if (editingRef.current || opts?.noEdit) return;
+    cancelPending();
+    pendingTimer.current = window.setTimeout(() => {
+      editingRef.current = true;
+      setEditing(true);
+      pendingTimer.current = null;
+    }, PENDING_EDIT_MS);
+  }, [cancelPending]);
+
+  const cancelPendingEdit = useCallback(() => {
+    cancelPending();
+  }, [cancelPending]);
+
+  const editCell = useCallback((rowId: string, key: string) => {
+    cancelPending();
+    rowRef.current = rowId;
+    keyRef.current = key;
+    editingRef.current = true;
+    setSelectedRowId(rowId);
     setActiveKey(key);
     setEditing(true);
-  }, []);
+  }, [cancelPending]);
 
   const stopEditing = useCallback(() => {
+    cancelPending();
+    editingRef.current = false;
     setEditing(false);
-  }, []);
+  }, [cancelPending]);
 
   const clear = useCallback(() => {
+    cancelPending();
+    rowRef.current = null;
+    keyRef.current = null;
+    editingRef.current = false;
+    setSelectedRowId(null);
     setActiveKey(null);
     setEditing(false);
-  }, []);
+  }, [cancelPending]);
 
   // Outside-click → clear selection. Edits commit on the input's onBlur,
-  // which fires before this handler (React synthetic blur fires first).
+  // which fires before this handler.
   useEffect(() => {
     if (!outsideRef) return;
     const handler = (e: MouseEvent) => {
@@ -89,41 +144,67 @@ export const SelectionProvider = ({ children, outsideRef }: ProviderProps) => {
       if (e.target instanceof Node && root.contains(e.target)) return;
       // Ignore clicks inside Radix portals (popovers, etc.)
       if (e.target instanceof Element && e.target.closest('[data-radix-popper-content-wrapper]')) return;
-      setActiveKey(null);
-      setEditing(false);
+      clear();
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [outsideRef]);
+  }, [outsideRef, clear]);
 
-  // Esc handler: editing → selected; selected → idle.
+  // Esc handler at provider level: editing→selected; selected→cleared.
+  // ProjectTable's own keydown listener may pre-empt this when a detail
+  // page is open.
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (!activeKey) return;
-      if (editing) {
-        // Editing cells handle their own Esc (to cancel + flush input).
-        // We only trigger this fallback when the focus is NOT inside a cell input.
-        const target = e.target as HTMLElement | null;
-        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
-        setEditing(false);
-      } else {
-        setActiveKey(null);
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || (target as any).isContentEditable)) {
+        // Editing cells handle their own Esc (cancel + flush).
+        return;
+      }
+      if (editingRef.current) {
+        stopEditing();
+      } else if (rowRef.current || keyRef.current) {
+        clear();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [activeKey, editing]);
+  }, [stopEditing, clear]);
+
+  // Cleanup any pending timer on unmount.
+  useEffect(() => () => cancelPending(), [cancelPending]);
 
   return (
-    <SelectionContext.Provider value={{ activeKey, editing, selectCell, editCell, stopEditing, clear }}>
+    <SelectionContext.Provider
+      value={{
+        selectedRowId, activeKey, editing,
+        selectCell, cancelPendingEdit, editCell, stopEditing, clear,
+      }}
+    >
       {children}
     </SelectionContext.Provider>
   );
 };
 
+// Optional row context: wrap each table row so cells inherit rowId AND
+// a default double-click handler (open detail) without each call site
+// having to pass them explicitly.
+const RowContext = createContext<string | null>(null);
+const RowDoubleClickContext = createContext<(() => void) | null>(null);
+export const RowProvider = ({ rowId, onDoubleClick, children }: { rowId: string; onDoubleClick?: () => void; children: React.ReactNode }) => (
+  <RowContext.Provider value={rowId}>
+    <RowDoubleClickContext.Provider value={onDoubleClick ?? null}>
+      {children}
+    </RowDoubleClickContext.Provider>
+  </RowContext.Provider>
+);
+export const useRowId = () => useContext(RowContext);
+export const useRowDoubleClick = () => useContext(RowDoubleClickContext);
+
 // ── Cell ──────────────────────────────────────────────────────────────
 interface BaseProps {
+  /** Row id this cell belongs to. Defaults to the surrounding RowProvider. */
+  rowId?: string;
   /** Stable identifier for selection (e.g. `${rowId}:projectName`). */
   cellKey: string;
   /** Read-only? (no hover, no click-to-edit) */
@@ -138,6 +219,10 @@ interface BaseProps {
   muted?: boolean;
   /** Forced flash state from outside (used by Category B/C cells where save happens after popover close). */
   flash?: "success" | "error" | null;
+  /** Double-click handler — opens project detail at the row level. */
+  onRowDoubleClick?: () => void;
+  /** When true, second-click never schedules edit (used by Stage column). */
+  noClickEdit?: boolean;
 }
 
 interface TextProps extends BaseProps {
@@ -165,18 +250,21 @@ type Props = TextProps | CustomProps;
 const FLASH_MS = 700;
 
 export const EditableCell = (props: Props) => {
-  const { cellKey, readOnly, align = "left", display, title, muted, flash: externalFlash } = props;
+  const { cellKey, readOnly, align = "left", display, title, muted, flash: externalFlash, noClickEdit } = props;
+  const ctxRowId = useRowId();
+  const ctxDouble = useRowDoubleClick();
+  const rowId = props.rowId ?? ctxRowId ?? "__no_row__";
+  const onRowDoubleClick = props.onRowDoubleClick ?? ctxDouble ?? undefined;
   const sel = useCellSelection();
-  const isActive = sel?.activeKey === cellKey;
-  const isEditing = isActive && !!sel?.editing;
-  const isSelectedOnly = isActive && !sel?.editing;
+  const isFocused = sel?.activeKey === cellKey && sel?.selectedRowId === rowId;
+  const isEditing = isFocused && !!sel?.editing;
+  const isSelectedOnly = isFocused && !sel?.editing;
 
   const [internalFlash, setInternalFlash] = useState<"success" | "error" | null>(null);
   const flash = externalFlash ?? internalFlash;
   const cellRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const commitGuard = useRef(false);
-  // Track previous editing state — fire onActivate when we transition into Editing for custom cells.
   const wasEditingRef = useRef(false);
 
   // Auto-focus input on entering edit mode (text cells only)
@@ -187,8 +275,7 @@ export const EditableCell = (props: Props) => {
     }
   }, [isEditing, props.mode]);
 
-  // Custom cells: call onActivate exactly when transitioning Idle/Selected → Editing.
-  // When `active` (popover-open) flips false while still Editing, drop to Selected.
+  // Custom cells: call onActivate exactly when transitioning into Editing.
   useEffect(() => {
     if (props.mode !== "custom") return;
     if (isEditing && !wasEditingRef.current && cellRef.current) {
@@ -201,7 +288,6 @@ export const EditableCell = (props: Props) => {
     if (props.mode !== "custom") return;
     // After a popover closes (active → false) while we're in Editing, step down.
     if (isEditing && (props as CustomProps).active === false) {
-      // Defer one tick so the Radix close + outside-click handler don't race.
       const t = window.setTimeout(() => sel?.stopEditing(), 0);
       return () => window.clearTimeout(t);
     }
@@ -215,22 +301,25 @@ export const EditableCell = (props: Props) => {
   }, [internalFlash]);
 
   const handleCellClick = (e: ReactMouseEvent) => {
-    if (readOnly) return;
     e.stopPropagation();
-    if (!sel) return;
-    sel.selectCell(cellKey);
+    if (readOnly) {
+      // Read-only cells still participate in row selection.
+      sel?.selectCell(rowId, cellKey, { noEdit: true });
+      return;
+    }
+    sel?.selectCell(rowId, cellKey, { noEdit: noClickEdit });
   };
 
   const handleCellDoubleClick = (e: ReactMouseEvent) => {
-    if (readOnly) return;
     e.stopPropagation();
-    if (!sel) return;
-    sel.editCell(cellKey);
+    e.preventDefault();
+    sel?.cancelPendingEdit();
+    onRowDoubleClick?.();
   };
 
   const handleCellMouseDown = (e: ReactMouseEvent) => {
-    // Block row-level long-press timer for editable cells
-    if (!readOnly) e.stopPropagation();
+    // Block row-level long-press timer so editable cells don't trigger stage picker.
+    e.stopPropagation();
   };
 
   const commit = async (raw: string) => {
@@ -250,7 +339,6 @@ export const EditableCell = (props: Props) => {
         sel?.stopEditing();
       } else {
         setInternalFlash("error");
-        // keep editing so user can correct
       }
     } catch {
       setInternalFlash("error");
@@ -262,11 +350,9 @@ export const EditableCell = (props: Props) => {
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      // Commit then drop selection entirely (Enter = "done").
       commit((e.target as HTMLInputElement).value).then(() => sel?.clear());
     } else if (e.key === "Escape") {
       e.preventDefault();
-      // Cancel without saving, return to Selected (border stays).
       sel?.stopEditing();
     }
     e.stopPropagation();
@@ -278,7 +364,7 @@ export const EditableCell = (props: Props) => {
     : isEditing || (props.mode === "custom" && (props as CustomProps).active)
       ? { boxShadow: "inset 0 0 0 2px hsl(var(--brand-navy) / 0.85)", backgroundColor: "hsl(var(--brand-navy) / 0.04)" }
       : isSelectedOnly
-        ? { boxShadow: "inset 0 0 0 2px hsl(var(--brand-navy) / 0.5)" }
+        ? { boxShadow: "inset 0 0 0 1px hsl(var(--brand-navy) / 0.55)" }
         : {};
 
   return (
@@ -291,8 +377,8 @@ export const EditableCell = (props: Props) => {
       className={cn(
         "relative px-3 py-1.5 truncate transition-colors h-full flex items-center",
         align === "right" ? "justify-end text-right" : "justify-start text-left",
-        !readOnly && !isEditing && "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-text group/edit",
-        readOnly && "cursor-default",
+        !readOnly && !isEditing && "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer group/edit",
+        readOnly && "cursor-pointer",
       )}
       style={{
         ...ringStyle,
@@ -332,9 +418,9 @@ export const EditableCell = (props: Props) => {
       ) : (
         <>
           <span className="truncate w-full">{display}</span>
-          {!readOnly && (
+          {!readOnly && isSelectedOnly && (
             <Pencil
-              className="h-3 w-3 ml-1 opacity-0 group-hover/edit:opacity-40 shrink-0 transition-opacity"
+              className="h-3 w-3 ml-1 opacity-50 shrink-0 transition-opacity"
               style={{ color: "hsl(var(--brand-navy))" }}
             />
           )}

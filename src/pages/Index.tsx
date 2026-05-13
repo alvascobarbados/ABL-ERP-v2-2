@@ -826,6 +826,8 @@ const Index = () => {
             onPickStage={performMove}
             hasActiveFilter={hasActiveFilter || isSearching}
             onClearFilters={() => { setFilters(EMPTY_FILTER); setSearch(""); }}
+            selectedCardId={selectedCard?.id ?? null}
+            onCloseDetail={() => setSelectedCard(null)}
           />
         ) : isCompleted ? (
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 bg-[#6B8E5A]/[0.04]">

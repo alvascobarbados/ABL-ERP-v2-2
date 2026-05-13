@@ -7,7 +7,7 @@
  * Mobile (<1024px) never renders this — Index.tsx hides the view switcher
  * and only mounts the Table at the lg breakpoint.
  */
-import { useMemo, useState, useRef, MouseEvent as ReactMouseEvent } from "react";
+import { useMemo, useState, useRef, useEffect, MouseEvent as ReactMouseEvent } from "react";
 import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@/data/pipelines";
 import { useColumnWidths } from "@/hooks/useColumnWidths";
 import { ColumnResizeHandle } from "./ColumnResizeHandle";
-import { EditableCell, SaveResult, SelectionProvider } from "./EditableCell";
+import { EditableCell, SaveResult, SelectionProvider, RowProvider, useRowId, useCellSelection, useRowSelected, useCellFocused } from "./EditableCell";
 import { EntityPicker, TeamMultiPicker } from "./EntityPicker";
 import { BuyerPicker } from "./BuyerPicker";
 import {
@@ -73,6 +73,10 @@ interface Props {
   onClearFilters?: () => void;
   /** When true (sub-chevron stage selected), drop the Stage column entirely. */
   hideStageColumn?: boolean;
+  /** Currently-open project detail card id (drives Spacebar/Esc behavior). */
+  selectedCardId?: string | null;
+  /** Close the detail page (Spacebar / Esc when detail is open). */
+  onCloseDetail?: () => void;
 }
 
 const DAY = 86400000;
@@ -328,7 +332,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
 
-export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onPickStage, hasActiveFilter, onClearFilters, hideStageColumn: _ignored }: Props) => {
+export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onPickStage, hasActiveFilter, onClearFilters, hideStageColumn: _ignored, selectedCardId, onCloseDetail }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const cw = useColumnWidths();
@@ -371,6 +375,12 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
 
   return (
     <SelectionProvider outsideRef={tableRootRef}>
+    <TableKeyboard
+      sorted={sorted}
+      selectedCardId={selectedCardId}
+      onOpenCard={onOpenCard}
+      onCloseDetail={onCloseDetail}
+    />
     <TooltipProvider delayDuration={300}>
     <div className="flex-1 min-h-0 min-w-0 flex flex-col">
       <div className="flex-1 min-h-0 min-w-0 flex flex-col px-6 lg:px-8 pt-3 pb-0 overflow-hidden">
@@ -585,11 +595,16 @@ const TableRow = ({
     }
   };
 
-  // Single-click on row whitespace (not on a cell) → open detail.
-  // Cells stop propagation, so this only fires on margins / read-only gutters.
-  // Double-click no longer toggles flag — that gesture is reserved for cells.
+  // Row whitespace clicks (gutters) deselect via the SelectionProvider's
+  // outside-click handler when appropriate. We no longer open detail on
+  // single-click — only dblclick (per row-selection model).
   const handleClick = (_e: ReactMouseEvent) => {
+    /* no-op: cells handle selection; row whitespace falls through */
+  };
+
+  const handleRowDoubleClick = (e: ReactMouseEvent) => {
     if (longPressed.current) return;
+    e.preventDefault();
     onOpen();
   };
 
@@ -793,22 +808,28 @@ const TableRow = ({
     }
   };
 
+  const isRowSelected = useRowSelected(card.id);
+
   return (
+    <RowProvider rowId={card.id} onDoubleClick={onOpen}>
     <div
       role="row"
       onClick={handleClick}
+      onDoubleClick={handleRowDoubleClick}
       onContextMenu={handleContextMenu}
       onMouseDown={startLongPress}
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}
       className={cn(
         "grid items-stretch text-[13.5px] cursor-pointer transition-colors group select-none relative",
-        "hover:bg-[hsl(var(--brand-orange)/0.045)]",
+        !isRowSelected && "hover:bg-[hsl(var(--brand-orange)/0.045)]",
       )}
       style={{
         gridTemplateColumns: gridCols,
         minHeight: 44,
-        backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
+        backgroundColor: isRowSelected
+          ? "hsl(var(--brand-navy) / 0.055)"
+          : flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
         borderBottom: "1px solid hsl(var(--brand-navy) / 0.05)",
         boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}`,
         color: "hsl(var(--brand-navy))",
@@ -1105,19 +1126,23 @@ const TableRow = ({
 
       {has("shipmentNumber") && (
       <TrackingCellTrigger
+        cellKey={`${card.id}:shipmentNumber`}
         value={proj.shipmentNumber ?? undefined}
         modeSet={!!proj.shippingMode && proj.shippingMode !== "Local"}
         flash={flashFor("shipmentNumber")}
         onClick={() => proj.shippingMode && proj.shippingMode !== "Local" && setShipmentNumberEditorOpen(true)}
+        onRowDoubleClick={onOpen}
       />
       )}
 
       {has("tracking") && (
       <TrackingCellTrigger
+        cellKey={`${card.id}:tracking`}
         value={proj.trackingRef}
         modeSet={!!proj.shippingMode}
         flash={flashFor("trackingRef")}
         onClick={() => proj.shippingMode && setTrackingEditorOpen(true)}
+        onRowDoubleClick={onOpen}
       />
       )}
 
@@ -1132,18 +1157,19 @@ const TableRow = ({
         title={proj.pointPerson}
         active={openPicker === "rep"}
         flash={flashFor("rep")}
+        onRowDoubleClick={onOpen}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("rep"); }}
       />
       )}
 
       {has("completionDate") && (
-      <ReadOnlyCell muted={!proj.completionDate}>
+      <ReadOnlyCell cellKey={`${card.id}:completionDate`} onRowDoubleClick={onOpen} muted={!proj.completionDate}>
         <span className="tabular">{proj.completionDate ? fmtDeadline(proj.completionDate) : "—"}</span>
       </ReadOnlyCell>
       )}
 
       {has("deadline") && (
-      <ReadOnlyCell muted={!card.deadlineDate}>
+      <ReadOnlyCell cellKey={`${card.id}:deadline`} onRowDoubleClick={onOpen} muted={!card.deadlineDate}>
         {card.deadlineDate ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -1303,29 +1329,58 @@ const TableRow = ({
         }}
       />
     </div>
+    </RowProvider>
   );
 };
 
+// ── Selection ring helper for non-EditableCell wrappers ──────────────
+function useSelectionRing(cellKey: string, flash?: "success" | "error" | null): React.CSSProperties {
+  const focused = useCellFocused(cellKey);
+  if (flash === "success") return { boxShadow: "inset 0 0 0 2px hsl(var(--brand-navy) / 0.5)", backgroundColor: "hsl(140 50% 50% / 0.12)" };
+  if (flash === "error") return { boxShadow: "inset 0 0 0 2px hsl(var(--urgent))", backgroundColor: "hsl(0 70% 50% / 0.10)" };
+  if (focused) return { boxShadow: "inset 0 0 0 1px hsl(var(--brand-navy) / 0.55)" };
+  return {};
+}
+
 // ── Tracking cell trigger (opens BottomSheet; disabled when no Mode) ──
 interface TrackingCellTriggerProps {
+  cellKey: string;
   value: string | undefined;
   modeSet: boolean;
   flash: "success" | "error" | null;
   onClick: () => void;
+  onRowDoubleClick: () => void;
 }
-const TrackingCellTrigger = ({ value, modeSet, flash, onClick }: TrackingCellTriggerProps) => {
-  const ringStyle: React.CSSProperties =
-    flash === "success" ? { boxShadow: "inset 0 0 0 2px hsl(var(--brand-navy) / 0.5)", backgroundColor: "hsl(140 50% 50% / 0.12)" }
-    : flash === "error" ? { boxShadow: "inset 0 0 0 2px hsl(var(--urgent))", backgroundColor: "hsl(0 70% 50% / 0.10)" }
-    : {};
+const TrackingCellTrigger = ({ cellKey, value, modeSet, flash, onClick, onRowDoubleClick }: TrackingCellTriggerProps) => {
+  const sel = useCellSelection();
+  const rowId = useRowId() ?? "__no_row__";
+  const focused = useCellFocused(cellKey);
+  const ringStyle = useSelectionRing(cellKey, flash);
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!sel) return;
+    // First click → select. Second click on focused cell (and Mode set) → open editor.
+    if (focused && modeSet) {
+      sel.cancelPendingEdit();
+      onClick();
+      return;
+    }
+    sel.selectCell(rowId, cellKey, { noEdit: true });
+  };
+  const handleDouble = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    sel?.cancelPendingEdit();
+    onRowDoubleClick();
+  };
   const cell = (
     <div
-      onClick={(e) => { e.stopPropagation(); if (modeSet) onClick(); }}
+      onClick={handleClick}
       onMouseDown={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => e.stopPropagation()}
+      onDoubleClick={handleDouble}
       className={cn(
         "relative px-3 py-1.5 truncate transition-colors h-full flex items-center justify-start text-left",
-        modeSet ? "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer" : "cursor-not-allowed",
+        modeSet ? "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer" : "cursor-pointer",
       )}
       style={{
         ...ringStyle,
@@ -1351,25 +1406,36 @@ function parseInitialsList(raw: string | undefined): string[] {
   return raw.split(/[,\s]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
 }
 
-// ── Read-only cell (Pipeline·Stage, Deadline, Urgency) ─────────────────
+// ── Read-only cell (Completion, Deadline) ─────────────────────────────
 interface ReadOnlyCellProps {
+  cellKey: string;
+  onRowDoubleClick: () => void;
   children: React.ReactNode;
   title?: string;
   align?: "left" | "right";
   muted?: boolean;
 }
-const ReadOnlyCell = ({ children, title, align = "left", muted }: ReadOnlyCellProps) => (
-  <div
-    className={cn(
-      "px-3 py-1.5 truncate flex items-center",
-      align === "right" ? "justify-end text-right" : "justify-start text-left",
-    )}
-    style={muted ? { color: "hsl(var(--brand-navy) / 0.28)" } : undefined}
-    title={title}
-  >
-    <span className="truncate w-full">{children}</span>
-  </div>
-);
+const ReadOnlyCell = ({ cellKey, onRowDoubleClick, children, title, align = "left", muted }: ReadOnlyCellProps) => {
+  const sel = useCellSelection();
+  const rowId = useRowId() ?? "__no_row__";
+  const ringStyle = useSelectionRing(cellKey);
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); sel?.selectCell(rowId, cellKey, { noEdit: true }); }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => { e.stopPropagation(); e.preventDefault(); sel?.cancelPendingEdit(); onRowDoubleClick(); }}
+      className={cn(
+        "px-3 py-1.5 truncate flex items-center cursor-pointer hover:bg-[hsl(var(--brand-navy)/0.04)]",
+        align === "right" ? "justify-end text-right" : "justify-start text-left",
+      )}
+      style={{ ...ringStyle, color: muted ? "hsl(var(--brand-navy) / 0.28)" : undefined }}
+      title={title}
+    >
+      <span className="truncate w-full">{children}</span>
+    </div>
+  );
+};
+
 
 // ── Mode cell (Air / Ocean / Local enum popover) ──────────────────────
 interface ModeCellProps {
@@ -1536,6 +1602,7 @@ const StageCell = ({
         display={<StageStatePill pipeline={pipeline} stage={stage} accent={accent} />}
         active={active}
         flash={flash}
+        noClickEdit
         onActivate={onActivate}
       />
       {open && (
@@ -1609,4 +1676,54 @@ const StageCell = ({
       )}
     </>
   );
+};
+
+// ── Keyboard handler (Spacebar / Esc) ─────────────────────────────────
+// Mounted inside SelectionProvider so it can read the selected row id and
+// drive Spacebar (open/close detail) + Esc (close detail when open).
+interface TableKeyboardProps {
+  sorted: PipelineCard[];
+  selectedCardId?: string | null;
+  onOpenCard: (c: PipelineCard) => void;
+  onCloseDetail?: () => void;
+}
+const TableKeyboard = ({ sorted, selectedCardId, onOpenCard, onCloseDetail }: TableKeyboardProps) => {
+  const sel = useCellSelection();
+  useEffect(() => {
+    const isFormTarget = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el as any).isContentEditable;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (isFormTarget(e.target)) return;
+      // Spacebar
+      if (e.key === " " || e.code === "Space") {
+        if (selectedCardId && onCloseDetail) {
+          e.preventDefault();
+          onCloseDetail();
+          return;
+        }
+        if (sel?.selectedRowId && !sel.editing) {
+          const card = sorted.find((c) => c.id === sel.selectedRowId);
+          if (card) {
+            e.preventDefault();
+            onOpenCard(card);
+          }
+        }
+        return;
+      }
+      // Escape — when detail is open, close it (preempts provider's deselect).
+      if (e.key === "Escape") {
+        if (selectedCardId && onCloseDetail && !sel?.editing) {
+          e.preventDefault();
+          onCloseDetail();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sorted, selectedCardId, onOpenCard, onCloseDetail, sel]);
+  return null;
 };
