@@ -1565,3 +1565,55 @@ function PresenceAvatars({ users }: { users: import("@/hooks/usePresence").Prese
     </div>
   );
 }
+
+// ─────────── PO Amount Editor (amount + currency) ───────────
+interface PoAmountEditorProps {
+  open: boolean;
+  onClose: () => void;
+  amount: number | null;
+  currency: Currency;
+  onSave: (raw: string, currency: Currency) => void;
+}
+function PoAmountEditor({ open, onClose, amount, currency, onSave }: PoAmountEditorProps) {
+  const [v, setV] = useState(amount != null ? String(amount) : "");
+  const [cur, setCur] = useState<Currency>(currency);
+  useEffect(() => {
+    if (open) {
+      setV(amount != null ? String(amount) : "");
+      setCur(currency);
+    }
+  }, [open, amount, currency]);
+
+  const sanitize = (raw: string) => {
+    const cleaned = raw.replace(/[^\d.]/g, "");
+    const i = cleaned.indexOf(".");
+    if (i === -1) return cleaned;
+    return cleaned.slice(0, i + 1) + cleaned.slice(i + 1).replace(/\./g, "");
+  };
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title="PO Amount" onSave={() => onSave(v, cur)}>
+      <div className="flex items-stretch gap-2">
+        <input
+          autoFocus
+          inputMode="decimal"
+          value={v}
+          onChange={(e) => setV(sanitize(e.target.value))}
+          placeholder="0"
+          className="flex-1 rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+          style={{ minHeight: 48 }}
+        />
+        <select
+          value={cur}
+          onChange={(e) => setCur(e.target.value as Currency)}
+          className="rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+          style={{ minHeight: 48 }}
+        >
+          {CURRENCY_CODES.map((c) => (
+            <option key={c} value={c}>{c}{CURRENCY_SYMBOLS[c]}</option>
+          ))}
+        </select>
+      </div>
+    </BottomSheet>
+  );
+}
