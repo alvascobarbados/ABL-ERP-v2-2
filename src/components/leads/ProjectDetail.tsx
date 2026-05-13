@@ -367,6 +367,31 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     setEditor(null);
   };
 
+
+  // ─── Clear handlers (set field to null) ────────────────────────────────
+  const clearDeadline = () => { updateProject(live.id, { deadlineDate: null, deadline: undefined } as any); setEditor(null); };
+  const clearCompletionDate = () => { updateProject(live.id, { completionDate: null } as any); setEditor(null); };
+  const clearPaidDate = () => { updateProject(live.id, { paidOnDate: null } as any); setEditor(null); };
+  const clearDepositPaidDate = () => { updateProject(live.id, { depositPaidDate: null } as any); setEditor(null); };
+  const clearPaidMethod = () => { updateProject(live.id, { paymentMethod: null, paymentReference: null } as any); setEditor(null); };
+  const clearDepositPaidMethod = () => { updateProject(live.id, { depositPaidMethod: null, depositPaymentReference: null } as any); setEditor(null); };
+  const clearShippingMode = () => {
+    if (!live.shippingMode) { setEditor(null); return; }
+    const hasTracking = !!live.trackingRef && live.trackingRef.trim() !== "";
+    const apply = () => { updateProject(live.id, { shippingMode: undefined, salesShippingLabel: undefined, trackingRef: undefined }); setEditor(null); };
+    if (hasTracking) {
+      setEditor(null);
+      setConfirm({
+        title: "Clear shipping mode?",
+        description: `Clearing the shipping mode will also clear the current tracking number (${live.trackingRef}).`,
+        confirmLabel: "Clear",
+        onConfirm: () => { apply(); setConfirm(null); },
+      });
+      return;
+    }
+    apply();
+  };
+
   const submitNote = (text: string) => { addNote(live.id, text); setEditor(null); };
 
   const handlePickSupplier = (id: string) => {
