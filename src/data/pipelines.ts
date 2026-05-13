@@ -239,6 +239,50 @@ export type SalesShippingLabel =
 export type PaymentMethod = "Transfer" | "Cheque" | "Cash";
 export type WeightUnit = "kg" | "lbs";
 export type VolumeUnit = "CBM" | "CuFt";
+export type Currency = "USD" | "BBD" | "HKD" | "RMB" | "GBP" | "EUR";
+
+export const CURRENCY_CODES: Currency[] = ["USD", "BBD", "HKD", "RMB", "GBP", "EUR"];
+
+export const CURRENCY_SYMBOLS: Record<Currency, string> = {
+  USD: "$",
+  BBD: "$",
+  HKD: "$",
+  RMB: "¥",
+  GBP: "£",
+  EUR: "€",
+};
+
+const COUNTRY_TO_CURRENCY: Record<string, Currency> = {
+  China: "RMB",
+  USA: "USD",
+  Barbados: "BBD",
+  UK: "GBP",
+  "United Kingdom": "GBP",
+  "Hong Kong": "HKD",
+  Germany: "EUR",
+  France: "EUR",
+  Italy: "EUR",
+  Spain: "EUR",
+  Netherlands: "EUR",
+  Belgium: "EUR",
+  Portugal: "EUR",
+  Ireland: "EUR",
+  Austria: "EUR",
+  Finland: "EUR",
+  Greece: "EUR",
+};
+
+export function currencyForSupplierCountry(country: string | null | undefined): Currency {
+  if (!country) return "USD";
+  return COUNTRY_TO_CURRENCY[country] ?? "USD";
+}
+
+export function formatPoAmount(amount: number | null | undefined, currency: Currency | null | undefined): string {
+  if (amount == null || !Number.isFinite(amount)) return "—";
+  const code = currency ?? "USD";
+  const symbol = CURRENCY_SYMBOLS[code];
+  return `${code}${symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 export interface ProjectNote {
   id: string;
