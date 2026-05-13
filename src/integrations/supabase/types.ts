@@ -290,7 +290,8 @@ export type Database = {
           payment_terms_custom_days: number | null
           payment_terms_inherited: boolean | null
           pipeline_id: string
-          po_amount_usd: number | null
+          po_amount: number | null
+          po_amount_currency: string
           po_number: string | null
           point_person: string
           priority: string
@@ -349,7 +350,8 @@ export type Database = {
           payment_terms_custom_days?: number | null
           payment_terms_inherited?: boolean | null
           pipeline_id: string
-          po_amount_usd?: number | null
+          po_amount?: number | null
+          po_amount_currency?: string
           po_number?: string | null
           point_person: string
           priority?: string
@@ -408,7 +410,8 @@ export type Database = {
           payment_terms_custom_days?: number | null
           payment_terms_inherited?: boolean | null
           pipeline_id?: string
-          po_amount_usd?: number | null
+          po_amount?: number | null
+          po_amount_currency?: string
           po_number?: string | null
           point_person?: string
           priority?: string
