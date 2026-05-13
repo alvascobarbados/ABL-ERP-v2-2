@@ -100,7 +100,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const editMode = useEditMode();
   const {
     projects,
-    updateProject, addNote,
+    updateProject, addNote, updateNote, removeNote, restoreNote,
     addLineItem, updateLineItem, removeLineItem,
     duplicateProject, softDeleteProject, restoreProject,
     moveCard, toggleFlag,
