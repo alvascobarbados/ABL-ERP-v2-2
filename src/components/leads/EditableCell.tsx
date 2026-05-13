@@ -186,13 +186,20 @@ export const SelectionProvider = ({ children, outsideRef }: ProviderProps) => {
   );
 };
 
-// Optional row context: wrap each table row so cells inherit rowId without
-// each call site having to pass it explicitly.
+// Optional row context: wrap each table row so cells inherit rowId AND
+// a default double-click handler (open detail) without each call site
+// having to pass them explicitly.
 const RowContext = createContext<string | null>(null);
-export const RowProvider = ({ rowId, children }: { rowId: string; children: React.ReactNode }) => (
-  <RowContext.Provider value={rowId}>{children}</RowContext.Provider>
+const RowDoubleClickContext = createContext<(() => void) | null>(null);
+export const RowProvider = ({ rowId, onDoubleClick, children }: { rowId: string; onDoubleClick?: () => void; children: React.ReactNode }) => (
+  <RowContext.Provider value={rowId}>
+    <RowDoubleClickContext.Provider value={onDoubleClick ?? null}>
+      {children}
+    </RowDoubleClickContext.Provider>
+  </RowContext.Provider>
 );
 export const useRowId = () => useContext(RowContext);
+export const useRowDoubleClick = () => useContext(RowDoubleClickContext);
 
 // ── Cell ──────────────────────────────────────────────────────────────
 interface BaseProps {
