@@ -57,11 +57,11 @@ const fmtNoteTs = (d: Date) => {
   return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })} · ${t}`;
 };
 
-// Display overrides (mirror ProjectTable) so e.g. shipment_required → "Shipping"
+// Display overrides — surface legacy ids under their new label so historical rows still read sensibly.
 const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
   paid: "Paid",
-  shipment_required: "Shipping",
-  shipment_assigned: "Shipping",
+  shipment_required: "Ready to Ship",
+  shipment_assigned: "In Transit",
 };
 function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
   return STAGE_DISPLAY[stage] ?? getStageTitle(pipeline, stage);
