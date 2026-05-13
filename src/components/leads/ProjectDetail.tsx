@@ -79,6 +79,7 @@ type EditorKind =
   | { kind: "cbm" }
   | { kind: "packages" }
   | { kind: "designBrief" }
+  | { kind: "proofNumber" }
   | { kind: "completionDate" }
   | { kind: "outstandingBalance" }
   | { kind: "addNote" }
@@ -247,6 +248,17 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const saveCbm = saveNumeric("cbm", false);
   const savePackages = saveNumeric("numPackages", true);
   const saveDesignBrief = (v: string) => { updateProject(live.id, { designBrief: v.trim() || undefined }); setEditor(null); };
+  const saveProofNumber = (v: string) => {
+    const t = (v ?? "").replace(/^\s*P-?/i, "").replace(/\D/g, "").trim();
+    if (t === "") {
+      updateProject(live.id, { proofNumber: undefined });
+      setEditor(null);
+      return;
+    }
+    if (t.length !== 4) { toast.error("Proof number must be 4 digits"); return; }
+    updateProject(live.id, { proofNumber: t });
+    setEditor(null);
+  };
   const saveCompletionDate = (d: Date) => { updateProject(live.id, { completionDate: d }); setEditor(null); };
   const saveOutstandingBalance = (v: string) => {
     const cleaned = (v ?? "").replace(/[^\d.]/g, "");
@@ -499,15 +511,21 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── DESIGN BRIEF ── */}
+          {/* ── DESIGN ── */}
           <section>
-            <SectionHeader>Design Brief</SectionHeader>
+            <SectionHeader>Design</SectionHeader>
             <SectionCard>
               <DetailRow
                 label="Brief"
                 value={live.designBrief}
                 placeholder="Add design brief…"
                 onClick={() => setEditor({ kind: "designBrief" })}
+              />
+              <DetailRow
+                label="Proof No."
+                value={live.proofNumber ? `P-${live.proofNumber}` : undefined}
+                placeholder="P-"
+                onClick={() => setEditor({ kind: "proofNumber" })}
               />
             </SectionCard>
           </section>
@@ -777,6 +795,17 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         placeholder="Describe the creative brief…"
         multiline
         onSave={saveDesignBrief}
+      />
+      <TextEditor
+        open={editor?.kind === "proofNumber"}
+        onClose={() => setEditor(null)}
+        title="Proof number"
+        value={live.proofNumber ?? ""}
+        placeholder="0042"
+        prefix="P-"
+        digitsOnly
+        maxLength={4}
+        onSave={saveProofNumber}
       />
       <DateEditor
         open={editor?.kind === "completionDate"}
