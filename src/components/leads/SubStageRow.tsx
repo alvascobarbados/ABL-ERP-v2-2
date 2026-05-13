@@ -21,7 +21,7 @@ interface Props {
   stageCounts: Partial<Record<StageId, number>>;
 }
 
-const MULTI_STAGE: PipelineId[] = ["sales", "design", "finance"];
+const MULTI_STAGE: PipelineId[] = ["sales", "design", "production", "shipping", "finance"];
 const ROW_HEIGHT = 40;
 const ORANGE = "#E97B2C";
 const PILL_BG = "rgba(233,123,44,0.12)";
