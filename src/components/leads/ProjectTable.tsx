@@ -1126,19 +1126,23 @@ const TableRow = ({
 
       {has("shipmentNumber") && (
       <TrackingCellTrigger
+        cellKey={`${card.id}:shipmentNumber`}
         value={proj.shipmentNumber ?? undefined}
         modeSet={!!proj.shippingMode && proj.shippingMode !== "Local"}
         flash={flashFor("shipmentNumber")}
         onClick={() => proj.shippingMode && proj.shippingMode !== "Local" && setShipmentNumberEditorOpen(true)}
+        onRowDoubleClick={onOpen}
       />
       )}
 
       {has("tracking") && (
       <TrackingCellTrigger
+        cellKey={`${card.id}:tracking`}
         value={proj.trackingRef}
         modeSet={!!proj.shippingMode}
         flash={flashFor("trackingRef")}
         onClick={() => proj.shippingMode && setTrackingEditorOpen(true)}
+        onRowDoubleClick={onOpen}
       />
       )}
 
@@ -1153,18 +1157,19 @@ const TableRow = ({
         title={proj.pointPerson}
         active={openPicker === "rep"}
         flash={flashFor("rep")}
+        onRowDoubleClick={onOpen}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("rep"); }}
       />
       )}
 
       {has("completionDate") && (
-      <ReadOnlyCell muted={!proj.completionDate}>
+      <ReadOnlyCell cellKey={`${card.id}:completionDate`} onRowDoubleClick={onOpen} muted={!proj.completionDate}>
         <span className="tabular">{proj.completionDate ? fmtDeadline(proj.completionDate) : "—"}</span>
       </ReadOnlyCell>
       )}
 
       {has("deadline") && (
-      <ReadOnlyCell muted={!card.deadlineDate}>
+      <ReadOnlyCell cellKey={`${card.id}:deadline`} onRowDoubleClick={onOpen} muted={!card.deadlineDate}>
         {card.deadlineDate ? (
           <Tooltip>
             <TooltipTrigger asChild>
