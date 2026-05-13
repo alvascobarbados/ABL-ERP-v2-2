@@ -1152,7 +1152,12 @@ const NoteCard = ({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-muted/60 transition-opacity"
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className={cn(
+                  "p-1 rounded-md hover:bg-muted/60 transition-opacity",
+                  menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
+                )}
                 aria-label="Note actions"
               >
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -1161,8 +1166,10 @@ const NoteCard = ({
             <PopoverContent
               align="end"
               sideOffset={4}
-              className="w-40 p-1 rounded-lg shadow-lg bg-card"
+              className="w-40 p-1 rounded-lg shadow-lg bg-card z-[60]"
               style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               {canEdit && (
                 <button
