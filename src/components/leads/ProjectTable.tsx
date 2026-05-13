@@ -1000,6 +1000,29 @@ const TableRow = ({
       />
       )}
 
+      {has("proof") && (
+      <EditableCell
+        cellKey={`${card.id}:proofNumber`}
+        mode="text"
+        align="left"
+        display={<span className="tabular">{proj.proofNumber ? `P-${proj.proofNumber}` : "—"}</span>}
+        title={proj.proofNumber ? `P-${proj.proofNumber}` : ""}
+        muted={!proj.proofNumber}
+        value={proj.proofNumber ?? ""}
+        placeholder="####"
+        prefix="P-"
+        maxLength={4}
+        onCommit={async (v) => {
+          const trimmed = v.replace(/^\s*P-?/i, "").replace(/\D/g, "").trim();
+          if (trimmed !== "" && trimmed.length !== 4) {
+            toast.error("Proof number must be 4 digits");
+            return { ok: false };
+          }
+          return saveText("proofNumber", trimmed);
+        }}
+      />
+      )}
+
       {has("po") && (
       <EditableCell
         cellKey={`${card.id}:poNumber`}
