@@ -3,6 +3,7 @@ import {
   PipelineCard, PIPELINES, PipelineId, StageId, ShippingMode,
   SupplierLabelHint, ProjectLogEntry, ProjectLogActionType,
   PaymentMethod, WeightUnit, VolumeUnit,
+  Currency, CURRENCY_CODES, CURRENCY_SYMBOLS, currencyForSupplierCountry, formatPoAmount,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -274,7 +275,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { shipmentNumber: v });
     setEditor(null);
   };
-  const saveNumericField = (field: "weightKg" | "volumeValue" | "numPackages" | "poAmountUsd" | "depositAmount", integer: boolean) => (raw: string) => {
+  const saveNumericField = (field: "weightKg" | "volumeValue" | "numPackages" | "depositAmount", integer: boolean) => (raw: string) => {
     const cleaned = (raw ?? "").replace(integer ? /[^\d]/g : /[^\d.]/g, "");
     if (cleaned === "") {
       updateProject(live.id, { [field]: null } as any);
@@ -294,7 +295,19 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const saveWeight = saveNumericField("weightKg", false);
   const saveVolume = saveNumericField("volumeValue", false);
   const savePackages = saveNumericField("numPackages", true);
-  const savePoAmount = saveNumericField("poAmountUsd", false);
+  const savePoAmount = (raw: string, currency: Currency) => {
+    const cleaned = (raw ?? "").replace(/[^\d.]/g, "");
+    const patch: any = { poAmountCurrency: currency };
+    if (cleaned === "") {
+      patch.poAmount = null;
+    } else {
+      const n = Number(cleaned);
+      if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
+      patch.poAmount = n;
+    }
+    updateProject(live.id, patch);
+    setEditor(null);
+  };
   const saveDepositAmount = saveNumericField("depositAmount", false);
   const saveDesignBrief = (v: string) => { updateProject(live.id, { designBrief: v.trim() || undefined }); setEditor(null); };
   const saveProofNumber = (v: string) => {
@@ -360,9 +373,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     const next = md.suppliers.find((s) => s.id === id);
     const priorD = defaultsForCountry(prior?.country);
     const nextD = defaultsForCountry(next?.country);
+    const priorCur = currencyForSupplierCountry(prior?.country);
+    const nextCur = currencyForSupplierCountry(next?.country);
     const patch: any = { supplierId: id, supplierLabel: undefined };
     if ((live.weightUnit ?? "kg") === priorD.weight && nextD.weight !== priorD.weight) patch.weightUnit = nextD.weight;
     if ((live.volumeUnit ?? "CBM") === priorD.volume && nextD.volume !== priorD.volume) patch.volumeUnit = nextD.volume;
+    if ((live.poAmountCurrency ?? "USD") === priorCur && nextCur !== priorCur) patch.poAmountCurrency = nextCur;
     updateProject(live.id, patch);
     setEditor(null);
   };
@@ -633,7 +649,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow label="PO #" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
               <DetailRow
                 label="PO Amount"
-                value={live.poAmountUsd != null ? `$${live.poAmountUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : undefined}
+                value={live.poAmount != null ? formatPoAmount(live.poAmount, live.poAmountCurrency ?? "USD") : undefined}
                 onClick={() => setEditor({ kind: "poAmount" })}
               />
             </SectionCard>
@@ -975,14 +991,16 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         digitsOnly
         onSave={savePackages}
       />
-      <TextEditor
+      <PoAmountEditor
         open={editor?.kind === "poAmount"}
         onClose={() => setEditor(null)}
-        title="PO Amount (USD)"
-        value={live.poAmountUsd != null ? String(live.poAmountUsd) : ""}
-        placeholder="0"
-        digitsOnly
-        allowDecimal
+        amount={live.poAmount ?? null}
+        currency={
+          live.poAmountCurrency
+          ?? (live.poAmount == null
+            ? currencyForSupplierCountry(md.getSupplierByAnyId(live.supplierId)?.country)
+            : "USD")
+        }
         onSave={savePoAmount}
       />
       <TextEditor
@@ -1545,5 +1563,57 @@ function PresenceAvatars({ users }: { users: import("@/hooks/usePresence").Prese
         </span>
       )}
     </div>
+  );
+}
+
+// ─────────── PO Amount Editor (amount + currency) ───────────
+interface PoAmountEditorProps {
+  open: boolean;
+  onClose: () => void;
+  amount: number | null;
+  currency: Currency;
+  onSave: (raw: string, currency: Currency) => void;
+}
+function PoAmountEditor({ open, onClose, amount, currency, onSave }: PoAmountEditorProps) {
+  const [v, setV] = useState(amount != null ? String(amount) : "");
+  const [cur, setCur] = useState<Currency>(currency);
+  useEffect(() => {
+    if (open) {
+      setV(amount != null ? String(amount) : "");
+      setCur(currency);
+    }
+  }, [open, amount, currency]);
+
+  const sanitize = (raw: string) => {
+    const cleaned = raw.replace(/[^\d.]/g, "");
+    const i = cleaned.indexOf(".");
+    if (i === -1) return cleaned;
+    return cleaned.slice(0, i + 1) + cleaned.slice(i + 1).replace(/\./g, "");
+  };
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title="PO Amount" onSave={() => onSave(v, cur)}>
+      <div className="flex items-stretch gap-2">
+        <input
+          autoFocus
+          inputMode="decimal"
+          value={v}
+          onChange={(e) => setV(sanitize(e.target.value))}
+          placeholder="0"
+          className="flex-1 rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+          style={{ minHeight: 48 }}
+        />
+        <select
+          value={cur}
+          onChange={(e) => setCur(e.target.value as Currency)}
+          className="rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
+          style={{ minHeight: 48 }}
+        >
+          {CURRENCY_CODES.map((c) => (
+            <option key={c} value={c}>{c}{CURRENCY_SYMBOLS[c]}</option>
+          ))}
+        </select>
+      </div>
+    </BottomSheet>
   );
 }

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import {
   PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
   ProjectLogEntry, ProjectLogActionType,
-  SUPPLIERS, ShippingMode, PaymentMethod, WeightUnit, VolumeUnit,
+  SUPPLIERS, ShippingMode, PaymentMethod, WeightUnit, VolumeUnit, Currency,
 } from "@/data/pipelines";
 import { useCurrentUser, type CurrentUser } from "./useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,7 +76,8 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
   invoiceNumber: "invoice number",
   paymentTerms: "payment terms",
   invoiceIssuedDate: "invoice issued date",
-  poAmountUsd: "PO amount",
+  poAmount: "PO amount",
+  poAmountCurrency: "PO currency",
   depositRequired: "deposit required",
   depositInvoiceNumber: "deposit invoice",
   depositAmount: "deposit amount",
@@ -196,7 +197,8 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     paidOnDate: row.paid_on_date ? new Date(row.paid_on_date) : null,
     paymentMethod: (row.payment_method ?? null) as PaymentMethod | null,
     paymentReference: row.payment_reference ?? null,
-    poAmountUsd: row.po_amount_usd != null ? Number(row.po_amount_usd) : null,
+    poAmount: row.po_amount != null ? Number(row.po_amount) : null,
+    poAmountCurrency: (row.po_amount_currency ?? "USD") as Currency,
     weightUnit: (row.weight_unit ?? "kg") as WeightUnit,
     volumeValue: row.volume_value != null ? Number(row.volume_value) : (row.cbm != null ? Number(row.cbm) : null),
     volumeUnit: (row.volume_unit ?? "CBM") as VolumeUnit,
@@ -263,7 +265,8 @@ function projectToRow(p: Project): any {
     paid_on_date: p.paidOnDate ? p.paidOnDate.toISOString() : null,
     payment_method: p.paymentMethod ?? null,
     payment_reference: p.paymentReference ?? null,
-    po_amount_usd: p.poAmountUsd ?? null,
+    po_amount: p.poAmount ?? null,
+    po_amount_currency: p.poAmountCurrency ?? "USD",
     deposit_required: !!p.depositRequired,
     deposit_invoice_number: p.depositInvoiceNumber ?? null,
     deposit_amount: p.depositAmount ?? null,
