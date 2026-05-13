@@ -186,10 +186,18 @@ export const SelectionProvider = ({ children, outsideRef }: ProviderProps) => {
   );
 };
 
+// Optional row context: wrap each table row so cells inherit rowId without
+// each call site having to pass it explicitly.
+const RowContext = createContext<string | null>(null);
+export const RowProvider = ({ rowId, children }: { rowId: string; children: React.ReactNode }) => (
+  <RowContext.Provider value={rowId}>{children}</RowContext.Provider>
+);
+export const useRowId = () => useContext(RowContext);
+
 // ── Cell ──────────────────────────────────────────────────────────────
 interface BaseProps {
-  /** Row id this cell belongs to. */
-  rowId: string;
+  /** Row id this cell belongs to. Defaults to the surrounding RowProvider. */
+  rowId?: string;
   /** Stable identifier for selection (e.g. `${rowId}:projectName`). */
   cellKey: string;
   /** Read-only? (no hover, no click-to-edit) */
