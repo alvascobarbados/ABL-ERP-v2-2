@@ -275,7 +275,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { shipmentNumber: v });
     setEditor(null);
   };
-  const saveNumericField = (field: "weightKg" | "volumeValue" | "numPackages" | "poAmountUsd" | "depositAmount", integer: boolean) => (raw: string) => {
+  const saveNumericField = (field: "weightKg" | "volumeValue" | "numPackages" | "depositAmount", integer: boolean) => (raw: string) => {
     const cleaned = (raw ?? "").replace(integer ? /[^\d]/g : /[^\d.]/g, "");
     if (cleaned === "") {
       updateProject(live.id, { [field]: null } as any);
@@ -295,7 +295,19 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const saveWeight = saveNumericField("weightKg", false);
   const saveVolume = saveNumericField("volumeValue", false);
   const savePackages = saveNumericField("numPackages", true);
-  const savePoAmount = saveNumericField("poAmountUsd", false);
+  const savePoAmount = (raw: string, currency: Currency) => {
+    const cleaned = (raw ?? "").replace(/[^\d.]/g, "");
+    const patch: any = { poAmountCurrency: currency };
+    if (cleaned === "") {
+      patch.poAmount = null;
+    } else {
+      const n = Number(cleaned);
+      if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
+      patch.poAmount = n;
+    }
+    updateProject(live.id, patch);
+    setEditor(null);
+  };
   const saveDepositAmount = saveNumericField("depositAmount", false);
   const saveDesignBrief = (v: string) => { updateProject(live.id, { designBrief: v.trim() || undefined }); setEditor(null); };
   const saveProofNumber = (v: string) => {
