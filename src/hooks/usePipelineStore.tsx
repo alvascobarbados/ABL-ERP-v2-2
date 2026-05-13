@@ -926,9 +926,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const knownStages: StageId[] = PIPELINES.flatMap((pp) => pp.stages.map((s) => s.id));
     const targetPipeline: PipelineId = orig.deletedFromPipeline ?? orig.pipeline ?? "sales";
     const fallbackStage: Record<PipelineId, StageId> = {
-      sales: "quote", design: "design",
+      sales: "quote", design: "artwork_creation",
       purchasing: "purchasing", production: "production",
-      shipping: "shipment_required", finance: "invoice_required",
+      shipping: "shipment_assigned", finance: "invoice_required",
       completed: "completed",
       operations: "production", // legacy alias
     };
