@@ -100,6 +100,7 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
       projectName: projectName.trim(),
       detailSummary: detail.trim() || undefined,
       pointPerson: DEFAULT_USER_INITIALS,
+      initialPipeline,
       initialStage,
       deadlineDate: deadline ? new Date(`${deadline}T00:00:00`) : undefined,
       buyerId: buyerId ?? undefined,
