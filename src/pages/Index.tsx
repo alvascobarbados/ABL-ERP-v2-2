@@ -937,7 +937,7 @@ const Index = () => {
       <AssignShipmentSheet
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
-        intakeSubs={projects.filter((p) => p.pipeline === "shipping" && p.stage === "shipment_required")}
+        intakeSubs={projects.filter((p) => p.pipeline === "production" && p.stage === "ready_to_ship")}
         shipments={shipments}
       />
 
