@@ -233,6 +233,8 @@ interface TextProps extends BaseProps {
   placeholder?: string;
   /** Optional fixed visual prefix shown left of the input while editing (e.g. "Q-"). Not part of the saved value. */
   prefix?: string;
+  /** Optional max input length (characters). No cap when omitted. */
+  maxLength?: number;
   /** Called when the user commits (Enter or blur). Return ok=false to flash red. */
   onCommit: (next: string) => Promise<SaveResult> | SaveResult;
 }
@@ -403,6 +405,7 @@ export const EditableCell = (props: Props) => {
             inputMode={props.mode === "number" ? "decimal" : undefined}
             defaultValue={props.value}
             placeholder={props.placeholder}
+            maxLength={(props as TextProps).maxLength}
             onBlur={(e) => commit(e.target.value)}
             onKeyDown={handleKey}
             onClick={(e) => e.stopPropagation()}
