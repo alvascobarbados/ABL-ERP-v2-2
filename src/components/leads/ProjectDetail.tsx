@@ -4,7 +4,7 @@ import {
   SupplierLabelHint, ProjectLogEntry, ProjectLogActionType,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { usePipelineStore, getStageTitle, getNextStage } from "@/hooks/usePipelineStore";
@@ -23,7 +23,6 @@ import { formatAmountFull } from "@/lib/money";
 import { LineItemsGrid } from "./LineItemsGrid";
 import { canEditNote, canDeleteNote } from "@/lib/permissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ProjectNote } from "@/data/pipelines";
 
 interface Props {
