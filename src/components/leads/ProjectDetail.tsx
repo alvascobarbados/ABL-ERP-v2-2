@@ -612,13 +612,27 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               return (
                 <ul className="divide-y" style={{ borderColor: "hsl(var(--brand-navy) / 0.08)" }}>
                   {[...userNotes].reverse().map((n) => (
-                    <li key={n.id} className="py-3 first:pt-0 last:pb-0">
-                      <div className="flex items-baseline gap-2 mb-0.5">
-                        <span className="text-[13px] font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>{n.author}</span>
-                        <span className="text-[11px] text-muted-foreground tabular">{fmtNoteTs(n.ts)}</span>
-                      </div>
-                      <div className="text-[13px] leading-snug text-foreground whitespace-pre-wrap">{n.text}</div>
-                    </li>
+                    <NoteCard
+                      key={n.id}
+                      note={n}
+                      onSave={(text) => updateNote(live.id, n.id, text)}
+                      onDelete={async () => {
+                        const snapshot = n;
+                        let undone = false;
+                        await removeNote(live.id, n.id);
+                        toast(`Note deleted`, {
+                          duration: 8000,
+                          action: {
+                            label: "Undo",
+                            onClick: () => {
+                              if (undone) return;
+                              undone = true;
+                              restoreNote(live.id, snapshot);
+                            },
+                          },
+                        });
+                      }}
+                    />
                   ))}
                 </ul>
               );
