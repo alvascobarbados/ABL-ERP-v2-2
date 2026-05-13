@@ -595,11 +595,16 @@ const TableRow = ({
     }
   };
 
-  // Single-click on row whitespace (not on a cell) → open detail.
-  // Cells stop propagation, so this only fires on margins / read-only gutters.
-  // Double-click no longer toggles flag — that gesture is reserved for cells.
+  // Row whitespace clicks (gutters) deselect via the SelectionProvider's
+  // outside-click handler when appropriate. We no longer open detail on
+  // single-click — only dblclick (per row-selection model).
   const handleClick = (_e: ReactMouseEvent) => {
+    /* no-op: cells handle selection; row whitespace falls through */
+  };
+
+  const handleRowDoubleClick = (e: ReactMouseEvent) => {
     if (longPressed.current) return;
+    e.preventDefault();
     onOpen();
   };
 
