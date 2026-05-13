@@ -229,15 +229,17 @@ export const ShippingPipelineView = ({
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <IntakeCollapsible
-        count={intakeCount}
-        intakeSubs={intakeSubs}
-        onOpenCard={onOpenCard}
-        onSwipeForward={onSwipeForward}
-        onSwipeBack={onSwipeBack}
-        onOpenPicker={onOpenPicker}
-        onOpenIntake={onOpenIntake}
-      />
+      {intakeCount > 0 && (
+        <IntakeCollapsible
+          count={intakeCount}
+          intakeSubs={intakeSubs}
+          onOpenCard={onOpenCard}
+          onSwipeForward={onSwipeForward}
+          onSwipeBack={onSwipeBack}
+          onOpenPicker={onOpenPicker}
+          onOpenIntake={onOpenIntake}
+        />
+      )}
       <Group
         title="Air"
         shipments={air}
