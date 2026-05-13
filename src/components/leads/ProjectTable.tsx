@@ -7,7 +7,7 @@
  * Mobile (<1024px) never renders this — Index.tsx hides the view switcher
  * and only mounts the Table at the lg breakpoint.
  */
-import { useMemo, useState, useRef, MouseEvent as ReactMouseEvent } from "react";
+import { useMemo, useState, useRef, useEffect, MouseEvent as ReactMouseEvent } from "react";
 import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
