@@ -88,9 +88,10 @@ function urgencyLabel(date?: Date): { text: string; tone: "urgent" | "soon" | "n
   return { text: `in ${diff}d`, tone: "neutral", days: diff };
 }
 
+import { formatAmountRounded } from "@/lib/money";
+
 function fmtMoney(v: number | undefined): string {
-  if (!v && v !== 0) return "—";
-  return `$${v.toLocaleString()}`;
+  return formatAmountRounded(v);
 }
 
 function fmtDeadline(date?: Date): string {
