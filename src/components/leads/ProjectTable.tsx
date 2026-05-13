@@ -808,22 +808,28 @@ const TableRow = ({
     }
   };
 
+  const isRowSelected = useRowSelected(card.id);
+
   return (
+    <RowProvider rowId={card.id}>
     <div
       role="row"
       onClick={handleClick}
+      onDoubleClick={handleRowDoubleClick}
       onContextMenu={handleContextMenu}
       onMouseDown={startLongPress}
       onMouseUp={cancelLongPress}
       onMouseLeave={cancelLongPress}
       className={cn(
         "grid items-stretch text-[13.5px] cursor-pointer transition-colors group select-none relative",
-        "hover:bg-[hsl(var(--brand-orange)/0.045)]",
+        !isRowSelected && "hover:bg-[hsl(var(--brand-orange)/0.045)]",
       )}
       style={{
         gridTemplateColumns: gridCols,
         minHeight: 44,
-        backgroundColor: flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
+        backgroundColor: isRowSelected
+          ? "hsl(var(--brand-navy) / 0.055)"
+          : flagged ? "hsl(var(--brand-orange) / 0.05)" : stripeBg,
         borderBottom: "1px solid hsl(var(--brand-navy) / 0.05)",
         boxShadow: `inset 4px 0 0 0 ${flagged ? "hsl(var(--brand-orange))" : accent}`,
         color: "hsl(var(--brand-navy))",
