@@ -933,22 +933,38 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       <TextEditor
         open={editor?.kind === "weight"}
         onClose={() => setEditor(null)}
-        title="Weight (kg)"
+        title={`Weight (${live.weightUnit ?? "kg"})`}
         value={live.weightKg != null ? String(live.weightKg) : ""}
         placeholder="0"
         digitsOnly
         allowDecimal
         onSave={saveWeight}
       />
-      <TextEditor
-        open={editor?.kind === "cbm"}
+      <ListPicker
+        open={editor?.kind === "weightUnit"}
         onClose={() => setEditor(null)}
-        title="CBM"
-        value={live.cbm != null ? String(live.cbm) : ""}
+        title="Weight unit"
+        options={WEIGHT_UNIT_OPTIONS}
+        selectedId={live.weightUnit ?? "kg"}
+        onPick={saveWeightUnit}
+      />
+      <TextEditor
+        open={editor?.kind === "volume"}
+        onClose={() => setEditor(null)}
+        title={`Volume (${live.volumeUnit ?? "CBM"})`}
+        value={live.volumeValue != null ? String(live.volumeValue) : ""}
         placeholder="0"
         digitsOnly
         allowDecimal
-        onSave={saveCbm}
+        onSave={saveVolume}
+      />
+      <ListPicker
+        open={editor?.kind === "volumeUnit"}
+        onClose={() => setEditor(null)}
+        title="Volume unit"
+        options={VOLUME_UNIT_OPTIONS}
+        selectedId={live.volumeUnit ?? "CBM"}
+        onPick={saveVolumeUnit}
       />
       <TextEditor
         open={editor?.kind === "packages"}
@@ -958,6 +974,16 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         placeholder="0"
         digitsOnly
         onSave={savePackages}
+      />
+      <TextEditor
+        open={editor?.kind === "poAmount"}
+        onClose={() => setEditor(null)}
+        title="PO Amount (USD)"
+        value={live.poAmountUsd != null ? String(live.poAmountUsd) : ""}
+        placeholder="0"
+        digitsOnly
+        allowDecimal
+        onSave={savePoAmount}
       />
       <TextEditor
         open={editor?.kind === "designBrief"}
@@ -986,15 +1012,71 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         value={live.completionDate ?? undefined}
         onSave={saveCompletionDate}
       />
+      {/* Finance — deposit */}
       <TextEditor
-        open={editor?.kind === "outstandingBalance"}
+        open={editor?.kind === "depositInvoice"}
         onClose={() => setEditor(null)}
-        title="Outstanding balance (BBD)"
-        value={live.outstandingBalance != null ? String(live.outstandingBalance) : ""}
+        title="Deposit invoice #"
+        value={live.depositInvoiceNumber ?? ""}
+        placeholder="DEP-1234"
+        onSave={saveDepositInvoice}
+      />
+      <TextEditor
+        open={editor?.kind === "depositAmount"}
+        onClose={() => setEditor(null)}
+        title="Deposit amount (BBD)"
+        value={live.depositAmount != null ? String(live.depositAmount) : ""}
         placeholder="0"
         digitsOnly
         allowDecimal
-        onSave={saveOutstandingBalance}
+        onSave={saveDepositAmount}
+      />
+      <DateEditor
+        open={editor?.kind === "depositPaidDate"}
+        onClose={() => setEditor(null)}
+        title="Deposit paid date"
+        value={live.depositPaidDate ?? undefined}
+        onSave={saveDepositPaidDate}
+      />
+      <ListPicker
+        open={editor?.kind === "depositPaidMethod"}
+        onClose={() => setEditor(null)}
+        title="Deposit paid method"
+        options={PAYMENT_METHOD_OPTIONS}
+        selectedId={live.depositPaidMethod ?? undefined}
+        onPick={saveDepositPaidMethod}
+      />
+      <TextEditor
+        open={editor?.kind === "depositPaymentRef"}
+        onClose={() => setEditor(null)}
+        title={`Deposit ${refLabelFor(live.depositPaidMethod) ?? "Reference"}`}
+        value={live.depositPaymentReference ?? ""}
+        placeholder=""
+        onSave={saveDepositPaymentRef}
+      />
+      {/* Finance — final */}
+      <DateEditor
+        open={editor?.kind === "paidDate"}
+        onClose={() => setEditor(null)}
+        title="Paid date"
+        value={live.paidOnDate ?? undefined}
+        onSave={savePaidDate}
+      />
+      <ListPicker
+        open={editor?.kind === "paidMethod"}
+        onClose={() => setEditor(null)}
+        title="Paid method"
+        options={PAYMENT_METHOD_OPTIONS}
+        selectedId={live.paymentMethod ?? undefined}
+        onPick={savePaidMethod}
+      />
+      <TextEditor
+        open={editor?.kind === "paymentRef"}
+        onClose={() => setEditor(null)}
+        title={refLabelFor(live.paymentMethod) ?? "Reference"}
+        value={live.paymentReference ?? ""}
+        placeholder=""
+        onSave={savePaymentRef}
       />
       <TextEditor
         open={editor?.kind === "addNote"}
