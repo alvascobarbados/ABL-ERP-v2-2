@@ -26,6 +26,7 @@ const COLUMN_DEFS: { id: ColumnId; label: string }[] = [
   { id: "designBrief", label: "Design Brief" },
   { id: "supplier", label: "Supplier" },
   { id: "quote", label: "Q#" },
+  { id: "proof", label: "Proof" },
   { id: "po", label: "PO#" },
   { id: "invoice", label: "INV#" },
   { id: "amount", label: "Amount" },
