@@ -502,7 +502,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             }}
           >
             {sorted.length} project{sorted.length === 1 ? "" : "s"}
-            {totalAmount > 0 && <> · ${totalAmount.toLocaleString()} BBD total</>}
+            {totalAmount > 0 && <> · ${Math.round(totalAmount).toLocaleString()} BBD total</>}
           </div>
         </div>
       </div>
