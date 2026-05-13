@@ -2,11 +2,13 @@ import { ArrowLeft, MoreVertical, ChevronRight, Plus, Flag, ArrowRight, MoreHori
 import {
   PipelineCard, PIPELINES, PipelineId, StageId, ShippingMode,
   SupplierLabelHint, ProjectLogEntry, ProjectLogActionType,
+  PaymentMethod, WeightUnit, VolumeUnit,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import { usePipelineStore, getStageTitle, getNextStage } from "@/hooks/usePipelineStore";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
@@ -76,19 +78,31 @@ type EditorKind =
   | { kind: "deadline" }
   | { kind: "quote" }
   | { kind: "po" }
+  | { kind: "poAmount" }
   | { kind: "invoice" }
   | { kind: "tracking" }
   | { kind: "shipmentNumber" }
   | { kind: "weight" }
-  | { kind: "cbm" }
+  | { kind: "weightUnit" }
+  | { kind: "volume" }
+  | { kind: "volumeUnit" }
   | { kind: "packages" }
   | { kind: "designBrief" }
   | { kind: "proofNumber" }
   | { kind: "completionDate" }
-  | { kind: "outstandingBalance" }
   | { kind: "addNote" }
   | { kind: "supplier" }
   | { kind: "shippingMode" }
+  // Finance — deposit
+  | { kind: "depositInvoice" }
+  | { kind: "depositAmount" }
+  | { kind: "depositPaidDate" }
+  | { kind: "depositPaidMethod" }
+  | { kind: "depositPaymentRef" }
+  // Finance — final
+  | { kind: "paidDate" }
+  | { kind: "paidMethod" }
+  | { kind: "paymentRef" }
   | null;
 
 const SHIPPING_MODE_OPTIONS: ListOption[] = [
@@ -96,6 +110,33 @@ const SHIPPING_MODE_OPTIONS: ListOption[] = [
   { id: "Ocean", label: "Ocean" },
   { id: "Local", label: "Local" },
 ];
+const PAYMENT_METHOD_OPTIONS: ListOption[] = [
+  { id: "Transfer", label: "Transfer" },
+  { id: "Cheque",   label: "Cheque" },
+  { id: "Cash",     label: "Cash" },
+];
+const WEIGHT_UNIT_OPTIONS: ListOption[] = [
+  { id: "kg",  label: "kg" },
+  { id: "lbs", label: "lbs" },
+];
+const VOLUME_UNIT_OPTIONS: ListOption[] = [
+  { id: "CBM",  label: "CBM" },
+  { id: "CuFt", label: "CuFt" },
+];
+
+function refLabelFor(method?: PaymentMethod | null): string | null {
+  if (method === "Transfer") return "Bank Ref No.";
+  if (method === "Cheque") return "Cheque No.";
+  return null;
+}
+
+function defaultsForCountry(country?: string | null): { weight: WeightUnit; volume: VolumeUnit } {
+  if (country === "USA") return { weight: "lbs", volume: "CuFt" };
+  return { weight: "kg", volume: "CBM" };
+}
+
+const fmtCreated = (d: Date) =>
+  `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
 export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const store = usePipelineStore();
@@ -233,22 +274,28 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { shipmentNumber: v });
     setEditor(null);
   };
-  const saveNumeric = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) => (raw: string) => {
+  const saveNumericField = (field: "weightKg" | "volumeValue" | "numPackages" | "poAmountUsd" | "depositAmount", integer: boolean) => (raw: string) => {
     const cleaned = (raw ?? "").replace(integer ? /[^\d]/g : /[^\d.]/g, "");
     if (cleaned === "") {
-      updateProject(live.id, { [field]: undefined } as any);
+      updateProject(live.id, { [field]: null } as any);
       setEditor(null);
       return;
     }
     const n = Number(cleaned);
     if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
     const value = integer ? Math.floor(n) : n;
+    if (field === "depositAmount" && live.value && value > live.value) {
+      toast.error("Deposit can't exceed project amount");
+      return;
+    }
     updateProject(live.id, { [field]: value } as any);
     setEditor(null);
   };
-  const saveWeight = saveNumeric("weightKg", false);
-  const saveCbm = saveNumeric("cbm", false);
-  const savePackages = saveNumeric("numPackages", true);
+  const saveWeight = saveNumericField("weightKg", false);
+  const saveVolume = saveNumericField("volumeValue", false);
+  const savePackages = saveNumericField("numPackages", true);
+  const savePoAmount = saveNumericField("poAmountUsd", false);
+  const saveDepositAmount = saveNumericField("depositAmount", false);
   const saveDesignBrief = (v: string) => { updateProject(live.id, { designBrief: v.trim() || undefined }); setEditor(null); };
   const saveProofNumber = (v: string) => {
     const t = (v ?? "").replace(/^\s*P-?/i, "").replace(/\D/g, "").trim();
@@ -262,19 +309,61 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     setEditor(null);
   };
   const saveCompletionDate = (d: Date) => { updateProject(live.id, { completionDate: d }); setEditor(null); };
-  const saveOutstandingBalance = (v: string) => {
-    const cleaned = (v ?? "").replace(/[^\d.]/g, "");
-    if (cleaned === "") { updateProject(live.id, { outstandingBalance: undefined }); setEditor(null); return; }
-    const n = Number(cleaned);
-    if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
-    updateProject(live.id, { outstandingBalance: n });
+
+  // Finance — deposit
+  const toggleDepositRequired = (next: boolean) => {
+    updateProject(live.id, { depositRequired: next });
+  };
+  const saveDepositInvoice = (v: string) => {
+    const t = v.trim() || null;
+    updateProject(live.id, { depositInvoiceNumber: t });
+    setEditor(null);
+  };
+  const saveDepositPaidDate = (d: Date) => { updateProject(live.id, { depositPaidDate: d }); setEditor(null); };
+  const saveDepositPaidMethod = (id: string) => {
+    const m = (id === "Transfer" || id === "Cheque" || id === "Cash") ? (id as PaymentMethod) : null;
+    const patch: any = { depositPaidMethod: m };
+    if (m === "Cash" || m == null) patch.depositPaymentReference = null;
+    updateProject(live.id, patch);
+    setEditor(null);
+  };
+  const saveDepositPaymentRef = (v: string) => {
+    updateProject(live.id, { depositPaymentReference: v.trim() || null });
+    setEditor(null);
+  };
+  // Finance — final invoice
+  const savePaidDate = (d: Date) => { updateProject(live.id, { paidOnDate: d }); setEditor(null); };
+  const savePaidMethod = (id: string) => {
+    const m = (id === "Transfer" || id === "Cheque" || id === "Cash") ? (id as PaymentMethod) : null;
+    const patch: any = { paymentMethod: m };
+    if (m === "Cash" || m == null) patch.paymentReference = null;
+    updateProject(live.id, patch);
+    setEditor(null);
+  };
+  const savePaymentRef = (v: string) => {
+    updateProject(live.id, { paymentReference: v.trim() || null });
+    setEditor(null);
+  };
+  const saveWeightUnit = (id: string) => {
+    if (id === "kg" || id === "lbs") updateProject(live.id, { weightUnit: id as WeightUnit });
+    setEditor(null);
+  };
+  const saveVolumeUnit = (id: string) => {
+    if (id === "CBM" || id === "CuFt") updateProject(live.id, { volumeUnit: id as VolumeUnit });
     setEditor(null);
   };
 
   const submitNote = (text: string) => { addNote(live.id, text); setEditor(null); };
 
   const handlePickSupplier = (id: string) => {
-    updateProject(live.id, { supplierId: id, supplierLabel: undefined });
+    const prior = md.getSupplierByAnyId(live.supplierId);
+    const next = md.suppliers.find((s) => s.id === id);
+    const priorD = defaultsForCountry(prior?.country);
+    const nextD = defaultsForCountry(next?.country);
+    const patch: any = { supplierId: id, supplierLabel: undefined };
+    if ((live.weightUnit ?? "kg") === priorD.weight && nextD.weight !== priorD.weight) patch.weightUnit = nextD.weight;
+    if ((live.volumeUnit ?? "CBM") === priorD.volume && nextD.volume !== priorD.volume) patch.volumeUnit = nextD.volume;
+    updateProject(live.id, patch);
     setEditor(null);
   };
   const handlePickSupplierMeta = (meta: string) => {
@@ -472,10 +561,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── PROJECT DETAILS ── */}
+          {/* ── OVERVIEW ── */}
           <section>
-            <SectionHeader>Project Details</SectionHeader>
+            <SectionHeader>Overview</SectionHeader>
             <SectionCard>
+              <DetailRow label="Created" value={fmtCreated(live.createdAt)} locked />
               <DetailRow label="Customer" value={live.customer} locked />
               <DetailRow
                 label="Buyer"
@@ -485,19 +575,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
               <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
+              <DetailRow label="Shipping Mode" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
+              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
               <DetailRow
                 label="Amount"
                 value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
-              <DetailRow
-                label="Outstanding Balance"
-                value={live.outstandingBalance != null ? `$${live.outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BBD` : undefined}
-                onClick={() => setEditor({ kind: "outstandingBalance" })}
-              />
-              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
-              <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
-              <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
               <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
               <DetailRow
                 label="Deadline"
@@ -505,10 +589,20 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 onClick={() => setEditor({ kind: "deadline" })}
                 valueColor={u?.color}
               />
-              <DetailRow
-                label="Completion Date"
-                value={live.completionDate ? fmtLong(live.completionDate) : undefined}
-                onClick={() => setEditor({ kind: "completionDate" })}
+              <DetailRow label="Outstanding Balance" value={undefined} locked />
+            </SectionCard>
+          </section>
+
+          {/* ── LINE ITEMS ── */}
+          <section>
+            <SectionHeader>Line Items</SectionHeader>
+            <SectionCard>
+              <LineItemsGrid
+                projectId={live.id}
+                items={live.lineItems ?? []}
+                addLineItem={addLineItem}
+                updateLineItem={updateLineItem}
+                removeLineItem={removeLineItem}
               />
             </SectionCard>
           </section>
@@ -532,39 +626,74 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── SHIPPING DETAILS ── */}
+          {/* ── PURCHASING ── */}
           <section>
-            <SectionHeader>Shipping Details</SectionHeader>
+            <SectionHeader>Purchasing</SectionHeader>
+            <SectionCard>
+              <DetailRow label="PO #" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DetailRow
+                label="PO Amount"
+                value={live.poAmountUsd != null ? `$${live.poAmountUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : undefined}
+                onClick={() => setEditor({ kind: "poAmount" })}
+              />
+            </SectionCard>
+          </section>
+
+          {/* ── PRODUCTION & SHIPPING ── */}
+          <section>
+            <SectionHeader>Production & Shipping</SectionHeader>
             <SectionCard>
               <DetailRow
-                label="Weight (kg)"
-                value={live.weightKg != null ? String(live.weightKg) : undefined}
-                onClick={() => setEditor({ kind: "weight" })}
+                label="Completion Date"
+                value={live.completionDate ? fmtLong(live.completionDate) : undefined}
+                onClick={() => setEditor({ kind: "completionDate" })}
               />
               <DetailRow
-                label="CBM"
-                value={live.cbm != null ? String(live.cbm) : undefined}
-                onClick={() => setEditor({ kind: "cbm" })}
+                label="Weight"
+                value={live.weightKg != null ? `${live.weightKg} ${live.weightUnit ?? "kg"}` : undefined}
+                onClick={() => setEditor({ kind: "weight" })}
+                trailing={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditor({ kind: "weightUnit" }); }}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-md mr-1.5 hover:bg-muted/60"
+                    style={{ color: "hsl(var(--brand-navy) / 0.7)", border: "1px solid hsl(var(--brand-navy) / 0.18)" }}
+                  >
+                    {live.weightUnit ?? "kg"}
+                  </button>
+                }
+              />
+              <DetailRow
+                label="Volume"
+                value={live.volumeValue != null ? `${live.volumeValue} ${live.volumeUnit ?? "CBM"}` : undefined}
+                onClick={() => setEditor({ kind: "volume" })}
+                trailing={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditor({ kind: "volumeUnit" }); }}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-md mr-1.5 hover:bg-muted/60"
+                    style={{ color: "hsl(var(--brand-navy) / 0.7)", border: "1px solid hsl(var(--brand-navy) / 0.18)" }}
+                  >
+                    {live.volumeUnit ?? "CBM"}
+                  </button>
+                }
               />
               <DetailRow
                 label="No. of Packages"
                 value={live.numPackages != null ? String(live.numPackages) : undefined}
                 onClick={() => setEditor({ kind: "packages" })}
               />
-              <DetailRow label="Mode of Shipping" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
               <DetailRow
-                label="Shipment Number"
+                label="Shipment #"
                 value={live.shipmentNumber ?? undefined}
                 onClick={live.shippingMode && live.shippingMode !== "Local" ? () => setEditor({ kind: "shipmentNumber" }) : undefined}
                 locked={!live.shippingMode || live.shippingMode === "Local"}
-                lockedHint={!live.shippingMode ? "Set Mode first to enable Shipment Number" : (live.shippingMode === "Local" ? "Shipment Number not yet supported for Local mode" : undefined)}
+                lockedHint={!live.shippingMode ? "Set Shipping Mode first" : (live.shippingMode === "Local" ? "Not supported for Local mode" : undefined)}
               />
               <DetailRow
-                label="Tracking"
+                label="Tracking Number"
                 value={live.trackingRef ? live.trackingRef.toUpperCase() : undefined}
                 onClick={live.shippingMode ? () => setEditor({ kind: "tracking" }) : undefined}
                 locked={!live.shippingMode}
-                lockedHint={!live.shippingMode ? "Set Mode first to enable Tracking" : undefined}
+                lockedHint={!live.shippingMode ? "Set Shipping Mode first" : undefined}
                 trailing={hasShipmentLink ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenShipment(live.shipmentId!); }}
@@ -578,24 +707,79 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── LINE ITEMS ── */}
+          {/* ── FINANCE ── */}
           <section>
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h2
-                className="text-[11px] uppercase font-semibold"
-                style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
-              >
-                Line items
-              </h2>
-            </div>
+            <SectionHeader>Finance</SectionHeader>
             <SectionCard>
-              <LineItemsGrid
-                projectId={live.id}
-                items={live.lineItems ?? []}
-                addLineItem={addLineItem}
-                updateLineItem={updateLineItem}
-                removeLineItem={removeLineItem}
+              <div
+                className="w-full flex items-center gap-3 px-2 -mx-2 py-2.5 border-b last:border-b-0"
+                style={{ borderColor: "hsl(var(--brand-navy) / 0.07)", minHeight: 40 }}
+              >
+                <span className="text-[13px] shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.6)", width: 168 }}>
+                  Deposit Required
+                </span>
+                <span className="flex-1 min-w-0 text-[14px] font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>
+                  {live.depositRequired ? "Yes" : "No"}
+                </span>
+                <Switch checked={!!live.depositRequired} onCheckedChange={toggleDepositRequired} />
+              </div>
+
+              {!live.depositRequired && (live.depositInvoiceNumber || live.depositAmount != null || live.depositPaidDate) && (
+                <div className="px-2 -mx-2 py-2 text-[11px] italic" style={{ color: "hsl(var(--brand-orange))" }}>
+                  Deposit data present but toggle off — toggle on to display
+                </div>
+              )}
+
+              {live.depositRequired && (
+                <>
+                  <DetailRow label="Deposit #" value={live.depositInvoiceNumber ?? undefined} onClick={() => setEditor({ kind: "depositInvoice" })} />
+                  <DetailRow
+                    label="Deposit Amount"
+                    value={live.depositAmount != null ? `$${live.depositAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BBD` : undefined}
+                    onClick={() => setEditor({ kind: "depositAmount" })}
+                  />
+                  <DetailRow
+                    label="Deposit Paid Date"
+                    value={live.depositPaidDate ? fmtLong(live.depositPaidDate) : undefined}
+                    onClick={() => setEditor({ kind: "depositPaidDate" })}
+                  />
+                  {live.depositPaidDate && (
+                    <DetailRow
+                      label="Deposit Paid Method"
+                      value={live.depositPaidMethod ?? undefined}
+                      onClick={() => setEditor({ kind: "depositPaidMethod" })}
+                    />
+                  )}
+                  {live.depositPaidDate && refLabelFor(live.depositPaidMethod) && (
+                    <DetailRow
+                      label={`Deposit ${refLabelFor(live.depositPaidMethod)!}`}
+                      value={live.depositPaymentReference ?? undefined}
+                      onClick={() => setEditor({ kind: "depositPaymentRef" })}
+                    />
+                  )}
+                </>
+              )}
+
+              <DetailRow label="INV #" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DetailRow
+                label="Paid Date"
+                value={live.paidOnDate ? fmtLong(live.paidOnDate) : undefined}
+                onClick={() => setEditor({ kind: "paidDate" })}
               />
+              {live.paidOnDate && (
+                <DetailRow
+                  label="Paid Method"
+                  value={live.paymentMethod ?? undefined}
+                  onClick={() => setEditor({ kind: "paidMethod" })}
+                />
+              )}
+              {live.paidOnDate && refLabelFor(live.paymentMethod) && (
+                <DetailRow
+                  label={refLabelFor(live.paymentMethod)!}
+                  value={live.paymentReference ?? undefined}
+                  onClick={() => setEditor({ kind: "paymentRef" })}
+                />
+              )}
             </SectionCard>
           </section>
 
@@ -749,22 +933,38 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
       <TextEditor
         open={editor?.kind === "weight"}
         onClose={() => setEditor(null)}
-        title="Weight (kg)"
+        title={`Weight (${live.weightUnit ?? "kg"})`}
         value={live.weightKg != null ? String(live.weightKg) : ""}
         placeholder="0"
         digitsOnly
         allowDecimal
         onSave={saveWeight}
       />
-      <TextEditor
-        open={editor?.kind === "cbm"}
+      <ListPicker
+        open={editor?.kind === "weightUnit"}
         onClose={() => setEditor(null)}
-        title="CBM"
-        value={live.cbm != null ? String(live.cbm) : ""}
+        title="Weight unit"
+        options={WEIGHT_UNIT_OPTIONS}
+        selectedId={live.weightUnit ?? "kg"}
+        onPick={saveWeightUnit}
+      />
+      <TextEditor
+        open={editor?.kind === "volume"}
+        onClose={() => setEditor(null)}
+        title={`Volume (${live.volumeUnit ?? "CBM"})`}
+        value={live.volumeValue != null ? String(live.volumeValue) : ""}
         placeholder="0"
         digitsOnly
         allowDecimal
-        onSave={saveCbm}
+        onSave={saveVolume}
+      />
+      <ListPicker
+        open={editor?.kind === "volumeUnit"}
+        onClose={() => setEditor(null)}
+        title="Volume unit"
+        options={VOLUME_UNIT_OPTIONS}
+        selectedId={live.volumeUnit ?? "CBM"}
+        onPick={saveVolumeUnit}
       />
       <TextEditor
         open={editor?.kind === "packages"}
@@ -774,6 +974,16 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         placeholder="0"
         digitsOnly
         onSave={savePackages}
+      />
+      <TextEditor
+        open={editor?.kind === "poAmount"}
+        onClose={() => setEditor(null)}
+        title="PO Amount (USD)"
+        value={live.poAmountUsd != null ? String(live.poAmountUsd) : ""}
+        placeholder="0"
+        digitsOnly
+        allowDecimal
+        onSave={savePoAmount}
       />
       <TextEditor
         open={editor?.kind === "designBrief"}
@@ -802,15 +1012,71 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         value={live.completionDate ?? undefined}
         onSave={saveCompletionDate}
       />
+      {/* Finance — deposit */}
       <TextEditor
-        open={editor?.kind === "outstandingBalance"}
+        open={editor?.kind === "depositInvoice"}
         onClose={() => setEditor(null)}
-        title="Outstanding balance (BBD)"
-        value={live.outstandingBalance != null ? String(live.outstandingBalance) : ""}
+        title="Deposit invoice #"
+        value={live.depositInvoiceNumber ?? ""}
+        placeholder="DEP-1234"
+        onSave={saveDepositInvoice}
+      />
+      <TextEditor
+        open={editor?.kind === "depositAmount"}
+        onClose={() => setEditor(null)}
+        title="Deposit amount (BBD)"
+        value={live.depositAmount != null ? String(live.depositAmount) : ""}
         placeholder="0"
         digitsOnly
         allowDecimal
-        onSave={saveOutstandingBalance}
+        onSave={saveDepositAmount}
+      />
+      <DateEditor
+        open={editor?.kind === "depositPaidDate"}
+        onClose={() => setEditor(null)}
+        title="Deposit paid date"
+        value={live.depositPaidDate ?? undefined}
+        onSave={saveDepositPaidDate}
+      />
+      <ListPicker
+        open={editor?.kind === "depositPaidMethod"}
+        onClose={() => setEditor(null)}
+        title="Deposit paid method"
+        options={PAYMENT_METHOD_OPTIONS}
+        selectedId={live.depositPaidMethod ?? undefined}
+        onPick={saveDepositPaidMethod}
+      />
+      <TextEditor
+        open={editor?.kind === "depositPaymentRef"}
+        onClose={() => setEditor(null)}
+        title={`Deposit ${refLabelFor(live.depositPaidMethod) ?? "Reference"}`}
+        value={live.depositPaymentReference ?? ""}
+        placeholder=""
+        onSave={saveDepositPaymentRef}
+      />
+      {/* Finance — final */}
+      <DateEditor
+        open={editor?.kind === "paidDate"}
+        onClose={() => setEditor(null)}
+        title="Paid date"
+        value={live.paidOnDate ?? undefined}
+        onSave={savePaidDate}
+      />
+      <ListPicker
+        open={editor?.kind === "paidMethod"}
+        onClose={() => setEditor(null)}
+        title="Paid method"
+        options={PAYMENT_METHOD_OPTIONS}
+        selectedId={live.paymentMethod ?? undefined}
+        onPick={savePaidMethod}
+      />
+      <TextEditor
+        open={editor?.kind === "paymentRef"}
+        onClose={() => setEditor(null)}
+        title={refLabelFor(live.paymentMethod) ?? "Reference"}
+        value={live.paymentReference ?? ""}
+        placeholder=""
+        onSave={savePaymentRef}
       />
       <TextEditor
         open={editor?.kind === "addNote"}
