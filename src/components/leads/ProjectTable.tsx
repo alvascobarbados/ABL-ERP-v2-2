@@ -375,6 +375,12 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
 
   return (
     <SelectionProvider outsideRef={tableRootRef}>
+    <TableKeyboard
+      sorted={sorted}
+      selectedCardId={selectedCardId}
+      onOpenCard={onOpenCard}
+      onCloseDetail={onCloseDetail}
+    />
     <TooltipProvider delayDuration={300}>
     <div className="flex-1 min-h-0 min-w-0 flex flex-col">
       <div className="flex-1 min-h-0 min-w-0 flex flex-col px-6 lg:px-8 pt-3 pb-0 overflow-hidden">
