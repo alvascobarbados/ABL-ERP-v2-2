@@ -142,15 +142,15 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
     const start = target.selectionStart ?? v.length;
     const end = target.selectionEnd ?? v.length;
     const next = v.slice(0, start) + cleaned + v.slice(end);
-    setV(sanitizeDigitsLike(next));
+    setV(capLen(sanitizeDigitsLike(next)));
   };
   const handleChange = (raw: string) => {
-    if (digitsOnly) setV(sanitizeDigitsLike(raw));
-    else setV(raw);
+    if (digitsOnly) setV(capLen(sanitizeDigitsLike(raw)));
+    else setV(capLen(raw));
   };
   const commit = () => {
-    if (digitsOnly) onSave(sanitizeDigitsLike(v));
-    else onSave(v.trim());
+    if (digitsOnly) onSave(capLen(sanitizeDigitsLike(v)));
+    else onSave(capLen(v.trim()));
   };
   // Allow empty save when digitsOnly (clearing the field is meaningful)
   const saveDisabled = digitsOnly ? false : !v.trim();
@@ -198,6 +198,7 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
             onPaste={handlePaste}
             placeholder={placeholder}
             inputMode={digitsOnly ? "numeric" : undefined}
+            maxLength={maxLength}
             className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[15px] tabular p-0"
             style={{ color: "hsl(var(--brand-navy))" }}
           />
@@ -206,8 +207,9 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
         <input
           ref={ref as React.RefObject<HTMLInputElement>}
           value={v}
-          onChange={(e) => setV(e.target.value)}
+          onChange={(e) => setV(capLen(e.target.value))}
           placeholder={placeholder}
+          maxLength={maxLength}
           className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
           style={{ minHeight: 48 }}
         />
