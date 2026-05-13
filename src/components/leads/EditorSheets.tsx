@@ -267,11 +267,26 @@ interface ListPickerProps {
   options: ListOption[];
   selectedId?: string;
   onPick: (id: string) => void;
+  onClear?: () => void;
+  clearLabel?: string;
 }
-export const ListPicker = ({ open, onClose, title, options, selectedId, onPick }: ListPickerProps) => {
+export const ListPicker = ({ open, onClose, title, options, selectedId, onPick, onClear, clearLabel }: ListPickerProps) => {
   return (
     <BottomSheet open={open} onClose={onClose} title={title}>
       <ul className="space-y-1.5">
+        {onClear && selectedId != null && (
+          <li>
+            <button
+              onClick={onClear}
+              className="w-full text-left px-3.5 py-3 rounded-xl border border-dashed transition-colors hover:bg-muted/40"
+              style={{ minHeight: 48, borderColor: "hsl(var(--brand-navy) / 0.2)" }}
+            >
+              <div className="text-sm italic" style={{ color: "hsl(var(--brand-navy) / 0.6)" }}>
+                {clearLabel ?? "— Clear selection —"}
+              </div>
+            </button>
+          </li>
+        )}
         {options.map((o) => (
           <li key={o.id}>
             <button
