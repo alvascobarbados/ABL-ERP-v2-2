@@ -2,11 +2,13 @@ import { ArrowLeft, MoreVertical, ChevronRight, Plus, Flag, ArrowRight, MoreHori
 import {
   PipelineCard, PIPELINES, PipelineId, StageId, ShippingMode,
   SupplierLabelHint, ProjectLogEntry, ProjectLogActionType,
+  PaymentMethod, WeightUnit, VolumeUnit,
 } from "@/data/pipelines";
 import { PIPELINE_ACCENT } from "@/lib/brand";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import { usePipelineStore, getStageTitle, getNextStage } from "@/hooks/usePipelineStore";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
