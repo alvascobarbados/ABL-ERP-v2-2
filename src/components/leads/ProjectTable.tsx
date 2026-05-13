@@ -114,20 +114,23 @@ function stageLabel(c: PipelineCard, _activeTab: TabId): string {
 // Stage progression rank within each pipeline. Lower = earlier in the flow.
 // Shipping collapses to a single rank (only one user-facing stage).
 const STAGE_RANK: Record<StageId, number> = {
-  sourcing: 0, proposal: 1, quote: 2, confirming: 3, archive: 99,
-  design: 0, proof: 1,
-  purchasing: 0, production: 0,
-  preproduction: 0, in_production: 1, // legacy
-  shipment_required: 0, shipment_assigned: 0,
+  sourcing: 0, proposal: 1, quote: 2, pending: 3, stalled: 4, archive: 99,
+  confirming: 3, // legacy → was Pending
+  client_artwork: 0, artwork_creation: 1, proof: 2, internal: 3,
+  design: 1, // legacy → was Artwork Creation
+  purchasing: 0,
+  production: 0, ready_to_ship: 1,
+  preproduction: 0, in_production: 0, // legacy
+  shipment_assigned: 0, arrived: 1,
+  shipment_required: 0, // legacy
   invoice_required: 0, invoiced: 1, paid: 2,
   completed: 0,
 };
 
 // Number of user-facing stages per pipeline (used for shade ramp).
-// Single-state pipelines stay at full saturation.
 const STAGE_COUNT: Record<PipelineId, number> = {
-  sales: 4, design: 2, purchasing: 1, production: 1,
-  shipping: 1, finance: 2, completed: 1, operations: 1,
+  sales: 5, design: 4, purchasing: 1, production: 2,
+  shipping: 2, finance: 2, completed: 1, operations: 2,
 };
 
 /** Shade strength 0..1 — earlier stages lighter, later stages full saturation. */
