@@ -285,6 +285,7 @@ export type Database = {
           point_person: string
           priority: string
           project_name: string
+          proof_number: string | null
           quote_number: string | null
           sales_shipping_label: string | null
           shipment_id: string | null
@@ -333,6 +334,7 @@ export type Database = {
           point_person: string
           priority?: string
           project_name: string
+          proof_number?: string | null
           quote_number?: string | null
           sales_shipping_label?: string | null
           shipment_id?: string | null
@@ -381,6 +383,7 @@ export type Database = {
           point_person?: string
           priority?: string
           project_name?: string
+          proof_number?: string | null
           quote_number?: string | null
           sales_shipping_label?: string | null
           shipment_id?: string | null
