@@ -36,8 +36,8 @@ const PIPELINE_ORDER: Record<PipelineId, number> = {
 // "Shipping". "completed" already has "Completed" in PIPELINES.
 const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
   paid: "Paid",
-  shipment_required: "Shipping",
-  shipment_assigned: "Shipping",
+  shipment_required: "Ready to Ship", // legacy alias surfaced as the new label
+  shipment_assigned: "In Transit",
 };
 function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
   return STAGE_DISPLAY[stage] ?? getStageTitle(pipeline, stage);
