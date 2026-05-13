@@ -561,10 +561,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── PROJECT DETAILS ── */}
+          {/* ── OVERVIEW ── */}
           <section>
-            <SectionHeader>Project Details</SectionHeader>
+            <SectionHeader>Overview</SectionHeader>
             <SectionCard>
+              <DetailRow label="Created" value={fmtCreated(live.createdAt)} locked />
               <DetailRow label="Customer" value={live.customer} locked />
               <DetailRow
                 label="Buyer"
@@ -574,19 +575,13 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow label="Project" value={live.projectName} onClick={() => setEditor({ kind: "projectName" })} />
               <DetailRow label="Detail summary" value={live.detailSummary} onClick={() => setEditor({ kind: "detailSummary" })} />
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
+              <DetailRow label="Shipping Mode" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
+              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
               <DetailRow
                 label="Amount"
                 value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
-              <DetailRow
-                label="Outstanding Balance"
-                value={live.outstandingBalance != null ? `$${live.outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BBD` : undefined}
-                onClick={() => setEditor({ kind: "outstandingBalance" })}
-              />
-              <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
-              <DetailRow label="PO#" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
-              <DetailRow label="INV#" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
               <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
               <DetailRow
                 label="Deadline"
@@ -594,10 +589,20 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 onClick={() => setEditor({ kind: "deadline" })}
                 valueColor={u?.color}
               />
-              <DetailRow
-                label="Completion Date"
-                value={live.completionDate ? fmtLong(live.completionDate) : undefined}
-                onClick={() => setEditor({ kind: "completionDate" })}
+              <DetailRow label="Outstanding Balance" value={undefined} locked />
+            </SectionCard>
+          </section>
+
+          {/* ── LINE ITEMS ── */}
+          <section>
+            <SectionHeader>Line Items</SectionHeader>
+            <SectionCard>
+              <LineItemsGrid
+                projectId={live.id}
+                items={live.lineItems ?? []}
+                addLineItem={addLineItem}
+                updateLineItem={updateLineItem}
+                removeLineItem={removeLineItem}
               />
             </SectionCard>
           </section>
@@ -621,39 +626,74 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── SHIPPING DETAILS ── */}
+          {/* ── PURCHASING ── */}
           <section>
-            <SectionHeader>Shipping Details</SectionHeader>
+            <SectionHeader>Purchasing</SectionHeader>
+            <SectionCard>
+              <DetailRow label="PO #" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DetailRow
+                label="PO Amount"
+                value={live.poAmountUsd != null ? `$${live.poAmountUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : undefined}
+                onClick={() => setEditor({ kind: "poAmount" })}
+              />
+            </SectionCard>
+          </section>
+
+          {/* ── PRODUCTION & SHIPPING ── */}
+          <section>
+            <SectionHeader>Production & Shipping</SectionHeader>
             <SectionCard>
               <DetailRow
-                label="Weight (kg)"
-                value={live.weightKg != null ? String(live.weightKg) : undefined}
-                onClick={() => setEditor({ kind: "weight" })}
+                label="Completion Date"
+                value={live.completionDate ? fmtLong(live.completionDate) : undefined}
+                onClick={() => setEditor({ kind: "completionDate" })}
               />
               <DetailRow
-                label="CBM"
-                value={live.cbm != null ? String(live.cbm) : undefined}
-                onClick={() => setEditor({ kind: "cbm" })}
+                label="Weight"
+                value={live.weightKg != null ? `${live.weightKg} ${live.weightUnit ?? "kg"}` : undefined}
+                onClick={() => setEditor({ kind: "weight" })}
+                trailing={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditor({ kind: "weightUnit" }); }}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-md mr-1.5 hover:bg-muted/60"
+                    style={{ color: "hsl(var(--brand-navy) / 0.7)", border: "1px solid hsl(var(--brand-navy) / 0.18)" }}
+                  >
+                    {live.weightUnit ?? "kg"}
+                  </button>
+                }
+              />
+              <DetailRow
+                label="Volume"
+                value={live.volumeValue != null ? `${live.volumeValue} ${live.volumeUnit ?? "CBM"}` : undefined}
+                onClick={() => setEditor({ kind: "volume" })}
+                trailing={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditor({ kind: "volumeUnit" }); }}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-md mr-1.5 hover:bg-muted/60"
+                    style={{ color: "hsl(var(--brand-navy) / 0.7)", border: "1px solid hsl(var(--brand-navy) / 0.18)" }}
+                  >
+                    {live.volumeUnit ?? "CBM"}
+                  </button>
+                }
               />
               <DetailRow
                 label="No. of Packages"
                 value={live.numPackages != null ? String(live.numPackages) : undefined}
                 onClick={() => setEditor({ kind: "packages" })}
               />
-              <DetailRow label="Mode of Shipping" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
               <DetailRow
-                label="Shipment Number"
+                label="Shipment #"
                 value={live.shipmentNumber ?? undefined}
                 onClick={live.shippingMode && live.shippingMode !== "Local" ? () => setEditor({ kind: "shipmentNumber" }) : undefined}
                 locked={!live.shippingMode || live.shippingMode === "Local"}
-                lockedHint={!live.shippingMode ? "Set Mode first to enable Shipment Number" : (live.shippingMode === "Local" ? "Shipment Number not yet supported for Local mode" : undefined)}
+                lockedHint={!live.shippingMode ? "Set Shipping Mode first" : (live.shippingMode === "Local" ? "Not supported for Local mode" : undefined)}
               />
               <DetailRow
-                label="Tracking"
+                label="Tracking Number"
                 value={live.trackingRef ? live.trackingRef.toUpperCase() : undefined}
                 onClick={live.shippingMode ? () => setEditor({ kind: "tracking" }) : undefined}
                 locked={!live.shippingMode}
-                lockedHint={!live.shippingMode ? "Set Mode first to enable Tracking" : undefined}
+                lockedHint={!live.shippingMode ? "Set Shipping Mode first" : undefined}
                 trailing={hasShipmentLink ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenShipment(live.shipmentId!); }}
@@ -667,24 +707,79 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             </SectionCard>
           </section>
 
-          {/* ── LINE ITEMS ── */}
+          {/* ── FINANCE ── */}
           <section>
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h2
-                className="text-[11px] uppercase font-semibold"
-                style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
-              >
-                Line items
-              </h2>
-            </div>
+            <SectionHeader>Finance</SectionHeader>
             <SectionCard>
-              <LineItemsGrid
-                projectId={live.id}
-                items={live.lineItems ?? []}
-                addLineItem={addLineItem}
-                updateLineItem={updateLineItem}
-                removeLineItem={removeLineItem}
+              <div
+                className="w-full flex items-center gap-3 px-2 -mx-2 py-2.5 border-b last:border-b-0"
+                style={{ borderColor: "hsl(var(--brand-navy) / 0.07)", minHeight: 40 }}
+              >
+                <span className="text-[13px] shrink-0" style={{ color: "hsl(var(--brand-navy) / 0.6)", width: 168 }}>
+                  Deposit Required
+                </span>
+                <span className="flex-1 min-w-0 text-[14px] font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>
+                  {live.depositRequired ? "Yes" : "No"}
+                </span>
+                <Switch checked={!!live.depositRequired} onCheckedChange={toggleDepositRequired} />
+              </div>
+
+              {!live.depositRequired && (live.depositInvoiceNumber || live.depositAmount != null || live.depositPaidDate) && (
+                <div className="px-2 -mx-2 py-2 text-[11px] italic" style={{ color: "hsl(var(--brand-orange))" }}>
+                  Deposit data present but toggle off — toggle on to display
+                </div>
+              )}
+
+              {live.depositRequired && (
+                <>
+                  <DetailRow label="Deposit #" value={live.depositInvoiceNumber ?? undefined} onClick={() => setEditor({ kind: "depositInvoice" })} />
+                  <DetailRow
+                    label="Deposit Amount"
+                    value={live.depositAmount != null ? `$${live.depositAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BBD` : undefined}
+                    onClick={() => setEditor({ kind: "depositAmount" })}
+                  />
+                  <DetailRow
+                    label="Deposit Paid Date"
+                    value={live.depositPaidDate ? fmtLong(live.depositPaidDate) : undefined}
+                    onClick={() => setEditor({ kind: "depositPaidDate" })}
+                  />
+                  {live.depositPaidDate && (
+                    <DetailRow
+                      label="Deposit Paid Method"
+                      value={live.depositPaidMethod ?? undefined}
+                      onClick={() => setEditor({ kind: "depositPaidMethod" })}
+                    />
+                  )}
+                  {live.depositPaidDate && refLabelFor(live.depositPaidMethod) && (
+                    <DetailRow
+                      label={`Deposit ${refLabelFor(live.depositPaidMethod)!}`}
+                      value={live.depositPaymentReference ?? undefined}
+                      onClick={() => setEditor({ kind: "depositPaymentRef" })}
+                    />
+                  )}
+                </>
+              )}
+
+              <DetailRow label="INV #" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DetailRow
+                label="Paid Date"
+                value={live.paidOnDate ? fmtLong(live.paidOnDate) : undefined}
+                onClick={() => setEditor({ kind: "paidDate" })}
               />
+              {live.paidOnDate && (
+                <DetailRow
+                  label="Paid Method"
+                  value={live.paymentMethod ?? undefined}
+                  onClick={() => setEditor({ kind: "paidMethod" })}
+                />
+              )}
+              {live.paidOnDate && refLabelFor(live.paymentMethod) && (
+                <DetailRow
+                  label={refLabelFor(live.paymentMethod)!}
+                  value={live.paymentReference ?? undefined}
+                  onClick={() => setEditor({ kind: "paymentRef" })}
+                />
+              )}
             </SectionCard>
           </section>
 
