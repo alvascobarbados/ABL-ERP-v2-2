@@ -58,7 +58,7 @@ import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility"
 
 type SortKey =
   | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
-  | "quote" | "po" | "invoice" | "amount" | "balance"
+  | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
 
@@ -209,6 +209,13 @@ function compareCards(
       if (av && !bv) return -1;
       return dir * av.localeCompare(bv, undefined, { numeric: true });
     }
+    case "proof": {
+      const av = a.project.proofNumber ?? "";
+      const bv = b.project.proofNumber ?? "";
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      return dir * av.localeCompare(bv, undefined, { numeric: true });
+    }
     case "po": {
       const av = a.project.poNumber ?? "";
       const bv = b.project.poNumber ?? "";
@@ -315,6 +322,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "designBrief", label: "Design Brief", defaultPx: 200 },
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
+  { key: "proof", label: "Proof", defaultPx: 80 },
   { key: "po", label: "PO#", defaultPx: 92 },
   { key: "invoice", label: "INV#", defaultPx: 96 },
   { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
@@ -988,6 +996,29 @@ const TableRow = ({
         onCommit={(v) => {
           const trimmed = v.replace(/^\s*Q-?/i, "").replace(/\D/g, "").trim();
           return saveText("quoteNumber", trimmed);
+        }}
+      />
+      )}
+
+      {has("proof") && (
+      <EditableCell
+        cellKey={`${card.id}:proofNumber`}
+        mode="text"
+        align="left"
+        display={<span className="tabular">{proj.proofNumber ? `P-${proj.proofNumber}` : "—"}</span>}
+        title={proj.proofNumber ? `P-${proj.proofNumber}` : ""}
+        muted={!proj.proofNumber}
+        value={proj.proofNumber ?? ""}
+        placeholder="####"
+        prefix="P-"
+        maxLength={4}
+        onCommit={async (v) => {
+          const trimmed = v.replace(/^\s*P-?/i, "").replace(/\D/g, "").trim();
+          if (trimmed !== "" && trimmed.length !== 4) {
+            toast.error("Proof number must be 4 digits");
+            return { ok: false };
+          }
+          return saveText("proofNumber", trimmed);
         }}
       />
       )}
