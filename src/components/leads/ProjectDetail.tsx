@@ -988,14 +988,16 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         digitsOnly
         onSave={savePackages}
       />
-      <TextEditor
+      <PoAmountEditor
         open={editor?.kind === "poAmount"}
         onClose={() => setEditor(null)}
-        title="PO Amount (USD)"
-        value={live.poAmountUsd != null ? String(live.poAmountUsd) : ""}
-        placeholder="0"
-        digitsOnly
-        allowDecimal
+        amount={live.poAmount ?? null}
+        currency={
+          live.poAmountCurrency
+          ?? (live.poAmount == null
+            ? currencyForSupplierCountry(md.getSupplierByAnyId(live.supplierId)?.country)
+            : "USD")
+        }
         onSave={savePoAmount}
       />
       <TextEditor
