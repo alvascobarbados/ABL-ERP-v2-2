@@ -472,7 +472,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
               <DetailRow
                 label="Amount"
-                value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
+                value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
               <DetailRow
