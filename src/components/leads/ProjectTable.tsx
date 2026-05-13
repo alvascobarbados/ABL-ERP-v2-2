@@ -811,7 +811,7 @@ const TableRow = ({
   const isRowSelected = useRowSelected(card.id);
 
   return (
-    <RowProvider rowId={card.id}>
+    <RowProvider rowId={card.id} onDoubleClick={onOpen}>
     <div
       role="row"
       onClick={handleClick}
