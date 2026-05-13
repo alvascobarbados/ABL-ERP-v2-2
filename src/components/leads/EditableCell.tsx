@@ -243,7 +243,9 @@ type Props = TextProps | CustomProps;
 const FLASH_MS = 700;
 
 export const EditableCell = (props: Props) => {
-  const { rowId, cellKey, readOnly, align = "left", display, title, muted, flash: externalFlash, onRowDoubleClick, noClickEdit } = props;
+  const { cellKey, readOnly, align = "left", display, title, muted, flash: externalFlash, onRowDoubleClick, noClickEdit } = props;
+  const ctxRowId = useRowId();
+  const rowId = props.rowId ?? ctxRowId ?? "__no_row__";
   const sel = useCellSelection();
   const isFocused = sel?.activeKey === cellKey && sel?.selectedRowId === rowId;
   const isEditing = isFocused && !!sel?.editing;
