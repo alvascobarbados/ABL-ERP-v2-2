@@ -1612,16 +1612,10 @@ interface StageCellProps {
   anchorEl: HTMLElement | null;
 }
 
-// User-facing stage list per pipeline (Shipping collapses to one row).
-const STAGE_PICKER_GROUPS: { pipeline: PipelineId; stages: { id: StageId; title: string }[] }[] = [
-  { pipeline: "sales",      stages: [{ id: "sourcing", title: "Sourcing" }, { id: "proposal", title: "Proposal" }, { id: "quote", title: "Quote" }, { id: "confirming", title: "Confirming" }] },
-  { pipeline: "design",     stages: [{ id: "design", title: "Design" }, { id: "proof", title: "Proof" }] },
-  { pipeline: "purchasing", stages: [{ id: "purchasing", title: "Purchasing" }] },
-  { pipeline: "production", stages: [{ id: "production", title: "Production" }] },
-  { pipeline: "shipping",   stages: [{ id: "shipment_required", title: "Shipping" }] },
-  { pipeline: "finance",    stages: [{ id: "invoice_required", title: "To Invoice" }, { id: "invoiced", title: "To Collect" }] },
-  { pipeline: "completed",  stages: [{ id: "completed", title: "Completed" }] },
-];
+// User-facing stage list per pipeline — sourced from the central PIPELINES config
+// so adds/renames don't need to be repeated here.
+const STAGE_PICKER_GROUPS: { pipeline: PipelineId; stages: { id: StageId; title: string }[] }[] =
+  PIPELINES.map((p) => ({ pipeline: p.id, stages: p.stages.map((s) => ({ id: s.id, title: s.title })) }));
 
 const StageCell = ({
   cellKey, pipeline, stage, accent, active, flash, onActivate,
