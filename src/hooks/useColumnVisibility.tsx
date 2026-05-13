@@ -41,17 +41,21 @@ const ALL_COLUMNS: ColumnId[] = [
   "rep", "completionDate", "deadline",
 ];
 
+// Outstanding Balance is hidden by default on every tab — toggleable via
+// Columns popover. (v1: still stored, just not shown by default.)
+const DEFAULT_COLUMNS: ColumnId[] = ALL_COLUMNS.filter((c) => c !== "balance");
+
 export const DEFAULT_VISIBLE: Record<TabId, ColumnId[]> = {
-  all: ALL_COLUMNS,
-  sales: ALL_COLUMNS,
-  design: ALL_COLUMNS,
-  purchasing: ALL_COLUMNS,
-  production: ALL_COLUMNS,
-  shipping: ALL_COLUMNS,
-  finance: ALL_COLUMNS,
-  completed: ALL_COLUMNS,
+  all: DEFAULT_COLUMNS,
+  sales: DEFAULT_COLUMNS,
+  design: DEFAULT_COLUMNS,
+  purchasing: DEFAULT_COLUMNS,
+  production: DEFAULT_COLUMNS,
+  shipping: DEFAULT_COLUMNS,
+  finance: DEFAULT_COLUMNS,
+  completed: DEFAULT_COLUMNS,
   // legacy alias
-  operations: ALL_COLUMNS,
+  operations: DEFAULT_COLUMNS,
 };
 
 const STORAGE_PREFIX = "alvasco.colVis.v1";
