@@ -383,6 +383,7 @@ export interface Project {
   depositPaidMethod?: PaymentMethod | null;
   /** Single column stores either Bank Ref No. (Transfer) or Cheque No. (Cheque). */
   depositPaymentReference?: string | null;
+}
 
 /** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
 export type AirCarrier = "DHL" | "FedEx";
