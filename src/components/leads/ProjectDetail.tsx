@@ -373,9 +373,12 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     const next = md.suppliers.find((s) => s.id === id);
     const priorD = defaultsForCountry(prior?.country);
     const nextD = defaultsForCountry(next?.country);
+    const priorCur = currencyForSupplierCountry(prior?.country);
+    const nextCur = currencyForSupplierCountry(next?.country);
     const patch: any = { supplierId: id, supplierLabel: undefined };
     if ((live.weightUnit ?? "kg") === priorD.weight && nextD.weight !== priorD.weight) patch.weightUnit = nextD.weight;
     if ((live.volumeUnit ?? "CBM") === priorD.volume && nextD.volume !== priorD.volume) patch.volumeUnit = nextD.volume;
+    if ((live.poAmountCurrency ?? "USD") === priorCur && nextCur !== priorCur) patch.poAmountCurrency = nextCur;
     updateProject(live.id, patch);
     setEditor(null);
   };
