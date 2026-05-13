@@ -313,6 +313,8 @@ export interface Project {
   priority: Priority;
   tag?: CardTag;
   quoteNumber?: string;
+  /** 4-digit proof number; displayed as "P-####", stored bare ("0042"). */
+  proofNumber?: string;
   poNumber?: string;
   invoiceNumber?: string;
   lineItems?: LineItem[];
