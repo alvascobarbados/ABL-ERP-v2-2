@@ -210,8 +210,9 @@ export const ShippingPipelineView = ({
   onOpenCard, onSwipeForward, onSwipeBack, onOpenPicker,
 }: Props) => {
   const visibleShipments = shipments.filter((s) => s.status !== "Delivered");
-  const assignedSubs = subs.filter((s) => s.stage === "shipment_assigned");
-  const intakeSubs = subs.filter((s) => s.stage === "shipment_required");
+  // Both In Transit ('shipment_assigned') and Arrived live in Shipping now.
+  const assignedSubs = subs.filter((s) => s.stage === "shipment_assigned" || s.stage === "arrived");
+  const intakeSubs: Project[] = [];
 
   const air = visibleShipments.filter((s) => s.mode === "Air");
   const ocean = visibleShipments.filter((s) => s.mode !== "Air");
@@ -228,15 +229,17 @@ export const ShippingPipelineView = ({
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <IntakeCollapsible
-        count={intakeCount}
-        intakeSubs={intakeSubs}
-        onOpenCard={onOpenCard}
-        onSwipeForward={onSwipeForward}
-        onSwipeBack={onSwipeBack}
-        onOpenPicker={onOpenPicker}
-        onOpenIntake={onOpenIntake}
-      />
+      {intakeCount > 0 && (
+        <IntakeCollapsible
+          count={intakeCount}
+          intakeSubs={intakeSubs}
+          onOpenCard={onOpenCard}
+          onSwipeForward={onSwipeForward}
+          onSwipeBack={onSwipeBack}
+          onOpenPicker={onOpenPicker}
+          onOpenIntake={onOpenIntake}
+        />
+      )}
       <Group
         title="Air"
         shipments={air}

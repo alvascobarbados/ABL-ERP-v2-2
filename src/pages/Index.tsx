@@ -172,11 +172,14 @@ function projectMatchesSearch(p: Project, q: string): boolean {
 
 function projectHasMissingData(p: Project): boolean {
   const stageRank: Record<StageId, number> = {
-    sourcing: 0, proposal: 0, quote: 1, confirming: 2, archive: 0,
-    design: 2, proof: 2,
-    purchasing: 3, production: 4,
+    sourcing: 0, proposal: 0, quote: 1, pending: 2, stalled: 2, archive: 0,
+    confirming: 2, // legacy
+    client_artwork: 2, artwork_creation: 2, proof: 2, internal: 2,
+    design: 2, // legacy
+    purchasing: 3, production: 4, ready_to_ship: 4,
     preproduction: 3, in_production: 4, // legacy
-    shipment_required: 5, shipment_assigned: 6,
+    shipment_assigned: 6, arrived: 6,
+    shipment_required: 5, // legacy
     invoice_required: 7, invoiced: 8, paid: 9, completed: 9,
   };
   const r = stageRank[p.stage] ?? 0;
@@ -720,7 +723,7 @@ const Index = () => {
             if (isSearching && !projectMatchesSearch(p, search.trim())) return false;
             return true;
           });
-          const intakeCount = projects.filter((p) => p.pipeline === "shipping" && p.stage === "shipment_required").length;
+          const intakeCount = projects.filter((p) => p.pipeline === "production" && p.stage === "ready_to_ship").length;
 
           if (isCompleted) {
             return (
@@ -934,7 +937,7 @@ const Index = () => {
       <AssignShipmentSheet
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
-        intakeSubs={projects.filter((p) => p.pipeline === "shipping" && p.stage === "shipment_required")}
+        intakeSubs={projects.filter((p) => p.pipeline === "production" && p.stage === "ready_to_ship")}
         shipments={shipments}
       />
 

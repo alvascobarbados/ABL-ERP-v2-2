@@ -28,11 +28,7 @@ export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }:
 
       <div className="space-y-5 mt-4">
         {PIPELINES.map((p) => {
-          // Shipping has exactly one user-facing stage ("Shipping"). Mode
-          // (Air/Ocean/Local) is changed elsewhere — never via the picker.
-          const stages = p.id === "shipping"
-            ? [{ id: "shipment_required" as StageId, title: "Shipping" }]
-            : p.stages;
+          const stages = p.stages;
           return (
             <div key={p.id}>
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mb-2">
@@ -40,9 +36,7 @@ export const StagePicker = ({ open, onClose, title, subtitle, current, onPick }:
               </p>
               <div className="grid grid-cols-1 gap-1.5">
                 {stages.map((s) => {
-                  const isCurrent = current?.pipeline === p.id && (
-                    p.id === "shipping" ? true : current?.stage === s.id
-                  );
+                  const isCurrent = current?.pipeline === p.id && current?.stage === s.id;
                   const adj = isAdjacent(p.id, s.id);
                   return (
                     <button

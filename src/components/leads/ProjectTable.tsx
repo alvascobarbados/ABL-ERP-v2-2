@@ -36,8 +36,8 @@ const PIPELINE_ORDER: Record<PipelineId, number> = {
 // "Shipping". "completed" already has "Completed" in PIPELINES.
 const STAGE_DISPLAY: Partial<Record<StageId, string>> = {
   paid: "Paid",
-  shipment_required: "Shipping",
-  shipment_assigned: "Shipping",
+  shipment_required: "Ready to Ship", // legacy alias surfaced as the new label
+  shipment_assigned: "In Transit",
 };
 function displayStageTitle(pipeline: PipelineId, stage: StageId): string {
   return STAGE_DISPLAY[stage] ?? getStageTitle(pipeline, stage);
@@ -114,20 +114,23 @@ function stageLabel(c: PipelineCard, _activeTab: TabId): string {
 // Stage progression rank within each pipeline. Lower = earlier in the flow.
 // Shipping collapses to a single rank (only one user-facing stage).
 const STAGE_RANK: Record<StageId, number> = {
-  sourcing: 0, proposal: 1, quote: 2, confirming: 3, archive: 99,
-  design: 0, proof: 1,
-  purchasing: 0, production: 0,
-  preproduction: 0, in_production: 1, // legacy
-  shipment_required: 0, shipment_assigned: 0,
+  sourcing: 0, proposal: 1, quote: 2, pending: 3, stalled: 4, archive: 99,
+  confirming: 3, // legacy → was Pending
+  client_artwork: 0, artwork_creation: 1, proof: 2, internal: 3,
+  design: 1, // legacy → was Artwork Creation
+  purchasing: 0,
+  production: 0, ready_to_ship: 1,
+  preproduction: 0, in_production: 0, // legacy
+  shipment_assigned: 0, arrived: 1,
+  shipment_required: 0, // legacy
   invoice_required: 0, invoiced: 1, paid: 2,
   completed: 0,
 };
 
 // Number of user-facing stages per pipeline (used for shade ramp).
-// Single-state pipelines stay at full saturation.
 const STAGE_COUNT: Record<PipelineId, number> = {
-  sales: 4, design: 2, purchasing: 1, production: 1,
-  shipping: 1, finance: 2, completed: 1, operations: 1,
+  sales: 5, design: 4, purchasing: 1, production: 2,
+  shipping: 2, finance: 2, completed: 1, operations: 2,
 };
 
 /** Shade strength 0..1 — earlier stages lighter, later stages full saturation. */
@@ -1609,16 +1612,10 @@ interface StageCellProps {
   anchorEl: HTMLElement | null;
 }
 
-// User-facing stage list per pipeline (Shipping collapses to one row).
-const STAGE_PICKER_GROUPS: { pipeline: PipelineId; stages: { id: StageId; title: string }[] }[] = [
-  { pipeline: "sales",      stages: [{ id: "sourcing", title: "Sourcing" }, { id: "proposal", title: "Proposal" }, { id: "quote", title: "Quote" }, { id: "confirming", title: "Confirming" }] },
-  { pipeline: "design",     stages: [{ id: "design", title: "Design" }, { id: "proof", title: "Proof" }] },
-  { pipeline: "purchasing", stages: [{ id: "purchasing", title: "Purchasing" }] },
-  { pipeline: "production", stages: [{ id: "production", title: "Production" }] },
-  { pipeline: "shipping",   stages: [{ id: "shipment_required", title: "Shipping" }] },
-  { pipeline: "finance",    stages: [{ id: "invoice_required", title: "To Invoice" }, { id: "invoiced", title: "To Collect" }] },
-  { pipeline: "completed",  stages: [{ id: "completed", title: "Completed" }] },
-];
+// User-facing stage list per pipeline — sourced from the central PIPELINES config
+// so adds/renames don't need to be repeated here.
+const STAGE_PICKER_GROUPS: { pipeline: PipelineId; stages: { id: StageId; title: string }[] }[] =
+  PIPELINES.map((p) => ({ pipeline: p.id, stages: p.stages.map((s) => ({ id: s.id, title: s.title })) }));
 
 const StageCell = ({
   cellKey, pipeline, stage, accent, active, flash, onActivate,

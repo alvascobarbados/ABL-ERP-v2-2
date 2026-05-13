@@ -15,26 +15,26 @@ export type PipelineId =
   | "operations";
 
 export type StageId =
-  // sales
-  | "sourcing" | "proposal" | "quote" | "confirming" | "archive"
-  // design
-  | "design" | "proof"
+  // sales (active)
+  | "sourcing" | "proposal" | "quote" | "pending" | "stalled" | "archive"
+  /** @deprecated renamed to "pending" */
+  | "confirming"
+  // design (active)
+  | "client_artwork" | "artwork_creation" | "proof" | "internal"
+  /** @deprecated renamed to "artwork_creation" (as a sub-stage id) */
+  | "design"
   // purchasing — single-state pipeline (procurement: POs, supplier confirmation, deposits)
   | "purchasing"
-  // production — single-state pipeline (factory making the goods)
-  | "production"
+  // production — In Production + Ready to Ship
+  | "production" | "ready_to_ship"
   /** @deprecated split into "purchasing" (pre-production work) and "production" (factory making) */
   | "preproduction"
   /** @deprecated renamed to "production" */
   | "in_production"
-  // shipping — NOT real stages anymore. The Shipping pipeline groups by
-  // mode (Air / Ocean) + assignment status. The two values below are
-  // routing hints only:
-  //   shipment_required → no shipment assigned yet (Awaiting Shipment)
-  //   shipment_assigned → on a shipment (rendered under Air or Ocean)
-  // "Delivered" no longer exists in Shipping — delivered projects move
-  // out of Shipping entirely into Finance · To Invoice.
-  | "shipment_required" | "shipment_assigned"
+  // shipping — In Transit (id stays as "shipment_assigned" for log stability) + Arrived
+  | "shipment_assigned" | "arrived"
+  /** @deprecated awaiting-shipment intake moved to Production · Ready to Ship */
+  | "shipment_required"
   // finance — display labels are "To Invoice" and "To Collect" (the IDs
   // stay so historical audit log entries continue to match cleanly).
   | "invoice_required" | "invoiced"
@@ -67,23 +67,25 @@ export const PIPELINES: PipelineConfig[] = [
   {
     id: "sales",
     title: "Sales",
-    // NOTE: "archive" is a valid StageId and projects can still sit in
-    // sales/archive, but Archive is NOT a kanban stage anymore — it lives
-    // in the left rail (see ArchiveView). Pipeline views, counts, and the
-    // StagePicker hide archived projects entirely.
+    // "archive" is a valid StageId but lives in the left rail, not in the kanban.
+    // "stalled" is a parking sub-stage (not a normal forward step) — kept here
+    // so it shows up in the picker, sub-stage row, and counts.
     stages: [
       { id: "sourcing", title: "Sourcing" },
       { id: "proposal", title: "Proposal" },
       { id: "quote", title: "Quote" },
-      { id: "confirming", title: "Confirming" },
+      { id: "pending", title: "Pending" },
+      { id: "stalled", title: "Stalled" },
     ],
   },
   {
     id: "design",
     title: "Design",
     stages: [
-      { id: "design", title: "Design" },
+      { id: "client_artwork", title: "Client Artwork" },
+      { id: "artwork_creation", title: "Artwork Creation" },
       { id: "proof", title: "Proof" },
+      { id: "internal", title: "Internal" },
     ],
   },
   {
@@ -97,29 +99,24 @@ export const PIPELINES: PipelineConfig[] = [
     id: "production",
     title: "Production",
     stages: [
-      { id: "production", title: "Production" },
+      { id: "production", title: "In Production" },
+      { id: "ready_to_ship", title: "Ready to Ship" },
     ],
   },
   {
     id: "shipping",
     title: "Shipping",
-    // The Shipping pipeline UI does NOT render by stage — it groups by
-    // mode (Air / Ocean) and assignment (Awaiting Shipment). These two
-    // entries exist purely so cross-pipeline navigation (next/prev,
-    // jiggle picker, friendly labels) still has something to point at.
+    // Two real sub-stages now. The Shipping pipeline UI groups by mode
+    // (Air / Ocean) within shipment cards; these stage ids drive the
+    // sub-stage filter and Move Forward / Back semantics.
     stages: [
-      { id: "shipment_required", title: "Awaiting Shipment" },
-      { id: "shipment_assigned", title: "On Shipment" },
+      { id: "shipment_assigned", title: "In Transit" },
+      { id: "arrived", title: "Arrived" },
     ],
   },
   {
     id: "finance",
     title: "Finance",
-    // Finance has exactly TWO sub-stages now. The "paid" stage is no longer
-    // part of the relay race — once a project is paid it moves to the
-    // Completed pipeline below. Display labels are action-oriented:
-    // "To Invoice" / "To Collect" — the IDs stay so historical audit log
-    // entries remain stable.
     stages: [
       { id: "invoice_required", title: "To Invoice" },
       { id: "invoiced", title: "To Collect" },
@@ -128,8 +125,6 @@ export const PIPELINES: PipelineConfig[] = [
   {
     id: "completed",
     title: "Completed",
-    // Single-state terminal pipeline. Reached via "Mark as paid" from
-    // Finance · To Collect (replaces the old finance/paid stage).
     stages: [
       { id: "completed", title: "Completed" },
     ],
@@ -143,12 +138,20 @@ export const isCompletedProject = (p: { pipeline: PipelineId; stage: StageId }) 
   p.pipeline === "completed" || (p.pipeline === "finance" && p.stage === "paid");
 
 export const STAGE_ACCENT: Record<StageId, string> = {
-  sourcing: "amber", proposal: "indigo", quote: "amber", confirming: "emerald", archive: "slate",
-  design: "magenta", proof: "magenta",
-  purchasing: "slate", production: "navy",
-  // legacy — kept for historical log-entry rendering
-  preproduction: "violet", in_production: "orange",
-  shipment_required: "amber", shipment_assigned: "sky",
+  // sales
+  sourcing: "amber", proposal: "indigo", quote: "amber",
+  pending: "emerald", stalled: "slate", archive: "slate",
+  /** legacy */ confirming: "emerald",
+  // design
+  client_artwork: "magenta", artwork_creation: "magenta", proof: "magenta", internal: "slate",
+  /** legacy */ design: "magenta",
+  // purchasing / production
+  purchasing: "slate", production: "navy", ready_to_ship: "navy",
+  /** legacy */ preproduction: "violet", in_production: "orange",
+  // shipping
+  shipment_assigned: "sky", arrived: "teal",
+  /** legacy */ shipment_required: "amber",
+  // finance / completed
   invoice_required: "rose", invoiced: "amber", paid: "emerald",
   completed: "emerald",
 };
