@@ -274,22 +274,28 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     updateProject(live.id, { shipmentNumber: v });
     setEditor(null);
   };
-  const saveNumeric = (field: "weightKg" | "cbm" | "numPackages", integer: boolean) => (raw: string) => {
+  const saveNumericField = (field: "weightKg" | "volumeValue" | "numPackages" | "poAmountUsd" | "depositAmount", integer: boolean) => (raw: string) => {
     const cleaned = (raw ?? "").replace(integer ? /[^\d]/g : /[^\d.]/g, "");
     if (cleaned === "") {
-      updateProject(live.id, { [field]: undefined } as any);
+      updateProject(live.id, { [field]: null } as any);
       setEditor(null);
       return;
     }
     const n = Number(cleaned);
     if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
     const value = integer ? Math.floor(n) : n;
+    if (field === "depositAmount" && live.value && value > live.value) {
+      toast.error("Deposit can't exceed project amount");
+      return;
+    }
     updateProject(live.id, { [field]: value } as any);
     setEditor(null);
   };
-  const saveWeight = saveNumeric("weightKg", false);
-  const saveCbm = saveNumeric("cbm", false);
-  const savePackages = saveNumeric("numPackages", true);
+  const saveWeight = saveNumericField("weightKg", false);
+  const saveVolume = saveNumericField("volumeValue", false);
+  const savePackages = saveNumericField("numPackages", true);
+  const savePoAmount = saveNumericField("poAmountUsd", false);
+  const saveDepositAmount = saveNumericField("depositAmount", false);
   const saveDesignBrief = (v: string) => { updateProject(live.id, { designBrief: v.trim() || undefined }); setEditor(null); };
   const saveProofNumber = (v: string) => {
     const t = (v ?? "").replace(/^\s*P-?/i, "").replace(/\D/g, "").trim();
@@ -303,19 +309,61 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     setEditor(null);
   };
   const saveCompletionDate = (d: Date) => { updateProject(live.id, { completionDate: d }); setEditor(null); };
-  const saveOutstandingBalance = (v: string) => {
-    const cleaned = (v ?? "").replace(/[^\d.]/g, "");
-    if (cleaned === "") { updateProject(live.id, { outstandingBalance: undefined }); setEditor(null); return; }
-    const n = Number(cleaned);
-    if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
-    updateProject(live.id, { outstandingBalance: n });
+
+  // Finance — deposit
+  const toggleDepositRequired = (next: boolean) => {
+    updateProject(live.id, { depositRequired: next });
+  };
+  const saveDepositInvoice = (v: string) => {
+    const t = v.trim() || null;
+    updateProject(live.id, { depositInvoiceNumber: t });
+    setEditor(null);
+  };
+  const saveDepositPaidDate = (d: Date) => { updateProject(live.id, { depositPaidDate: d }); setEditor(null); };
+  const saveDepositPaidMethod = (id: string) => {
+    const m = (id === "Transfer" || id === "Cheque" || id === "Cash") ? (id as PaymentMethod) : null;
+    const patch: any = { depositPaidMethod: m };
+    if (m === "Cash" || m == null) patch.depositPaymentReference = null;
+    updateProject(live.id, patch);
+    setEditor(null);
+  };
+  const saveDepositPaymentRef = (v: string) => {
+    updateProject(live.id, { depositPaymentReference: v.trim() || null });
+    setEditor(null);
+  };
+  // Finance — final invoice
+  const savePaidDate = (d: Date) => { updateProject(live.id, { paidOnDate: d }); setEditor(null); };
+  const savePaidMethod = (id: string) => {
+    const m = (id === "Transfer" || id === "Cheque" || id === "Cash") ? (id as PaymentMethod) : null;
+    const patch: any = { paymentMethod: m };
+    if (m === "Cash" || m == null) patch.paymentReference = null;
+    updateProject(live.id, patch);
+    setEditor(null);
+  };
+  const savePaymentRef = (v: string) => {
+    updateProject(live.id, { paymentReference: v.trim() || null });
+    setEditor(null);
+  };
+  const saveWeightUnit = (id: string) => {
+    if (id === "kg" || id === "lbs") updateProject(live.id, { weightUnit: id as WeightUnit });
+    setEditor(null);
+  };
+  const saveVolumeUnit = (id: string) => {
+    if (id === "CBM" || id === "CuFt") updateProject(live.id, { volumeUnit: id as VolumeUnit });
     setEditor(null);
   };
 
   const submitNote = (text: string) => { addNote(live.id, text); setEditor(null); };
 
   const handlePickSupplier = (id: string) => {
-    updateProject(live.id, { supplierId: id, supplierLabel: undefined });
+    const prior = md.getSupplierByAnyId(live.supplierId);
+    const next = md.suppliers.find((s) => s.id === id);
+    const priorD = defaultsForCountry(prior?.country);
+    const nextD = defaultsForCountry(next?.country);
+    const patch: any = { supplierId: id, supplierLabel: undefined };
+    if ((live.weightUnit ?? "kg") === priorD.weight && nextD.weight !== priorD.weight) patch.weightUnit = nextD.weight;
+    if ((live.volumeUnit ?? "CBM") === priorD.volume && nextD.volume !== priorD.volume) patch.volumeUnit = nextD.volume;
+    updateProject(live.id, patch);
     setEditor(null);
   };
   const handlePickSupplierMeta = (meta: string) => {
