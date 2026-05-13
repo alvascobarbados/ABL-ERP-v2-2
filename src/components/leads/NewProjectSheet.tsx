@@ -16,10 +16,12 @@ import { BuyerPicker } from "./BuyerPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { useMasterData } from "@/hooks/useMasterData";
-import { Project, PIPELINES } from "@/data/pipelines";
+import { Project, PIPELINES, PipelineId, StageId } from "@/data/pipelines";
 
-type InitialStageId = "sourcing" | "proposal" | "quote" | "confirming";
-const INITIAL_STAGES: InitialStageId[] = ["sourcing", "proposal", "quote", "confirming"];
+// Allowed initial pipelines (skip Purchasing — workflow-only intake — and the legacy 'operations' alias).
+const INITIAL_PIPELINES: PipelineId[] = ["sales", "design", "production", "shipping", "finance", "completed"];
+// Skip parking sub-stages from the picker (stalled, internal, archive).
+const PICKER_SKIP: Set<StageId> = new Set(["stalled", "internal", "archive"] as StageId[]);
 import { DEFAULT_USER_INITIALS } from "./UserMenu";
 
 interface Props {
