@@ -410,8 +410,10 @@ export interface Project {
   paymentMethod?: PaymentMethod | null;
   paymentReference?: string | null;
   // ── Block-based detail page (v1) ──
-  /** Purchasing block: USD purchase-order amount (Teshima quote, etc.). */
-  poAmountUsd?: number | null;
+  /** Purchasing block: purchase-order amount (Teshima quote, etc.). */
+  poAmount?: number | null;
+  /** Purchasing block: currency for poAmount. Defaults to supplier-country mapping or USD. */
+  poAmountCurrency?: Currency;
   /** Production & Shipping block: weight unit. Defaults to 'kg'; flips to 'lbs' for USA suppliers. */
   weightUnit?: WeightUnit;
   /** Production & Shipping block: volume value (replaces legacy `cbm`). */
