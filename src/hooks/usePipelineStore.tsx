@@ -311,17 +311,12 @@ export function getStageTitle(pipeline: PipelineId, stage: StageId): string {
 
 function forwardStages(pipeline: PipelineId): StageId[] {
   const p = PIPELINES.find((x) => x.id === pipeline)!;
-  if (pipeline === "sales") return p.stages.filter((s) => s.id !== "archive").map((s) => s.id);
-  if (pipeline === "shipping") return ["shipment_assigned"];
-  return p.stages.map((s) => s.id);
+  // Strip parking/terminal sub-stages from the linear forward path.
+  const SKIP = new Set<StageId>(["archive", "stalled", "internal"]);
+  return p.stages.filter((s) => !SKIP.has(s.id)).map((s) => s.id);
 }
 
 export function getNextStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
-  if (pipeline === "shipping") {
-    if (stage === "shipment_required") return { pipeline: "shipping", stage: "shipment_assigned" };
-    if (stage === "shipment_assigned") return { pipeline: "finance", stage: "invoice_required" };
-    return null;
-  }
   const stages = forwardStages(pipeline);
   const idx = stages.indexOf(stage);
   if (idx >= 0 && idx < stages.length - 1) {
@@ -330,26 +325,19 @@ export function getNextStage(pipeline: PipelineId, stage: StageId): { pipeline: 
   const pi = PIPELINES.findIndex((x) => x.id === pipeline);
   if (pi < PIPELINES.length - 1) {
     const next = PIPELINES[pi + 1];
-    if (next.id === "shipping") return { pipeline: "shipping", stage: "shipment_required" };
-    return { pipeline: next.id, stage: next.stages[0].id };
+    const nextStages = forwardStages(next.id);
+    return { pipeline: next.id, stage: nextStages[0] };
   }
   return null;
 }
 
 export function getPrevStage(pipeline: PipelineId, stage: StageId): { pipeline: PipelineId; stage: StageId } | null {
-  if (pipeline === "shipping") {
-    if (stage === "shipment_assigned" || stage === "shipment_required") {
-      return { pipeline: "production", stage: "production" };
-    }
-    return null;
-  }
   const stages = forwardStages(pipeline);
   const idx = stages.indexOf(stage);
   if (idx > 0) return { pipeline, stage: stages[idx - 1] };
   const pi = PIPELINES.findIndex((x) => x.id === pipeline);
   if (pi > 0) {
     const prev = PIPELINES[pi - 1];
-    if (prev.id === "shipping") return { pipeline: "shipping", stage: "shipment_assigned" };
     const prevStages = forwardStages(prev.id);
     return { pipeline: prev.id, stage: prevStages[prevStages.length - 1] };
   }
@@ -362,15 +350,18 @@ export interface MoveValidation {
   missing: ("detailSummary" | "supplier" | "shippingMode")[];
 }
 
-/** Forward order of stages across all pipelines. `archive` is treated as a terminal exit (not part of the linear flow). */
+/** Forward order of stages across all pipelines. Parking sub-stages
+ *  (stalled, internal, archive) are excluded from the linear flow. */
 export const STAGE_ORDER: StageId[] = [
-  "sourcing", "proposal", "quote", "confirming",
-  "design", "proof",
-  "purchasing", "production",
-  // legacy stage IDs kept in the order so historical log entries still rank correctly
-  "preproduction", "in_production",
-  "shipment_required", "shipment_assigned",
-  "invoice_required", "invoiced", "paid",
+  "sourcing", "proposal", "quote", "pending",
+  "client_artwork", "artwork_creation", "proof",
+  "purchasing",
+  "production", "ready_to_ship",
+  "shipment_assigned", "arrived",
+  "invoice_required", "invoiced",
+  "completed",
+  // legacy IDs kept in the order so historical log entries still rank correctly
+  "confirming", "design", "preproduction", "in_production", "shipment_required", "paid",
 ];
 
 /** Returns true if moving from `from` to `to` advances the project (toward Production/Shipping/Finance/Completed). */
