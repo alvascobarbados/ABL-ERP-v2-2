@@ -19,6 +19,7 @@ import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StagePicker } from "./StagePicker";
 import { usePresence } from "@/hooks/usePresence";
+import { formatAmountFull } from "@/lib/money";
 
 interface Props {
   card: PipelineCard | null;
@@ -472,7 +473,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
               <DetailRow
                 label="Amount"
-                value={live.value ? `$${live.value.toLocaleString()} BBD` : undefined}
+                value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
               <DetailRow

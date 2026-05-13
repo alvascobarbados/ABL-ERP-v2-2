@@ -23,6 +23,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { formatAmountRounded } from "@/lib/money";
 
 // Pipeline order matches the chevron flow (Sales → Design → Purchasing → Production → Shipping → Finance → Completed).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
@@ -89,8 +90,7 @@ function urgencyLabel(date?: Date): { text: string; tone: "urgent" | "soon" | "n
 }
 
 function fmtMoney(v: number | undefined): string {
-  if (!v && v !== 0) return "—";
-  return `$${v.toLocaleString()}`;
+  return formatAmountRounded(v);
 }
 
 function fmtDeadline(date?: Date): string {
@@ -502,7 +502,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             }}
           >
             {sorted.length} project{sorted.length === 1 ? "" : "s"}
-            {totalAmount > 0 && <> · ${totalAmount.toLocaleString()} BBD total</>}
+            {totalAmount > 0 && <> · ${Math.round(totalAmount).toLocaleString()} BBD total</>}
           </div>
         </div>
       </div>
