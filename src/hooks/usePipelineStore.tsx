@@ -229,7 +229,11 @@ function projectToRow(p: Project): any {
     tracking_ref: p.trackingRef ?? null,
     shipment_number: p.shipmentNumber ?? null,
     weight_kg: p.weightKg ?? null,
-    cbm: p.cbm ?? null,
+    weight_unit: p.weightUnit ?? "kg",
+    volume_value: p.volumeValue ?? null,
+    volume_unit: p.volumeUnit ?? "CBM",
+    // Legacy mirror: keep `cbm` populated when volume is in CBM, NULL otherwise.
+    cbm: (p.volumeUnit ?? "CBM") === "CBM" && p.volumeValue != null ? Number(p.volumeValue) : null,
     num_packages: p.numPackages ?? null,
     design_brief: p.designBrief ?? null,
     completion_date: p.completionDate ? p.completionDate.toISOString() : null,
