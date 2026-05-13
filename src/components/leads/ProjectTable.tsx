@@ -1602,6 +1602,7 @@ const StageCell = ({
         display={<StageStatePill pipeline={pipeline} stage={stage} accent={accent} />}
         active={active}
         flash={flash}
+        noClickEdit
         onActivate={onActivate}
       />
       {open && (
