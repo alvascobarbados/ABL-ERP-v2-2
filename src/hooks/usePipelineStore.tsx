@@ -423,6 +423,9 @@ interface PipelineStoreCtx {
   updateProject: (id: string, patch: Partial<Project>) => Promise<void>;
   renameProject: (currentName: string, newName: string) => Promise<{ count: number }>;
   addNote: (projectId: string, text: string, author?: string) => Promise<void>;
+  updateNote: (projectId: string, noteId: string, newText: string) => Promise<void>;
+  removeNote: (projectId: string, noteId: string) => Promise<void>;
+  restoreNote: (projectId: string, note: ProjectNote) => Promise<void>;
   addLineItem: (projectId: string, item: LineItem) => Promise<void>;
   updateLineItem: (projectId: string, index: number, item: LineItem) => Promise<void>;
   removeLineItem: (projectId: string, index: number) => Promise<void>;
@@ -490,6 +493,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         arr.push({
           id: r.id, ts: new Date(r.ts), author: r.author,
           authorUserId: r.author_user_id ?? undefined, text: r.text, auto: r.auto,
+          updatedAt: r.updated_at ? new Date(r.updated_at) : undefined,
         });
         notesByProj.set(r.project_id, arr);
       }
