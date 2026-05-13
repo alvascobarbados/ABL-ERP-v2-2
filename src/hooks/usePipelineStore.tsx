@@ -56,8 +56,10 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
   shippingMode: "mode",
   trackingRef: "tracking",
   shipmentNumber: "shipment number",
-  weightKg: "weight (kg)",
-  cbm: "CBM",
+  weightKg: "weight",
+  weightUnit: "weight unit",
+  volumeValue: "volume",
+  volumeUnit: "volume unit",
   numPackages: "no. of packages",
   designBrief: "design brief",
   completionDate: "completion date",
@@ -71,9 +73,19 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
   quoteNumber: "Q#",
   proofNumber: "proof number",
   poNumber: "PO#",
-  invoiceNumber: "INV#",
+  invoiceNumber: "invoice number",
   paymentTerms: "payment terms",
   invoiceIssuedDate: "invoice issued date",
+  poAmountUsd: "PO amount",
+  depositRequired: "deposit required",
+  depositInvoiceNumber: "deposit invoice",
+  depositAmount: "deposit amount",
+  depositPaidDate: "deposit paid date",
+  depositPaidMethod: "deposit paid method",
+  depositPaymentReference: "deposit payment reference",
+  paidOnDate: "paid date",
+  paymentMethod: "paid method",
+  paymentReference: "payment reference",
 };
 
 const SUPPRESSED_FIELDS = new Set<keyof Project>([
@@ -82,8 +94,9 @@ const SUPPRESSED_FIELDS = new Set<keyof Project>([
   "deletedAt", "deletedFromPipeline", "deletedFromStage",
   "invoiceRequiredEnteredAt", "invoiceIssuedDateAssumed",
   "paymentTermsInherited", "paymentTermsCustomDays",
-  "paidOnDate", "paymentMethod", "paymentReference",
   "salesShippingLabel",
+  // legacy mirror — Volume fields are the source of truth now
+  "cbm",
 ]);
 
 function fmtVal(field: keyof Project, val: unknown, suppliers: Supplier[]): string {
