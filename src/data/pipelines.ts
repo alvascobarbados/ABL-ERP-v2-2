@@ -15,26 +15,26 @@ export type PipelineId =
   | "operations";
 
 export type StageId =
-  // sales
-  | "sourcing" | "proposal" | "quote" | "confirming" | "archive"
-  // design
-  | "design" | "proof"
+  // sales (active)
+  | "sourcing" | "proposal" | "quote" | "pending" | "stalled" | "archive"
+  /** @deprecated renamed to "pending" */
+  | "confirming"
+  // design (active)
+  | "client_artwork" | "artwork_creation" | "proof" | "internal"
+  /** @deprecated renamed to "artwork_creation" (as a sub-stage id) */
+  | "design"
   // purchasing — single-state pipeline (procurement: POs, supplier confirmation, deposits)
   | "purchasing"
-  // production — single-state pipeline (factory making the goods)
-  | "production"
+  // production — In Production + Ready to Ship
+  | "production" | "ready_to_ship"
   /** @deprecated split into "purchasing" (pre-production work) and "production" (factory making) */
   | "preproduction"
   /** @deprecated renamed to "production" */
   | "in_production"
-  // shipping — NOT real stages anymore. The Shipping pipeline groups by
-  // mode (Air / Ocean) + assignment status. The two values below are
-  // routing hints only:
-  //   shipment_required → no shipment assigned yet (Awaiting Shipment)
-  //   shipment_assigned → on a shipment (rendered under Air or Ocean)
-  // "Delivered" no longer exists in Shipping — delivered projects move
-  // out of Shipping entirely into Finance · To Invoice.
-  | "shipment_required" | "shipment_assigned"
+  // shipping — In Transit (id stays as "shipment_assigned" for log stability) + Arrived
+  | "shipment_assigned" | "arrived"
+  /** @deprecated awaiting-shipment intake moved to Production · Ready to Ship */
+  | "shipment_required"
   // finance — display labels are "To Invoice" and "To Collect" (the IDs
   // stay so historical audit log entries continue to match cleanly).
   | "invoice_required" | "invoiced"
