@@ -866,6 +866,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const createProject = useCallback<PipelineStoreCtx["createProject"]>(async (input) => {
     const u = userRef.current;
+    const initialPipeline: PipelineId = input.initialPipeline ?? "sales";
     const initialStage: StageId = input.initialStage ?? "sourcing";
     const userSetDeadline = !!input.deadlineDate;
     const deadlineDate = input.deadlineDate ?? null;
@@ -879,7 +880,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       projectName: input.projectName,
       detailSummary: input.detailSummary,
       pointPerson: input.pointPerson ?? "AV",
-      pipeline: "sales", stage: initialStage,
+      pipeline: initialPipeline, stage: initialStage,
       deadline: deadlineLabel ?? "—",
       deadlineDate,
       value: 0, orderType: "New", priority: "Standard",
@@ -887,10 +888,11 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       paymentTerms: "Net 30",
       paymentTermsInherited: true,
     };
-    const stageTitle = getStageTitle("sales", initialStage);
+    const pipelineTitle = PIPELINES.find((p) => p.id === initialPipeline)?.title ?? initialPipeline;
+    const stageTitle = getStageTitle(initialPipeline, initialStage);
     const desc = userSetDeadline && deadlineLabel
-      ? `${u.shortName} created this project in Sales · ${stageTitle} with deadline ${deadlineLabel}`
-      : `${u.shortName} created this project in Sales · ${stageTitle}`;
+      ? `${u.shortName} created this project in ${pipelineTitle} · ${stageTitle} with deadline ${deadlineLabel}`
+      : `${u.shortName} created this project in ${pipelineTitle} · ${stageTitle}`;
     const r = appendLog(newProj, { actor: actorOf(u), actionType: "project_created", description: desc });
     const ok = await commitProjectChange(r.project, [r.entry]);
     return ok ? r.project : null;
