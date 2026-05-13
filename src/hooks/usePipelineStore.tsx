@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import {
   PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
   ProjectLogEntry, ProjectLogActionType,
-  SUPPLIERS, ShippingMode,
+  SUPPLIERS, ShippingMode, PaymentMethod, WeightUnit, VolumeUnit,
 } from "@/data/pipelines";
 import { useCurrentUser, type CurrentUser } from "./useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
