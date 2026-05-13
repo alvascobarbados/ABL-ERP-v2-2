@@ -226,18 +226,23 @@ export const LineItemsGrid = ({ projectId, items, addLineItem, updateLineItem, r
 
   const handleBlur = (rowKey: string, field: Field) => () => { commitCell(rowKey, field); };
 
-  // Discard untouched pending rows when focus leaves the entire grid
+  // Discard untouched pending rows when focus leaves the entire grid.
+  // Defer one frame so we don't kill a row that was just added by clicking
+  // the "+ Add line item" button (focus hasn't reached the new input yet).
   useEffect(() => {
     const root = containerRef.current; if (!root) return;
-    const handler = (e: FocusEvent) => {
-      const next = e.relatedTarget as Node | null;
-      if (next && root.contains(next)) return;
-      setPending((prev) => prev.filter((p) => {
-        const d = drafts[pKey(p.key)] ?? {};
-        const keep = (d.description ?? "").trim() !== "";
-        if (!keep) clearDraftField(pKey(p.key));
-        return keep;
-      }));
+    const handler = () => {
+      requestAnimationFrame(() => {
+        const r = containerRef.current; if (!r) return;
+        const active = document.activeElement as Node | null;
+        if (active && r.contains(active)) return;
+        setPending((prev) => prev.filter((p) => {
+          const d = drafts[pKey(p.key)] ?? {};
+          const keep = (d.description ?? "").trim() !== "";
+          if (!keep) clearDraftField(pKey(p.key));
+          return keep;
+        }));
+      });
     };
     root.addEventListener("focusout", handler);
     return () => root.removeEventListener("focusout", handler);
