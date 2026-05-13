@@ -73,6 +73,10 @@ interface Props {
   onClearFilters?: () => void;
   /** When true (sub-chevron stage selected), drop the Stage column entirely. */
   hideStageColumn?: boolean;
+  /** Currently-open project detail card id (drives Spacebar/Esc behavior). */
+  selectedCardId?: string | null;
+  /** Close the detail page (Spacebar / Esc when detail is open). */
+  onCloseDetail?: () => void;
 }
 
 const DAY = 86400000;
