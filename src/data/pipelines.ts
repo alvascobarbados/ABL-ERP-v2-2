@@ -363,9 +363,26 @@ export interface Project {
   invoiceRequiredEnteredAt?: Date;
   // ── Phase-2 paid-capture fields (nullable; no UI yet) ──
   paidOnDate?: Date | null;
-  paymentMethod?: string | null;
+  paymentMethod?: PaymentMethod | null;
   paymentReference?: string | null;
-}
+  // ── Block-based detail page (v1) ──
+  /** Purchasing block: USD purchase-order amount (Teshima quote, etc.). */
+  poAmountUsd?: number | null;
+  /** Production & Shipping block: weight unit. Defaults to 'kg'; flips to 'lbs' for USA suppliers. */
+  weightUnit?: WeightUnit;
+  /** Production & Shipping block: volume value (replaces legacy `cbm`). */
+  volumeValue?: number | null;
+  /** Production & Shipping block: volume unit. Defaults to 'CBM'; flips to 'CuFt' for USA suppliers. */
+  volumeUnit?: VolumeUnit;
+  // ── Finance block: deposit ──
+  /** When true, deposit rows render in the Finance section. Off by default. */
+  depositRequired?: boolean;
+  depositInvoiceNumber?: string | null;
+  depositAmount?: number | null;
+  depositPaidDate?: Date | null;
+  depositPaidMethod?: PaymentMethod | null;
+  /** Single column stores either Bank Ref No. (Transfer) or Cheque No. (Cheque). */
+  depositPaymentReference?: string | null;
 
 /** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
 export type AirCarrier = "DHL" | "FedEx";
