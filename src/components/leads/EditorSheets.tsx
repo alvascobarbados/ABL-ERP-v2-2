@@ -228,8 +228,9 @@ interface DateEditorProps {
   title: string;
   value?: Date;
   onSave: (d: Date) => void;
+  onClear?: () => void;
 }
-export const DateEditor = ({ open, onClose, title, value, onSave }: DateEditorProps) => {
+export const DateEditor = ({ open, onClose, title, value, onSave, onClear }: DateEditorProps) => {
   const [d, setD] = useState<Date | undefined>(value);
   useEffect(() => { if (open) setD(value); }, [open, value]);
   return (
@@ -242,6 +243,17 @@ export const DateEditor = ({ open, onClose, title, value, onSave }: DateEditorPr
           className="p-3 pointer-events-auto"
         />
       </div>
+      {onClear && value && (
+        <div className="mt-3 flex justify-center">
+          <button
+            onClick={onClear}
+            className="text-[13px] italic px-3 py-2 rounded-lg hover:bg-muted/40 transition-colors"
+            style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
+          >
+            — Clear date —
+          </button>
+        </div>
+      )}
     </BottomSheet>
   );
 };
