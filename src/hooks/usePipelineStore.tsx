@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import {
   PIPELINES, PipelineId, StageId, Project, Shipment, Supplier, ProjectNote, LineItem,
   ProjectLogEntry, ProjectLogActionType,
-  SUPPLIERS, ShippingMode,
+  SUPPLIERS, ShippingMode, PaymentMethod, WeightUnit, VolumeUnit,
 } from "@/data/pipelines";
 import { useCurrentUser, type CurrentUser } from "./useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,8 +56,10 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
   shippingMode: "mode",
   trackingRef: "tracking",
   shipmentNumber: "shipment number",
-  weightKg: "weight (kg)",
-  cbm: "CBM",
+  weightKg: "weight",
+  weightUnit: "weight unit",
+  volumeValue: "volume",
+  volumeUnit: "volume unit",
   numPackages: "no. of packages",
   designBrief: "design brief",
   completionDate: "completion date",
@@ -71,9 +73,19 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
   quoteNumber: "Q#",
   proofNumber: "proof number",
   poNumber: "PO#",
-  invoiceNumber: "INV#",
+  invoiceNumber: "invoice number",
   paymentTerms: "payment terms",
   invoiceIssuedDate: "invoice issued date",
+  poAmountUsd: "PO amount",
+  depositRequired: "deposit required",
+  depositInvoiceNumber: "deposit invoice",
+  depositAmount: "deposit amount",
+  depositPaidDate: "deposit paid date",
+  depositPaidMethod: "deposit paid method",
+  depositPaymentReference: "deposit payment reference",
+  paidOnDate: "paid date",
+  paymentMethod: "paid method",
+  paymentReference: "payment reference",
 };
 
 const SUPPRESSED_FIELDS = new Set<keyof Project>([
@@ -82,8 +94,9 @@ const SUPPRESSED_FIELDS = new Set<keyof Project>([
   "deletedAt", "deletedFromPipeline", "deletedFromStage",
   "invoiceRequiredEnteredAt", "invoiceIssuedDateAssumed",
   "paymentTermsInherited", "paymentTermsCustomDays",
-  "paidOnDate", "paymentMethod", "paymentReference",
   "salesShippingLabel",
+  // legacy mirror — Volume fields are the source of truth now
+  "cbm",
 ]);
 
 function fmtVal(field: keyof Project, val: unknown, suppliers: Supplier[]): string {
@@ -181,8 +194,18 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     invoiceIssuedDateAssumed: row.invoice_issued_date_assumed ?? undefined,
     invoiceRequiredEnteredAt: row.invoice_required_entered_at ? new Date(row.invoice_required_entered_at) : undefined,
     paidOnDate: row.paid_on_date ? new Date(row.paid_on_date) : null,
-    paymentMethod: row.payment_method ?? null,
+    paymentMethod: (row.payment_method ?? null) as PaymentMethod | null,
     paymentReference: row.payment_reference ?? null,
+    poAmountUsd: row.po_amount_usd != null ? Number(row.po_amount_usd) : null,
+    weightUnit: (row.weight_unit ?? "kg") as WeightUnit,
+    volumeValue: row.volume_value != null ? Number(row.volume_value) : (row.cbm != null ? Number(row.cbm) : null),
+    volumeUnit: (row.volume_unit ?? "CBM") as VolumeUnit,
+    depositRequired: !!row.deposit_required,
+    depositInvoiceNumber: row.deposit_invoice_number ?? null,
+    depositAmount: row.deposit_amount != null ? Number(row.deposit_amount) : null,
+    depositPaidDate: row.deposit_paid_date ? new Date(row.deposit_paid_date) : null,
+    depositPaidMethod: (row.deposit_paid_method ?? null) as PaymentMethod | null,
+    depositPaymentReference: row.deposit_payment_reference ?? null,
     notes: notesByProj.get(row.id),
     log: logByProj.get(row.id),
     lineItems: itemsByProj.get(row.id),
@@ -206,7 +229,11 @@ function projectToRow(p: Project): any {
     tracking_ref: p.trackingRef ?? null,
     shipment_number: p.shipmentNumber ?? null,
     weight_kg: p.weightKg ?? null,
-    cbm: p.cbm ?? null,
+    weight_unit: p.weightUnit ?? "kg",
+    volume_value: p.volumeValue ?? null,
+    volume_unit: p.volumeUnit ?? "CBM",
+    // Legacy mirror: keep `cbm` populated when volume is in CBM, NULL otherwise.
+    cbm: (p.volumeUnit ?? "CBM") === "CBM" && p.volumeValue != null ? Number(p.volumeValue) : null,
     num_packages: p.numPackages ?? null,
     design_brief: p.designBrief ?? null,
     completion_date: p.completionDate ? p.completionDate.toISOString() : null,
@@ -236,6 +263,13 @@ function projectToRow(p: Project): any {
     paid_on_date: p.paidOnDate ? p.paidOnDate.toISOString() : null,
     payment_method: p.paymentMethod ?? null,
     payment_reference: p.paymentReference ?? null,
+    po_amount_usd: p.poAmountUsd ?? null,
+    deposit_required: !!p.depositRequired,
+    deposit_invoice_number: p.depositInvoiceNumber ?? null,
+    deposit_amount: p.depositAmount ?? null,
+    deposit_paid_date: p.depositPaidDate ? p.depositPaidDate.toISOString() : null,
+    deposit_paid_method: p.depositPaidMethod ?? null,
+    deposit_payment_reference: p.depositPaymentReference ?? null,
     updated_at: new Date().toISOString(),
   };
 }
