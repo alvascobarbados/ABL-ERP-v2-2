@@ -1324,6 +1324,7 @@ const TableRow = ({
         }}
       />
     </div>
+    </RowProvider>
   );
 };
 
