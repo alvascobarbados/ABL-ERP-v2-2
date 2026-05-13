@@ -1153,6 +1153,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         options={SHIPPING_MODE_OPTIONS}
         selectedId={live.shippingMode}
         onPick={handlePickShippingMode}
+        onClear={clearShippingMode}
       />
 
       <StagePicker
