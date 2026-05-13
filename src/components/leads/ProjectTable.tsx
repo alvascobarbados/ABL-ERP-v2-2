@@ -1676,3 +1676,53 @@ const StageCell = ({
     </>
   );
 };
+
+// ── Keyboard handler (Spacebar / Esc) ─────────────────────────────────
+// Mounted inside SelectionProvider so it can read the selected row id and
+// drive Spacebar (open/close detail) + Esc (close detail when open).
+interface TableKeyboardProps {
+  sorted: PipelineCard[];
+  selectedCardId?: string | null;
+  onOpenCard: (c: PipelineCard) => void;
+  onCloseDetail?: () => void;
+}
+const TableKeyboard = ({ sorted, selectedCardId, onOpenCard, onCloseDetail }: TableKeyboardProps) => {
+  const sel = useCellSelection();
+  useEffect(() => {
+    const isFormTarget = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el as any).isContentEditable;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (isFormTarget(e.target)) return;
+      // Spacebar
+      if (e.key === " " || e.code === "Space") {
+        if (selectedCardId && onCloseDetail) {
+          e.preventDefault();
+          onCloseDetail();
+          return;
+        }
+        if (sel?.selectedRowId && !sel.editing) {
+          const card = sorted.find((c) => c.id === sel.selectedRowId);
+          if (card) {
+            e.preventDefault();
+            onOpenCard(card);
+          }
+        }
+        return;
+      }
+      // Escape — when detail is open, close it (preempts provider's deselect).
+      if (e.key === "Escape") {
+        if (selectedCardId && onCloseDetail && !sel?.editing) {
+          e.preventDefault();
+          onCloseDetail();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sorted, selectedCardId, onOpenCard, onCloseDetail, sel]);
+  return null;
+};
