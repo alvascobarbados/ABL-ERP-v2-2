@@ -20,6 +20,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { StagePicker } from "./StagePicker";
 import { usePresence } from "@/hooks/usePresence";
 import { formatAmountFull } from "@/lib/money";
+import { LineItemsGrid } from "./LineItemsGrid";
 
 interface Props {
   card: PipelineCard | null;
@@ -83,8 +84,6 @@ type EditorKind =
   | { kind: "completionDate" }
   | { kind: "outstandingBalance" }
   | { kind: "addNote" }
-  | { kind: "addLineItem" }
-  | { kind: "editLineItem"; index: number }
   | { kind: "supplier" }
   | { kind: "shippingMode" }
   | null;
@@ -578,50 +577,22 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
 
           {/* ── LINE ITEMS ── */}
           <section>
-            <SectionHeaderWithAction onAction={() => setEditor({ kind: "addLineItem" })}>Line items</SectionHeaderWithAction>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h2
+                className="text-[11px] uppercase font-semibold"
+                style={{ color: "hsl(var(--brand-navy) / 0.5)", letterSpacing: "0.08em" }}
+              >
+                Line items
+              </h2>
+            </div>
             <SectionCard>
-            {!live.lineItems || live.lineItems.length === 0 ? (
-              <div className="text-[13px] italic text-muted-foreground/70">No line items yet</div>
-            ) : (() => {
-              const items = live.lineItems;
-              const maxDigits = Math.max(...items.map((li) => li.qty.toLocaleString().length), 3);
-              const sumTotal = items.reduce((n, li) => n + (typeof li.total === "number" ? li.total : 0), 0);
-              const showSum = sumTotal > 0;
-              const fmt = (n: number) =>
-                n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-              return (
-                <>
-                  <ul className="divide-y" style={{ borderColor: "hsl(var(--brand-navy) / 0.08)" }}>
-                    {items.map((li, i) => (
-                      <li key={i}>
-                        <button
-                          onClick={() => setEditor({ kind: "editLineItem", index: i })}
-                          className="w-full flex items-center gap-3 py-2.5 text-left rounded-md hover:bg-muted/40 transition-colors px-2 -mx-2"
-                          style={{ minHeight: 40 }}
-                        >
-                          <span className="text-right tabular font-semibold text-foreground shrink-0" style={{ width: `${maxDigits + 1}ch` }}>
-                            {li.qty.toLocaleString()}
-                          </span>
-                          <span className="text-muted-foreground/60">×</span>
-                          <span className="text-foreground/90 leading-snug flex-1 min-w-0 break-words">{li.description}</span>
-                          <span className="tabular shrink-0 text-right text-[13px]" style={{ minWidth: 64, color: "hsl(var(--brand-navy) / 0.65)" }}>
-                            {typeof li.unitPrice === "number" ? `$${fmt(li.unitPrice)}` : "—"}
-                          </span>
-                          <span className="tabular shrink-0 text-right text-[13px] font-semibold" style={{ minWidth: 80, color: "hsl(var(--brand-navy))" }}>
-                            {typeof li.total === "number" ? `$${fmt(li.total)}` : "—"}
-                          </span>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-2 text-right text-[12px] tabular" style={{ color: "hsl(var(--brand-navy) / 0.65)" }}>
-                    {items.length} {items.length === 1 ? "item" : "items"}
-                    {showSum && ` · $${fmt(sumTotal)} BBD`}
-                  </div>
-                </>
-              );
-            })()}
+              <LineItemsGrid
+                projectId={live.id}
+                items={live.lineItems ?? []}
+                addLineItem={addLineItem}
+                updateLineItem={updateLineItem}
+                removeLineItem={removeLineItem}
+              />
             </SectionCard>
           </section>
 
@@ -832,47 +803,6 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         placeholder="Write a note…"
         multiline
         onSave={submitNote}
-      />
-      <ProductLineItemEditor
-        open={editor?.kind === "addLineItem"}
-        onClose={() => setEditor(null)}
-        title="Add line item"
-        qty=""
-        description=""
-        onSave={(q, d, price) => {
-          addLineItem(live.id, {
-            qty: q,
-            description: d,
-            unitPrice: price,
-            total: price !== undefined ? +(q * price).toFixed(2) : undefined,
-          });
-          setEditor(null);
-        }}
-      />
-      <ProductLineItemEditor
-        open={editor?.kind === "editLineItem"}
-        onClose={() => setEditor(null)}
-        title="Edit line item"
-        qty={editor?.kind === "editLineItem" ? (live.lineItems?.[editor.index]?.qty ?? 0) : 0}
-        description={editor?.kind === "editLineItem" ? (live.lineItems?.[editor.index]?.description ?? "") : ""}
-        unitPrice={editor?.kind === "editLineItem" ? live.lineItems?.[editor.index]?.unitPrice : undefined}
-        onSave={(q, d, price) => {
-          if (editor?.kind !== "editLineItem") return;
-          const existing = live.lineItems?.[editor.index];
-          updateLineItem(live.id, editor.index, {
-            ...existing,
-            qty: q,
-            description: d,
-            unitPrice: price,
-            total: price !== undefined ? +(q * price).toFixed(2) : undefined,
-          });
-          setEditor(null);
-        }}
-        onDelete={() => {
-          if (editor?.kind !== "editLineItem") return;
-          removeLineItem(live.id, editor.index);
-          setEditor(null);
-        }}
       />
       <EntityPicker
         open={editor?.kind === "supplier"}
@@ -1132,117 +1062,6 @@ const ActivitySection = ({
   );
 };
 
-// ───────────── Line item editor (unchanged from previous version) ─────────────
-interface LineItemEditorProps {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  qty: number | "";
-  description: string;
-  unitPrice?: number;
-  onSave: (qty: number, description: string, unitPrice?: number) => void;
-  onDelete?: () => void;
-}
-const fmtMoney = (n: number) =>
-  n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const ProductLineItemEditor = ({
-  open, onClose, title, qty, description, unitPrice, onSave, onDelete,
-}: LineItemEditorProps) => {
-  const [q, setQ] = useState<string>(String(qty ?? ""));
-  const [d, setD] = useState(description);
-  const [price, setPrice] = useState<string>(unitPrice != null ? String(unitPrice) : "");
-
-  useEffect(() => {
-    if (open) {
-      setQ(String(qty ?? ""));
-      setD(description);
-      setPrice(unitPrice != null ? String(unitPrice) : "");
-    }
-  }, [open, qty, description, unitPrice]);
-
-  const qNum = Number(q);
-  const priceNum = price.trim() === "" ? undefined : Number(price);
-  const priceValid = priceNum === undefined || (!Number.isNaN(priceNum) && priceNum >= 0);
-  const valid = qNum > 0 && d.trim().length > 0 && priceValid;
-  const computedTotal = priceNum !== undefined && qNum > 0 ? qNum * priceNum : undefined;
-
-  return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={title}
-      onSave={() => valid && onSave(qNum, d.trim(), priceNum)}
-      saveDisabled={!valid}
-    >
-      <div className="space-y-3">
-        <div>
-          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Quantity</label>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value.replace(/[^\d]/g, ""))}
-            inputMode="numeric"
-            placeholder="0"
-            className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
-            style={{ minHeight: 48 }}
-            autoFocus
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">Description</label>
-          <input
-            value={d}
-            onChange={(e) => setD(e.target.value)}
-            placeholder="e.g. Branded Coolers 60L"
-            className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
-            style={{ minHeight: 48 }}
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
-            Unit price <span className="normal-case tracking-normal text-muted-foreground/70">(BBD, optional)</span>
-          </label>
-          <div className="relative">
-            <span
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] tabular pointer-events-none"
-              style={{ color: "hsl(var(--brand-navy) / 0.55)" }}
-            >$</span>
-            <input
-              value={price}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d.]/g, "");
-                const parts = v.split(".");
-                const cleaned = parts.length > 1
-                  ? `${parts[0]}.${parts.slice(1).join("").slice(0, 2)}`
-                  : v;
-                setPrice(cleaned);
-              }}
-              inputMode="decimal"
-              placeholder="0.00"
-              className="w-full rounded-xl border border-border bg-card pl-7 pr-3 py-2.5 text-[15px] tabular focus:outline-none focus:ring-2 focus:ring-[hsl(var(--brand-navy)/0.4)]"
-              style={{ minHeight: 48 }}
-            />
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[12px]" style={{ color: "hsl(var(--brand-navy) / 0.65)" }}>
-            <span className="uppercase tracking-[0.16em] text-muted-foreground/80">Total</span>
-            <span className="tabular font-semibold" style={{ color: "hsl(var(--brand-navy))" }}>
-              {computedTotal !== undefined ? `$${fmtMoney(computedTotal)}` : "—"}
-            </span>
-          </div>
-        </div>
-        {onDelete && (
-          <button
-            onClick={onDelete}
-            className="w-full mt-2 px-3.5 py-3 rounded-xl border text-sm font-medium hover:bg-muted/40 transition-colors"
-            style={{ borderColor: "hsl(var(--urgent) / 0.4)", color: "hsl(var(--urgent))", minHeight: 48 }}
-          >
-            Delete item
-          </button>
-        )}
-      </div>
-    </BottomSheet>
-  );
-};
 
 // ── Presence avatars (top-right of sticky header) ──────────────────────
 function PresenceAvatars({ users }: { users: import("@/hooks/usePresence").PresentUser[] }) {
