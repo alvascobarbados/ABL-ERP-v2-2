@@ -1152,7 +1152,7 @@ const NoteCard = ({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+                onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
                 className={cn(
                   "p-1 rounded-md hover:bg-muted/60 transition-opacity",
