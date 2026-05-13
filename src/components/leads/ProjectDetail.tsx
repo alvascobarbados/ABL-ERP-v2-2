@@ -1,4 +1,4 @@
-import { ArrowLeft, MoreVertical, ChevronRight, Plus, Flag, ArrowRight } from "lucide-react";
+import { ArrowLeft, MoreVertical, ChevronRight, Plus, Flag, ArrowRight, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import {
   PipelineCard, PIPELINES, PipelineId, StageId, ShippingMode,
   SupplierLabelHint, ProjectLogEntry, ProjectLogActionType,
@@ -21,6 +21,10 @@ import { StagePicker } from "./StagePicker";
 import { usePresence } from "@/hooks/usePresence";
 import { formatAmountFull } from "@/lib/money";
 import { LineItemsGrid } from "./LineItemsGrid";
+import { canEditNote, canDeleteNote } from "@/lib/permissions";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { ProjectNote } from "@/data/pipelines";
 
 interface Props {
   card: PipelineCard | null;
