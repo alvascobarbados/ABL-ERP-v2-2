@@ -38,7 +38,8 @@ export const NewProjectSheet = ({ open, onClose, onCreated }: Props) => {
   const [projectName, setProjectName] = useState("");
   const [detail, setDetail] = useState("");
   const [deadline, setDeadline] = useState(""); // yyyy-mm-dd or ""
-  const [initialStage, setInitialStage] = useState<InitialStageId>("sourcing");
+  const [initialPipeline, setInitialPipeline] = useState<PipelineId>("sales");
+  const [initialStage, setInitialStage] = useState<StageId>("sourcing");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [buyerPickerOpen, setBuyerPickerOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
