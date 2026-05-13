@@ -266,6 +266,12 @@ export type Database = {
           deleted_at: string | null
           deleted_from_pipeline: string | null
           deleted_from_stage: string | null
+          deposit_amount: number | null
+          deposit_invoice_number: string | null
+          deposit_paid_date: string | null
+          deposit_paid_method: string | null
+          deposit_payment_reference: string | null
+          deposit_required: boolean
           design_brief: string | null
           detail_summary: string | null
           flagged: boolean
@@ -284,6 +290,7 @@ export type Database = {
           payment_terms_custom_days: number | null
           payment_terms_inherited: boolean | null
           pipeline_id: string
+          po_amount_usd: number | null
           po_number: string | null
           point_person: string
           priority: string
@@ -301,7 +308,10 @@ export type Database = {
           tracking_ref: string | null
           updated_at: string
           value: number
+          volume_unit: string
+          volume_value: number | null
           weight_kg: number | null
+          weight_unit: string
         }
         Insert: {
           buyer_id?: string | null
@@ -315,6 +325,12 @@ export type Database = {
           deleted_at?: string | null
           deleted_from_pipeline?: string | null
           deleted_from_stage?: string | null
+          deposit_amount?: number | null
+          deposit_invoice_number?: string | null
+          deposit_paid_date?: string | null
+          deposit_paid_method?: string | null
+          deposit_payment_reference?: string | null
+          deposit_required?: boolean
           design_brief?: string | null
           detail_summary?: string | null
           flagged?: boolean
@@ -333,6 +349,7 @@ export type Database = {
           payment_terms_custom_days?: number | null
           payment_terms_inherited?: boolean | null
           pipeline_id: string
+          po_amount_usd?: number | null
           po_number?: string | null
           point_person: string
           priority?: string
@@ -350,7 +367,10 @@ export type Database = {
           tracking_ref?: string | null
           updated_at?: string
           value?: number
+          volume_unit?: string
+          volume_value?: number | null
           weight_kg?: number | null
+          weight_unit?: string
         }
         Update: {
           buyer_id?: string | null
@@ -364,6 +384,12 @@ export type Database = {
           deleted_at?: string | null
           deleted_from_pipeline?: string | null
           deleted_from_stage?: string | null
+          deposit_amount?: number | null
+          deposit_invoice_number?: string | null
+          deposit_paid_date?: string | null
+          deposit_paid_method?: string | null
+          deposit_payment_reference?: string | null
+          deposit_required?: boolean
           design_brief?: string | null
           detail_summary?: string | null
           flagged?: boolean
@@ -382,6 +408,7 @@ export type Database = {
           payment_terms_custom_days?: number | null
           payment_terms_inherited?: boolean | null
           pipeline_id?: string
+          po_amount_usd?: number | null
           po_number?: string | null
           point_person?: string
           priority?: string
@@ -399,7 +426,10 @@ export type Database = {
           tracking_ref?: string | null
           updated_at?: string
           value?: number
+          volume_unit?: string
+          volume_value?: number | null
           weight_kg?: number | null
+          weight_unit?: string
         }
         Relationships: [
           {
@@ -459,7 +489,7 @@ export type Database = {
       }
       suppliers: {
         Row: {
-          country: string | null
+          country: string
           created_at: string
           default_shipping_mode: string | null
           id: string
@@ -469,7 +499,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          country?: string | null
+          country?: string
           created_at?: string
           default_shipping_mode?: string | null
           id?: string
@@ -479,7 +509,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          country?: string | null
+          country?: string
           created_at?: string
           default_shipping_mode?: string | null
           id?: string
