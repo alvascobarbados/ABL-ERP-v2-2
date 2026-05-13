@@ -1109,8 +1109,23 @@ const NoteCard = ({
   const [draft, setDraft] = useState(note.text);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { if (!editing) setDraft(note.text); }, [note.text, editing]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: PointerEvent) => {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      setMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   const isEdited = !!note.updatedAt && note.updatedAt.getTime() - note.ts.getTime() > NOTE_EDITED_THRESHOLD_MS;
 
@@ -1147,29 +1162,27 @@ const NoteCard = ({
           )}
         </div>
         {showMenu && !editing && (
-          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
+          <div ref={menuRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={cn(
+                "p-1 rounded-md hover:bg-muted/60 transition-opacity",
+                menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
+              )}
+              aria-label="Note actions"
+              aria-expanded={menuOpen}
+            >
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            </button>
+            {menuOpen && (
+              <div
+                className="absolute right-0 top-full z-[230] mt-1 w-40 rounded-lg border bg-card p-1 shadow-lg"
+                style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
-                className={cn(
-                  "p-1 rounded-md hover:bg-muted/60 transition-opacity",
-                  menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
-                )}
-                aria-label="Note actions"
               >
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              sideOffset={4}
-              className="w-40 p-1 rounded-lg shadow-lg bg-card z-[60]"
-              style={{ borderColor: "hsl(var(--brand-navy) / 0.15)" }}
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
               {canEdit && (
                 <button
                   type="button"
@@ -1190,8 +1203,9 @@ const NoteCard = ({
                   <span className="font-medium">Delete</span>
                 </button>
               )}
-            </PopoverContent>
-          </Popover>
+              </div>
+            )}
+          </div>
         )}
       </div>
       {editing ? (
