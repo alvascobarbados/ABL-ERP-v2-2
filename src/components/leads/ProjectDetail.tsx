@@ -225,7 +225,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
   const saveBuyer = (buyerId: string | null) => { updateProject(live.id, { buyerId }); setEditor(null); };
   const saveProjectName = (v: string) => {
     const t = v.trim();
-    if (t) updateProject(live.id, { projectName: t });
+    if (!t) { toast.error("Project name is required"); return; }
+    updateProject(live.id, { projectName: t });
     setEditor(null);
   };
   const saveDetail = (v: string) => { updateProject(live.id, { detailSummary: v }); setEditor(null); };
