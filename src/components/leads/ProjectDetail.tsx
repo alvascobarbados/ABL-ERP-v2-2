@@ -804,47 +804,6 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         multiline
         onSave={submitNote}
       />
-      <ProductLineItemEditor
-        open={editor?.kind === "addLineItem"}
-        onClose={() => setEditor(null)}
-        title="Add line item"
-        qty=""
-        description=""
-        onSave={(q, d, price) => {
-          addLineItem(live.id, {
-            qty: q,
-            description: d,
-            unitPrice: price,
-            total: price !== undefined ? +(q * price).toFixed(2) : undefined,
-          });
-          setEditor(null);
-        }}
-      />
-      <ProductLineItemEditor
-        open={editor?.kind === "editLineItem"}
-        onClose={() => setEditor(null)}
-        title="Edit line item"
-        qty={editor?.kind === "editLineItem" ? (live.lineItems?.[editor.index]?.qty ?? 0) : 0}
-        description={editor?.kind === "editLineItem" ? (live.lineItems?.[editor.index]?.description ?? "") : ""}
-        unitPrice={editor?.kind === "editLineItem" ? live.lineItems?.[editor.index]?.unitPrice : undefined}
-        onSave={(q, d, price) => {
-          if (editor?.kind !== "editLineItem") return;
-          const existing = live.lineItems?.[editor.index];
-          updateLineItem(live.id, editor.index, {
-            ...existing,
-            qty: q,
-            description: d,
-            unitPrice: price,
-            total: price !== undefined ? +(q * price).toFixed(2) : undefined,
-          });
-          setEditor(null);
-        }}
-        onDelete={() => {
-          if (editor?.kind !== "editLineItem") return;
-          removeLineItem(live.id, editor.index);
-          setEditor(null);
-        }}
-      />
       <EntityPicker
         open={editor?.kind === "supplier"}
         onClose={() => setEditor(null)}
