@@ -927,6 +927,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         title="Deadline"
         value={live.deadlineDate ?? undefined}
         onSave={saveDeadline}
+        onClear={clearDeadline}
       />
       <TextEditor
         open={editor?.kind === "quote"}
