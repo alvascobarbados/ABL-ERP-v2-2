@@ -1229,7 +1229,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const proj = projectsRef.current.find((p) => p.id === projectId);
     if (!ship || !proj) return;
     const u = userRef.current;
-    const next = touch({ ...proj, shipmentId, pipeline: "shipping" as const, stage: "shipment_assigned" as const, shippingMode: ship.mode });
+    const next = touch({ ...proj, shipmentId, pipeline: "shipping" as const, stage: "shipment_assigned" as const, shippingMode: ship.mode, stageEnteredAt: new Date() });
     const r = appendLog(next, { actor: actorOf(u), actionType: "stage_change",
       description: `${u.shortName} assigned this to shipment ${ship.code}`,
       metadata: { fromPipeline: proj.pipeline, fromStage: proj.stage, toPipeline: "shipping", toStage: "shipment_assigned" } });
