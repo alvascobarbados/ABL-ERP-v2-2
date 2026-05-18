@@ -377,7 +377,7 @@ export const EditableCell = (props: Props) => {
       onMouseDown={handleCellMouseDown}
       onContextMenu={(e) => { if (isEditing) e.stopPropagation(); }}
       className={cn(
-        "relative px-3 py-1.5 truncate transition-colors h-full flex items-center",
+        "relative px-3 py-1.5 transition-colors min-h-full flex items-start",
         align === "right" ? "justify-end text-right" : "justify-start text-left",
         !readOnly && !isEditing && "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer group/edit",
         readOnly && "cursor-pointer",
