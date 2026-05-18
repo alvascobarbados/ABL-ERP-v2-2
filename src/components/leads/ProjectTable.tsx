@@ -344,6 +344,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   // TODO(auth): Rep currently reads from `point_person` (comma-separated initials text).
   // When real auth + team_members FK lands, migrate to `sales_rep_id` and update this column.
   { key: "rep", label: "Rep", defaultPx: 60 },
+  { key: "createdAt", label: "Created", defaultPx: 110 },
   { key: "completionDate", label: "Completed", defaultPx: 110 },
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
