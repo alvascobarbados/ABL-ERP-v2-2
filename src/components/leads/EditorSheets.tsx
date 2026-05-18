@@ -90,8 +90,11 @@ interface TextEditorProps {
   /** Optional max input length (characters). No cap when omitted. */
   maxLength?: number;
   onSave: (v: string) => void;
+  /** Optional clear handler. When provided, renders a "Clear" button that wipes the field. */
+  onClear?: () => void;
+  clearLabel?: string;
 }
-export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, onSave }: TextEditorProps) => {
+export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, onSave, onClear, clearLabel }: TextEditorProps) => {
   const capLen = (s: string) => (maxLength != null ? s.slice(0, maxLength) : s);
   const sanitizeDigitsLike = (raw: string): string => {
     if (!digitsOnly) return raw;
