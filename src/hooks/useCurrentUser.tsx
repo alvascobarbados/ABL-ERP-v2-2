@@ -12,6 +12,12 @@ import type { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import Login from "@/pages/Login";
+import { writeSystemLog } from "@/lib/systemLog";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
+import { IdleWarningModal } from "@/components/IdleWarningModal";
+
+const SIGNOUT_REASON_KEY = "signout_reason";
+const signinLoggedKey = (uid: string) => `signin_logged_${uid}`;
 
 export interface CurrentUser {
   userId: string;
