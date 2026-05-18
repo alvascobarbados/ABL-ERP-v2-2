@@ -114,7 +114,8 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
     const prev = savedConfig;
     const { error } = await supabase
       .from("customers")
-      .update({ order_confirmation_config: next as any })
+      // Json cast: Supabase's generated Json type can't infer our nested gate-config shape.
+      .update({ order_confirmation_config: next as unknown as Json })
       .eq("id", customer.id);
     if (error) {
       toast.error(`Couldn't save: ${error.message}`);
