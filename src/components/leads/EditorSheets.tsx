@@ -799,7 +799,7 @@ export const ShipmentNumberEditor = ({ open, onClose, shippingMode, value, onSav
   const preview = number ? `${lockedPrefix}${number}` : "";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={mode === "Air" ? "Air shipment number" : "Ocean shipment number"} onSave={handleSave}>
+    <BottomSheet open={open} onClose={onClose} title={mode === "Air" ? "Air shipment number" : "Ocean shipment number"} onSave={handleSave} onClear={handleClear} clearLabel="Clear shipment number">
       <div className="space-y-4">
         {mode === "Ocean" && (
           <div>
