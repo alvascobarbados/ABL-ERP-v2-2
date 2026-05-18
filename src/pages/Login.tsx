@@ -1,7 +1,7 @@
 /**
  * Austere internal-team login. Wordmark, subtitle, Google + Magic Link.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,16 @@ export default function Login() {
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [idleBanner, setIdleBanner] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("signout_reason") === "idle") {
+        sessionStorage.removeItem("signout_reason");
+        setIdleBanner(true);
+      }
+    } catch {}
+  }, []);
 
   const cleanEmail = email.trim().toLowerCase();
   const validEmail = EMAIL_RE.test(cleanEmail);
@@ -88,6 +98,20 @@ export default function Login() {
           <span style={{ color: "hsl(var(--brand-orange))" }}>co</span>
         </span>
         <p className="mt-3 text-sm text-muted-foreground">Sign in to continue</p>
+
+        {idleBanner && (
+          <div
+            role="status"
+            className="mt-5 w-full rounded-xl border px-4 py-3 text-left text-[13px]"
+            style={{
+              borderColor: "hsl(var(--brand-orange) / 0.4)",
+              backgroundColor: "hsl(var(--brand-orange) / 0.08)",
+              color: "hsl(var(--brand-navy))",
+            }}
+          >
+            Signed out for inactivity. Sign in again to continue.
+          </div>
+        )}
 
         <button
           onClick={onGoogle}
