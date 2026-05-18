@@ -19,7 +19,7 @@ import { useCurrentUser } from "./useCurrentUser";
 // SortKey-equivalent IDs that ProjectTable uses for columns. Keep this list
 // in sync with ProjectTable's ALL_COLS.
 export type ColumnId =
-  | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
+  | "flagged" | "stage" | "currentStage" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate" | "createdAt"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
