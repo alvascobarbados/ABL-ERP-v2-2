@@ -144,7 +144,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
         new_modes: next[gate].conditional_modes,
         old_amount: prev[gate].conditional_amount_above,
         new_amount: next[gate].conditional_amount_above,
-      } as any,
+      } as Json,
     });
 
     // Per-project consequence audits
