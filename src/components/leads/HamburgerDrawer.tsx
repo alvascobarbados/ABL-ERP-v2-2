@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { X, Factory, Users, HelpCircle, LogOut, Trash2, UserCircle2, Archive, KanbanSquare, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { APP_VERSION } from "@/lib/version";
 
 interface Props {
   open: boolean;
