@@ -129,6 +129,12 @@ export interface Sentence {
 export function buildSentence(row: LogRow): Sentence {
   const m = row.metadata ?? {};
   switch (row.action_type) {
+    case "user_signin":
+      return { pre: "signed in", post: "" };
+    case "user_signout": {
+      const reason = (m as { reason?: string }).reason;
+      return { pre: reason === "idle_timeout" ? "signed out (inactivity)" : "signed out", post: "" };
+    }
     case "stage_change": {
       const fromP = m.fromPipeline as PipelineId | undefined;
       const fromS = m.fromStage as StageId | undefined;
@@ -175,6 +181,11 @@ export function buildSentence(row: LogRow): Sentence {
       return { pre: `${row.action_type.replace(/_/g, " ")} `, post: "" };
   }
 }
+
+const SYSTEM_ACTIONS = new Set(["user_signin", "user_signout"]);
+const SYSTEM_PROJECT_SENTINEL = "__system__";
+export const isSystemRow = (row: { action_type: string; project_id: string }) =>
+  SYSTEM_ACTIONS.has(row.action_type) || row.project_id === SYSTEM_PROJECT_SENTINEL;
 
 // Time formatted in Barbados (AST, UTC-4, no DST) with explicit "AST" label.
 const AST_TIME_FMT = new Intl.DateTimeFormat("en-US", {
