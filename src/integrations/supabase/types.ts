@@ -302,6 +302,7 @@ export type Database = {
           shipment_id: string | null
           shipment_number: string | null
           shipping_mode: string | null
+          stage_entered_at: string | null
           stage_id: string
           supplier_id: string | null
           supplier_label: string | null
@@ -362,6 +363,7 @@ export type Database = {
           shipment_id?: string | null
           shipment_number?: string | null
           shipping_mode?: string | null
+          stage_entered_at?: string | null
           stage_id: string
           supplier_id?: string | null
           supplier_label?: string | null
@@ -422,6 +424,7 @@ export type Database = {
           shipment_id?: string | null
           shipment_number?: string | null
           shipping_mode?: string | null
+          stage_entered_at?: string | null
           stage_id?: string
           supplier_id?: string | null
           supplier_label?: string | null
