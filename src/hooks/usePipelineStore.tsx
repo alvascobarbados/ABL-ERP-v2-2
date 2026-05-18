@@ -7,6 +7,7 @@ import {
 } from "@/data/pipelines";
 import { useCurrentUser, type CurrentUser } from "./useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
+import { pushUndo, isUndoing, getUndoContext, makeUndoId, clearUndoStack, type UndoEntry } from "./useUndoStack";
 
 // Strip a known prefix and any non-digits. Returns undefined for empty.
 // Defensive: DB should hold plain digits, but legacy rows may include "Q-"/"PO-"/"INV-".
@@ -26,13 +27,22 @@ function makeLogId() {
 }
 
 function appendLog(p: Project, entry: Omit<ProjectLogEntry, "id" | "ts"> & { ts?: Date }): { project: Project; entry: ProjectLogEntry } {
+  // If a Cmd+Z undo is currently being applied, tag the auto-generated audit
+  // entry so the original action remains discoverable from the inverse entry.
+  const ctx = getUndoContext();
+  const metadata = ctx
+    ? { ...(entry.metadata ?? {}), undoOfLogId: ctx.originalLogId, undoOfDescription: ctx.originalDescription }
+    : entry.metadata;
+  const description = ctx
+    ? `${entry.description} (undo)`
+    : entry.description;
   const full: ProjectLogEntry = {
     id: makeLogId(),
     ts: entry.ts ?? new Date(),
     actor: entry.actor,
     actionType: entry.actionType,
-    description: entry.description,
-    metadata: entry.metadata,
+    description,
+    metadata,
   };
   return { project: { ...p, log: [...(p.log ?? []), full] }, entry: full };
 }
@@ -497,6 +507,27 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const [pulsePipeline, setPulsePipeline] = useState<PipelineId | null>(null);
   const pulseTimer = useRef<number | null>(null);
 
+  // Stable reference holder for in-store mutation fns so undo inverse
+  // closures don't need to be re-bound or hoisted past their definitions.
+  const apiRef = useRef<{
+    updateProject?: (id: string, patch: Partial<Project>) => Promise<void>;
+    moveCard?: (id: string, target: { pipeline: PipelineId; stage: StageId }) => Promise<MoveResult>;
+    toggleFlag?: (id: string) => Promise<void>;
+    restoreNote?: (projectId: string, note: ProjectNote) => Promise<void>;
+    removeNote?: (projectId: string, noteId: string) => Promise<void>;
+    updateNote?: (projectId: string, noteId: string, text: string) => Promise<void>;
+    addLineItem?: (projectId: string, item: LineItem) => Promise<void>;
+    removeLineItem?: (projectId: string, index: number) => Promise<void>;
+    updateLineItem?: (projectId: string, index: number, item: LineItem) => Promise<void>;
+    commitRaw?: (project: Project, entries: ProjectLogEntry[]) => Promise<boolean>;
+  }>({});
+
+  // Clear undo stack when the authenticated user changes (sign-in/sign-out).
+  useEffect(() => {
+    clearUndoStack();
+  }, [currentUser.userId]);
+
+
   // ── Initial fetch from Supabase + realtime subscription ───────────────
   // SCALING NOTE: chatty fan-out, fine to ~5k projects, revisit when
   // growth requires pagination or scoped subscriptions.
@@ -672,6 +703,30 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         metadata: { fromPipeline: proj.pipeline, fromStage: proj.stage, toPipeline: target.pipeline, toStage: target.stage } });
     }
     const ok = await commitProjectChange(res.project, [res.entry]);
+    if (ok && !isUndoing()) {
+      const fromPipeline = proj.pipeline;
+      const fromStage = proj.stage;
+      const prevShipmentId = proj.shipmentId;
+      pushUndo({
+        id: makeUndoId(),
+        timestamp: Date.now(),
+        description: `moved ${proj.projectName} to ${toLabel}`,
+        originalLogId: res.entry.id,
+        originalDescription: res.entry.description,
+        applyInverse: async () => {
+          const current = projectsRef.current.find((p) => p.id === cardId);
+          if (!current) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const mover = apiRef.current.moveCard;
+          if (!mover) return { ok: false, reason: "Undo unavailable" };
+          const moved = await mover(cardId, { pipeline: fromPipeline, stage: fromStage });
+          if (!moved.ok) return { ok: false, reason: "Couldn't restore stage" };
+          if (prevShipmentId !== current.shipmentId) {
+            await apiRef.current.updateProject?.(cardId, { shipmentId: prevShipmentId } as any);
+          }
+          return { ok: true };
+        },
+      });
+    }
     return { ok };
   }, []);
 
@@ -704,7 +759,35 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       next = r.project;
       newEntries.push(r.entry);
     }
-    await commitProjectChange(next, newEntries);
+    const ok = await commitProjectChange(next, newEntries);
+    if (ok && !isUndoing() && newEntries.length) {
+      // Capture before-values only for keys actually changed (those that
+      // produced an audit entry, via FIELD_LABELS).
+      const beforePatch: Partial<Project> = {};
+      for (const e of newEntries) {
+        const field = (e.metadata as any)?.field as keyof Project | undefined;
+        if (field) (beforePatch as any)[field] = (proj as any)[field] ?? null;
+      }
+      if (Object.keys(beforePatch).length) {
+        const first = newEntries[0];
+        const friendly = newEntries.length === 1
+          ? first.description.replace(/^[^\s]+\s/, "") // strip leading actor token
+          : `${newEntries.length} field changes on ${proj.projectName}`;
+        pushUndo({
+          id: makeUndoId(),
+          timestamp: Date.now(),
+          description: friendly,
+          originalLogId: first.id,
+          originalDescription: first.description,
+          applyInverse: async () => {
+            const exists = projectsRef.current.find((p) => p.id === id);
+            if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+            await apiRef.current.updateProject?.(id, beforePatch);
+            return { ok: true };
+          },
+        });
+      }
+    }
   }, []);
 
   const renameProject = useCallback(async (currentName: string, newName: string) => {
@@ -756,6 +839,22 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       await supabase.from("project_notes").delete().eq("id", note.id);
       await supabase.from("projects").upsert(projectToRow(proj));
       toast.error(FAILURE_TOAST);
+      return;
+    }
+    if (!isUndoing()) {
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `added a note to ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const stillThere = (exists.notes ?? []).some((n) => n.id === note.id);
+          if (!stillThere) return { ok: false, reason: "Already removed" };
+          await apiRef.current.removeNote?.(projectId, note.id);
+          return { ok: true };
+        },
+      });
     }
   }, []);
 
@@ -781,7 +880,23 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
     if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
     const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
-    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    if (!isUndoing()) {
+      const oldText = oldNote.text;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `edited a note on ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const still = (exists.notes ?? []).some((n) => n.id === noteId);
+          if (!still) return { ok: false, reason: "Can't undo — note no longer exists" };
+          await apiRef.current.updateNote?.(projectId, noteId, oldText);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   const removeNote = useCallback(async (projectId: string, noteId: string) => {
@@ -805,7 +920,21 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
     if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
     const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
-    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    if (!isUndoing()) {
+      const fullNote = removed;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `deleted a note from ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          await apiRef.current.restoreNote?.(projectId, fullNote);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   /** Re-insert a previously-deleted note with original id/ts/author. Does NOT
@@ -854,18 +983,55 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
       description: `${u.shortName} added line item ${item.qty} × ${item.description}` });
     await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
+    if (!isUndoing()) {
+      const addedAtIndex = items.length - 1;
+      const itemSig = `${item.qty}|${item.description}|${item.unitPrice ?? ""}`;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `added line item to ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const list = exists.lineItems ?? [];
+          let idx = list.findIndex((li, i) => i >= addedAtIndex && `${li.qty}|${li.description}|${li.unitPrice ?? ""}` === itemSig);
+          if (idx < 0) idx = list.findIndex((li) => `${li.qty}|${li.description}|${li.unitPrice ?? ""}` === itemSig);
+          if (idx < 0) return { ok: false, reason: "Already removed" };
+          await apiRef.current.removeLineItem?.(projectId, idx);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   const updateLineItem = useCallback(async (projectId: string, index: number, item: LineItem) => {
     const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
     const items = [...(proj.lineItems ?? [])];
     if (index < 0 || index >= items.length) return;
+    const before = items[index];
     items[index] = item;
     const next = touch({ ...proj, lineItems: items });
     const u = userRef.current;
     const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
       description: `${u.shortName} edited line item ${item.qty} × ${item.description}` });
     await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
+    if (!isUndoing()) {
+      const capturedIndex = index;
+      const beforeItem = before;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `edited line item on ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const list = exists.lineItems ?? [];
+          if (capturedIndex >= list.length) return { ok: false, reason: "Can't undo — line item no longer exists" };
+          await apiRef.current.updateLineItem?.(projectId, capturedIndex, beforeItem);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   const removeLineItem = useCallback(async (projectId: string, index: number) => {
@@ -879,6 +1045,20 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
       description: `${u.shortName} removed line item ${removed.qty} × ${removed.description}` });
     await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
+    if (!isUndoing()) {
+      const fullItem = removed;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `deleted line item from ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          await apiRef.current.addLineItem?.(projectId, fullItem);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   const duplicateProject = useCallback(async (projectId: string): Promise<Project | null> => {
