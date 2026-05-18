@@ -194,6 +194,7 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     invoiceNumber: stripRefPrefix(row.invoice_number, "INV-"),
     createdAt: new Date(row.created_at),
     updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
+    stageEnteredAt: row.stage_entered_at ? new Date(row.stage_entered_at) : undefined,
     deletedAt: row.deleted_at ? new Date(row.deleted_at) : undefined,
     deletedFromPipeline: row.deleted_from_pipeline ?? undefined,
     deletedFromStage: row.deleted_from_stage ?? undefined,
