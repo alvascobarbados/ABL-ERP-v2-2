@@ -143,22 +143,28 @@ export const CurrentUserProvider = ({ children }: { children: ReactNode }) => {
         setStatus("authed");
 
         // Log sign-in once per tab session, per user. Skips refreshes and
-        // INITIAL_SESSION re-resolves.
-        try {
-          const key = signinLoggedKey(data.id);
-          if (sessionStorage.getItem(key) !== "1") {
-            sessionStorage.setItem(key, "1");
+        // INITIAL_SESSION re-resolves. The sessionStorage flag is only set
+        // AFTER a successful insert so that a failed write (e.g. transient
+        // network blip) gets retried on the next sign-in attempt.
+        (async () => {
+          try {
+            const key = signinLoggedKey(data.id);
+            if (sessionStorage.getItem(key) === "1") return;
             const rawProvider = (session?.user?.app_metadata as { provider?: string } | undefined)?.provider;
             const provider = rawProvider === "google" ? "google" : "magic_link";
-            void writeSystemLog({
+            await writeSystemLog({
               actionType: "user_signin",
               actorUserId: data.id,
               actorDisplayName: shortName,
               description: `${shortName} signed in`,
               metadata: { event: "signin", provider },
             });
+            try { sessionStorage.setItem(key, "1"); } catch {}
+          } catch (e) {
+            console.error("[auth] sign-in log failed", e);
+            toast.error("Couldn't record sign-in to the activity log.");
           }
-        } catch {}
+        })();
       } catch {
         if (cancelled) return;
         setStatus("anon");
