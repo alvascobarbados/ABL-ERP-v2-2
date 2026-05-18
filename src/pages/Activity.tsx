@@ -650,7 +650,7 @@ function ActivityRow({
         <div className="flex-1 min-w-0 truncate text-[13px]" style={{ color: "hsl(var(--brand-navy) / 0.9)" }}>
           <span style={{ fontWeight: 600 }}>{row.actor_display_name}</span>{" "}
           <span>{sentence.pre}</span>
-          {projectClickable ? (
+          {isSystemRow(row) ? null : projectClickable ? (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenProject(row.project_id); }}
               className="hover:underline"
