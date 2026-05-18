@@ -703,12 +703,12 @@ export const ProjectCard = ({
                   title={stageLabel}
                 >
                   {stageLabel}
-                  {card.project.stageEnteredAt && (
+                  {proj.stageEnteredAt && (
                     <span
                       className="ml-1 tabular"
                       style={{ color: "hsl(var(--brand-navy) / 0.45)" }}
                     >
-                      · {fmtTimeInStage(card.project.stageEnteredAt)}
+                      · {fmtTimeInStage(proj.stageEnteredAt)}
                     </span>
                   )}
                 </span>
