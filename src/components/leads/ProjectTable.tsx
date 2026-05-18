@@ -1413,7 +1413,7 @@ const TrackingCellTrigger = ({ cellKey, value, modeSet, flash, onClick, onRowDou
       onMouseDown={(e) => e.stopPropagation()}
       onDoubleClick={handleDouble}
       className={cn(
-        "relative px-3 py-1.5 truncate transition-colors h-full flex items-center justify-start text-left",
+        "relative px-3 py-1.5 transition-colors min-h-full flex items-start justify-start text-left",
         modeSet ? "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer" : "cursor-pointer",
       )}
       style={{
@@ -1422,7 +1422,7 @@ const TrackingCellTrigger = ({ cellKey, value, modeSet, flash, onClick, onRowDou
       }}
       title={!modeSet ? undefined : (value ?? "")}
     >
-      <span className="truncate w-full tabular">{value ?? "—"}</span>
+      <span className="cell-clamp-2 w-full tabular">{value ?? "—"}</span>
     </div>
   );
   if (modeSet) return cell;
