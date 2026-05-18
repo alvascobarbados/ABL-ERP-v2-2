@@ -475,9 +475,16 @@ interface PipelineStoreCtx {
   hardDeleteProject: (projectId: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   addSupplier: (input: { name: string; country: string; defaultShippingMode: ShippingMode }) => Promise<Supplier>;
-  isQuoteNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
-  isPONumberDuplicate: (number: string, exceptProjectId: string) => boolean;
-  isInvoiceNumberDuplicate: (number: string, exceptProjectId: string) => boolean;
+  /**
+   * Find live projects (not soft-deleted, not the current one) sharing the same
+   * value in a document-number field. Returns [] for empty/undefined values.
+   * Used to surface the "also used on" soft notice in the project detail editor.
+   */
+  findProjectsByDocField: (
+    field: "quoteNumber" | "poNumber" | "invoiceNumber" | "proofNumber" | "depositInvoiceNumber",
+    value: string | null | undefined,
+    exceptProjectId: string,
+  ) => Project[];
   assignToShipment: (projectId: string, shipmentId: string) => Promise<void>;
   createShipment: (input: NewShipmentInput) => Promise<Shipment | null>;
   updateShipment: (id: string, patch: Partial<Shipment>) => Promise<void>;
@@ -1193,12 +1200,19 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     return sup;
   }, []);
 
-  const isQuoteNumberDuplicate = useCallback((n: string, exceptId: string) =>
-    projects.some((p) => p.id !== exceptId && p.quoteNumber === n), [projects]);
-  const isPONumberDuplicate = useCallback((n: string, exceptId: string) =>
-    projects.some((p) => p.id !== exceptId && p.poNumber === n), [projects]);
-  const isInvoiceNumberDuplicate = useCallback((n: string, exceptId: string) =>
-    projects.some((p) => p.id !== exceptId && p.invoiceNumber === n), [projects]);
+  const findProjectsByDocField = useCallback(
+    (
+      field: "quoteNumber" | "poNumber" | "invoiceNumber" | "proofNumber" | "depositInvoiceNumber",
+      value: string | null | undefined,
+      exceptId: string,
+    ): Project[] => {
+      if (!value) return [];
+      return projects.filter(
+        (p) => !p.deletedAt && p.id !== exceptId && (p[field] ?? null) === value,
+      );
+    },
+    [projects],
+  );
 
   const assignToShipment = useCallback(async (projectId: string, shipmentId: string) => {
     const ship = shipmentsRef.current.find((s) => s.id === shipmentId);
@@ -1286,10 +1300,10 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     duplicateProject, createProject, toggleFlag,
     softDeleteProject, restoreProject, hardDeleteProject, deleteProject,
     addSupplier,
-    isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
+    findProjectsByDocField,
     assignToShipment, createShipment, updateShipment, markShipmentDelivered,
     pulsePipeline, triggerPulse,
-  }), [liveProjects, trashedProjects, archivedProjects, shipments, suppliers, loading, moveCard, updateProject, renameProject, addNote, updateNote, removeNote, restoreNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, createProject, toggleFlag, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate, assignToShipment, createShipment, updateShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
+  }), [liveProjects, trashedProjects, archivedProjects, shipments, suppliers, loading, moveCard, updateProject, renameProject, addNote, updateNote, removeNote, restoreNote, addLineItem, updateLineItem, removeLineItem, duplicateProject, createProject, toggleFlag, softDeleteProject, restoreProject, hardDeleteProject, deleteProject, addSupplier, findProjectsByDocField, assignToShipment, createShipment, updateShipment, markShipmentDelivered, pulsePipeline, triggerPulse]);
 
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

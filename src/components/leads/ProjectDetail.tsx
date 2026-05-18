@@ -32,6 +32,7 @@ interface Props {
   card: PipelineCard | null;
   onClose: () => void;
   onOpenShipment: (id: string) => void;
+  onOpenProject?: (id: string) => void;
   onAdvance?: (card: PipelineCard) => void;
   onOpenPicker?: (card: PipelineCard) => void;
 }
@@ -139,7 +140,70 @@ function defaultsForCountry(country?: string | null): { weight: WeightUnit; volu
 const fmtCreated = (d: Date) =>
   `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
-export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
+// ── Soft duplicate notice ─────────────────────────────────────────────
+// Document number fields (Q/PO/INV/Proof/Deposit#) intentionally allow
+// duplicates — one PO can cover several projects. This inline notice lists
+// other live projects sharing the same value. Updates live as the store does.
+type DocField = "quoteNumber" | "poNumber" | "invoiceNumber" | "proofNumber" | "depositInvoiceNumber";
+const DuplicateNotice = ({
+  field, value, currentId, onOpenProject,
+}: {
+  field: DocField;
+  value: string | null | undefined;
+  currentId: string;
+  onOpenProject?: (id: string) => void;
+}) => {
+  const { findProjectsByDocField } = usePipelineStore();
+  const [expanded, setExpanded] = useState(false);
+  const matches = findProjectsByDocField(field, value, currentId);
+  if (matches.length === 0) return null;
+
+  const showAll = expanded || matches.length <= 3;
+  const visible = showAll ? matches : matches.slice(0, 3);
+  const overflow = matches.length - visible.length;
+
+  const renderLink = (id: string, name: string) => (
+    <button
+      key={id}
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onOpenProject?.(id); }}
+      className="underline underline-offset-2 hover:opacity-80"
+      style={{ color: "hsl(var(--brand-navy) / 0.85)" }}
+    >
+      {name}
+    </button>
+  );
+
+  return (
+    <div
+      className="px-2 -mx-2 pt-1.5 pb-2 text-[11px] leading-snug border-b last:border-b-0"
+      style={{ color: "hsl(var(--brand-navy) / 0.55)", borderColor: "hsl(var(--brand-navy) / 0.07)" }}
+    >
+      <span className="mr-1">Also used on:</span>
+      {visible.map((p, i) => (
+        <span key={p.id}>
+          {i > 0 && <span>, </span>}
+          {renderLink(p.id, p.projectName)}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <>
+          <span>, and </span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+            className="underline underline-offset-2 hover:opacity-80"
+            style={{ color: "hsl(var(--brand-navy) / 0.85)" }}
+          >
+            {overflow} {overflow === 1 ? "other" : "others"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+
+export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const editMode = useEditMode();
@@ -150,7 +214,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     duplicateProject, softDeleteProject, restoreProject,
     moveCard, toggleFlag,
     triggerPulse,
-    isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
+    findProjectsByDocField,
   } = store;
 
   const [editor, setEditor] = useState<EditorKind>(null);
@@ -250,21 +314,21 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     const re = new RegExp(`^\\s*${px}-?`, "i");
     return raw.replace(re, "").replace(/\D/g, "").trim();
   };
+  // Document numbers (Q/PO/INV/Proof/Deposit#) allow duplicates intentionally —
+  // one PO/invoice/quote can legitimately cover multiple projects. The soft
+  // "Also used on:" notice surfaces in the DetailRow below each field.
   const saveQuote = (v: string) => {
     const t = stripNumberPrefix(v, "Q") || undefined;
-    if (t && isQuoteNumberDuplicate(t, live.id)) { toast.error(`Quote ${t} already in use`); return; }
     updateProject(live.id, { quoteNumber: t });
     setEditor(null);
   };
   const savePO = (v: string) => {
     const t = stripNumberPrefix(v, "PO") || undefined;
-    if (t && isPONumberDuplicate(t, live.id)) { toast.error(`PO ${t} already in use`); return; }
     updateProject(live.id, { poNumber: t });
     setEditor(null);
   };
   const saveInvoice = (v: string) => {
     const t = stripNumberPrefix(v, "INV") || undefined;
-    if (t && isInvoiceNumberDuplicate(t, live.id)) { toast.error(`Invoice ${t} already in use`); return; }
     updateProject(live.id, { invoiceNumber: t });
     setEditor(null);
   };
@@ -619,6 +683,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
               <DetailRow label="Shipping Mode" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
               <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
+              <DuplicateNotice field="quoteNumber" value={live.quoteNumber} currentId={live.id} onOpenProject={onOpenProject} />
               <DetailRow
                 label="Amount"
                 value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
@@ -665,6 +730,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
                 placeholder="P-"
                 onClick={() => setEditor({ kind: "proofNumber" })}
               />
+              <DuplicateNotice field="proofNumber" value={live.proofNumber} currentId={live.id} onOpenProject={onOpenProject} />
             </SectionCard>
           </section>
 
@@ -673,6 +739,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
             <SectionHeader>Purchasing</SectionHeader>
             <SectionCard>
               <DetailRow label="PO #" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DuplicateNotice field="poNumber" value={live.poNumber} currentId={live.id} onOpenProject={onOpenProject} />
               <DetailRow
                 label="PO Amount"
                 value={live.poAmount != null ? formatPoAmount(live.poAmount, live.poAmountCurrency ?? "USD") : undefined}
@@ -775,6 +842,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               {live.depositRequired && (
                 <>
                   <DetailRow label="Deposit #" value={live.depositInvoiceNumber ?? undefined} onClick={() => setEditor({ kind: "depositInvoice" })} />
+                  <DuplicateNotice field="depositInvoiceNumber" value={live.depositInvoiceNumber} currentId={live.id} onOpenProject={onOpenProject} />
                   <DetailRow
                     label="Deposit Amount"
                     value={live.depositAmount != null ? `$${live.depositAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BBD` : undefined}
@@ -803,6 +871,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
               )}
 
               <DetailRow label="INV #" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DuplicateNotice field="invoiceNumber" value={live.invoiceNumber} currentId={live.id} onOpenProject={onOpenProject} />
               <DetailRow
                 label="Paid Date"
                 value={live.paidOnDate ? fmtLong(live.paidOnDate) : undefined}
