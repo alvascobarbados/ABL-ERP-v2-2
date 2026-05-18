@@ -1,8 +1,15 @@
 /**
  * System-level audit entries (not tied to a specific project).
- * Stored in project_log_entries with sentinel project_id = '__system__'.
- * Activity.tsx detects this sentinel + the user_* action types and renders
- * the description line without a clickable project link.
+ *
+ * Stored in `project_log_entries` against the sentinel project row
+ * `__system__` (see migration that creates it). The sentinel exists purely
+ * to satisfy the FK from `project_log_entries.project_id → projects.id`;
+ * it is soft-deleted and filtered out of every project listing in the UI.
+ *
+ * `writeSystemLog` throws on failure — callers are responsible for catching
+ * and surfacing a toast. Do NOT swallow errors here, or the
+ * "log signin → set sessionStorage flag" sequence will skip retries on the
+ * next sign-in when something goes wrong with the insert.
  */
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,6 +38,7 @@ export async function writeSystemLog(args: WriteArgs): Promise<void> {
     metadata: (args.metadata ?? null) as never,
   });
   if (error) {
-    console.warn("[systemLog] insert failed", error);
+    console.error("[systemLog] insert failed", error);
+    throw error;
   }
 }

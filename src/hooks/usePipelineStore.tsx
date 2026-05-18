@@ -539,7 +539,10 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
     const refetchNow = async () => {
       const [pj, sh, nt, lg, li] = await Promise.all([
-        supabase.from("projects").select("*"),
+        // Exclude the `__system__` sentinel row that exists only as a FK
+        // anchor for system-level audit entries (sign-in / sign-out). It
+        // must never reach pipeline / spreadsheet / trash / archive views.
+        supabase.from("projects").select("*").neq("id", "__system__"),
         supabase.from("shipments").select("*"),
         supabase.from("project_notes").select("*").order("ts"),
         supabase.from("project_log_entries").select("*").order("ts"),
