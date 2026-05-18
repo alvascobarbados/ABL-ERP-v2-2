@@ -1123,6 +1123,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       deadlineDate,
       value: 0, orderType: "New", priority: "Standard",
       createdAt: new Date(),
+      stageEnteredAt: new Date(),
       paymentTerms: "Net 30",
       paymentTermsInherited: true,
     };
