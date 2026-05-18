@@ -1459,13 +1459,13 @@ const ReadOnlyCell = ({ cellKey, onRowDoubleClick, children, title, align = "lef
       onMouseDown={(e) => e.stopPropagation()}
       onDoubleClick={(e) => { e.stopPropagation(); e.preventDefault(); sel?.cancelPendingEdit(); onRowDoubleClick(); }}
       className={cn(
-        "px-3 py-1.5 truncate flex items-center cursor-pointer hover:bg-[hsl(var(--brand-navy)/0.04)]",
+        "px-3 py-1.5 min-h-full flex items-start cursor-pointer hover:bg-[hsl(var(--brand-navy)/0.04)]",
         align === "right" ? "justify-end text-right" : "justify-start text-left",
       )}
       style={{ ...ringStyle, color: muted ? "hsl(var(--brand-navy) / 0.28)" : undefined }}
       title={title}
     >
-      <span className="truncate w-full">{children}</span>
+      <span className="cell-clamp-2 w-full">{children}</span>
     </div>
   );
 };
