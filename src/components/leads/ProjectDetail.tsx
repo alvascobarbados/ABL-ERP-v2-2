@@ -150,7 +150,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     duplicateProject, softDeleteProject, restoreProject,
     moveCard, toggleFlag,
     triggerPulse,
-    isQuoteNumberDuplicate, isPONumberDuplicate, isInvoiceNumberDuplicate,
+    findProjectsByDocField,
   } = store;
 
   const [editor, setEditor] = useState<EditorKind>(null);
@@ -250,21 +250,21 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
     const re = new RegExp(`^\\s*${px}-?`, "i");
     return raw.replace(re, "").replace(/\D/g, "").trim();
   };
+  // Document numbers (Q/PO/INV/Proof/Deposit#) allow duplicates intentionally —
+  // one PO/invoice/quote can legitimately cover multiple projects. The soft
+  // "Also used on:" notice surfaces in the DetailRow below each field.
   const saveQuote = (v: string) => {
     const t = stripNumberPrefix(v, "Q") || undefined;
-    if (t && isQuoteNumberDuplicate(t, live.id)) { toast.error(`Quote ${t} already in use`); return; }
     updateProject(live.id, { quoteNumber: t });
     setEditor(null);
   };
   const savePO = (v: string) => {
     const t = stripNumberPrefix(v, "PO") || undefined;
-    if (t && isPONumberDuplicate(t, live.id)) { toast.error(`PO ${t} already in use`); return; }
     updateProject(live.id, { poNumber: t });
     setEditor(null);
   };
   const saveInvoice = (v: string) => {
     const t = stripNumberPrefix(v, "INV") || undefined;
-    if (t && isInvoiceNumberDuplicate(t, live.id)) { toast.error(`Invoice ${t} already in use`); return; }
     updateProject(live.id, { invoiceNumber: t });
     setEditor(null);
   };

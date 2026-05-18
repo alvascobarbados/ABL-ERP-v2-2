@@ -91,11 +91,8 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
       return;
     }
     if (key === "quote") {
+      // Duplicates are allowed — soft notice surfaces in ProjectDetail.
       const v = value.replace(/^\s*Q-?/i, "").replace(/\D/g, "").trim() || undefined;
-      if (v && store.isQuoteNumberDuplicate(v, proj.id)) {
-        toast.error(`Quote ${v} is already in use`);
-        return;
-      }
       const prev = proj.quoteNumber;
       store.updateProject(proj.id, { quoteNumber: v });
       setEditing(null);
@@ -104,10 +101,6 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
     }
     if (key === "po") {
       const v = value.replace(/^\s*PO-?/i, "").replace(/\D/g, "").trim() || undefined;
-      if (v && store.isPONumberDuplicate(v, proj.id)) {
-        toast.error(`PO ${v} is already in use`);
-        return;
-      }
       const prev = proj.poNumber;
       store.updateProject(proj.id, { poNumber: v });
       setEditing(null);
@@ -116,10 +109,6 @@ export const CardEditOverlay = ({ card, onExit }: CardEditOverlayProps) => {
     }
     if (key === "invoice") {
       const v = value.replace(/^\s*INV-?/i, "").replace(/\D/g, "").trim() || undefined;
-      if (v && store.isInvoiceNumberDuplicate(v, proj.id)) {
-        toast.error(`Invoice ${v} is already in use`);
-        return;
-      }
       const prev = proj.invoiceNumber;
       store.updateProject(proj.id, { invoiceNumber: v });
       setEditing(null);
