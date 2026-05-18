@@ -232,7 +232,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
     }
     const valid = tsCandidates.filter((x): x is string => !!x);
     const latest = valid.length
-      ? valid.reduce((a, b) => (new Date(a) > new Date(b) ? a : b))
+      ? valid.reduce<string>((a, b) => (new Date(a).getTime() > new Date(b).getTime() ? a : b))
       : null;
     return {
       iconColor: GREEN,
