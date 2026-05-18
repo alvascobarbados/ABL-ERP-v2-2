@@ -27,13 +27,22 @@ function makeLogId() {
 }
 
 function appendLog(p: Project, entry: Omit<ProjectLogEntry, "id" | "ts"> & { ts?: Date }): { project: Project; entry: ProjectLogEntry } {
+  // If a Cmd+Z undo is currently being applied, tag the auto-generated audit
+  // entry so the original action remains discoverable from the inverse entry.
+  const ctx = getUndoContext();
+  const metadata = ctx
+    ? { ...(entry.metadata ?? {}), undoOfLogId: ctx.originalLogId, undoOfDescription: ctx.originalDescription }
+    : entry.metadata;
+  const description = ctx
+    ? `${entry.description} (undo)`
+    : entry.description;
   const full: ProjectLogEntry = {
     id: makeLogId(),
     ts: entry.ts ?? new Date(),
     actor: entry.actor,
     actionType: entry.actionType,
-    description: entry.description,
-    metadata: entry.metadata,
+    description,
+    metadata,
   };
   return { project: { ...p, log: [...(p.log ?? []), full] }, entry: full };
 }
