@@ -289,7 +289,8 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
   }, [config]);
 
   return (
-    <section>
+    <section id="order-confirmation-requirements" style={{ scrollMarginTop: 80 }}>
+
       <SectionHeader>Order Confirmation Requirements</SectionHeader>
       <SectionCard>
         <div className="space-y-0">
