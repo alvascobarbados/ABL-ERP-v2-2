@@ -256,12 +256,12 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
     const pos = Array.from(new Set(openProjects.map((p) => p.customerPoNumber).filter(Boolean) as string[]));
     const lookup: ApprovalRowsLookup = { quotation: {}, po: {} };
     if (qs.length) {
-      const { data } = await supabase.from("quotation_approvals" as any).select("*").in("q_number", qs);
-      for (const r of (data ?? []) as any[]) lookup.quotation[r.q_number] = r;
+      const { data } = await supabase.from("quotation_approvals").select("*").in("q_number", qs);
+      for (const r of data ?? []) lookup.quotation[r.q_number] = r;
     }
     if (pos.length) {
-      const { data } = await supabase.from("customer_po_approvals" as any).select("*").in("customer_po_number", pos);
-      for (const r of (data ?? []) as any[]) lookup.po[r.customer_po_number] = r;
+      const { data } = await supabase.from("customer_po_approvals").select("*").in("customer_po_number", pos);
+      for (const r of data ?? []) lookup.po[r.customer_po_number] = r;
     }
 
     const changes: TransitionChange[] = [];
