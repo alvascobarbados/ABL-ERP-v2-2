@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { APP_VERSION } from "@/lib/version";
 
 interface Props {
   trashCount: number;
