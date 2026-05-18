@@ -332,7 +332,7 @@ function compareCards(
 const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
   { key: "stage", label: "Stage · State", defaultPx: 150 },
-  { key: "currentStage", label: "Current Stage", defaultPx: 64 },
+  { key: "currentStage", label: "Current Stage", defaultPx: 52 },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "buyer", label: "Buyer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
@@ -452,7 +452,8 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                     onClick={sortable ? () => onHeaderClick(c.key) : undefined}
                     disabled={!sortable}
                     className={cn(
-                      "h-10 px-4 inline-flex items-center gap-1 transition-colors truncate w-full text-[11px] font-semibold uppercase",
+                      "h-10 inline-flex items-center gap-1 transition-colors truncate w-full text-[11px] font-semibold uppercase",
+                      c.key === "currentStage" || c.key === "flagged" ? "px-1" : "px-4",
                       sortable ? "hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
                       c.key === "flagged" || c.key === "currentStage"
                         ? "justify-center"
