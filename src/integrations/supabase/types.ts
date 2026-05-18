@@ -376,6 +376,7 @@ export type Database = {
           email_verbal_approved_at: string | null
           email_verbal_approved_by_buyer_id: string | null
           email_verbal_approved_notes: string | null
+          email_verbal_approved_other_name: string | null
           email_verbal_approved_recorded_by_user_id: string | null
           email_verbal_approved_via_channel: string | null
           flagged: boolean
@@ -445,6 +446,7 @@ export type Database = {
           email_verbal_approved_at?: string | null
           email_verbal_approved_by_buyer_id?: string | null
           email_verbal_approved_notes?: string | null
+          email_verbal_approved_other_name?: string | null
           email_verbal_approved_recorded_by_user_id?: string | null
           email_verbal_approved_via_channel?: string | null
           flagged?: boolean
@@ -514,6 +516,7 @@ export type Database = {
           email_verbal_approved_at?: string | null
           email_verbal_approved_by_buyer_id?: string | null
           email_verbal_approved_notes?: string | null
+          email_verbal_approved_other_name?: string | null
           email_verbal_approved_recorded_by_user_id?: string | null
           email_verbal_approved_via_channel?: string | null
           flagged?: boolean

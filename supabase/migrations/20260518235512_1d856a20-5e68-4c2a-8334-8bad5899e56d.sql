@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS email_verbal_approved_other_name text;
