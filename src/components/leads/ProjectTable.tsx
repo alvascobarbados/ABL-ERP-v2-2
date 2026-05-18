@@ -8,7 +8,7 @@
  * and only mounts the Table at the lg breakpoint.
  */
 import { useMemo, useState, useRef, useEffect, MouseEvent as ReactMouseEvent } from "react";
-import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin } from "lucide-react";
+import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin, Clock } from "lucide-react";
 import { toast } from "sonner";
 import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS, ShippingMode,
@@ -332,7 +332,7 @@ function compareCards(
 const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
   { key: "stage", label: "Stage · State", defaultPx: 150 },
-  { key: "currentStage", label: "Current Stage", defaultPx: 100 },
+  { key: "currentStage", label: "Current Stage", defaultPx: 64 },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "buyer", label: "Buyer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
@@ -454,15 +454,17 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                     className={cn(
                       "h-10 px-4 inline-flex items-center gap-1 transition-colors truncate w-full text-[11px] font-semibold uppercase",
                       sortable ? "hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
-                      c.key === "flagged"
+                      c.key === "flagged" || c.key === "currentStage"
                         ? "justify-center"
                         : c.align === "right" ? "justify-end text-left" : "justify-start text-left",
                     )}
                     style={{ color: "hsl(var(--brand-navy) / 0.55)", letterSpacing: "0.06em" }}
-                    title={c.key === "flagged" ? "Flag" : c.label}
+                    title={c.key === "flagged" ? "Flag" : c.key === "currentStage" ? "Time in current stage" : c.label}
                   >
                     {c.key === "flagged" ? (
                       <Flag className="h-3.5 w-3.5 shrink-0" aria-label="Flag" />
+                    ) : c.key === "currentStage" ? (
+                      <Clock className="h-3.5 w-3.5 shrink-0" aria-label="Time in current stage" />
                     ) : (
                       <span className="truncate">{c.label}</span>
                     )}
