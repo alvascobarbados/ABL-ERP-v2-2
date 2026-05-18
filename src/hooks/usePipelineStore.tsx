@@ -839,6 +839,22 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       await supabase.from("project_notes").delete().eq("id", note.id);
       await supabase.from("projects").upsert(projectToRow(proj));
       toast.error(FAILURE_TOAST);
+      return;
+    }
+    if (!isUndoing()) {
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `added a note to ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const stillThere = (exists.notes ?? []).some((n) => n.id === note.id);
+          if (!stillThere) return { ok: false, reason: "Already removed" };
+          await apiRef.current.removeNote?.(projectId, note.id);
+          return { ok: true };
+        },
+      });
     }
   }, []);
 
