@@ -36,9 +36,12 @@ export interface Customer {
   email?: string | null;
   default_shipping_mode?: ShippingMode | null;
   notes?: string | null;
+  /** Per-customer order-confirmation gate config (Phase 2c). Defaulted on insert. */
+  order_confirmation_config?: import("@/lib/orderConfirmation").OrderConfirmationConfig | null;
   created_at: string;
   updated_at: string;
 }
+
 
 export interface Buyer {
   id: string;
@@ -171,7 +174,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
         supabase.from("buyers").select("*").order("name"),
       ]);
       if (!mounted) return;
-      if (c.data) setCustomers(c.data as Customer[]);
+      if (c.data) setCustomers(c.data as unknown as Customer[]);
       if (s.data) setSuppliers(s.data as SupplierRecord[]);
       if (t.data) setTeamMembers(t.data as TeamMember[]);
       if (p.data) setProducts(p.data as ProductRecord[]);
@@ -183,7 +186,7 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
       .channel("master-data")
       .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, async () => {
         const { data } = await supabase.from("customers").select("*").order("name");
-        if (data) setCustomers(data as Customer[]);
+        if (data) setCustomers(data as unknown as Customer[]);
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "suppliers" }, async () => {
         const { data } = await supabase.from("suppliers").select("*").order("name");
@@ -266,15 +269,15 @@ export const MasterDataProvider = ({ children }: { children: ReactNode }) => {
   const addCustomer = useCallback(async (input: Partial<Customer> & { name: string }) => {
     const { data, error } = await supabase
       .from("customers")
-      .insert({ ...input })
+      .insert({ ...input } as any)
       .select()
       .single();
     if (error) throw error;
-    setCustomers((prev) => [...prev.filter((c) => c.id !== data.id), data as Customer].sort((a, b) => a.name.localeCompare(b.name)));
-    return data as Customer;
+    setCustomers((prev) => [...prev.filter((c) => c.id !== data.id), data as unknown as Customer].sort((a, b) => a.name.localeCompare(b.name)));
+    return data as unknown as Customer;
   }, []);
   const updateCustomer = useCallback(async (id: string, patch: Partial<Customer>) => {
-    const { error } = await supabase.from("customers").update(patch).eq("id", id);
+    const { error } = await supabase.from("customers").update(patch as any).eq("id", id);
     if (error) throw error;
   }, []);
   const deleteCustomer = useCallback(async (id: string) => {
