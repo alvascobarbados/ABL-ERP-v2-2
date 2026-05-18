@@ -176,7 +176,15 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
   const saveDisabled = digitsOnly ? false : !v.trim();
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} onSave={commit} saveDisabled={saveDisabled}>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      onSave={commit}
+      saveDisabled={saveDisabled}
+      onClear={onClear}
+      clearLabel={clearLabel ?? `Clear ${title.toLowerCase()}`}
+    >
       {multiline ? (
         <textarea
           ref={ref as React.RefObject<HTMLTextAreaElement>}
