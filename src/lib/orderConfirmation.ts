@@ -120,7 +120,7 @@ const EMPTY_GATE: GateConfig = { mode: "not_required", conditional_modes: [], co
 function getGateConfig(customer: CustomerForGates | null | undefined, gate: GateKey): GateConfig {
   const cfg = customer?.order_confirmation_config;
   if (!cfg) return EMPTY_GATE;
-  const entry = (cfg as Record<string, GateConfig | undefined>)[gate];
+  const entry = (cfg as unknown as Record<string, GateConfig | undefined>)[gate];
   return entry ?? EMPTY_GATE;
 }
 
