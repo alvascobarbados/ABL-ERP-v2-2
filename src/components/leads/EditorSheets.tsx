@@ -542,6 +542,8 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
     onSave(result.value === undefined ? null : (result.value ?? null));
   };
 
+  const handleClear = () => { onSave(null); };
+
   // ── Disabled state ────────────────────────────────────────────────────
   if (!mode) {
     return (
