@@ -99,6 +99,20 @@ export default function Login() {
         </span>
         <p className="mt-3 text-sm text-muted-foreground">Sign in to continue</p>
 
+        {idleBanner && (
+          <div
+            role="status"
+            className="mt-5 w-full rounded-xl border px-4 py-3 text-left text-[13px]"
+            style={{
+              borderColor: "hsl(var(--brand-orange) / 0.4)",
+              backgroundColor: "hsl(var(--brand-orange) / 0.08)",
+              color: "hsl(var(--brand-navy))",
+            }}
+          >
+            Signed out for inactivity. Sign in again to continue.
+          </div>
+        )}
+
         <button
           onClick={onGoogle}
           disabled={busy}
