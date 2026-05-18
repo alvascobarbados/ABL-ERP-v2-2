@@ -983,18 +983,52 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
       description: `${u.shortName} added line item ${item.qty} × ${item.description}` });
     await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
+    if (!isUndoing()) {
+      const liId = item.id;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `added line item to ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const idx = (exists.lineItems ?? []).findIndex((li) => li.id === liId);
+          if (idx < 0) return { ok: false, reason: "Already removed" };
+          await apiRef.current.removeLineItem?.(projectId, idx);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   const updateLineItem = useCallback(async (projectId: string, index: number, item: LineItem) => {
     const proj = projectsRef.current.find((p) => p.id === projectId); if (!proj) return;
     const items = [...(proj.lineItems ?? [])];
     if (index < 0 || index >= items.length) return;
+    const before = items[index];
     items[index] = item;
     const next = touch({ ...proj, lineItems: items });
     const u = userRef.current;
     const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
       description: `${u.shortName} edited line item ${item.qty} × ${item.description}` });
     await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
+    if (!isUndoing()) {
+      const liId = item.id;
+      const beforeItem = before;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `edited line item on ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const idx = (exists.lineItems ?? []).findIndex((li) => li.id === liId);
+          if (idx < 0) return { ok: false, reason: "Can't undo — line item no longer exists" };
+          await apiRef.current.updateLineItem?.(projectId, idx, beforeItem);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   const removeLineItem = useCallback(async (projectId: string, index: number) => {
@@ -1008,6 +1042,20 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const r = appendLog(next, { actor: actorOf(u), actionType: "line_item_change",
       description: `${u.shortName} removed line item ${removed.qty} × ${removed.description}` });
     await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
+    if (!isUndoing()) {
+      const fullItem = removed;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `deleted line item from ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          await apiRef.current.addLineItem?.(projectId, fullItem);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   const duplicateProject = useCallback(async (projectId: string): Promise<Project | null> => {
