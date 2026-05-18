@@ -59,7 +59,7 @@ import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility"
 type SortKey =
   | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
-  | "designBrief" | "completionDate"
+  | "designBrief" | "completionDate" | "createdAt"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
 
 interface Props {
@@ -261,6 +261,11 @@ function compareCards(
       if (bv == null) return -1;
       return dir * (av - bv);
     }
+    case "createdAt": {
+      const av = a.project.createdAt?.getTime?.() ?? 0;
+      const bv = b.project.createdAt?.getTime?.() ?? 0;
+      return dir * (av - bv);
+    }
     case "weight": {
       const av = a.project.weightKg, bv = b.project.weightKg;
       if (av == null && bv == null) return 0;
@@ -339,6 +344,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   // TODO(auth): Rep currently reads from `point_person` (comma-separated initials text).
   // When real auth + team_members FK lands, migrate to `sales_rep_id` and update this column.
   { key: "rep", label: "Rep", defaultPx: 60 },
+  { key: "createdAt", label: "Created", defaultPx: 110 },
   { key: "completionDate", label: "Completed", defaultPx: 110 },
   { key: "deadline", label: "Deadline", defaultPx: 120 },
 ];
@@ -1194,6 +1200,12 @@ const TableRow = ({
         onRowDoubleClick={onOpen}
         onActivate={(el) => { setPickerAnchor(el); setOpenPicker("rep"); }}
       />
+      )}
+
+      {has("createdAt") && (
+      <ReadOnlyCell cellKey={`${card.id}:createdAt`} onRowDoubleClick={onOpen} muted={!proj.createdAt}>
+        <span className="tabular">{proj.createdAt ? fmtDeadline(proj.createdAt) : "—"}</span>
+      </ReadOnlyCell>
       )}
 
       {has("completionDate") && (

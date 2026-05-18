@@ -37,6 +37,7 @@ const COLUMN_DEFS: { id: ColumnId; label: string }[] = [
   { id: "mode", label: "Mode" },
   { id: "tracking", label: "Tracking" },
   { id: "rep", label: "Rep" },
+  { id: "createdAt", label: "Created" },
   { id: "completionDate", label: "Completed" },
   { id: "deadline", label: "Deadline" },
 ];

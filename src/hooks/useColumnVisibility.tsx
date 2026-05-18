@@ -21,7 +21,7 @@ import { useCurrentUser } from "./useCurrentUser";
 export type ColumnId =
   | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
-  | "designBrief" | "completionDate"
+  | "designBrief" | "completionDate" | "createdAt"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
 
 // Columns that must always be visible (workflow anchors). These cannot
@@ -38,7 +38,7 @@ const ALL_COLUMNS: ColumnId[] = [
   "flagged", "stage", "customer", "buyer", "project", "detail", "designBrief",
   "supplier", "quote", "proof", "po", "invoice", "amount", "balance",
   "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking",
-  "rep", "completionDate", "deadline",
+  "rep", "createdAt", "completionDate", "deadline",
 ];
 
 // Outstanding Balance is hidden by default on every tab — toggleable via

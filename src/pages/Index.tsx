@@ -59,15 +59,15 @@ const DEFAULT_FILTER: FilterState = EMPTY_FILTER;
 // ─── Sort persistence per-tab ───
 const SORT_STORAGE = "alvasco.sort.v1";
 const DEFAULT_SORTS: Record<TabId, SortState> = {
-  all: { field: "deadline", dir: "asc" },
-  sales: { field: "deadline", dir: "asc" },
-  design: { field: "deadline", dir: "asc" },
-  purchasing: { field: "deadline", dir: "asc" },
-  production: { field: "deadline", dir: "asc" },
-  operations: { field: "deadline", dir: "asc" }, // legacy alias
-  shipping: { field: "deadline", dir: "asc" },
-  finance: { field: "deadline", dir: "asc" },
-  completed: { field: "updated", dir: "desc" },
+  all: { field: "created", dir: "desc" },
+  sales: { field: "created", dir: "desc" },
+  design: { field: "created", dir: "desc" },
+  purchasing: { field: "created", dir: "desc" },
+  production: { field: "created", dir: "desc" },
+  operations: { field: "created", dir: "desc" }, // legacy alias
+  shipping: { field: "created", dir: "desc" },
+  finance: { field: "created", dir: "desc" },
+  completed: { field: "created", dir: "desc" },
 };
 
 function loadSorts(): Record<TabId, SortState> {
