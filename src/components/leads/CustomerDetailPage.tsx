@@ -17,6 +17,7 @@ import { useMasterData, type Buyer, type Customer, type CustomerCountry, type Cu
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { AddBuyerSheet } from "@/components/leads/CustomerListPage";
+import { OrderConfirmationRequirementsSection } from "@/components/leads/OrderConfirmationRequirementsSection";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -256,6 +257,9 @@ export const CustomerDetailPage = ({ customerId }: { customerId: string }) => {
               </div>
             </SectionCard>
           </section>
+
+          {/* ORDER CONFIRMATION REQUIREMENTS */}
+          <OrderConfirmationRequirementsSection customer={customer} />
 
           {/* ASSIGNED PROJECTS */}
           <section>
