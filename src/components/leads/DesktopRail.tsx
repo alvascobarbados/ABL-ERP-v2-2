@@ -206,8 +206,3 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
     </aside>
   );
 };
-
-      </div>
-    </aside>
-  );
-};
