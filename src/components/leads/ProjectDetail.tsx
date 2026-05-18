@@ -1418,6 +1418,22 @@ const LOG_DOT: Record<ProjectLogActionType, string> = {
   restore: "hsl(var(--muted-foreground))",
   mark_paid: "hsl(var(--brand-gold, var(--brand-orange)))",
   line_item_change: "hsl(var(--muted-foreground))",
+  // Approvals (Phase 4+): use teal for approval lifecycle, muted for config/overrides
+  customer_gate_config_change: "hsl(var(--muted-foreground))",
+  customer_gate_config_consequence: "hsl(var(--muted-foreground))",
+  artwork_approval_create: "hsl(var(--brand-teal))",
+  artwork_approval_update: "hsl(var(--brand-teal))",
+  artwork_approval_revoke: "hsl(var(--destructive))",
+  quotation_approval_create: "hsl(var(--brand-teal))",
+  quotation_approval_update: "hsl(var(--brand-teal))",
+  quotation_approval_revoke: "hsl(var(--destructive))",
+  customer_po_approval_create: "hsl(var(--brand-teal))",
+  customer_po_approval_update: "hsl(var(--brand-teal))",
+  customer_po_approval_revoke: "hsl(var(--destructive))",
+  email_verbal_approval_set: "hsl(var(--brand-teal))",
+  email_verbal_approval_unset: "hsl(var(--muted-foreground))",
+  gate_override_add: "hsl(var(--muted-foreground))",
+  gate_override_remove: "hsl(var(--muted-foreground))",
 };
 const fmtLogTs = (d: Date) => {
   const dt = d instanceof Date ? d : new Date(d);
