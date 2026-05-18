@@ -7,6 +7,7 @@ import {
 } from "@/data/pipelines";
 import { useCurrentUser, type CurrentUser } from "./useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
+import { pushUndo, isUndoing, getUndoContext, makeUndoId, clearUndoStack, type UndoEntry } from "./useUndoStack";
 
 // Strip a known prefix and any non-digits. Returns undefined for empty.
 // Defensive: DB should hold plain digits, but legacy rows may include "Q-"/"PO-"/"INV-".
