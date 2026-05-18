@@ -880,7 +880,23 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
     if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
     const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
-    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    if (!isUndoing()) {
+      const oldText = oldNote.text;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `edited a note on ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const still = (exists.notes ?? []).some((n) => n.id === noteId);
+          if (!still) return { ok: false, reason: "Can't undo — note no longer exists" };
+          await apiRef.current.updateNote?.(projectId, noteId, oldText);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   const removeNote = useCallback(async (projectId: string, noteId: string) => {
