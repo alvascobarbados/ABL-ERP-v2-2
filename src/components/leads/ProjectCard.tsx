@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { useExpandedCards } from "@/hooks/useExpandedCards";
 import { useMasterData } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
+import { fmtTimeInStage } from "@/lib/timeInStage";
+import { useMinuteTick } from "@/hooks/useMinuteTick";
 
 
 interface ProjectCardProps {
@@ -58,6 +60,7 @@ export const ProjectCard = ({
   const editMode = useEditMode();
   const store = usePipelineStore();
   const md = useMasterData();
+  useMinuteTick(); // refresh "time in stage" suffix every 60s
   // SINGLE SOURCE OF TRUTH: always read the live project record from the
   // central store. The `card.project` snapshot held by the parent list can
   // be one render behind after edits — going through the store guarantees
@@ -700,6 +703,14 @@ export const ProjectCard = ({
                   title={stageLabel}
                 >
                   {stageLabel}
+                  {proj.stageEnteredAt && (
+                    <span
+                      className="ml-1 tabular"
+                      style={{ color: "hsl(var(--brand-navy) / 0.45)" }}
+                    >
+                      · {fmtTimeInStage(proj.stageEnteredAt)}
+                    </span>
+                  )}
                 </span>
               )}
 

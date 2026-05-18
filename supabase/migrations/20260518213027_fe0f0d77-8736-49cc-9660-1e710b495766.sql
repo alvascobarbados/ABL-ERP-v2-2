@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN stage_entered_at timestamptz;

@@ -55,9 +55,11 @@ import { TrackingEditor, ShipmentNumberEditor } from "./EditorSheets";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { TabId } from "./PipelineTabs";
 import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility";
+import { useMinuteTick } from "@/hooks/useMinuteTick";
+import { fmtTimeInStage } from "@/lib/timeInStage";
 
 type SortKey =
-  | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
+  | "flagged" | "stage" | "currentStage" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate" | "createdAt"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
@@ -266,6 +268,13 @@ function compareCards(
       const bv = b.project.createdAt?.getTime?.() ?? 0;
       return dir * (av - bv);
     }
+    case "currentStage": {
+      // Sort by stage_entered_at. Descending = most recently moved first;
+      // ascending = stuck in stage longest first.
+      const av = a.project.stageEnteredAt?.getTime?.() ?? 0;
+      const bv = b.project.stageEnteredAt?.getTime?.() ?? 0;
+      return dir * (av - bv);
+    }
     case "weight": {
       const av = a.project.weightKg, bv = b.project.weightKg;
       if (av == null && bv == null) return 0;
@@ -323,6 +332,7 @@ function compareCards(
 const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
   { key: "stage", label: "Stage · State", defaultPx: 150 },
+  { key: "currentStage", label: "Current Stage", defaultPx: 100 },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "buyer", label: "Buyer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
@@ -576,6 +586,8 @@ const TableRow = ({
   const u = urgencyLabel(card.deadlineDate);
   const md = useMasterData();
   const store = usePipelineStore();
+  // Re-render every 60s so the Current Stage column rolls over (59m → 1h).
+  useMinuteTick();
   const supName = supplierName(proj.supplierId, md.getSupplierByAnyId) || proj.supplierLabel || "";
 
   // ── Inline-edit state ────────────────────────────────────────────────
@@ -893,6 +905,13 @@ const TableRow = ({
         }}
       />
       )}
+
+      {has("currentStage") && (
+      <ReadOnlyCell cellKey={`${card.id}:currentStage`} onRowDoubleClick={onOpen} muted={!proj.stageEnteredAt}>
+        <span className="tabular">{fmtTimeInStage(proj.stageEnteredAt)}</span>
+      </ReadOnlyCell>
+      )}
+
 
       {has("customer") && (
       <EditableCell

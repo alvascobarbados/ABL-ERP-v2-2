@@ -19,7 +19,7 @@ import { useCurrentUser } from "./useCurrentUser";
 // SortKey-equivalent IDs that ProjectTable uses for columns. Keep this list
 // in sync with ProjectTable's ALL_COLS.
 export type ColumnId =
-  | "flagged" | "stage" | "customer" | "buyer" | "project" | "detail" | "supplier"
+  | "flagged" | "stage" | "currentStage" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate" | "createdAt"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
@@ -35,7 +35,7 @@ export const ALWAYS_ON: ReadonlySet<ColumnId> = new Set([
 // Temporary: every tab defaults to ALL columns visible. Order mirrors
 // ALL_COLS in src/components/leads/ProjectTable.tsx.
 const ALL_COLUMNS: ColumnId[] = [
-  "flagged", "stage", "customer", "buyer", "project", "detail", "designBrief",
+  "flagged", "stage", "currentStage", "customer", "buyer", "project", "detail", "designBrief",
   "supplier", "quote", "proof", "po", "invoice", "amount", "balance",
   "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking",
   "rep", "createdAt", "completionDate", "deadline",

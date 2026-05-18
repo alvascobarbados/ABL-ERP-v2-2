@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 const COLUMN_DEFS: { id: ColumnId; label: string }[] = [
   { id: "flagged", label: "Flag" },
   { id: "stage", label: "Stage · State" },
+  { id: "currentStage", label: "Current Stage" },
   { id: "customer", label: "Customer" },
   { id: "project", label: "Project" },
   { id: "detail", label: "Detail" },
