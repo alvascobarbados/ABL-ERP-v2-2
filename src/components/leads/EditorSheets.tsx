@@ -642,7 +642,7 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
   const preview = previewPrefix && previewNumber ? `${previewPrefix}-${previewNumber}` : "";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Air tracking" onSave={handleSave}>
+    <BottomSheet open={open} onClose={onClose} title="Air tracking" onSave={handleSave} onClear={handleClear} clearLabel="Clear tracking">
       <div className="space-y-4">
         <div>
           <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
