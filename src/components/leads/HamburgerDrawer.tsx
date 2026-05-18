@@ -107,9 +107,10 @@ export const HamburgerDrawer = ({
           <MenuItem icon={LogOut} label="Sign out" dim onClick={() => { onClose(); toast("Sign out coming soon"); }} />
         </nav>
 
-        <div className="px-5 py-3 border-t text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
+        <div className="px-5 py-3 border-t flex items-center justify-between text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
           style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }}>
-          Alvasco
+          <span>Alvasco</span>
+          <span className="tabular normal-case tracking-normal opacity-70">v2-2</span>
         </div>
       </aside>
       <button
