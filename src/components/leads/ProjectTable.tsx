@@ -332,7 +332,7 @@ function compareCards(
 const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right" | "left"; resizable?: boolean }[] = [
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
   { key: "stage", label: "Stage · State", defaultPx: 150 },
-  { key: "currentStage", label: "Current Stage", defaultPx: 64 },
+  { key: "currentStage", label: "Current Stage", defaultPx: 48 },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "buyer", label: "Buyer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
