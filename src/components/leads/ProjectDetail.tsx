@@ -140,6 +140,69 @@ function defaultsForCountry(country?: string | null): { weight: WeightUnit; volu
 const fmtCreated = (d: Date) =>
   `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
+// ── Soft duplicate notice ─────────────────────────────────────────────
+// Document number fields (Q/PO/INV/Proof/Deposit#) intentionally allow
+// duplicates — one PO can cover several projects. This inline notice lists
+// other live projects sharing the same value. Updates live as the store does.
+type DocField = "quoteNumber" | "poNumber" | "invoiceNumber" | "proofNumber" | "depositInvoiceNumber";
+const DuplicateNotice = ({
+  field, value, currentId, onOpenProject,
+}: {
+  field: DocField;
+  value: string | null | undefined;
+  currentId: string;
+  onOpenProject?: (id: string) => void;
+}) => {
+  const { findProjectsByDocField } = usePipelineStore();
+  const [expanded, setExpanded] = useState(false);
+  const matches = findProjectsByDocField(field, value, currentId);
+  if (matches.length === 0) return null;
+
+  const showAll = expanded || matches.length <= 3;
+  const visible = showAll ? matches : matches.slice(0, 3);
+  const overflow = matches.length - visible.length;
+
+  const renderLink = (id: string, name: string) => (
+    <button
+      key={id}
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onOpenProject?.(id); }}
+      className="underline underline-offset-2 hover:opacity-80"
+      style={{ color: "hsl(var(--brand-navy) / 0.85)" }}
+    >
+      {name}
+    </button>
+  );
+
+  return (
+    <div
+      className="px-2 -mx-2 pt-1.5 pb-2 text-[11px] leading-snug border-b last:border-b-0"
+      style={{ color: "hsl(var(--brand-navy) / 0.55)", borderColor: "hsl(var(--brand-navy) / 0.07)" }}
+    >
+      <span className="mr-1">Also used on:</span>
+      {visible.map((p, i) => (
+        <span key={p.id}>
+          {i > 0 && <span>, </span>}
+          {renderLink(p.id, p.projectName)}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <>
+          <span>, and </span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+            className="underline underline-offset-2 hover:opacity-80"
+            style={{ color: "hsl(var(--brand-navy) / 0.85)" }}
+          >
+            {overflow} {overflow === 1 ? "other" : "others"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+
 export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
