@@ -507,6 +507,27 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
   const [pulsePipeline, setPulsePipeline] = useState<PipelineId | null>(null);
   const pulseTimer = useRef<number | null>(null);
 
+  // Stable reference holder for in-store mutation fns so undo inverse
+  // closures don't need to be re-bound or hoisted past their definitions.
+  const apiRef = useRef<{
+    updateProject?: (id: string, patch: Partial<Project>) => Promise<void>;
+    moveCard?: (id: string, target: { pipeline: PipelineId; stage: StageId }) => Promise<MoveResult>;
+    toggleFlag?: (id: string) => Promise<void>;
+    restoreNote?: (projectId: string, note: ProjectNote) => Promise<void>;
+    removeNote?: (projectId: string, noteId: string) => Promise<void>;
+    updateNote?: (projectId: string, noteId: string, text: string) => Promise<void>;
+    addLineItem?: (projectId: string, item: LineItem) => Promise<void>;
+    removeLineItem?: (projectId: string, index: number) => Promise<void>;
+    updateLineItem?: (projectId: string, index: number, item: LineItem) => Promise<void>;
+    commitRaw?: (project: Project, entries: ProjectLogEntry[]) => Promise<boolean>;
+  }>({});
+
+  // Clear undo stack when the authenticated user changes (sign-in/sign-out).
+  useEffect(() => {
+    clearUndoStack();
+  }, [currentUser.userId]);
+
+
   // ── Initial fetch from Supabase + realtime subscription ───────────────
   // SCALING NOTE: chatty fan-out, fine to ~5k projects, revisit when
   // growth requires pagination or scoped subscriptions.
