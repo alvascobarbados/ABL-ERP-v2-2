@@ -1055,6 +1055,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         digitsOnly
         maxLength={4}
         onSave={saveProofNumber}
+        onClear={() => saveProofNumber("")}
+        clearLabel="Clear proof number"
       />
       <DateEditor
         open={editor?.kind === "completionDate"}
@@ -1072,6 +1074,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         value={live.depositInvoiceNumber ?? ""}
         placeholder="DEP-1234"
         onSave={saveDepositInvoice}
+        onClear={() => saveDepositInvoice("")}
+        clearLabel="Clear deposit number"
       />
       <TextEditor
         open={editor?.kind === "depositAmount"}
