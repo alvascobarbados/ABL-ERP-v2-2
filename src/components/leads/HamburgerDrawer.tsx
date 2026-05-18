@@ -111,7 +111,7 @@ export const HamburgerDrawer = ({
         <div className="px-5 py-3 border-t flex items-center justify-between text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
           style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }}>
           <span>Alvasco</span>
-          <span className="tabular normal-case tracking-normal opacity-70">v2-2</span>
+          <span className="tabular normal-case tracking-normal opacity-70">{APP_VERSION}</span>
         </div>
       </aside>
       <button
