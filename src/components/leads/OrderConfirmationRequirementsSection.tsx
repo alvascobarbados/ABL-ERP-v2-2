@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { SectionHeader, SectionCard } from "@/components/leads/ProjectDetail";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -113,7 +114,8 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
     const prev = savedConfig;
     const { error } = await supabase
       .from("customers")
-      .update({ order_confirmation_config: next as any })
+      // Json cast: Supabase's generated Json type can't infer our nested gate-config shape.
+      .update({ order_confirmation_config: next as unknown as Json })
       .eq("id", customer.id);
     if (error) {
       toast.error(`Couldn't save: ${error.message}`);
@@ -142,7 +144,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
         new_modes: next[gate].conditional_modes,
         old_amount: prev[gate].conditional_amount_above,
         new_amount: next[gate].conditional_amount_above,
-      } as any,
+      } as Json,
     });
 
     // Per-project consequence audits
@@ -162,7 +164,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
           old_state: ch.oldState,
           new_state: ch.newState,
           parent_log_id: logId,
-        } as any,
+        } as Json,
       });
     }
 
@@ -176,7 +178,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
       applyInverse: async () => {
         const { error: e2 } = await supabase
           .from("customers")
-          .update({ order_confirmation_config: prev as any })
+          .update({ order_confirmation_config: prev as unknown as Json })
           .eq("id", customer.id);
         if (e2) return { ok: false, reason: "Couldn't restore previous configuration" };
         setConfig(prev); setSavedConfig(prev);
@@ -189,7 +191,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
           actor_display_name: user.shortName,
           action_type: "customer_gate_config_change",
           description: `${user.shortName} undid: ${GATE_LABELS[gate]} requirement on ${customer.name}`,
-          metadata: { undo_of: logId, customer_id: customer.id, gate } as any,
+          metadata: { undo_of: logId, customer_id: customer.id, gate } as Json,
         });
         return { ok: true };
       },
@@ -254,12 +256,12 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
     const pos = Array.from(new Set(openProjects.map((p) => p.customerPoNumber).filter(Boolean) as string[]));
     const lookup: ApprovalRowsLookup = { quotation: {}, po: {} };
     if (qs.length) {
-      const { data } = await supabase.from("quotation_approvals" as any).select("*").in("q_number", qs);
-      for (const r of (data ?? []) as any[]) lookup.quotation[r.q_number] = r;
+      const { data } = await supabase.from("quotation_approvals").select("*").in("q_number", qs);
+      for (const r of data ?? []) lookup.quotation[r.q_number] = r;
     }
     if (pos.length) {
-      const { data } = await supabase.from("customer_po_approvals" as any).select("*").in("customer_po_number", pos);
-      for (const r of (data ?? []) as any[]) lookup.po[r.customer_po_number] = r;
+      const { data } = await supabase.from("customer_po_approvals").select("*").in("customer_po_number", pos);
+      for (const r of data ?? []) lookup.po[r.customer_po_number] = r;
     }
 
     const changes: TransitionChange[] = [];
@@ -287,7 +289,8 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
   }, [config]);
 
   return (
-    <section>
+    <section id="order-confirmation-requirements" style={{ scrollMarginTop: 80 }}>
+
       <SectionHeader>Order Confirmation Requirements</SectionHeader>
       <SectionCard>
         <div className="space-y-0">

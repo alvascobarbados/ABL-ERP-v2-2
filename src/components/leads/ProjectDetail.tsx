@@ -20,6 +20,7 @@ import { BuyerPicker } from "./BuyerPicker";
 import { useMasterData, parseInitials, formatInitials } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ApprovalsSubsection } from "./ApprovalsSubsection";
 import { StagePicker } from "./StagePicker";
 import { usePresence } from "@/hooks/usePresence";
 import { formatAmountFull } from "@/lib/money";
@@ -664,7 +665,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
                   {live.flagged ? "Flagged" : "Flag"}
                 </button>
               </div>
+              <ApprovalsSubsection project={live} />
             </SectionCard>
+
           </section>
 
           {/* ── OVERVIEW ── */}
