@@ -1,0 +1,9 @@
+DELETE FROM project_log_entries;
+DELETE FROM project_notes;
+DELETE FROM line_items;
+DELETE FROM shipments;
+DELETE FROM projects;
+DELETE FROM buyers;
+DELETE FROM customers;
+DELETE FROM suppliers;
+DELETE FROM products;
