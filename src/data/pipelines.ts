@@ -383,6 +383,9 @@ export interface Project {
   // line-item changes, stage moves). Spreadsheet view sorts/filters by these.
   createdAt: Date;
   updatedAt?: Date;
+  /** Timestamp the project most recently entered its current sub-stage.
+   *  Resets on ANY pipeline/stage change. System-managed only. */
+  stageEnteredAt?: Date;
   // ── Trash (soft-delete) ──────────────────────────────────────────────
   // Set when the project is moved to Trash. Filtered out of every
   // pipeline view, search result, and count. Visible only in TrashView.
