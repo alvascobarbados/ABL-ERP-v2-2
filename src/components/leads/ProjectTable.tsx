@@ -586,6 +586,8 @@ const TableRow = ({
   const u = urgencyLabel(card.deadlineDate);
   const md = useMasterData();
   const store = usePipelineStore();
+  // Re-render every 60s so the Current Stage column rolls over (59m → 1h).
+  useMinuteTick();
   const supName = supplierName(proj.supplierId, md.getSupplierByAnyId) || proj.supplierLabel || "";
 
   // ── Inline-edit state ────────────────────────────────────────────────
