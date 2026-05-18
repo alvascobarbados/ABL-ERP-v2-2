@@ -420,10 +420,10 @@ export const EditableCell = (props: Props) => {
         </div>
       ) : (
         <>
-          <span className="truncate w-full">{display}</span>
+          <span className="cell-clamp-2 w-full">{display}</span>
           {!readOnly && isSelectedOnly && (
             <Pencil
-              className="h-3 w-3 ml-1 opacity-50 shrink-0 transition-opacity"
+              className="h-3 w-3 ml-1 mt-0.5 opacity-50 shrink-0 transition-opacity"
               style={{ color: "hsl(var(--brand-navy))" }}
             />
           )}
