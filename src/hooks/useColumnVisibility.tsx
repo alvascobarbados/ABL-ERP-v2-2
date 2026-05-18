@@ -45,14 +45,43 @@ const ALL_COLUMNS: ColumnId[] = [
 // Columns popover. (v1: still stored, just not shown by default.)
 const DEFAULT_COLUMNS: ColumnId[] = ALL_COLUMNS.filter((c) => c !== "balance");
 
+// Per-pipeline default hides — keeps tabs focused on workflow-relevant columns.
+// Users can still re-enable any column via the Columns popover.
+const without = (cols: ColumnId[], hide: ColumnId[]): ColumnId[] =>
+  cols.filter((c) => !hide.includes(c));
+const withAdd = (cols: ColumnId[], add: ColumnId[]): ColumnId[] => {
+  const set = new Set(cols);
+  add.forEach((c) => set.add(c));
+  return ALL_COLUMNS.filter((c) => set.has(c));
+};
+
+const SALES_DEFAULT = without(DEFAULT_COLUMNS, [
+  "proof", "po", "invoice", "weight", "cbm", "pkgs", "tracking", "completionDate",
+]);
+const DESIGN_DEFAULT = without(DEFAULT_COLUMNS, [
+  "invoice", "amount", "weight", "cbm", "pkgs", "shipmentNumber", "tracking", "completionDate",
+]);
+const PURCHASING_DEFAULT = without(DEFAULT_COLUMNS, ["designBrief", "tracking"]);
+const PRODUCTION_DEFAULT = withAdd(
+  without(DEFAULT_COLUMNS, ["designBrief"]),
+  ["completionDate"],
+);
+const SHIPPING_DEFAULT = withAdd(
+  without(DEFAULT_COLUMNS, ["designBrief", "proof"]),
+  ["completionDate"],
+);
+const FINANCE_DEFAULT = without(DEFAULT_COLUMNS, [
+  "designBrief", "proof", "weight", "cbm", "pkgs",
+]);
+
 export const DEFAULT_VISIBLE: Record<TabId, ColumnId[]> = {
   all: DEFAULT_COLUMNS,
-  sales: DEFAULT_COLUMNS,
-  design: DEFAULT_COLUMNS,
-  purchasing: DEFAULT_COLUMNS,
-  production: DEFAULT_COLUMNS,
-  shipping: DEFAULT_COLUMNS,
-  finance: DEFAULT_COLUMNS,
+  sales: SALES_DEFAULT,
+  design: DESIGN_DEFAULT,
+  purchasing: PURCHASING_DEFAULT,
+  production: PRODUCTION_DEFAULT,
+  shipping: SHIPPING_DEFAULT,
+  finance: FINANCE_DEFAULT,
   completed: DEFAULT_COLUMNS,
   // legacy alias
   operations: DEFAULT_COLUMNS,
