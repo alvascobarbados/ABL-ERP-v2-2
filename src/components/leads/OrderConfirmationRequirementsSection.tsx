@@ -164,7 +164,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
           old_state: ch.oldState,
           new_state: ch.newState,
           parent_log_id: logId,
-        } as any,
+        } as Json,
       });
     }
 
