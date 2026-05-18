@@ -1,0 +1,2 @@
+ALTER TABLE public.project_log_entries DROP CONSTRAINT project_log_action_chk;
+ALTER TABLE public.project_log_entries ADD CONSTRAINT project_log_action_chk CHECK (action_type = ANY (ARRAY['stage_change'::text, 'field_edit'::text, 'flag_toggle'::text, 'note_added'::text, 'note_edited'::text, 'note_deleted'::text, 'project_created'::text, 'archive'::text, 'unarchive'::text, 'trash'::text, 'restore'::text, 'mark_paid'::text, 'line_item_change'::text, 'user_signin'::text, 'user_signout'::text]));
