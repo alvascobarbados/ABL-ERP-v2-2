@@ -664,7 +664,9 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
                   {live.flagged ? "Flagged" : "Flag"}
                 </button>
               </div>
+              <ApprovalsSubsection project={live} />
             </SectionCard>
+
           </section>
 
           {/* ── OVERVIEW ── */}
