@@ -261,6 +261,11 @@ function compareCards(
       if (bv == null) return -1;
       return dir * (av - bv);
     }
+    case "createdAt": {
+      const av = a.project.createdAt?.getTime?.() ?? 0;
+      const bv = b.project.createdAt?.getTime?.() ?? 0;
+      return dir * (av - bv);
+    }
     case "weight": {
       const av = a.project.weightKg, bv = b.project.weightKg;
       if (av == null && bv == null) return 0;
