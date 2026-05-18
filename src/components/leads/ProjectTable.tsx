@@ -906,6 +906,13 @@ const TableRow = ({
       />
       )}
 
+      {has("currentStage") && (
+      <ReadOnlyCell cellKey={`${card.id}:currentStage`} onRowDoubleClick={onOpen} muted={!proj.stageEnteredAt}>
+        <span className="tabular">{fmtTimeInStage(proj.stageEnteredAt)}</span>
+      </ReadOnlyCell>
+      )}
+
+
       {has("customer") && (
       <EditableCell
         cellKey={`${card.id}:customer`}
