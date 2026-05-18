@@ -583,7 +583,7 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
   if (mode === "Ocean") {
     const preview = oceanBl ? `${OCEAN_TRACKING_PREFIX}-${oceanBl}` : "";
     return (
-      <BottomSheet open={open} onClose={onClose} title="Ocean tracking (B/L)" onSave={handleSave}>
+      <BottomSheet open={open} onClose={onClose} title="Ocean tracking (B/L)" onSave={handleSave} onClear={handleClear} clearLabel="Clear tracking">
         <div className="space-y-4">
           <div>
             <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
