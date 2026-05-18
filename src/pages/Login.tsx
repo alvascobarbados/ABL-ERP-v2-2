@@ -1,7 +1,7 @@
 /**
  * Austere internal-team login. Wordmark, subtitle, Google + Magic Link.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
