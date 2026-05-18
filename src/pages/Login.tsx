@@ -37,6 +37,16 @@ export default function Login() {
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [idleBanner, setIdleBanner] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("signout_reason") === "idle") {
+        sessionStorage.removeItem("signout_reason");
+        setIdleBanner(true);
+      }
+    } catch {}
+  }, []);
 
   const cleanEmail = email.trim().toLowerCase();
   const validEmail = EMAIL_RE.test(cleanEmail);
