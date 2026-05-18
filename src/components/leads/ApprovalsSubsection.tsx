@@ -228,11 +228,14 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
       if (g === "email") tsCandidates.push(project.emailVerbalApprovedAt);
       else if (g === "quotation") tsCandidates.push(quotationApproval?.approved_on);
       else if (g === "po") tsCandidates.push(customerPoApproval?.approved_on);
-      else if (g === "deposit") tsCandidates.push(project.depositPaidDate);
+      else if (g === "deposit") {
+        const d = project.depositPaidDate;
+        tsCandidates.push(d ? (d instanceof Date ? d.toISOString() : d) : null);
+      }
     }
     const valid = tsCandidates.filter((x): x is string => !!x);
     const latest = valid.length
-      ? valid.reduce<string>((a, b) => (new Date(a).getTime() > new Date(b).getTime() ? a : b))
+      ? valid.reduce((a, b) => (new Date(a).getTime() > new Date(b).getTime() ? a : b), valid[0])
       : null;
     return {
       iconColor: GREEN,
