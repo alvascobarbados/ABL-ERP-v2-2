@@ -1272,7 +1272,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const subs = projectsRef.current.filter((p) => p.shipmentId === shipmentId && p.pipeline === "shipping");
     let count = 0;
     for (const p of subs) {
-      const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required" };
+      const patch: Partial<Project> = { pipeline: "finance", stage: "invoice_required", stageEnteredAt: new Date() };
       // INV# is filled in manually when an invoice actually exists — not auto-generated.
       const next = touch({ ...p, ...patch });
       const r = appendLog(next, { actor: actorOf(u), actionType: "stage_change",
