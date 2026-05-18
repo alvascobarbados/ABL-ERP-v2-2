@@ -225,6 +225,7 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     emailVerbalApprovedAt: row.email_verbal_approved_at ?? null,
     emailVerbalApprovedByBuyerId: row.email_verbal_approved_by_buyer_id ?? null,
     emailVerbalApprovedViaChannel: row.email_verbal_approved_via_channel ?? null,
+    emailVerbalApprovedOtherName: row.email_verbal_approved_other_name ?? null,
     emailVerbalApprovedNotes: row.email_verbal_approved_notes ?? null,
     emailVerbalApprovedRecordedByUserId: row.email_verbal_approved_recorded_by_user_id ?? null,
     orderConfirmationOverrides: (row.order_confirmation_overrides ?? {}) as any,
