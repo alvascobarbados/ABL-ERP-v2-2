@@ -36,9 +36,12 @@ export interface Customer {
   email?: string | null;
   default_shipping_mode?: ShippingMode | null;
   notes?: string | null;
+  /** Per-customer order-confirmation gate config (Phase 2c). Defaulted on insert. */
+  order_confirmation_config?: import("@/lib/orderConfirmation").OrderConfirmationConfig | null;
   created_at: string;
   updated_at: string;
 }
+
 
 export interface Buyer {
   id: string;

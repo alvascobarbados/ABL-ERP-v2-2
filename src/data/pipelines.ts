@@ -312,7 +312,15 @@ export type ProjectLogActionType =
   | "trash"
   | "restore"
   | "mark_paid"
-  | "line_item_change";
+  | "line_item_change"
+  // ── Approvals (Phase 4+) ──────────────────────────────────────────────
+  | "customer_gate_config_change"
+  | "customer_gate_config_consequence"
+  | "artwork_approval_create" | "artwork_approval_update" | "artwork_approval_revoke"
+  | "quotation_approval_create" | "quotation_approval_update" | "quotation_approval_revoke"
+  | "customer_po_approval_create" | "customer_po_approval_update" | "customer_po_approval_revoke"
+  | "email_verbal_approval_set" | "email_verbal_approval_unset"
+  | "gate_override_add" | "gate_override_remove";
 
 export interface ProjectLogEntry {
   id: string;
@@ -322,7 +330,7 @@ export interface ProjectLogEntry {
   /** Pre-rendered, human-readable sentence (with the actor's name as subject). */
   description: string;
   /** Optional structured payload — keeps the door open to future filtering. */
-  metadata?: {
+  metadata?: Record<string, unknown> & {
     field?: string;
     fromValue?: unknown;
     toValue?: unknown;
@@ -332,6 +340,7 @@ export interface ProjectLogEntry {
     toStage?: StageId;
   };
 }
+
 
 export interface Project {
   id: string;
@@ -432,6 +441,15 @@ export interface Project {
   depositPaidMethod?: PaymentMethod | null;
   /** Single column stores either Bank Ref No. (Transfer) or Cheque No. (Cheque). */
   depositPaymentReference?: string | null;
+  // ── Phase 2b: Approvals (customer PO + email/verbal + per-gate overrides) ──
+  customerPoNumber?: string | null;
+  emailVerbalApproved?: boolean;
+  emailVerbalApprovedAt?: string | null;
+  emailVerbalApprovedByBuyerId?: string | null;
+  emailVerbalApprovedViaChannel?: "email" | "whatsapp" | "phone" | "in_person" | "other" | null;
+  emailVerbalApprovedNotes?: string | null;
+  emailVerbalApprovedRecordedByUserId?: string | null;
+  orderConfirmationOverrides?: import("@/lib/orderConfirmation").OrderConfirmationOverrides;
 }
 
 /** @deprecated Carriers now live inside `trackingRef` as a PREFIX-number string. */
