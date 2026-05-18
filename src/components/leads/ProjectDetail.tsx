@@ -938,6 +938,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         prefix="Q-"
         digitsOnly
         onSave={saveQuote}
+        onClear={() => saveQuote("")}
+        clearLabel="Clear quote number"
       />
       <TextEditor
         open={editor?.kind === "po"}
@@ -948,6 +950,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         prefix="PO-"
         digitsOnly
         onSave={savePO}
+        onClear={() => savePO("")}
+        clearLabel="Clear PO number"
       />
       <TextEditor
         open={editor?.kind === "invoice"}
@@ -958,6 +962,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         prefix="INV-"
         digitsOnly
         onSave={saveInvoice}
+        onClear={() => saveInvoice("")}
+        clearLabel="Clear invoice number"
       />
       <TrackingEditor
         open={editor?.kind === "tracking"}
