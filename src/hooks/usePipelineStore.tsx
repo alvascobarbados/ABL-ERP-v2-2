@@ -984,7 +984,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       description: `${u.shortName} added line item ${item.qty} × ${item.description}` });
     await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
     if (!isUndoing()) {
-      const liId = item.id;
+      const addedAtIndex = items.length - 1;
+      const itemSig = `${item.qty}|${item.description}|${item.unitPrice ?? ""}`;
       pushUndo({
         id: makeUndoId(), timestamp: Date.now(),
         description: `added line item to ${proj.projectName}`,
@@ -992,7 +993,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         applyInverse: async () => {
           const exists = projectsRef.current.find((p) => p.id === projectId);
           if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
-          const idx = (exists.lineItems ?? []).findIndex((li) => li.id === liId);
+          const list = exists.lineItems ?? [];
+          let idx = list.findIndex((li, i) => i >= addedAtIndex && `${li.qty}|${li.description}|${li.unitPrice ?? ""}` === itemSig);
+          if (idx < 0) idx = list.findIndex((li) => `${li.qty}|${li.description}|${li.unitPrice ?? ""}` === itemSig);
           if (idx < 0) return { ok: false, reason: "Already removed" };
           await apiRef.current.removeLineItem?.(projectId, idx);
           return { ok: true };
