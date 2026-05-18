@@ -273,7 +273,7 @@ const ApprovalRow = ({
   divider,
   extraPadding,
 }: {
-  icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  icon: LucideIcon;
   content: {
     iconColor: string;
     chevron: boolean;
