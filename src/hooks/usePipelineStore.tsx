@@ -1094,6 +1094,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       pipeline: orig.pipeline, stage: orig.stage, flagged: false,
       deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined,
       createdAt: new Date(), updatedAt: undefined,
+      stageEnteredAt: new Date(),
     };
     const r = appendLog(copy, { actor: actorOf(u), actionType: "project_created",
       description: `${u.shortName} duplicated this from ${orig.projectName}` });
