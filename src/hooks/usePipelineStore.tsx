@@ -284,6 +284,7 @@ function projectToRow(p: Project): any {
     deposit_paid_date: p.depositPaidDate ? p.depositPaidDate.toISOString() : null,
     deposit_paid_method: p.depositPaidMethod ?? null,
     deposit_payment_reference: p.depositPaymentReference ?? null,
+    stage_entered_at: p.stageEnteredAt ? p.stageEnteredAt.toISOString() : null,
     updated_at: new Date().toISOString(),
   };
 }
