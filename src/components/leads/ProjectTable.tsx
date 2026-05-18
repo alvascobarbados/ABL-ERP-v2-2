@@ -1202,6 +1202,12 @@ const TableRow = ({
       />
       )}
 
+      {has("createdAt") && (
+      <ReadOnlyCell cellKey={`${card.id}:createdAt`} onRowDoubleClick={onOpen} muted={!proj.createdAt}>
+        <span className="tabular">{proj.createdAt ? fmtDeadline(proj.createdAt) : "—"}</span>
+      </ReadOnlyCell>
+      )}
+
       {has("completionDate") && (
       <ReadOnlyCell cellKey={`${card.id}:completionDate`} onRowDoubleClick={onOpen} muted={!proj.completionDate}>
         <span className="tabular">{proj.completionDate ? fmtDeadline(proj.completionDate) : "—"}</span>
