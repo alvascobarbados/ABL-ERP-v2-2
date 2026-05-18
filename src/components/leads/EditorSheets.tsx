@@ -560,7 +560,7 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
   // ── Local: free-text ──────────────────────────────────────────────────
   if (mode === "Local") {
     return (
-      <BottomSheet open={open} onClose={onClose} title="Local tracking" onSave={handleSave}>
+      <BottomSheet open={open} onClose={onClose} title="Local tracking" onSave={handleSave} onClear={handleClear} clearLabel="Clear tracking">
         <div>
           <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
             Tracking note
