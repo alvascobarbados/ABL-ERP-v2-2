@@ -893,7 +893,7 @@ const TableRow = ({
         cellKey={`${card.id}:customer`}
         mode="custom"
         align="left"
-        display={<span className="font-semibold text-[13.5px] truncate block">{proj.customer}</span>}
+        display={<span className="font-semibold text-[13.5px]">{proj.customer}</span>}
         title={proj.customer}
         active={openPicker === "customer"}
         flash={flashFor("customer")}
@@ -911,8 +911,8 @@ const TableRow = ({
             align="left"
             display={
               buyer
-                ? <span className="text-[13px] truncate block">{buyer.name}</span>
-                : <span className="text-[12.5px] text-muted-foreground italic truncate block">
+                ? <span className="text-[13px]">{buyer.name}</span>
+                : <span className="text-[12.5px] text-muted-foreground italic">
                     {buyerCustomerId ? "+ Buyer" : "—"}
                   </span>
             }
@@ -1413,7 +1413,7 @@ const TrackingCellTrigger = ({ cellKey, value, modeSet, flash, onClick, onRowDou
       onMouseDown={(e) => e.stopPropagation()}
       onDoubleClick={handleDouble}
       className={cn(
-        "relative px-3 py-1.5 truncate transition-colors h-full flex items-center justify-start text-left",
+        "relative px-3 py-1.5 transition-colors min-h-full flex items-start justify-start text-left",
         modeSet ? "hover:bg-[hsl(var(--brand-navy)/0.06)] cursor-pointer" : "cursor-pointer",
       )}
       style={{
@@ -1422,7 +1422,7 @@ const TrackingCellTrigger = ({ cellKey, value, modeSet, flash, onClick, onRowDou
       }}
       title={!modeSet ? undefined : (value ?? "")}
     >
-      <span className="truncate w-full tabular">{value ?? "—"}</span>
+      <span className="cell-clamp-2 w-full tabular">{value ?? "—"}</span>
     </div>
   );
   if (modeSet) return cell;
@@ -1459,13 +1459,13 @@ const ReadOnlyCell = ({ cellKey, onRowDoubleClick, children, title, align = "lef
       onMouseDown={(e) => e.stopPropagation()}
       onDoubleClick={(e) => { e.stopPropagation(); e.preventDefault(); sel?.cancelPendingEdit(); onRowDoubleClick(); }}
       className={cn(
-        "px-3 py-1.5 truncate flex items-center cursor-pointer hover:bg-[hsl(var(--brand-navy)/0.04)]",
+        "px-3 py-1.5 min-h-full flex items-start cursor-pointer hover:bg-[hsl(var(--brand-navy)/0.04)]",
         align === "right" ? "justify-end text-right" : "justify-start text-left",
       )}
       style={{ ...ringStyle, color: muted ? "hsl(var(--brand-navy) / 0.28)" : undefined }}
       title={title}
     >
-      <span className="truncate w-full">{children}</span>
+      <span className="cell-clamp-2 w-full">{children}</span>
     </div>
   );
 };

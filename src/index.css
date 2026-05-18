@@ -155,6 +155,19 @@
     overflow: hidden;
     overflow-wrap: anywhere;
   }
+  /* Table-cell 2-line clamp: wraps long content to 2 lines, ellipsizes
+     beyond that, and breaks long unbroken strings (URLs, tracking refs). */
+  .cell-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+  }
 
   /* Disable text selection + iOS long-press copy/look-up callout.
      Apply to lists, cards, chips, headers, pills — anywhere the long-press
