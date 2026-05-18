@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { SectionHeader, SectionCard } from "@/components/leads/ProjectDetail";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
