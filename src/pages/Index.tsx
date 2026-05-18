@@ -902,7 +902,7 @@ const Index = () => {
         onChange={setSort}
       />
 
-      <ProjectDetail card={selectedCard} onClose={() => setSelectedCard(null)} onOpenShipment={openShipmentById} />
+      <ProjectDetail card={selectedCard} onClose={() => setSelectedCard(null)} onOpenShipment={openShipmentById} onOpenProject={openProjectById} />
       <ShipmentView shipment={selectedShipment} onClose={() => setSelectedShipment(null)} onOpenProject={openProjectById} />
       <SuppliersView open={suppliersOpen} onClose={() => setSuppliersOpen(false)}
         onOpenProject={(id) => { setSuppliersOpen(false); openProjectById(id); }} />

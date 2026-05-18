@@ -683,6 +683,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
               <DetailRow label="Supplier" value={supplierName} onClick={() => setEditor({ kind: "supplier" })} />
               <DetailRow label="Shipping Mode" value={live.shippingMode} onClick={() => setEditor({ kind: "shippingMode" })} />
               <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
+              <DuplicateNotice field="quoteNumber" value={live.quoteNumber} currentId={live.id} onOpenProject={onOpenProject} />
               <DetailRow
                 label="Amount"
                 value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
@@ -729,6 +730,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
                 placeholder="P-"
                 onClick={() => setEditor({ kind: "proofNumber" })}
               />
+              <DuplicateNotice field="proofNumber" value={live.proofNumber} currentId={live.id} onOpenProject={onOpenProject} />
             </SectionCard>
           </section>
 
@@ -737,6 +739,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
             <SectionHeader>Purchasing</SectionHeader>
             <SectionCard>
               <DetailRow label="PO #" value={live.poNumber ? `PO-${live.poNumber}` : undefined} placeholder="PO-" onClick={() => setEditor({ kind: "po" })} />
+              <DuplicateNotice field="poNumber" value={live.poNumber} currentId={live.id} onOpenProject={onOpenProject} />
               <DetailRow
                 label="PO Amount"
                 value={live.poAmount != null ? formatPoAmount(live.poAmount, live.poAmountCurrency ?? "USD") : undefined}
@@ -839,6 +842,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
               {live.depositRequired && (
                 <>
                   <DetailRow label="Deposit #" value={live.depositInvoiceNumber ?? undefined} onClick={() => setEditor({ kind: "depositInvoice" })} />
+                  <DuplicateNotice field="depositInvoiceNumber" value={live.depositInvoiceNumber} currentId={live.id} onOpenProject={onOpenProject} />
                   <DetailRow
                     label="Deposit Amount"
                     value={live.depositAmount != null ? `$${live.depositAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BBD` : undefined}
@@ -867,6 +871,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
               )}
 
               <DetailRow label="INV #" value={live.invoiceNumber ? `INV-${live.invoiceNumber}` : undefined} placeholder="INV-" onClick={() => setEditor({ kind: "invoice" })} />
+              <DuplicateNotice field="invoiceNumber" value={live.invoiceNumber} currentId={live.id} onOpenProject={onOpenProject} />
               <DetailRow
                 label="Paid Date"
                 value={live.paidOnDate ? fmtLong(live.paidOnDate) : undefined}
