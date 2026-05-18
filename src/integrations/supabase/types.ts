@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      artwork_approvals: {
+        Row: {
+          approved_by_buyer_id: string | null
+          approved_by_other_name: string | null
+          approved_on: string
+          created_at: string
+          id: string
+          notes: string | null
+          proof_number: string
+          recorded_by_user_id: string
+          updated_at: string
+          via_channel: string
+        }
+        Insert: {
+          approved_by_buyer_id?: string | null
+          approved_by_other_name?: string | null
+          approved_on: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          proof_number: string
+          recorded_by_user_id: string
+          updated_at?: string
+          via_channel: string
+        }
+        Update: {
+          approved_by_buyer_id?: string | null
+          approved_by_other_name?: string | null
+          approved_on?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          proof_number?: string
+          recorded_by_user_id?: string
+          updated_at?: string
+          via_channel?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artwork_approvals_approved_by_buyer_id_fkey"
+            columns: ["approved_by_buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyers: {
         Row: {
           contact: string | null
@@ -52,6 +99,53 @@ export type Database = {
           },
         ]
       }
+      customer_po_approvals: {
+        Row: {
+          approved_by_buyer_id: string | null
+          approved_by_other_name: string | null
+          approved_on: string
+          created_at: string
+          customer_po_number: string
+          id: string
+          notes: string | null
+          recorded_by_user_id: string
+          updated_at: string
+          via_channel: string
+        }
+        Insert: {
+          approved_by_buyer_id?: string | null
+          approved_by_other_name?: string | null
+          approved_on: string
+          created_at?: string
+          customer_po_number: string
+          id?: string
+          notes?: string | null
+          recorded_by_user_id: string
+          updated_at?: string
+          via_channel: string
+        }
+        Update: {
+          approved_by_buyer_id?: string | null
+          approved_by_other_name?: string | null
+          approved_on?: string
+          created_at?: string
+          customer_po_number?: string
+          id?: string
+          notes?: string | null
+          recorded_by_user_id?: string
+          updated_at?: string
+          via_channel?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_po_approvals_approved_by_buyer_id_fkey"
+            columns: ["approved_by_buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           contact_name: string | null
@@ -63,6 +157,7 @@ export type Database = {
           incoterms: string | null
           name: string
           notes: string | null
+          order_confirmation_config: Json
           payment_terms: string
           payment_terms_custom_days: number | null
           phone: string | null
@@ -78,6 +173,7 @@ export type Database = {
           incoterms?: string | null
           name: string
           notes?: string | null
+          order_confirmation_config?: Json
           payment_terms?: string
           payment_terms_custom_days?: number | null
           phone?: string | null
@@ -93,6 +189,7 @@ export type Database = {
           incoterms?: string | null
           name?: string
           notes?: string | null
+          order_confirmation_config?: Json
           payment_terms?: string
           payment_terms_custom_days?: number | null
           phone?: string | null
@@ -261,6 +358,7 @@ export type Database = {
           contact_person: string | null
           created_at: string
           customer: string
+          customer_po_number: string | null
           deadline: string
           deadline_date: string | null
           deleted_at: string | null
@@ -274,6 +372,12 @@ export type Database = {
           deposit_required: boolean
           design_brief: string | null
           detail_summary: string | null
+          email_verbal_approved: boolean
+          email_verbal_approved_at: string | null
+          email_verbal_approved_by_buyer_id: string | null
+          email_verbal_approved_notes: string | null
+          email_verbal_approved_recorded_by_user_id: string | null
+          email_verbal_approved_via_channel: string | null
           flagged: boolean
           id: string
           invoice_issued_date: string | null
@@ -281,6 +385,7 @@ export type Database = {
           invoice_number: string | null
           invoice_required_entered_at: string | null
           num_packages: number | null
+          order_confirmation_overrides: Json
           order_type: string
           outstanding_balance: number | null
           paid_on_date: string | null
@@ -322,6 +427,7 @@ export type Database = {
           contact_person?: string | null
           created_at?: string
           customer: string
+          customer_po_number?: string | null
           deadline: string
           deadline_date?: string | null
           deleted_at?: string | null
@@ -335,6 +441,12 @@ export type Database = {
           deposit_required?: boolean
           design_brief?: string | null
           detail_summary?: string | null
+          email_verbal_approved?: boolean
+          email_verbal_approved_at?: string | null
+          email_verbal_approved_by_buyer_id?: string | null
+          email_verbal_approved_notes?: string | null
+          email_verbal_approved_recorded_by_user_id?: string | null
+          email_verbal_approved_via_channel?: string | null
           flagged?: boolean
           id: string
           invoice_issued_date?: string | null
@@ -342,6 +454,7 @@ export type Database = {
           invoice_number?: string | null
           invoice_required_entered_at?: string | null
           num_packages?: number | null
+          order_confirmation_overrides?: Json
           order_type?: string
           outstanding_balance?: number | null
           paid_on_date?: string | null
@@ -383,6 +496,7 @@ export type Database = {
           contact_person?: string | null
           created_at?: string
           customer?: string
+          customer_po_number?: string | null
           deadline?: string
           deadline_date?: string | null
           deleted_at?: string | null
@@ -396,6 +510,12 @@ export type Database = {
           deposit_required?: boolean
           design_brief?: string | null
           detail_summary?: string | null
+          email_verbal_approved?: boolean
+          email_verbal_approved_at?: string | null
+          email_verbal_approved_by_buyer_id?: string | null
+          email_verbal_approved_notes?: string | null
+          email_verbal_approved_recorded_by_user_id?: string | null
+          email_verbal_approved_via_channel?: string | null
           flagged?: boolean
           id?: string
           invoice_issued_date?: string | null
@@ -403,6 +523,7 @@ export type Database = {
           invoice_number?: string | null
           invoice_required_entered_at?: string | null
           num_packages?: number | null
+          order_confirmation_overrides?: Json
           order_type?: string
           outstanding_balance?: number | null
           paid_on_date?: string | null
@@ -446,10 +567,64 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "projects_email_verbal_approved_by_buyer_id_fkey"
+            columns: ["email_verbal_approved_by_buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "projects_shipment_fk"
             columns: ["shipment_id"]
             isOneToOne: false
             referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_approvals: {
+        Row: {
+          approved_by_buyer_id: string | null
+          approved_by_other_name: string | null
+          approved_on: string
+          created_at: string
+          id: string
+          notes: string | null
+          q_number: string
+          recorded_by_user_id: string
+          updated_at: string
+          via_channel: string
+        }
+        Insert: {
+          approved_by_buyer_id?: string | null
+          approved_by_other_name?: string | null
+          approved_on: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          q_number: string
+          recorded_by_user_id: string
+          updated_at?: string
+          via_channel: string
+        }
+        Update: {
+          approved_by_buyer_id?: string | null
+          approved_by_other_name?: string | null
+          approved_on?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          q_number?: string
+          recorded_by_user_id?: string
+          updated_at?: string
+          via_channel?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_approvals_approved_by_buyer_id_fkey"
+            columns: ["approved_by_buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
             referencedColumns: ["id"]
           },
         ]
