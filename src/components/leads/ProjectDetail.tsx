@@ -32,6 +32,7 @@ interface Props {
   card: PipelineCard | null;
   onClose: () => void;
   onOpenShipment: (id: string) => void;
+  onOpenProject?: (id: string) => void;
   onAdvance?: (card: PipelineCard) => void;
   onOpenPicker?: (card: PipelineCard) => void;
 }
@@ -139,7 +140,7 @@ function defaultsForCountry(country?: string | null): { weight: WeightUnit; volu
 const fmtCreated = (d: Date) =>
   `${d.getDate()} ${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
-export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
+export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: Props) => {
   const store = usePipelineStore();
   const md = useMasterData();
   const editMode = useEditMode();
