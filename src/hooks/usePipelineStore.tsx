@@ -703,6 +703,30 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         metadata: { fromPipeline: proj.pipeline, fromStage: proj.stage, toPipeline: target.pipeline, toStage: target.stage } });
     }
     const ok = await commitProjectChange(res.project, [res.entry]);
+    if (ok && !isUndoing()) {
+      const fromPipeline = proj.pipeline;
+      const fromStage = proj.stage;
+      const prevShipmentId = proj.shipmentId;
+      pushUndo({
+        id: makeUndoId(),
+        timestamp: Date.now(),
+        description: `moved ${proj.projectName} to ${toLabel}`,
+        originalLogId: res.entry.id,
+        originalDescription: res.entry.description,
+        applyInverse: async () => {
+          const current = projectsRef.current.find((p) => p.id === cardId);
+          if (!current) return { ok: false, reason: "Can't undo — project no longer exists" };
+          const mover = apiRef.current.moveCard;
+          if (!mover) return { ok: false, reason: "Undo unavailable" };
+          const moved = await mover(cardId, { pipeline: fromPipeline, stage: fromStage });
+          if (!moved.ok) return { ok: false, reason: "Couldn't restore stage" };
+          if (prevShipmentId !== current.shipmentId) {
+            await apiRef.current.updateProject?.(cardId, { shipmentId: prevShipmentId } as any);
+          }
+          return { ok: true };
+        },
+      });
+    }
     return { ok };
   }, []);
 
