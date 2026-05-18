@@ -117,16 +117,48 @@ export const CurrentUserProvider = ({ children }: { children: ReactNode }) => {
           setStatus("anon");
           return;
         }
+        const fullName = data.full_name;
+        const shortName = shortNameOf(fullName);
         setUser({
           userId: data.id,
-          fullName: data.full_name,
-          shortName: shortNameOf(data.full_name),
-          initials: (data.initials || data.full_name.slice(0, 2)).toUpperCase(),
+          fullName,
+          shortName,
+          initials: (data.initials || fullName.slice(0, 2)).toUpperCase(),
           email: data.email ?? email,
           role: data.role,
-          signOut: async () => { await supabase.auth.signOut(); },
+          signOut: async () => {
+            try {
+              await writeSystemLog({
+                actionType: "user_signout",
+                actorUserId: data.id,
+                actorDisplayName: shortName,
+                description: `${shortName} signed out`,
+                metadata: { event: "signout", reason: "manual" },
+              });
+            } catch {}
+            try { sessionStorage.removeItem(signinLoggedKey(data.id)); } catch {}
+            await supabase.auth.signOut();
+          },
         });
         setStatus("authed");
+
+        // Log sign-in once per tab session, per user. Skips refreshes and
+        // INITIAL_SESSION re-resolves.
+        try {
+          const key = signinLoggedKey(data.id);
+          if (sessionStorage.getItem(key) !== "1") {
+            sessionStorage.setItem(key, "1");
+            const rawProvider = (session?.user?.app_metadata as { provider?: string } | undefined)?.provider;
+            const provider = rawProvider === "google" ? "google" : "magic_link";
+            void writeSystemLog({
+              actionType: "user_signin",
+              actorUserId: data.id,
+              actorDisplayName: shortName,
+              description: `${shortName} signed in`,
+              metadata: { event: "signin", provider },
+            });
+          }
+        } catch {}
       } catch {
         if (cancelled) return;
         setStatus("anon");
