@@ -720,6 +720,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       const fromPipeline = proj.pipeline;
       const fromStage = proj.stage;
       const prevShipmentId = proj.shipmentId;
+      const prevStageEnteredAt = proj.stageEnteredAt;
       pushUndo({
         id: makeUndoId(),
         timestamp: Date.now(),
@@ -736,6 +737,10 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
           if (prevShipmentId !== current.shipmentId) {
             await apiRef.current.updateProject?.(cardId, { shipmentId: prevShipmentId } as any);
           }
+          // Restore the prior stage_entered_at so the column doesn't show
+          // "just now" after an undo. stageEnteredAt is not in FIELD_LABELS
+          // so this update produces no audit entry.
+          await apiRef.current.updateProject?.(cardId, { stageEnteredAt: prevStageEnteredAt } as any);
           return { ok: true };
         },
       });
