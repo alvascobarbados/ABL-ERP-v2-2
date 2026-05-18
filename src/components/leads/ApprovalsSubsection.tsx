@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Palette, Handshake } from "lucide-react";
+import { ChevronRight, Palette, Handshake, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
