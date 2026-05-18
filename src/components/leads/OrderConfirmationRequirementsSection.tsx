@@ -178,7 +178,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
       applyInverse: async () => {
         const { error: e2 } = await supabase
           .from("customers")
-          .update({ order_confirmation_config: prev as any })
+          .update({ order_confirmation_config: prev as unknown as Json })
           .eq("id", customer.id);
         if (e2) return { ok: false, reason: "Couldn't restore previous configuration" };
         setConfig(prev); setSavedConfig(prev);
