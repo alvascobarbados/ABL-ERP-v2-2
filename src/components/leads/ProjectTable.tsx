@@ -911,8 +911,8 @@ const TableRow = ({
             align="left"
             display={
               buyer
-                ? <span className="text-[13px] truncate block">{buyer.name}</span>
-                : <span className="text-[12.5px] text-muted-foreground italic truncate block">
+                ? <span className="text-[13px]">{buyer.name}</span>
+                : <span className="text-[12.5px] text-muted-foreground italic">
                     {buyerCustomerId ? "+ Buyer" : "—"}
                   </span>
             }
