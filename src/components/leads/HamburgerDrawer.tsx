@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { X, Factory, Users, HelpCircle, LogOut, Trash2, UserCircle2, Archive, KanbanSquare, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { APP_VERSION } from "@/lib/version";
 
 interface Props {
   open: boolean;
@@ -107,9 +108,10 @@ export const HamburgerDrawer = ({
           <MenuItem icon={LogOut} label="Sign out" dim onClick={() => { onClose(); toast("Sign out coming soon"); }} />
         </nav>
 
-        <div className="px-5 py-3 border-t text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
+        <div className="px-5 py-3 border-t flex items-center justify-between text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
           style={{ borderColor: "hsl(var(--brand-navy) / 0.1)" }}>
-          Alvasco
+          <span>Alvasco</span>
+          <span className="tabular normal-case tracking-normal opacity-70">{APP_VERSION}</span>
         </div>
       </aside>
       <button

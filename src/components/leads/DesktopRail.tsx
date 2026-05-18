@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { APP_VERSION } from "@/lib/version";
 
 interface Props {
   trashCount: number;
@@ -195,6 +196,12 @@ export const DesktopRail = ({ trashCount, archiveCount }: Props) => {
         {renderItem({ icon: HelpCircle, label: "Help", onClick: () => toast("Help docs coming soon") }, "fh")}
         {renderItem({ icon: Settings, label: "Settings", onClick: () => toast("Settings coming soon") }, "fs")}
         {renderItem({ icon: LogOut, label: "Sign out", onClick: () => { void user.signOut(); } }, "fo")}
+        <div
+          className="px-3 pt-1 text-[11px] tabular leading-none select-none"
+          style={{ color: "rgba(255,255,255,0.5)" }}
+        >
+          {APP_VERSION}
+        </div>
       </div>
     </aside>
   );
