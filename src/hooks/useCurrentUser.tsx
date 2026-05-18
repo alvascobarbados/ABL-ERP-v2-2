@@ -206,7 +206,44 @@ export const CurrentUserProvider = ({ children }: { children: ReactNode }) => {
     return <Login />;
   }
 
-  return <Ctx.Provider value={user}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={user}>
+      <IdleGuard user={user}>{children}</IdleGuard>
+    </Ctx.Provider>
+  );
+};
+
+const IdleGuard = ({ user, children }: { user: CurrentUser; children: ReactNode }) => {
+  const { warningOpen, remainingMs, dismissWarning, logoutNow } = useIdleTimeout({
+    enabled: true,
+    onIdleLogout: () => {
+      void (async () => {
+        try {
+          await writeSystemLog({
+            actionType: "user_signout",
+            actorUserId: user.userId,
+            actorDisplayName: user.shortName,
+            description: `${user.shortName} signed out (inactivity)`,
+            metadata: { event: "signout", reason: "idle_timeout" },
+          });
+        } catch {}
+        try { sessionStorage.removeItem(signinLoggedKey(user.userId)); } catch {}
+        try { sessionStorage.setItem(SIGNOUT_REASON_KEY, "idle"); } catch {}
+        try { await supabase.auth.signOut(); } catch {}
+      })();
+    },
+  });
+  return (
+    <>
+      {children}
+      <IdleWarningModal
+        open={warningOpen}
+        remainingMs={remainingMs}
+        onStay={dismissWarning}
+        onSignOut={logoutNow}
+      />
+    </>
+  );
 };
 
 export const useCurrentUser = (): CurrentUser => useContext(Ctx);
