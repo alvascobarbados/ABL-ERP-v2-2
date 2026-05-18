@@ -891,6 +891,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       projectName: `${orig.projectName} (Copy)`,
       quoteNumber: undefined, poNumber: undefined, invoiceNumber: undefined,
       shipmentId: undefined, notes: undefined, lineItems: undefined, log: undefined,
+      // Per spec: duplicate clears shipping mode, shipment #, and tracking ref.
+      shippingMode: undefined, shipmentNumber: undefined, trackingRef: undefined,
       pipeline: orig.pipeline, stage: orig.stage, flagged: false,
       deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined,
       createdAt: new Date(), updatedAt: undefined,

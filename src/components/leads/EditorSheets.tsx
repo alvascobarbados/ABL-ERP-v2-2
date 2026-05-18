@@ -501,6 +501,14 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
 
   const handleSave = () => {
     if (!mode) return;
+    // Empty bypasses format validation — saving an empty tracking value clears the field.
+    if (mode === "Local" && (localText ?? "").trim() === "") { onSave(null); return; }
+    if (mode === "Ocean" && sanitizeAlnum(oceanBl ?? "") === "") { onSave(null); return; }
+    if (mode === "Air") {
+      const hasCarrier = carrier === "Other" ? !!sanitizeCustomPrefix(customPrefix).replace(/-+$/, "") : !!carrier;
+      const hasNumber = !!sanitizeDigits(number);
+      if (!hasCarrier && !hasNumber) { onSave(null); return; }
+    }
     const result = validateAndCompose({ mode, carrier, customPrefix, number, localText, oceanBlSuffix: oceanBl });
     if (!result.ok) { setError(result.error ?? "Invalid"); return; }
     onSave(result.value === undefined ? null : (result.value ?? null));
