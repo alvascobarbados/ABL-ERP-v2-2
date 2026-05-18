@@ -299,6 +299,7 @@ function projectToRow(p: Project): any {
     email_verbal_approved_at: p.emailVerbalApprovedAt ?? null,
     email_verbal_approved_by_buyer_id: p.emailVerbalApprovedByBuyerId ?? null,
     email_verbal_approved_via_channel: p.emailVerbalApprovedViaChannel ?? null,
+    email_verbal_approved_other_name: p.emailVerbalApprovedOtherName ?? null,
     email_verbal_approved_notes: p.emailVerbalApprovedNotes ?? null,
     email_verbal_approved_recorded_by_user_id: p.emailVerbalApprovedRecordedByUserId ?? null,
     order_confirmation_overrides: p.orderConfirmationOverrides ?? {},
