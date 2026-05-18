@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { useExpandedCards } from "@/hooks/useExpandedCards";
 import { useMasterData } from "@/hooks/useMasterData";
 import { CardActionsPopover } from "./CardActionsPopover";
+import { fmtTimeInStage } from "@/lib/timeInStage";
+import { useMinuteTick } from "@/hooks/useMinuteTick";
 
 
 interface ProjectCardProps {
