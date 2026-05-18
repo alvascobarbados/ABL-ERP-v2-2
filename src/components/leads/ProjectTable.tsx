@@ -266,6 +266,13 @@ function compareCards(
       const bv = b.project.createdAt?.getTime?.() ?? 0;
       return dir * (av - bv);
     }
+    case "currentStage": {
+      // Sort by stage_entered_at. Descending = most recently moved first;
+      // ascending = stuck in stage longest first.
+      const av = a.project.stageEnteredAt?.getTime?.() ?? 0;
+      const bv = b.project.stageEnteredAt?.getTime?.() ?? 0;
+      return dir * (av - bv);
+    }
     case "weight": {
       const av = a.project.weightKg, bv = b.project.weightKg;
       if (av == null && bv == null) return 0;
