@@ -60,6 +60,7 @@ export const ProjectCard = ({
   const editMode = useEditMode();
   const store = usePipelineStore();
   const md = useMasterData();
+  useMinuteTick(); // refresh "time in stage" suffix every 60s
   // SINGLE SOURCE OF TRUTH: always read the live project record from the
   // central store. The `card.project` snapshot held by the parent list can
   // be one render behind after edits — going through the store guarantees
