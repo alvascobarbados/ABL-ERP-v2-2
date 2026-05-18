@@ -1016,7 +1016,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       description: `${u.shortName} edited line item ${item.qty} × ${item.description}` });
     await persistLineItemsAndCommit(projectId, items, r.project, r.entry);
     if (!isUndoing()) {
-      const liId = item.id;
+      const capturedIndex = index;
       const beforeItem = before;
       pushUndo({
         id: makeUndoId(), timestamp: Date.now(),
@@ -1025,9 +1025,9 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         applyInverse: async () => {
           const exists = projectsRef.current.find((p) => p.id === projectId);
           if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
-          const idx = (exists.lineItems ?? []).findIndex((li) => li.id === liId);
-          if (idx < 0) return { ok: false, reason: "Can't undo — line item no longer exists" };
-          await apiRef.current.updateLineItem?.(projectId, idx, beforeItem);
+          const list = exists.lineItems ?? [];
+          if (capturedIndex >= list.length) return { ok: false, reason: "Can't undo — line item no longer exists" };
+          await apiRef.current.updateLineItem?.(projectId, capturedIndex, beforeItem);
           return { ok: true };
         },
       });
