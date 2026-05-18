@@ -191,7 +191,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
           actor_display_name: user.shortName,
           action_type: "customer_gate_config_change",
           description: `${user.shortName} undid: ${GATE_LABELS[gate]} requirement on ${customer.name}`,
-          metadata: { undo_of: logId, customer_id: customer.id, gate } as any,
+          metadata: { undo_of: logId, customer_id: customer.id, gate } as Json,
         });
         return { ok: true };
       },
