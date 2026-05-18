@@ -759,7 +759,35 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       next = r.project;
       newEntries.push(r.entry);
     }
-    await commitProjectChange(next, newEntries);
+    const ok = await commitProjectChange(next, newEntries);
+    if (ok && !isUndoing() && newEntries.length) {
+      // Capture before-values only for keys actually changed (those that
+      // produced an audit entry, via FIELD_LABELS).
+      const beforePatch: Partial<Project> = {};
+      for (const e of newEntries) {
+        const field = (e.metadata as any)?.field as keyof Project | undefined;
+        if (field) (beforePatch as any)[field] = (proj as any)[field] ?? null;
+      }
+      if (Object.keys(beforePatch).length) {
+        const first = newEntries[0];
+        const friendly = newEntries.length === 1
+          ? first.description.replace(/^[^\s]+\s/, "") // strip leading actor token
+          : `${newEntries.length} field changes on ${proj.projectName}`;
+        pushUndo({
+          id: makeUndoId(),
+          timestamp: Date.now(),
+          description: friendly,
+          originalLogId: first.id,
+          originalDescription: first.description,
+          applyInverse: async () => {
+            const exists = projectsRef.current.find((p) => p.id === id);
+            if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+            await apiRef.current.updateProject?.(id, beforePatch);
+            return { ok: true };
+          },
+        });
+      }
+    }
   }, []);
 
   const renameProject = useCallback(async (currentName: string, newName: string) => {
