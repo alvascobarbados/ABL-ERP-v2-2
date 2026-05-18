@@ -772,6 +772,8 @@ export const ShipmentNumberEditor = ({ open, onClose, shippingMode, value, onSav
     onSave(v.value === undefined ? null : (v.value ?? null));
   };
 
+  const handleClear = () => { onSave(null); };
+
   if (!mode) {
     return (
       <BottomSheet open={open} onClose={onClose} title="Shipment Number">
