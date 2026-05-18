@@ -893,7 +893,7 @@ const TableRow = ({
         cellKey={`${card.id}:customer`}
         mode="custom"
         align="left"
-        display={<span className="font-semibold text-[13.5px] truncate block">{proj.customer}</span>}
+        display={<span className="font-semibold text-[13.5px]">{proj.customer}</span>}
         title={proj.customer}
         active={openPicker === "customer"}
         flash={flashFor("customer")}
