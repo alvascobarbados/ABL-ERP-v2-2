@@ -920,7 +920,21 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     const { error: pErr } = await supabase.from("projects").upsert(projectToRow(r.project));
     if (pErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
     const { error: lErr } = await supabase.from("project_log_entries").insert(logEntryToRow(projectId, r.entry));
-    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); }
+    if (lErr) { setProjects(snapshot); toast.error(FAILURE_TOAST); return; }
+    if (!isUndoing()) {
+      const fullNote = removed;
+      pushUndo({
+        id: makeUndoId(), timestamp: Date.now(),
+        description: `deleted a note from ${proj.projectName}`,
+        originalLogId: r.entry.id, originalDescription: r.entry.description,
+        applyInverse: async () => {
+          const exists = projectsRef.current.find((p) => p.id === projectId);
+          if (!exists) return { ok: false, reason: "Can't undo — project no longer exists" };
+          await apiRef.current.restoreNote?.(projectId, fullNote);
+          return { ok: true };
+        },
+      });
+    }
   }, []);
 
   /** Re-insert a previously-deleted note with original id/ts/author. Does NOT
