@@ -938,6 +938,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         prefix="Q-"
         digitsOnly
         onSave={saveQuote}
+        onClear={() => saveQuote("")}
+        clearLabel="Clear quote number"
       />
       <TextEditor
         open={editor?.kind === "po"}
@@ -948,6 +950,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         prefix="PO-"
         digitsOnly
         onSave={savePO}
+        onClear={() => savePO("")}
+        clearLabel="Clear PO number"
       />
       <TextEditor
         open={editor?.kind === "invoice"}
@@ -958,6 +962,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         prefix="INV-"
         digitsOnly
         onSave={saveInvoice}
+        onClear={() => saveInvoice("")}
+        clearLabel="Clear invoice number"
       />
       <TrackingEditor
         open={editor?.kind === "tracking"}
@@ -1049,6 +1055,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         digitsOnly
         maxLength={4}
         onSave={saveProofNumber}
+        onClear={() => saveProofNumber("")}
+        clearLabel="Clear proof number"
       />
       <DateEditor
         open={editor?.kind === "completionDate"}
@@ -1066,6 +1074,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment }: Props) => {
         value={live.depositInvoiceNumber ?? ""}
         placeholder="DEP-1234"
         onSave={saveDepositInvoice}
+        onClear={() => saveDepositInvoice("")}
+        clearLabel="Clear deposit number"
       />
       <TextEditor
         open={editor?.kind === "depositAmount"}

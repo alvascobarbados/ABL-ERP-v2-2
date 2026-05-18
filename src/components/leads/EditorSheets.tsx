@@ -13,9 +13,12 @@ interface BottomSheetProps {
   onSave?: () => void;
   saveLabel?: string;
   saveDisabled?: boolean;
+  /** Optional clear-all action. Renders a muted full-width button at the bottom of the sheet. */
+  onClear?: () => void;
+  clearLabel?: string;
   children: React.ReactNode;
 }
-export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", saveDisabled, children }: BottomSheetProps) => {
+export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", saveDisabled, onClear, clearLabel = "Clear", children }: BottomSheetProps) => {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -48,7 +51,21 @@ export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", 
             </button>
           ) : <span className="w-12" />}
         </div>
-        <div className="p-5 max-h-[70vh] overflow-y-auto">{children}</div>
+        <div className="p-5 max-h-[70vh] overflow-y-auto">
+          {children}
+          {onClear && (
+            <div className="mt-5 pt-4 border-t border-border/60">
+              <button
+                type="button"
+                onClick={onClear}
+                className="w-full text-[13px] text-muted-foreground hover:text-foreground transition-colors py-2 rounded-lg"
+                style={{ minHeight: 40 }}
+              >
+                {clearLabel}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <style>{`@keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
     </div>
@@ -73,8 +90,11 @@ interface TextEditorProps {
   /** Optional max input length (characters). No cap when omitted. */
   maxLength?: number;
   onSave: (v: string) => void;
+  /** Optional clear handler. When provided, renders a "Clear" button that wipes the field. */
+  onClear?: () => void;
+  clearLabel?: string;
 }
-export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, onSave }: TextEditorProps) => {
+export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, onSave, onClear, clearLabel }: TextEditorProps) => {
   const capLen = (s: string) => (maxLength != null ? s.slice(0, maxLength) : s);
   const sanitizeDigitsLike = (raw: string): string => {
     if (!digitsOnly) return raw;
@@ -156,7 +176,15 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
   const saveDisabled = digitsOnly ? false : !v.trim();
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} onSave={commit} saveDisabled={saveDisabled}>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      onSave={commit}
+      saveDisabled={saveDisabled}
+      onClear={onClear}
+      clearLabel={clearLabel ?? `Clear ${title.toLowerCase()}`}
+    >
       {multiline ? (
         <textarea
           ref={ref as React.RefObject<HTMLTextAreaElement>}
@@ -514,6 +542,8 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
     onSave(result.value === undefined ? null : (result.value ?? null));
   };
 
+  const handleClear = () => { onSave(null); };
+
   // ── Disabled state ────────────────────────────────────────────────────
   if (!mode) {
     return (
@@ -530,7 +560,7 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
   // ── Local: free-text ──────────────────────────────────────────────────
   if (mode === "Local") {
     return (
-      <BottomSheet open={open} onClose={onClose} title="Local tracking" onSave={handleSave}>
+      <BottomSheet open={open} onClose={onClose} title="Local tracking" onSave={handleSave} onClear={handleClear} clearLabel="Clear tracking">
         <div>
           <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
             Tracking note
@@ -553,7 +583,7 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
   if (mode === "Ocean") {
     const preview = oceanBl ? `${OCEAN_TRACKING_PREFIX}-${oceanBl}` : "";
     return (
-      <BottomSheet open={open} onClose={onClose} title="Ocean tracking (B/L)" onSave={handleSave}>
+      <BottomSheet open={open} onClose={onClose} title="Ocean tracking (B/L)" onSave={handleSave} onClear={handleClear} clearLabel="Clear tracking">
         <div className="space-y-4">
           <div>
             <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
@@ -612,7 +642,7 @@ export const TrackingEditor = ({ open, onClose, shippingMode, value, onSave }: T
   const preview = previewPrefix && previewNumber ? `${previewPrefix}-${previewNumber}` : "";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Air tracking" onSave={handleSave}>
+    <BottomSheet open={open} onClose={onClose} title="Air tracking" onSave={handleSave} onClear={handleClear} clearLabel="Clear tracking">
       <div className="space-y-4">
         <div>
           <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1.5">
@@ -742,6 +772,8 @@ export const ShipmentNumberEditor = ({ open, onClose, shippingMode, value, onSav
     onSave(v.value === undefined ? null : (v.value ?? null));
   };
 
+  const handleClear = () => { onSave(null); };
+
   if (!mode) {
     return (
       <BottomSheet open={open} onClose={onClose} title="Shipment Number">
@@ -767,7 +799,7 @@ export const ShipmentNumberEditor = ({ open, onClose, shippingMode, value, onSav
   const preview = number ? `${lockedPrefix}${number}` : "";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={mode === "Air" ? "Air shipment number" : "Ocean shipment number"} onSave={handleSave}>
+    <BottomSheet open={open} onClose={onClose} title={mode === "Air" ? "Air shipment number" : "Ocean shipment number"} onSave={handleSave} onClear={handleClear} clearLabel="Clear shipment number">
       <div className="space-y-4">
         {mode === "Ocean" && (
           <div>
