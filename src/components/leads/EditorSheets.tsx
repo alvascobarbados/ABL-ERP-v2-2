@@ -13,9 +13,12 @@ interface BottomSheetProps {
   onSave?: () => void;
   saveLabel?: string;
   saveDisabled?: boolean;
+  /** Optional clear-all action. Renders a muted full-width button at the bottom of the sheet. */
+  onClear?: () => void;
+  clearLabel?: string;
   children: React.ReactNode;
 }
-export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", saveDisabled, children }: BottomSheetProps) => {
+export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", saveDisabled, onClear, clearLabel = "Clear", children }: BottomSheetProps) => {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -48,7 +51,21 @@ export const BottomSheet = ({ open, onClose, title, onSave, saveLabel = "Done", 
             </button>
           ) : <span className="w-12" />}
         </div>
-        <div className="p-5 max-h-[70vh] overflow-y-auto">{children}</div>
+        <div className="p-5 max-h-[70vh] overflow-y-auto">
+          {children}
+          {onClear && (
+            <div className="mt-5 pt-4 border-t border-border/60">
+              <button
+                type="button"
+                onClick={onClear}
+                className="w-full text-[13px] text-muted-foreground hover:text-foreground transition-colors py-2 rounded-lg"
+                style={{ minHeight: 40 }}
+              >
+                {clearLabel}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <style>{`@keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
     </div>
