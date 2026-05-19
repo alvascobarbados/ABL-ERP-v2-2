@@ -59,7 +59,7 @@ import { useMinuteTick } from "@/hooks/useMinuteTick";
 import { fmtTimeInStage } from "@/lib/timeInStage";
 
 type SortKey =
-  | "flagged" | "stage" | "currentStage" | "customer" | "buyer" | "project" | "detail" | "supplier"
+  | "flagged" | "stage" | "currentStage" | "approvals" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate" | "createdAt"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
