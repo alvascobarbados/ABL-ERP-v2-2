@@ -697,7 +697,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     if (pErr) {
       console.error("[store] commit project failed", optimistic.id, pErr.message);
       setProjects(snapshot);
-      toast.error(FAILURE_TOAST);
+      toast.error(friendlyPgErrorMessage(pErr));
       return false;
     }
     if (logEntries.length) {
@@ -711,7 +711,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         if (prevRow) {
           await supabase.from("projects").upsert(projectToRow(prevRow));
         }
-        toast.error(FAILURE_TOAST);
+        toast.error(friendlyPgErrorMessage(lErr));
         return false;
       }
     }
