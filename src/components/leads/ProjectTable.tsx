@@ -387,14 +387,47 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<PipelineCard | null>(null);
 
+  // Batched approval fetch for all visible projects' doc numbers.
+  const approvalDocs = useMemo(
+    () => visible.map((c) => ({
+      proofNumber: c.project.proofNumber,
+      quoteNumber: c.project.quoteNumber,
+      customerPoNumber: c.project.customerPoNumber,
+    })),
+    [visible],
+  );
+  const approvals = useApprovalLookups(approvalDocs);
+
+  // Precomputed per-card approval state (gray=0, orange=1, green=2 ranks)
+  // for both icons. Used for the cell + sort.
+  const approvalState = useMemo(() => {
+    const map = new Map<string, { artwork: "gray" | "green"; order: "gray" | "orange" | "green"; orderState: ReturnType<typeof computeOrderConfirmationState> }>();
+    for (const c of visible) {
+      const customer = md.findCustomerByName(c.project.customer) ?? null;
+      const art = computeArtworkState(c.project, approvals.artwork);
+      const ord = computeOrderConfirmationState(c.project, customer, approvals.order);
+      map.set(c.id, { artwork: art, order: ord.state, orderState: ord });
+    }
+    return map;
+  }, [visible, approvals, md]);
+
+  const approvalRank = useMemo(() => {
+    const rank = { gray: 0, orange: 1, green: 2 } as const;
+    return (cardId: string) => {
+      const s = approvalState.get(cardId);
+      if (!s) return { artwork: 0, order: 0 };
+      return { artwork: rank[s.artwork], order: rank[s.order] };
+    };
+  }, [approvalState]);
+
   const sorted = useMemo(() => {
     if (!sortKey) return visible;
     const buyerById = new Map(md.buyers.map((b) => [b.id, b]));
     const list = [...visible].sort((a, b) =>
-      compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId, (id) => (id ? buyerById.get(id) : undefined)),
+      compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId, (id) => (id ? buyerById.get(id) : undefined), approvalRank),
     );
     return list;
-  }, [visible, sortKey, sortDir, md.getSupplierByAnyId, md.buyers]);
+  }, [visible, sortKey, sortDir, md.getSupplierByAnyId, md.buyers, approvalRank]);
 
   const totalAmount = useMemo(
     () => sorted.reduce((sum, c) => sum + (c.project.value ?? 0), 0),
