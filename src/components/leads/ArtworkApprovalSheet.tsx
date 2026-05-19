@@ -67,6 +67,7 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
   const [errors, setErrors] = useState<Partial<Record<keyof ApprovalFormValue, string>>>({});
   const [busy, setBusy] = useState(false);
   const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const [affectedModal, setAffectedModal] = useState<AffectedProjectEntry[] | null>(null);
 
   useEffect(() => {
     if (open) {
