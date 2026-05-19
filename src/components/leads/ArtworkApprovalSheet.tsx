@@ -92,6 +92,16 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
       ? md.buyers.find((b) => b.id === v.approvedByBuyerId)?.name ?? "—"
       : (v.approvedByOtherName ?? "—");
 
+  const showAffected = (result: CascadeResult) => {
+    const entries: AffectedProjectEntry[] = result.stateTransitions.map((t) => ({
+      projectId: t.projectId,
+      projectName: t.projectName,
+      customerName: t.customerName,
+      stateChange: t.artworkState ? `${t.artworkState.from} → ${t.artworkState.to}` : undefined,
+    }));
+    setAffectedModal(entries);
+  };
+
   const submit = async () => {
     const errs = validateForm(form);
     setErrors(errs);
@@ -99,9 +109,7 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
     if (!proofNumber) return;
 
     setBusy(true);
-    const prior: ArtworkApprovalRow | null = existing
-      ? { ...existing }
-      : null;
+    const prior: ArtworkApprovalRow | null = existing ? { ...existing } : null;
 
     const payload = {
       proof_number: proofNumber,
@@ -113,9 +121,11 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
       recorded_by_user_id: user.userId,
     };
 
-    const { error } = await supabase
+    const { data: nextRow, error } = await supabase
       .from("artwork_approvals")
-      .upsert(payload, { onConflict: "proof_number" });
+      .upsert(payload, { onConflict: "proof_number" })
+      .select()
+      .maybeSingle();
 
     if (error) {
       toast.error(`Couldn't save: ${error.message}`);
@@ -123,14 +133,15 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
       return;
     }
 
-    // Audit on current project
+    // Audit on current project (matches existing format/text)
+    const cascadeTs = new Date().toISOString();
     const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
     const verb = isEdit ? "updated" : "recorded";
     const desc = `${user.shortName} ${verb} artwork approval · Proof #${proofNumber} from ${buyerNameFor(form)} via ${channelLabel(form.viaChannel)}`;
     await supabase.from("project_log_entries").insert({
       id: logId,
       project_id: project.id,
-      ts: new Date().toISOString(),
+      ts: cascadeTs,
       actor_user_id: user.userId,
       actor_display_name: user.shortName,
       action_type: isEdit ? "artwork_approval_update" : "artwork_approval_create",
@@ -145,7 +156,28 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
       } as Json,
     });
 
-    // Undo
+    // Cross-project cascade: per-sibling audits + bulk toast
+    const changeType = isEdit ? "artwork_update" as const : "artwork_create" as const;
+    const result = await cascadeApprovalChange({
+      changeType,
+      docNumber: proofNumber,
+      triggeringProjectId: project.id,
+      approvalRow: (nextRow as ArtworkApprovalRow) ?? null,
+      priorApprovalRow: prior,
+      actorUserId: user.userId,
+      actorDisplayName: user.shortName,
+      cascadeTs,
+      triggeringLogId: logId,
+    });
+    fireBulkToast({
+      changeType,
+      docNumber: proofNumber,
+      approverName: buyerNameFor(form),
+      result,
+      onViewAffected: result.affectedProjectIds.length > 1 ? () => showAffected(result) : undefined,
+    });
+
+    // Undo (with cascade inverse)
     pushUndo({
       id: makeUndoId(),
       timestamp: Date.now(),
@@ -160,15 +192,34 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
           const { error: e2 } = await supabase.from("artwork_approvals").delete().eq("proof_number", proofNumber);
           if (e2) return { ok: false, reason: "Couldn't undo approval" };
         }
+        const undoTs = new Date().toISOString();
         await supabase.from("project_log_entries").insert({
           id: `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
           project_id: project.id,
-          ts: new Date().toISOString(),
+          ts: undoTs,
           actor_user_id: user.userId,
           actor_display_name: user.shortName,
           action_type: prior ? "artwork_approval_update" : "artwork_approval_revoke",
           description: `${user.shortName} undid: artwork approval on Proof #${proofNumber}`,
           metadata: { undo_of: logId, proof_number: proofNumber } as Json,
+        });
+        const undoResult = await cascadeApprovalChange({
+          changeType: prior ? "artwork_update" : "artwork_revoke",
+          docNumber: proofNumber,
+          triggeringProjectId: project.id,
+          approvalRow: prior,
+          priorApprovalRow: (nextRow as ArtworkApprovalRow) ?? null,
+          actorUserId: user.userId,
+          actorDisplayName: user.shortName,
+          cascadeTs: undoTs,
+          triggeringLogId: logId,
+          undoOfLogId: logId,
+        });
+        fireBulkToast({
+          changeType: prior ? "artwork_update" : "artwork_revoke",
+          docNumber: proofNumber,
+          result: undoResult,
+          isUndo: true,
         });
         onSaved();
         return { ok: true };
@@ -178,13 +229,8 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
     setBusy(false);
     onSaved();
 
-    // Celebration: gray → green only on create
-    if (!isEdit) {
-      showGreenCelebration(`🎉 Artwork approval recorded · ${proofNumber} from ${buyerNameFor(form)}`);
-      setTimeout(onClose, 600);
-    } else {
-      toast.success(`Approval updated · Proof #${proofNumber}`);
-    }
+    // Auto-close on create (state transitioned somewhere green)
+    if (!isEdit) setTimeout(onClose, 600);
   };
 
   const revoke = async () => {
@@ -197,16 +243,34 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
       setBusy(false);
       return;
     }
+    const cascadeTs = new Date().toISOString();
     const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
     await supabase.from("project_log_entries").insert({
       id: logId,
       project_id: project.id,
-      ts: new Date().toISOString(),
+      ts: cascadeTs,
       actor_user_id: user.userId,
       actor_display_name: user.shortName,
       action_type: "artwork_approval_revoke",
       description: `${user.shortName} revoked artwork approval · Proof #${proofNumber}`,
       metadata: { proof_number: proofNumber } as Json,
+    });
+    const result = await cascadeApprovalChange({
+      changeType: "artwork_revoke",
+      docNumber: proofNumber,
+      triggeringProjectId: project.id,
+      approvalRow: null,
+      priorApprovalRow: prior,
+      actorUserId: user.userId,
+      actorDisplayName: user.shortName,
+      cascadeTs,
+      triggeringLogId: logId,
+    });
+    fireBulkToast({
+      changeType: "artwork_revoke",
+      docNumber: proofNumber,
+      result,
+      onViewAffected: result.affectedProjectIds.length > 1 ? () => showAffected(result) : undefined,
     });
     pushUndo({
       id: makeUndoId(),
@@ -217,15 +281,34 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
       applyInverse: async () => {
         const { error: e2 } = await supabase.from("artwork_approvals").insert(prior);
         if (e2) return { ok: false, reason: "Couldn't restore approval" };
+        const undoTs = new Date().toISOString();
+        const undoResult = await cascadeApprovalChange({
+          changeType: "artwork_create",
+          docNumber: proofNumber,
+          triggeringProjectId: project.id,
+          approvalRow: prior,
+          priorApprovalRow: null,
+          actorUserId: user.userId,
+          actorDisplayName: user.shortName,
+          cascadeTs: undoTs,
+          triggeringLogId: logId,
+          undoOfLogId: logId,
+        });
+        fireBulkToast({
+          changeType: "artwork_create",
+          docNumber: proofNumber,
+          result: undoResult,
+          isUndo: true,
+        });
         onSaved();
         return { ok: true };
       },
     });
     setBusy(false);
     onSaved();
-    toast(`Approval revoked · Proof #${proofNumber}`, { duration: 3000 });
     onClose();
   };
+
 
   if (!open) return null;
 
