@@ -343,7 +343,9 @@ export function fireBulkToast(opts: BulkToastOpts) {
       ? `Artwork approval recorded · ${docNumber}${approverName ? ` from ${approverName}` : ""}`
       : kind === "quotation"
         ? `Quotation Q-${docNumber} approved`
-        : `Customer PO ${docNumber} approved`;
+        : kind === "email_verbal"
+          ? `Email/verbal approval recorded · Q-${docNumber}${approverName ? ` from ${approverName}` : ""}`
+          : `Customer PO ${docNumber} approved`;
     title = n > 1 ? `${prefix}${docMsg} · Applied to ${n} projects` : `${prefix}${docMsg}`;
   } else {
     // update
