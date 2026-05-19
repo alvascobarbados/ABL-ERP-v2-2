@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { ChevronRight, Palette, Handshake, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { ArtworkApprovalSheet } from "./ArtworkApprovalSheet";
+import { OrderConfirmationSheet } from "./OrderConfirmationSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useMasterData, type Customer } from "@/hooks/useMasterData";
 import type { Project } from "@/data/pipelines";
