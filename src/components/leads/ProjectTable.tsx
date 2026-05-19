@@ -619,6 +619,11 @@ interface RowProps {
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  approvalState?: {
+    artwork: "gray" | "green";
+    order: "gray" | "orange" | "green";
+    orderState: ReturnType<typeof computeOrderConfirmationState>;
+  };
 }
 
 type EntityKindKey = "customer" | "supplier" | "rep";
@@ -626,6 +631,7 @@ type EntityKindKey = "customer" | "supplier" | "rep";
 const TableRow = ({
   index, card, activeTab, gridCols, visibleKeys, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onPickStage, onDuplicate, onArchive, onDelete,
+  approvalState,
 }: RowProps) => {
   const has = (k: SortKey) => visibleKeys.has(k);
   const proj = card.project;
