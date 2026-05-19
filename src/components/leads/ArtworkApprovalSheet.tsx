@@ -394,6 +394,13 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
         onCancel={() => setConfirmRevoke(false)}
         onConfirm={() => { setConfirmRevoke(false); void revoke(); }}
       />
+
+      <AffectedProjectsModal
+        open={!!affectedModal}
+        entries={affectedModal ?? []}
+        onClose={() => setAffectedModal(null)}
+        onLinkClick={() => { setAffectedModal(null); onClose(); }}
+      />
     </>
   );
 };
