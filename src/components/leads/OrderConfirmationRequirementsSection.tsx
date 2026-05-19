@@ -331,13 +331,20 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
         </div>
       </SectionCard>
 
-      <ConfirmDialog
+      <AffectedProjectsModal
         open={!!pending}
         title={pending ? `Update affects ${pending.transitions.changes.length} of ${pending.transitions.openCount} open projects` : ""}
-        description={pending ? buildTransitionsDescription(pending.transitions, customer.name) : ""}
+        intro={pending ? buildTransitionsDescription(pending.transitions, customer.name) : ""}
+        entries={pending ? pending.transitions.changes.map<AffectedProjectEntry>((c) => ({
+          projectId: c.projectId,
+          projectName: c.projectName,
+          customerName: customer.name,
+          stateChange: `${c.oldState} → ${c.newState}`,
+        })) : []}
         confirmLabel="Apply"
-        onCancel={confirmModalCancel}
+        cancelLabel="Cancel"
         onConfirm={confirmModalApply}
+        onClose={confirmModalCancel}
       />
     </section>
   );
