@@ -265,7 +265,7 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
         ...(input.undoOfLogId ? { undo_of: input.undoOfLogId } : {}),
         state_transition: t.artworkState ?? t.orderState,
         ...(kind === "artwork" ? { proof_number: input.docNumber } : {}),
-        ...(kind === "quotation" ? { q_number: input.docNumber } : {}),
+        ...(kind === "quotation" || kind === "email_verbal" ? { q_number: input.docNumber } : {}),
         ...(kind === "customer_po" ? { customer_po_number: input.docNumber } : {}),
       } as Json,
     }));
