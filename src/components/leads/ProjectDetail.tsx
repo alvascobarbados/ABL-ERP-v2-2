@@ -1168,6 +1168,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         placeholder="0"
         digitsOnly
         allowDecimal
+        errorText={depositAmountError}
         onSave={saveDepositAmount}
       />
       <DateEditor
