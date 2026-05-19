@@ -1127,6 +1127,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         value={live.designBrief ?? ""}
         placeholder="Describe the creative brief…"
         multiline
+        allowEmpty
         onSave={saveDesignBrief}
       />
       <TextEditor
