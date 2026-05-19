@@ -219,6 +219,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
   } = store;
 
   const [editor, setEditor] = useState<EditorKind>(null);
+  const [depositAmountError, setDepositAmountError] = useState<string | null>(null);
+  useEffect(() => { if (editor?.kind !== "depositAmount") setDepositAmountError(null); }, [editor]);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [stagePickerOpen, setStagePickerOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
