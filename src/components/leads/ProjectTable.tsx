@@ -1529,6 +1529,82 @@ const TrackingCellTrigger = ({ cellKey, value, modeSet, flash, onClick, onRowDou
   );
 };
 
+// ── Approvals cell (Artwork + Order Confirmation) ─────────────────────
+// Display-only: single-click selects the row like any other cell,
+// no second-click editor (entry point lives on the Project Detail page).
+const GATE_LABEL: Record<GateKey, string> = {
+  email: "Email/Verbal",
+  quotation: "Quotation",
+  po: "PO",
+  deposit: "Deposit",
+};
+interface ApprovalsCellProps {
+  proofNumber?: string | null;
+  artworkState: "gray" | "green";
+  orderState: "gray" | "orange" | "green";
+  orderInfo?: ReturnType<typeof computeOrderConfirmationState>;
+}
+const ApprovalsCell = ({ proofNumber, artworkState, orderState, orderInfo }: ApprovalsCellProps) => {
+  const sel = useCellSelection();
+  const rowId = useRowId() ?? "__no_row__";
+  const cellKey = `${rowId}:approvals`;
+  const ringStyle = useSelectionRing(cellKey);
+
+  const GREEN = "#2E7D32";
+  const ORANGE = "#E97B2C";
+  const GRAY = "#C8C5BC";
+
+  const artworkColor = artworkState === "green" ? GREEN : GRAY;
+  const orderColor =
+    orderState === "green" ? GREEN : orderState === "orange" ? ORANGE : GRAY;
+
+  const artworkTip =
+    artworkState === "green"
+      ? "Artwork approved"
+      : proofNumber
+      ? "Artwork pending"
+      : "Artwork: no proof set";
+
+  let orderTip = "Order: no requirements configured";
+  if (orderInfo) {
+    const { satisfied, required, missingGates } = orderInfo;
+    if (required === 0) orderTip = "Order: no requirements configured";
+    else if (orderState === "green") orderTip = `Order confirmed · ${required} of ${required}`;
+    else if (orderState === "orange") {
+      const missing = missingGates.map((g) => GATE_LABEL[g]).join(", ");
+      orderTip = `Order in progress · ${satisfied} of ${required} · awaiting ${missing}`;
+    } else orderTip = `Order pending · 0 of ${required}`;
+  }
+
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); sel?.selectCell(rowId, cellKey, { noEdit: true }); }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      className="px-1 min-h-full flex items-center justify-center cursor-pointer hover:bg-[hsl(var(--brand-navy)/0.04)]"
+      style={{ ...ringStyle, gap: 6 }}
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex" aria-label={artworkTip}>
+            <Palette size={18} style={{ color: artworkColor }} strokeWidth={2} />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top">{artworkTip}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex" aria-label={orderTip}>
+            <Handshake size={18} style={{ color: orderColor }} strokeWidth={2} />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top">{orderTip}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+};
+
+
 // Parse "AV, RC" → ["AV","RC"] for TeamMultiPicker.
 function parseInitialsList(raw: string | undefined): string[] {
   if (!raw) return [];
