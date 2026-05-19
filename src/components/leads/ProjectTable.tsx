@@ -164,12 +164,19 @@ function compareCards(
   a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1,
   lookup?: (id?: string | null) => { name: string } | undefined,
   buyerLookup?: (id?: string | null) => { name: string } | undefined,
+  approvalRank?: (cardId: string) => { artwork: number; order: number },
 ): number {
   const dl = (c: PipelineCard) => c.deadlineDate?.getTime?.() ?? Number.POSITIVE_INFINITY;
   switch (key) {
     case "flagged":
       // flagged first when asc
       return dir * (Number(!!b.project.flagged) - Number(!!a.project.flagged));
+    case "approvals": {
+      const ar = approvalRank?.(a.id) ?? { artwork: 0, order: 0 };
+      const br = approvalRank?.(b.id) ?? { artwork: 0, order: 0 };
+      if (ar.artwork !== br.artwork) return dir * (ar.artwork - br.artwork);
+      return dir * (ar.order - br.order);
+    }
     case "stage": {
       // Sort by pipeline order (Sales→Production→Shipping→Finance), then by
       // stage progression rank within pipeline (NOT alphabetical). Within
