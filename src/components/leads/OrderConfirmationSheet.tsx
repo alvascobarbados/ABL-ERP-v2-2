@@ -147,7 +147,11 @@ export const OrderConfirmationSheet = ({
 
       <div className="space-y-4 mt-5">
         {requiredGates.includes("email") && (
-          <EmailVerbalSection project={liveProject} customer={customer} onSaved={onSaved} />
+          <EmailVerbalSection
+            project={liveProject} customer={customer}
+            approval={emailVerbalApproval} onSaved={onSaved} onCloseSheet={onClose}
+            onShowAffected={showAffected}
+          />
         )}
         {requiredGates.includes("quotation") && (
           <QuotationSection
