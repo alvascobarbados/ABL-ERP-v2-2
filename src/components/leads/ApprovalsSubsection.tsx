@@ -340,6 +340,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
         project={project}
         customer={customer}
         quotationApproval={quotationApproval}
+        emailVerbalApproval={emailVerbalApproval}
         customerPoApproval={customerPoApproval}
         onSaved={() => void refetch()}
       />
