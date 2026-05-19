@@ -30,7 +30,7 @@ const COLUMN_DEFS: { id: ColumnId; label: string }[] = [
   { id: "proof", label: "Proof" },
   { id: "po", label: "PO#" },
   { id: "invoice", label: "INV#" },
-  { id: "amount", label: "Amount" },
+  { id: "amount", label: "Quote Amount" },
   { id: "balance", label: "Inv Balance" },
   { id: "weight", label: "Weight" },
   { id: "cbm", label: "CBM" },
