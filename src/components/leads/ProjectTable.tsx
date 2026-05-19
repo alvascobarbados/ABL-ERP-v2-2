@@ -8,7 +8,7 @@
  * and only mounts the Table at the lg breakpoint.
  */
 import { useMemo, useState, useRef, useEffect, MouseEvent as ReactMouseEvent } from "react";
-import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin, Clock } from "lucide-react";
+import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin, Clock, Palette, Handshake } from "lucide-react";
 import { toast } from "sonner";
 import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS, ShippingMode,
