@@ -57,6 +57,8 @@ import type { TabId } from "./PipelineTabs";
 import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility";
 import { useMinuteTick } from "@/hooks/useMinuteTick";
 import { fmtTimeInStage } from "@/lib/timeInStage";
+import { useApprovalLookups, type ApprovalsBundle } from "@/hooks/useApprovalLookups";
+import { computeArtworkState, computeOrderConfirmationState, type GateKey } from "@/lib/orderConfirmation";
 
 type SortKey =
   | "flagged" | "stage" | "currentStage" | "approvals" | "customer" | "buyer" | "project" | "detail" | "supplier"
