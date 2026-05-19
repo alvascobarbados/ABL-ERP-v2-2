@@ -981,6 +981,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         title="Detail summary"
         value={live.detailSummary ?? ""}
         multiline
+        allowEmpty
         onSave={saveDetail}
       />
       <BuyerPicker
