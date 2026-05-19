@@ -66,12 +66,15 @@ export function useApprovalLookups(projects: ProjectDocs[]): ApprovalsBundle {
   const { data } = useQuery<ApprovalsBundle>({
     queryKey,
     queryFn: async () => {
-      const [artworkRes, quotRes, poRes] = await Promise.all([
+      const [artworkRes, quotRes, emailRes, poRes] = await Promise.all([
         proofNumbers.length
           ? supabase.from("artwork_approvals").select("*").in("proof_number", proofNumbers)
           : Promise.resolve({ data: [], error: null }),
         quoteNumbers.length
           ? supabase.from("quotation_approvals").select("*").in("q_number", quoteNumbers)
+          : Promise.resolve({ data: [], error: null }),
+        quoteNumbers.length
+          ? supabase.from("quotation_email_verbal_approvals").select("*").in("q_number", quoteNumbers)
           : Promise.resolve({ data: [], error: null }),
         poNumbers.length
           ? supabase.from("customer_po_approvals").select("*").in("customer_po_number", poNumbers)
@@ -86,20 +89,22 @@ export function useApprovalLookups(projects: ProjectDocs[]): ApprovalsBundle {
       for (const row of (quotRes.data ?? []) as QuotationApprovalRow[]) {
         quotation[row.q_number] = row;
       }
+      const email: Record<string, QuotationEmailVerbalApprovalRow> = {};
+      for (const row of (emailRes.data ?? []) as QuotationEmailVerbalApprovalRow[]) {
+        email[row.q_number] = row;
+      }
       const po: Record<string, CustomerPoApprovalRow> = {};
       for (const row of (poRes.data ?? []) as CustomerPoApprovalRow[]) {
         po[row.customer_po_number] = row;
       }
-      return { artwork, order: { quotation, po } };
+      return { artwork, order: { email, quotation, po } };
     },
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
 
-  // Realtime: one broad subscription for the table. Any change on any of the
-  // 3 approval tables invalidates all approval-lookup queries. The subscription
-  // is intentionally global (not per-row filtered) because we don't know which
-  // doc numbers will be visible after a refetch — and the volume is low.
+  // Realtime: broad subscription. Any change on any approval table invalidates
+  // all approval-lookup queries. Subscription is intentionally global.
   useEffect(() => {
     const channel = supabase
       .channel("pipeline-table-approvals")
@@ -107,6 +112,9 @@ export function useApprovalLookups(projects: ProjectDocs[]): ApprovalsBundle {
         queryClient.invalidateQueries({ queryKey: ["approval-lookups"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "quotation_approvals" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["approval-lookups"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "quotation_email_verbal_approvals" }, () => {
         queryClient.invalidateQueries({ queryKey: ["approval-lookups"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "customer_po_approvals" }, () => {
