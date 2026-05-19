@@ -965,6 +965,17 @@ const TableRow = ({
       </ReadOnlyCell>
       )}
 
+      {has("approvals") && (
+        <ApprovalsCell
+          proofNumber={proj.proofNumber}
+          artworkState={approvalState?.artwork ?? "gray"}
+          orderState={approvalState?.order ?? "gray"}
+          orderInfo={approvalState?.orderState}
+        />
+      )}
+
+
+
 
       {has("customer") && (
       <EditableCell
