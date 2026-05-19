@@ -24,6 +24,7 @@ import {
   computeOrderConfirmationState,
   type ArtworkApprovalRow,
   type QuotationApprovalRow,
+  type QuotationEmailVerbalApprovalRow,
   type CustomerPoApprovalRow,
   type ApprovalRowsLookup,
   type ArtworkApprovalsLookup,
@@ -35,7 +36,8 @@ import {
 export type CascadeChangeType =
   | "artwork_create" | "artwork_update" | "artwork_revoke"
   | "quotation_create" | "quotation_update" | "quotation_revoke"
-  | "customer_po_create" | "customer_po_update" | "customer_po_revoke";
+  | "customer_po_create" | "customer_po_update" | "customer_po_revoke"
+  | "email_verbal_create" | "email_verbal_update" | "email_verbal_revoke";
 
 export interface CascadeStateTransition {
   projectId: string;
@@ -80,11 +82,12 @@ export interface CascadeInput {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-type DomainKind = "artwork" | "quotation" | "customer_po";
+type DomainKind = "artwork" | "quotation" | "customer_po" | "email_verbal";
 
 function kindOf(changeType: CascadeChangeType): DomainKind {
   if (changeType.startsWith("artwork")) return "artwork";
   if (changeType.startsWith("quotation")) return "quotation";
+  if (changeType.startsWith("email_verbal")) return "email_verbal";
   return "customer_po";
 }
 
@@ -105,6 +108,10 @@ function actionTypeFor(changeType: CascadeChangeType): string {
     case "customer_po_create": return "customer_po_approval_create";
     case "customer_po_update": return "customer_po_approval_update";
     case "customer_po_revoke": return "customer_po_approval_revoke";
+    // Email/Verbal reuses legacy _set/_unset action_type names for audit-log continuity.
+    case "email_verbal_create": return "email_verbal_approval_set";
+    case "email_verbal_update": return "email_verbal_approval_set";
+    case "email_verbal_revoke": return "email_verbal_approval_unset";
   }
 }
 
@@ -128,7 +135,6 @@ function rowToProjectForGates(r: Record<string, unknown>): ProjectForGates & {
     quoteNumber: r.quote_number as string | null,
     proofNumber: r.proof_number as string | null,
     customerPoNumber: r.customer_po_number as string | null,
-    emailVerbalApproved: r.email_verbal_approved as boolean | null,
     depositPaidDate: r.deposit_paid_date as string | null,
     orderConfirmationOverrides: (r.order_confirmation_overrides as ProjectForGates["orderConfirmationOverrides"]) ?? null,
   };
@@ -149,7 +155,7 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
     .is("deleted_at", null);
   const filtered = kind === "artwork"
     ? projectsQuery.eq("proof_number", input.docNumber)
-    : kind === "quotation"
+    : kind === "quotation" || kind === "email_verbal"
       ? projectsQuery.eq("quote_number", input.docNumber)
       : projectsQuery.eq("customer_po_number", input.docNumber);
   const { data: projectRows, error: pe } = await filtered;
@@ -159,16 +165,14 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
   const affectedProjectIds = affectedProjects.map((p) => p.id);
   const siblingProjectIds = affectedProjectIds.filter((id) => id !== input.triggeringProjectId);
 
-  // 2. For quotation/PO cascades we need each project's full lookup (the OTHER
-  //    doc-type's approval rows) + each project's customer config.
+  // 2. For non-artwork cascades we need each project's full lookup + customer config.
   let customerByName: Record<string, OrderConfirmationConfig | null> = {};
-  let lookupNext: ApprovalRowsLookup = { quotation: {}, po: {} };
-  let lookupPrior: ApprovalRowsLookup = { quotation: {}, po: {} };
+  let lookupNext: ApprovalRowsLookup = { email: {}, quotation: {}, po: {} };
+  let lookupPrior: ApprovalRowsLookup = { email: {}, quotation: {}, po: {} };
   let artworkLookupNext: ArtworkApprovalsLookup = {};
   let artworkLookupPrior: ArtworkApprovalsLookup = {};
 
   if (kind !== "artwork") {
-    // Need customer configs
     const customerNames = Array.from(new Set(affectedProjects.map((p) => p.customer).filter(Boolean)));
     if (customerNames.length) {
       const { data: custRows } = await supabase
@@ -180,43 +184,36 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
       }
     }
 
-    // Fetch quotation + PO approval rows for all affected projects.
     const qNums = Array.from(new Set(affectedProjects.map((p) => p.quoteNumber).filter(Boolean) as string[]));
     const poNums = Array.from(new Set(affectedProjects.map((p) => p.customerPoNumber).filter(Boolean) as string[]));
     if (qNums.length) {
       const { data } = await supabase.from("quotation_approvals").select("*").in("q_number", qNums);
       for (const r of data ?? []) lookupNext.quotation[r.q_number] = r as QuotationApprovalRow;
+      const { data: edata } = await supabase.from("quotation_email_verbal_approvals").select("*").in("q_number", qNums);
+      for (const r of edata ?? []) lookupNext.email[r.q_number] = r as QuotationEmailVerbalApprovalRow;
     }
     if (poNums.length) {
       const { data } = await supabase.from("customer_po_approvals").select("*").in("customer_po_number", poNums);
       for (const r of data ?? []) lookupNext.po[r.customer_po_number] = r as CustomerPoApprovalRow;
     }
-    // Build prior lookup: identical to next except swap the triggering approval.
     lookupPrior = {
+      email: { ...lookupNext.email },
       quotation: { ...lookupNext.quotation },
       po: { ...lookupNext.po },
     };
     if (kind === "quotation") {
-      if (input.priorApprovalRow) {
-        lookupPrior.quotation[input.docNumber] = input.priorApprovalRow as QuotationApprovalRow;
-      } else {
-        delete lookupPrior.quotation[input.docNumber];
-      }
+      if (input.priorApprovalRow) lookupPrior.quotation[input.docNumber] = input.priorApprovalRow as QuotationApprovalRow;
+      else delete lookupPrior.quotation[input.docNumber];
+    } else if (kind === "email_verbal") {
+      if (input.priorApprovalRow) lookupPrior.email[input.docNumber] = input.priorApprovalRow as QuotationEmailVerbalApprovalRow;
+      else delete lookupPrior.email[input.docNumber];
     } else {
-      if (input.priorApprovalRow) {
-        lookupPrior.po[input.docNumber] = input.priorApprovalRow as CustomerPoApprovalRow;
-      } else {
-        delete lookupPrior.po[input.docNumber];
-      }
+      if (input.priorApprovalRow) lookupPrior.po[input.docNumber] = input.priorApprovalRow as CustomerPoApprovalRow;
+      else delete lookupPrior.po[input.docNumber];
     }
   } else {
-    // Artwork: only need the artwork approvals lookup (just the one proof_number).
-    if (input.approvalRow) {
-      artworkLookupNext[input.docNumber] = input.approvalRow as ArtworkApprovalRow;
-    }
-    if (input.priorApprovalRow) {
-      artworkLookupPrior[input.docNumber] = input.priorApprovalRow as ArtworkApprovalRow;
-    }
+    if (input.approvalRow) artworkLookupNext[input.docNumber] = input.approvalRow as ArtworkApprovalRow;
+    if (input.priorApprovalRow) artworkLookupPrior[input.docNumber] = input.priorApprovalRow as ArtworkApprovalRow;
   }
 
   // 3. Compute prior vs next state per project.

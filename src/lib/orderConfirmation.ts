@@ -69,6 +69,16 @@ export interface QuotationApprovalRow {
   notes?: string | null;
   recorded_by_user_id: string;
 }
+export interface QuotationEmailVerbalApprovalRow {
+  id: string;
+  q_number: string;
+  approved_on: string;
+  via_channel: string;
+  approved_by_buyer_id?: string | null;
+  approved_by_other_name?: string | null;
+  notes?: string | null;
+  recorded_by_user_id: string;
+}
 export interface CustomerPoApprovalRow {
   id: string;
   customer_po_number: string;
@@ -81,6 +91,7 @@ export interface CustomerPoApprovalRow {
 }
 
 export interface ApprovalRowsLookup {
+  email: Record<string, QuotationEmailVerbalApprovalRow>; // keyed by q_number (Q#-keyed email/verbal)
   quotation: Record<string, QuotationApprovalRow>; // keyed by q_number
   po: Record<string, CustomerPoApprovalRow>;       // keyed by customer_po_number
 }
@@ -159,7 +170,7 @@ export function isGateSatisfied(
 ): boolean {
   switch (gate) {
     case "email":
-      return project.emailVerbalApproved === true;
+      return !!project.quoteNumber && !!lookup.email[project.quoteNumber];
     case "quotation":
       return !!project.quoteNumber && !!lookup.quotation[project.quoteNumber];
     case "po":
@@ -219,7 +230,7 @@ function runSanity() {
   const expect = (name: string, got: unknown, want: unknown) =>
     results.push({ name, pass: JSON.stringify(got) === JSON.stringify(want), got, want });
 
-  const emptyLookup: ApprovalRowsLookup = { quotation: {}, po: {} };
+  const emptyLookup: ApprovalRowsLookup = { email: {}, quotation: {}, po: {} };
 
   // 1. Empty config + no overrides → gray (0 required)
   expect("empty config → gray",
@@ -236,18 +247,22 @@ function runSanity() {
     computeOrderConfirmationState({}, { order_confirmation_config: allReq }, emptyLookup).state, "gray");
 
   // 3. 4 required, 2 satisfied → orange
-  const p3: ProjectForGates = { emailVerbalApproved: true, depositPaidDate: new Date() };
+  const p3: ProjectForGates = { quoteNumber: "Q-1", depositPaidDate: new Date() };
+  const lookup3: ApprovalRowsLookup = {
+    email: { "Q-1": { id: "e", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
+    quotation: {}, po: {},
+  };
   expect("4 req / 2 sat → orange",
-    computeOrderConfirmationState(p3, { order_confirmation_config: allReq }, emptyLookup).state, "orange");
+    computeOrderConfirmationState(p3, { order_confirmation_config: allReq }, lookup3).state, "orange");
 
   // 4. 4 required, 4 satisfied → green
   const p4: ProjectForGates = {
-    emailVerbalApproved: true,
     depositPaidDate: new Date(),
     quoteNumber: "Q-1",
     customerPoNumber: "PO-1",
   };
   const lookup4: ApprovalRowsLookup = {
+    email: { "Q-1": { id: "e", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
     quotation: { "Q-1": { id: "a", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
     po: { "PO-1": { id: "b", customer_po_number: "PO-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
   };

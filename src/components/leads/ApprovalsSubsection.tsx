@@ -21,6 +21,7 @@ import {
   computeOrderConfirmationState,
   type ArtworkApprovalRow,
   type QuotationApprovalRow,
+  type QuotationEmailVerbalApprovalRow,
   type CustomerPoApprovalRow,
   type GateKey,
 } from "@/lib/orderConfirmation";
@@ -65,6 +66,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
 
   const [artworkApproval, setArtworkApproval] = useState<ArtworkApprovalRow | null>(null);
   const [quotationApproval, setQuotationApproval] = useState<QuotationApprovalRow | null>(null);
+  const [emailVerbalApproval, setEmailVerbalApproval] = useState<QuotationEmailVerbalApprovalRow | null>(null);
   const [customerPoApproval, setCustomerPoApproval] = useState<CustomerPoApprovalRow | null>(null);
 
   const proofNumber = project.proofNumber ?? null;
@@ -73,12 +75,15 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
 
   const refetch = useMemo(
     () => async () => {
-      const [a, q, p] = await Promise.all([
+      const [a, q, e, p] = await Promise.all([
         proofNumber
           ? supabase.from("artwork_approvals").select("*").eq("proof_number", proofNumber).maybeSingle()
           : Promise.resolve({ data: null }),
         quoteNumber
           ? supabase.from("quotation_approvals").select("*").eq("q_number", quoteNumber).maybeSingle()
+          : Promise.resolve({ data: null }),
+        quoteNumber
+          ? supabase.from("quotation_email_verbal_approvals").select("*").eq("q_number", quoteNumber).maybeSingle()
           : Promise.resolve({ data: null }),
         customerPoNumber
           ? supabase.from("customer_po_approvals").select("*").eq("customer_po_number", customerPoNumber).maybeSingle()
@@ -86,6 +91,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
       ]);
       setArtworkApproval((a.data as ArtworkApprovalRow | null) ?? null);
       setQuotationApproval((q.data as QuotationApprovalRow | null) ?? null);
+      setEmailVerbalApproval((e.data as QuotationEmailVerbalApprovalRow | null) ?? null);
       setCustomerPoApproval((p.data as CustomerPoApprovalRow | null) ?? null);
     },
     [proofNumber, quoteNumber, customerPoNumber],

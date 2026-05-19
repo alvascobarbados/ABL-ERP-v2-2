@@ -632,6 +632,53 @@ export type Database = {
           },
         ]
       }
+      quotation_email_verbal_approvals: {
+        Row: {
+          approved_by_buyer_id: string | null
+          approved_by_other_name: string | null
+          approved_on: string
+          created_at: string
+          id: string
+          notes: string | null
+          q_number: string
+          recorded_by_user_id: string
+          updated_at: string
+          via_channel: string
+        }
+        Insert: {
+          approved_by_buyer_id?: string | null
+          approved_by_other_name?: string | null
+          approved_on: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          q_number: string
+          recorded_by_user_id: string
+          updated_at?: string
+          via_channel: string
+        }
+        Update: {
+          approved_by_buyer_id?: string | null
+          approved_by_other_name?: string | null
+          approved_on?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          q_number?: string
+          recorded_by_user_id?: string
+          updated_at?: string
+          via_channel?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_email_verbal_approvals_approved_by_buyer_id_fkey"
+            columns: ["approved_by_buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipments: {
         Row: {
           carrier: string | null
