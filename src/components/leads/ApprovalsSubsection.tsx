@@ -21,6 +21,7 @@ import {
   computeOrderConfirmationState,
   type ArtworkApprovalRow,
   type QuotationApprovalRow,
+  type QuotationEmailVerbalApprovalRow,
   type CustomerPoApprovalRow,
   type GateKey,
 } from "@/lib/orderConfirmation";
