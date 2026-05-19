@@ -230,7 +230,7 @@ function runSanity() {
   const expect = (name: string, got: unknown, want: unknown) =>
     results.push({ name, pass: JSON.stringify(got) === JSON.stringify(want), got, want });
 
-  const emptyLookup: ApprovalRowsLookup = { quotation: {}, po: {} };
+  const emptyLookup: ApprovalRowsLookup = { email: {}, quotation: {}, po: {} };
 
   // 1. Empty config + no overrides → gray (0 required)
   expect("empty config → gray",
