@@ -69,6 +69,16 @@ export interface QuotationApprovalRow {
   notes?: string | null;
   recorded_by_user_id: string;
 }
+export interface QuotationEmailVerbalApprovalRow {
+  id: string;
+  q_number: string;
+  approved_on: string;
+  via_channel: string;
+  approved_by_buyer_id?: string | null;
+  approved_by_other_name?: string | null;
+  notes?: string | null;
+  recorded_by_user_id: string;
+}
 export interface CustomerPoApprovalRow {
   id: string;
   customer_po_number: string;
