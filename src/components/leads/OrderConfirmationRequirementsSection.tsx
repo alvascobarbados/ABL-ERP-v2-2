@@ -271,10 +271,12 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
     // Fetch approval rows so quotation/PO gates resolve accurately
     const qs = Array.from(new Set(openProjects.map((p) => p.quoteNumber).filter(Boolean) as string[]));
     const pos = Array.from(new Set(openProjects.map((p) => p.customerPoNumber).filter(Boolean) as string[]));
-    const lookup: ApprovalRowsLookup = { quotation: {}, po: {} };
+    const lookup: ApprovalRowsLookup = { email: {}, quotation: {}, po: {} };
     if (qs.length) {
       const { data } = await supabase.from("quotation_approvals").select("*").in("q_number", qs);
       for (const r of data ?? []) lookup.quotation[r.q_number] = r;
+      const { data: edata } = await supabase.from("quotation_email_verbal_approvals").select("*").in("q_number", qs);
+      for (const r of edata ?? []) lookup.email[r.q_number] = r;
     }
     if (pos.length) {
       const { data } = await supabase.from("customer_po_approvals").select("*").in("customer_po_number", pos);
