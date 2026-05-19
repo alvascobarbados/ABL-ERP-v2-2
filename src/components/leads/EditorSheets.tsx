@@ -91,12 +91,14 @@ interface TextEditorProps {
   maxLength?: number;
   /** Inline validation error rendered in muted red below the input. When set, also disables Save. */
   errorText?: string | null;
+  /** Allow saving an empty value (for nullable fields). Defaults to false (required). */
+  allowEmpty?: boolean;
   onSave: (v: string) => void;
   /** Optional clear handler. When provided, renders a "Clear" button that wipes the field. */
   onClear?: () => void;
   clearLabel?: string;
 }
-export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, errorText, onSave, onClear, clearLabel }: TextEditorProps) => {
+export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, errorText, allowEmpty, onSave, onClear, clearLabel }: TextEditorProps) => {
   const capLen = (s: string) => (maxLength != null ? s.slice(0, maxLength) : s);
   const sanitizeDigitsLike = (raw: string): string => {
     if (!digitsOnly) return raw;
