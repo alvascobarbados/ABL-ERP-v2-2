@@ -981,6 +981,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         title="Detail summary"
         value={live.detailSummary ?? ""}
         multiline
+        allowEmpty
         onSave={saveDetail}
       />
       <BuyerPicker
@@ -1126,6 +1127,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         value={live.designBrief ?? ""}
         placeholder="Describe the creative brief…"
         multiline
+        allowEmpty
         onSave={saveDesignBrief}
       />
       <TextEditor
@@ -1156,6 +1158,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         title="Deposit invoice #"
         value={live.depositInvoiceNumber ?? ""}
         placeholder="DEP-1234"
+        allowEmpty
         onSave={saveDepositInvoice}
         onClear={() => saveDepositInvoice("")}
         clearLabel="Clear deposit number"
@@ -1194,6 +1197,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         title={`Deposit ${refLabelFor(live.depositPaidMethod) ?? "Reference"}`}
         value={live.depositPaymentReference ?? ""}
         placeholder=""
+        allowEmpty
         onSave={saveDepositPaymentRef}
       />
       {/* Finance — final */}
@@ -1220,6 +1224,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         title={refLabelFor(live.paymentMethod) ?? "Reference"}
         value={live.paymentReference ?? ""}
         placeholder=""
+        allowEmpty
         onSave={savePaymentRef}
       />
       <TextEditor
