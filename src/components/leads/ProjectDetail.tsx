@@ -1158,6 +1158,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         title="Deposit invoice #"
         value={live.depositInvoiceNumber ?? ""}
         placeholder="DEP-1234"
+        allowEmpty
         onSave={saveDepositInvoice}
         onClear={() => saveDepositInvoice("")}
         clearLabel="Clear deposit number"
