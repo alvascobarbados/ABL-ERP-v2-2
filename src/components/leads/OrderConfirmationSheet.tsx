@@ -118,6 +118,16 @@ export const OrderConfirmationSheet = ({
     priorStateRef.current = orderState.state;
   }, [orderState.state, orderState.required, customer?.name, project.customer, project.projectName, onClose]);
 
+  const [affectedModal, setAffectedModal] = useState<AffectedProjectEntry[] | null>(null);
+  const showAffected = (result: CascadeResult) => {
+    setAffectedModal(result.stateTransitions.map((t) => ({
+      projectId: t.projectId,
+      projectName: t.projectName,
+      customerName: t.customerName,
+      stateChange: t.orderState ? `${t.orderState.from} → ${t.orderState.to}` : undefined,
+    })));
+  };
+
   if (!open) return null;
 
   const requiredGates: GateKey[] = (["email", "quotation", "po", "deposit"] as GateKey[])
@@ -140,12 +150,14 @@ export const OrderConfirmationSheet = ({
           <QuotationSection
             project={liveProject} customer={customer}
             approval={quotationApproval} onSaved={onSaved} onCloseSheet={onClose}
+            onShowAffected={showAffected}
           />
         )}
         {requiredGates.includes("po") && (
           <PoSection
             project={liveProject} customer={customer}
             approval={customerPoApproval} onSaved={onSaved}
+            onShowAffected={showAffected}
           />
         )}
         {requiredGates.includes("deposit") && (
@@ -154,9 +166,17 @@ export const OrderConfirmationSheet = ({
       </div>
 
       <AdjustRequirementsExpander project={liveProject} customer={customer} onSaved={onSaved} />
+
+      <AffectedProjectsModal
+        open={!!affectedModal}
+        entries={affectedModal ?? []}
+        onClose={() => setAffectedModal(null)}
+        onLinkClick={() => { setAffectedModal(null); onClose(); }}
+      />
     </Sheet>
   );
 };
+
 
 // ─── Status strip ────────────────────────────────────────────────────────────
 const StatusStrip = ({
