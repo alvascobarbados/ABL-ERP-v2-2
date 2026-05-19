@@ -604,6 +604,15 @@ const PoSection = ({
     const prior = project.customerPoNumber ?? null;
     const { error } = await supabase.from("projects").update({ customer_po_number: val }).eq("id", project.id);
     if (error) { toast.error(`Couldn't save: ${error.message}`); setSavingPo(false); return; }
+    // Mirror to siblings sharing the same quote_number (customer PO # is quote-level).
+    if (project.quoteNumber) {
+      const dbQn = project.quoteNumber.replace(/^Q-/, "");
+      await supabase.from("projects")
+        .update({ customer_po_number: val })
+        .eq("quote_number", dbQn)
+        .neq("id", project.id)
+        .is("deleted_at", null);
+    }
     const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
     await supabase.from("project_log_entries").insert({
       id: logId, project_id: project.id, ts: new Date().toISOString(),
@@ -619,6 +628,14 @@ const PoSection = ({
       applyInverse: async () => {
         const { error: e2 } = await supabase.from("projects").update({ customer_po_number: prior }).eq("id", project.id);
         if (e2) return { ok: false, reason: "Couldn't undo" };
+        if (project.quoteNumber) {
+          const dbQn = project.quoteNumber.replace(/^Q-/, "");
+          await supabase.from("projects")
+            .update({ customer_po_number: prior })
+            .eq("quote_number", dbQn)
+            .neq("id", project.id)
+            .is("deleted_at", null);
+        }
         onSaved();
         return { ok: true };
       },

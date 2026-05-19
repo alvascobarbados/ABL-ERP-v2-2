@@ -679,6 +679,111 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
   const touch = (p: Project): Project => ({ ...p, updatedAt: new Date() });
 
+  // ── Quote-level field mirroring ──────────────────────────────────────
+  // Some fields conceptually belong to the quote, not the individual entry.
+  // When multiple project rows share a quote_number (sub-entries of one
+  // quote), edits to these fields on any entry mirror to every sibling.
+  // Supplier-level fields (po_number, po_amount, po_amount_currency,
+  // supplier_id) are intentionally NOT mirrored — different sub-entries
+  // can be sourced from different suppliers under one customer quote.
+  //
+  // When/if we introduce a true quotes parent table, these fields move to
+  // quote.* and this mirroring logic gets deleted in favor of the FK join.
+  type MirrorField = {
+    projKey: keyof Project;
+    dbCol: string;
+    /** Serialize the camelCase Project value for the snake_case DB column. */
+    toDb: (v: any) => any;
+  };
+  const MIRRORED_FIELDS: ReadonlyArray<MirrorField> = [
+    { projKey: "depositRequired",            dbCol: "deposit_required",            toDb: (v) => !!v },
+    { projKey: "depositInvoiceNumber",       dbCol: "deposit_invoice_number",      toDb: (v) => v ?? null },
+    { projKey: "depositAmount",              dbCol: "deposit_amount",              toDb: (v) => v ?? null },
+    { projKey: "depositPaidDate",            dbCol: "deposit_paid_date",           toDb: (v) => (v instanceof Date ? v.toISOString() : v ?? null) },
+    { projKey: "depositPaidMethod",          dbCol: "deposit_paid_method",         toDb: (v) => v ?? null },
+    { projKey: "depositPaymentReference",    dbCol: "deposit_payment_reference",   toDb: (v) => v ?? null },
+    { projKey: "invoiceNumber",              dbCol: "invoice_number",              toDb: (v) => v ?? null },
+    { projKey: "paidOnDate",                 dbCol: "paid_on_date",                toDb: (v) => (v instanceof Date ? v.toISOString() : v ?? null) },
+    { projKey: "paymentMethod",              dbCol: "payment_method",              toDb: (v) => v ?? null },
+    { projKey: "paymentReference",           dbCol: "payment_reference",           toDb: (v) => v ?? null },
+    { projKey: "value",                      dbCol: "value",                       toDb: (v) => v },
+    { projKey: "paymentTerms",               dbCol: "payment_terms",               toDb: (v) => v ?? null },
+    { projKey: "paymentTermsCustomDays",     dbCol: "payment_terms_custom_days",   toDb: (v) => v ?? null },
+    { projKey: "paymentTermsInherited",      dbCol: "payment_terms_inherited",     toDb: (v) => v ?? null },
+    { projKey: "invoiceIssuedDate",          dbCol: "invoice_issued_date",         toDb: (v) => (v instanceof Date ? v.toISOString() : v ?? null) },
+    { projKey: "invoiceIssuedDateAssumed",   dbCol: "invoice_issued_date_assumed", toDb: (v) => v ?? null },
+    { projKey: "customerPoNumber",           dbCol: "customer_po_number",          toDb: (v) => v ?? null },
+  ];
+
+  /** Compare two values treating Dates by epoch and null/undefined as equal. */
+  const sameValue = (a: any, b: any): boolean => {
+    if (a == null && b == null) return true;
+    if (a instanceof Date || b instanceof Date) {
+      const aT = a instanceof Date ? a.getTime() : a == null ? null : new Date(a).getTime();
+      const bT = b instanceof Date ? b.getTime() : b == null ? null : new Date(b).getTime();
+      return aT === bT;
+    }
+    return a === b;
+  };
+
+  /**
+   * After a successful primary save, mirror any changed quote-level fields
+   * to sibling project rows sharing the same quote_number. Best-effort:
+   * a mirror failure does NOT roll back the primary edit (a soft warning
+   * toast is shown instead). Local state and DB are updated in lockstep.
+   */
+  const mirrorToSiblings = async (optimistic: Project, prevRow: Project | undefined) => {
+    const qn = optimistic.quoteNumber;
+    if (!qn) return;
+    // Build the diff of mirrored fields.
+    const changedProj: Partial<Project> = {};
+    const changedDb: Record<string, any> = {};
+    for (const f of MIRRORED_FIELDS) {
+      const cur = (optimistic as any)[f.projKey];
+      const prev = prevRow ? (prevRow as any)[f.projKey] : undefined;
+      if (!sameValue(cur, prev)) {
+        (changedProj as any)[f.projKey] = cur;
+        changedDb[f.dbCol] = f.toDb(cur);
+      }
+    }
+    if (Object.keys(changedDb).length === 0) return;
+
+    const snapshot = projectsRef.current;
+    const siblings = snapshot.filter(
+      (p) => p.id !== optimistic.id && p.quoteNumber === qn && !p.deletedAt,
+    );
+    if (siblings.length === 0) return;
+
+    // Optimistic local mirror.
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id !== optimistic.id && p.quoteNumber === qn && !p.deletedAt
+          ? ({ ...p, ...changedProj, updatedAt: new Date() } as Project)
+          : p,
+      ),
+    );
+
+    // quote_number in DB is stored as plain digits (no "Q-" prefix).
+    const dbQn = qn.replace(/^Q-/, "");
+    const { error } = await supabase
+      .from("projects")
+      .update({ ...changedDb, updated_at: new Date().toISOString() })
+      .eq("quote_number", dbQn)
+      .neq("id", optimistic.id)
+      .is("deleted_at", null);
+
+    if (error) {
+      console.error("[store] mirror to siblings failed", qn, error.message);
+      // Roll back the local sibling mirror so UI doesn't lie.
+      setProjects(snapshot);
+      toast.warning(`Saved this entry, but couldn't sync sibling entries on Q-${dbQn}`);
+      return;
+    }
+    if (siblings.length > 0) {
+      toast(`Synced ${siblings.length} sibling ${siblings.length === 1 ? "entry" : "entries"} on Q-${dbQn}`, { duration: 2000 });
+    }
+  };
+
   // ── Optimistic mutation core ─────────────────────────────────────────
   // Apply optimistic in-memory change; await Supabase project upsert + log
   // insert in one chain; rollback both the local state and (if log failed)
@@ -715,6 +820,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         return false;
       }
     }
+    // Best-effort mirror of quote-level fields to siblings sharing quote_number.
+    await mirrorToSiblings(optimistic, prevRow);
     return true;
   };
 
