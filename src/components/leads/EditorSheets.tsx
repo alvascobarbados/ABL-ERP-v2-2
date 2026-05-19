@@ -244,7 +244,10 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
           style={{ minHeight: 48 }}
         />
       )}
-      {warning && (
+      {errorText && (
+        <p className="mt-3 text-xs leading-snug" style={{ color: "hsl(var(--urgent))" }}>{errorText}</p>
+      )}
+      {warning && !errorText && (
         <p className="mt-3 text-xs leading-snug" style={{ color: "hsl(var(--brand-orange))" }}>{warning}</p>
       )}
     </BottomSheet>
