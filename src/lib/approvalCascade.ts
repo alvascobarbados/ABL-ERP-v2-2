@@ -375,6 +375,7 @@ export function fireBulkToast(opts: BulkToastOpts) {
 function docLabel(kind: DomainKind, doc: string): string {
   if (kind === "artwork") return `Proof #${doc}`;
   if (kind === "quotation") return `Q-${doc}`;
+  if (kind === "email_verbal") return `Q-${doc}`;
   return `PO #${doc}`;
 }
 
