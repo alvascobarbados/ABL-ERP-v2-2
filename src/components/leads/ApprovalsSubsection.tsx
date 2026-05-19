@@ -161,6 +161,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
     const lookup = {
       quotation: quoteNumber && quotationApproval ? { [quoteNumber]: quotationApproval } : {},
       po: customerPoNumber && customerPoApproval ? { [customerPoNumber]: customerPoApproval } : {},
+      email: {},
     };
     const cust = customer
       ? { order_confirmation_config: customer.order_confirmation_config }
