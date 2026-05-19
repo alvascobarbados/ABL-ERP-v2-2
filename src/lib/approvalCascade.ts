@@ -290,6 +290,10 @@ function cascadeDescription(input: CascadeInput, t: CascadeStateTransition, verb
     const o = t.orderState!;
     return `${undoPrefix}Quotation approval ${verb} cascaded · Q-${input.docNumber} (${o.from} → ${o.to})`;
   }
+  if (kind === "email_verbal") {
+    const o = t.orderState!;
+    return `${undoPrefix}Email/verbal approval ${verb} cascaded · Q-${input.docNumber} (${o.from} → ${o.to})`;
+  }
   const o = t.orderState!;
   return `${undoPrefix}Customer PO approval ${verb} cascaded · PO #${input.docNumber} (${o.from} → ${o.to})`;
 }
