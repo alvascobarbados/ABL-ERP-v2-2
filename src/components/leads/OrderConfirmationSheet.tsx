@@ -17,6 +17,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
+import {
+  AffectedProjectsModal,
+  SiblingProjectsInline,
+  type AffectedProjectEntry,
+} from "./AffectedProjectsModal";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useMasterData, type Customer } from "@/hooks/useMasterData";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
@@ -31,6 +36,11 @@ import {
   type CustomerPoApprovalRow,
   type ApprovalRowsLookup,
 } from "@/lib/orderConfirmation";
+import {
+  cascadeApprovalChange,
+  fireBulkToast,
+  type CascadeResult,
+} from "@/lib/approvalCascade";
 import {
   ApprovalFormFields,
   validateForm,
@@ -108,6 +118,16 @@ export const OrderConfirmationSheet = ({
     priorStateRef.current = orderState.state;
   }, [orderState.state, orderState.required, customer?.name, project.customer, project.projectName, onClose]);
 
+  const [affectedModal, setAffectedModal] = useState<AffectedProjectEntry[] | null>(null);
+  const showAffected = (result: CascadeResult) => {
+    setAffectedModal(result.stateTransitions.map((t) => ({
+      projectId: t.projectId,
+      projectName: t.projectName,
+      customerName: t.customerName,
+      stateChange: t.orderState ? `${t.orderState.from} → ${t.orderState.to}` : undefined,
+    })));
+  };
+
   if (!open) return null;
 
   const requiredGates: GateKey[] = (["email", "quotation", "po", "deposit"] as GateKey[])
@@ -130,12 +150,14 @@ export const OrderConfirmationSheet = ({
           <QuotationSection
             project={liveProject} customer={customer}
             approval={quotationApproval} onSaved={onSaved} onCloseSheet={onClose}
+            onShowAffected={showAffected}
           />
         )}
         {requiredGates.includes("po") && (
           <PoSection
             project={liveProject} customer={customer}
             approval={customerPoApproval} onSaved={onSaved}
+            onShowAffected={showAffected}
           />
         )}
         {requiredGates.includes("deposit") && (
@@ -144,9 +166,17 @@ export const OrderConfirmationSheet = ({
       </div>
 
       <AdjustRequirementsExpander project={liveProject} customer={customer} onSaved={onSaved} />
+
+      <AffectedProjectsModal
+        open={!!affectedModal}
+        entries={affectedModal ?? []}
+        onClose={() => setAffectedModal(null)}
+        onLinkClick={() => { setAffectedModal(null); onClose(); }}
+      />
     </Sheet>
   );
 };
+
 
 // ─── Status strip ────────────────────────────────────────────────────────────
 const StatusStrip = ({
@@ -389,11 +419,12 @@ const EmailVerbalSection = ({
 
 // ─── Quotation section ───────────────────────────────────────────────────────
 const QuotationSection = ({
-  project, customer, approval, onSaved, onCloseSheet,
+  project, customer, approval, onSaved, onCloseSheet, onShowAffected,
 }: {
   project: Project; customer: Customer | undefined;
   approval: QuotationApprovalRow | null;
   onSaved: () => void; onCloseSheet: () => void;
+  onShowAffected: (result: CascadeResult) => void;
 }) => {
   const user = useCurrentUser();
   const md = useMasterData();
@@ -442,8 +473,12 @@ const QuotationSection = ({
           notes: form.notes.trim() || null,
           recorded_by_user_id: user.userId,
         };
-        const { error } = await supabase.from("quotation_approvals").upsert(payload, { onConflict: "q_number" });
+        const { data: nextRow, error } = await supabase
+          .from("quotation_approvals")
+          .upsert(payload, { onConflict: "q_number" })
+          .select().maybeSingle();
         if (error) { toast.error(`Couldn't save: ${error.message}`); return false; }
+        const cascadeTs = new Date().toISOString();
         const buyerName = form.approvedByBuyerId
           ? md.buyers.find((b) => b.id === form.approvedByBuyerId)?.name ?? "—"
           : form.approvedByOtherName ?? "—";
@@ -451,11 +486,22 @@ const QuotationSection = ({
         const verb = isEdit ? "updated" : "recorded";
         const desc = `${user.shortName} ${verb} quotation approval · Q-${q} from ${buyerName} via ${channelLabel(form.viaChannel)}`;
         await supabase.from("project_log_entries").insert({
-          id: logId, project_id: project.id, ts: new Date().toISOString(),
+          id: logId, project_id: project.id, ts: cascadeTs,
           actor_user_id: user.userId, actor_display_name: user.shortName,
           action_type: isEdit ? "quotation_approval_update" : "quotation_approval_create",
           description: desc,
           metadata: { q_number: q, via_channel: form.viaChannel, approved_on: form.approvedOn } as Json,
+        });
+        const changeType = isEdit ? "quotation_update" as const : "quotation_create" as const;
+        const result = await cascadeApprovalChange({
+          changeType, docNumber: q, triggeringProjectId: project.id,
+          approvalRow: (nextRow as QuotationApprovalRow) ?? null, priorApprovalRow: prior,
+          actorUserId: user.userId, actorDisplayName: user.shortName,
+          cascadeTs, triggeringLogId: logId,
+        });
+        fireBulkToast({
+          changeType, docNumber: q, result,
+          onViewAffected: result.affectedProjectIds.length > 1 ? () => onShowAffected(result) : undefined,
         });
         pushUndo({
           id: makeUndoId(), timestamp: Date.now(),
@@ -469,12 +515,23 @@ const QuotationSection = ({
               const { error: e2 } = await supabase.from("quotation_approvals").delete().eq("q_number", q);
               if (e2) return { ok: false, reason: "Couldn't undo quotation approval" };
             }
+            const undoTs = new Date().toISOString();
+            const undoResult = await cascadeApprovalChange({
+              changeType: prior ? "quotation_update" : "quotation_revoke",
+              docNumber: q, triggeringProjectId: project.id,
+              approvalRow: prior, priorApprovalRow: (nextRow as QuotationApprovalRow) ?? null,
+              actorUserId: user.userId, actorDisplayName: user.shortName,
+              cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
+            });
+            fireBulkToast({
+              changeType: prior ? "quotation_update" : "quotation_revoke",
+              docNumber: q, result: undoResult, isUndo: true,
+            });
             onSaved();
             return { ok: true };
           },
         });
         onSaved();
-        toast.success(`Quotation approval ${verb} · Q-${q}`);
         return true;
       }}
       onRevoke={async () => {
@@ -482,13 +539,24 @@ const QuotationSection = ({
         const prior = { ...approval };
         const { error } = await supabase.from("quotation_approvals").delete().eq("q_number", q);
         if (error) { toast.error(`Couldn't revoke: ${error.message}`); return; }
+        const cascadeTs = new Date().toISOString();
         const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         await supabase.from("project_log_entries").insert({
-          id: logId, project_id: project.id, ts: new Date().toISOString(),
+          id: logId, project_id: project.id, ts: cascadeTs,
           actor_user_id: user.userId, actor_display_name: user.shortName,
           action_type: "quotation_approval_revoke",
           description: `${user.shortName} revoked quotation approval · Q-${q}`,
           metadata: { q_number: q } as Json,
+        });
+        const result = await cascadeApprovalChange({
+          changeType: "quotation_revoke", docNumber: q, triggeringProjectId: project.id,
+          approvalRow: null, priorApprovalRow: prior,
+          actorUserId: user.userId, actorDisplayName: user.shortName,
+          cascadeTs, triggeringLogId: logId,
+        });
+        fireBulkToast({
+          changeType: "quotation_revoke", docNumber: q, result,
+          onViewAffected: result.affectedProjectIds.length > 1 ? () => onShowAffected(result) : undefined,
         });
         pushUndo({
           id: makeUndoId(), timestamp: Date.now(),
@@ -497,12 +565,21 @@ const QuotationSection = ({
           applyInverse: async () => {
             const { error: e2 } = await supabase.from("quotation_approvals").insert(prior);
             if (e2) return { ok: false, reason: "Couldn't restore quotation approval" };
+            const undoTs = new Date().toISOString();
+            const undoResult = await cascadeApprovalChange({
+              changeType: "quotation_create", docNumber: q, triggeringProjectId: project.id,
+              approvalRow: prior, priorApprovalRow: null,
+              actorUserId: user.userId, actorDisplayName: user.shortName,
+              cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
+            });
+            fireBulkToast({
+              changeType: "quotation_create", docNumber: q, result: undoResult, isUndo: true,
+            });
             onSaved();
             return { ok: true };
           },
         });
         onSaved();
-        toast(`Quotation approval revoked · Q-${q}`, { duration: 3000 });
       }}
     />
   );
@@ -510,8 +587,13 @@ const QuotationSection = ({
 
 // ─── PO section ──────────────────────────────────────────────────────────────
 const PoSection = ({
-  project, customer, approval, onSaved,
-}: { project: Project; customer: Customer | undefined; approval: CustomerPoApprovalRow | null; onSaved: () => void }) => {
+  project, customer, approval, onSaved, onShowAffected,
+}: {
+  project: Project; customer: Customer | undefined;
+  approval: CustomerPoApprovalRow | null;
+  onSaved: () => void;
+  onShowAffected: (result: CascadeResult) => void;
+}) => {
   const user = useCurrentUser();
   const md = useMasterData();
   const store = usePipelineStore();
@@ -608,8 +690,12 @@ const PoSection = ({
           notes: form.notes.trim() || null,
           recorded_by_user_id: user.userId,
         };
-        const { error } = await supabase.from("customer_po_approvals").upsert(payload, { onConflict: "customer_po_number" });
+        const { data: nextRow, error } = await supabase
+          .from("customer_po_approvals")
+          .upsert(payload, { onConflict: "customer_po_number" })
+          .select().maybeSingle();
         if (error) { toast.error(`Couldn't save: ${error.message}`); return false; }
+        const cascadeTs = new Date().toISOString();
         const buyerName = form.approvedByBuyerId
           ? md.buyers.find((b) => b.id === form.approvedByBuyerId)?.name ?? "—"
           : form.approvedByOtherName ?? "—";
@@ -617,11 +703,22 @@ const PoSection = ({
         const verb = isEdit ? "updated" : "recorded";
         const desc = `${user.shortName} ${verb} PO approval · PO #${po} from ${buyerName} via ${channelLabel(form.viaChannel)}`;
         await supabase.from("project_log_entries").insert({
-          id: logId, project_id: project.id, ts: new Date().toISOString(),
+          id: logId, project_id: project.id, ts: cascadeTs,
           actor_user_id: user.userId, actor_display_name: user.shortName,
           action_type: isEdit ? "customer_po_approval_update" : "customer_po_approval_create",
           description: desc,
           metadata: { customer_po_number: po, via_channel: form.viaChannel, approved_on: form.approvedOn } as Json,
+        });
+        const changeType = isEdit ? "customer_po_update" as const : "customer_po_create" as const;
+        const result = await cascadeApprovalChange({
+          changeType, docNumber: po, triggeringProjectId: project.id,
+          approvalRow: (nextRow as CustomerPoApprovalRow) ?? null, priorApprovalRow: prior,
+          actorUserId: user.userId, actorDisplayName: user.shortName,
+          cascadeTs, triggeringLogId: logId,
+        });
+        fireBulkToast({
+          changeType, docNumber: po, result,
+          onViewAffected: result.affectedProjectIds.length > 1 ? () => onShowAffected(result) : undefined,
         });
         pushUndo({
           id: makeUndoId(), timestamp: Date.now(),
@@ -635,12 +732,23 @@ const PoSection = ({
               const { error: e2 } = await supabase.from("customer_po_approvals").delete().eq("customer_po_number", po);
               if (e2) return { ok: false, reason: "Couldn't undo PO approval" };
             }
+            const undoTs = new Date().toISOString();
+            const undoResult = await cascadeApprovalChange({
+              changeType: prior ? "customer_po_update" : "customer_po_revoke",
+              docNumber: po, triggeringProjectId: project.id,
+              approvalRow: prior, priorApprovalRow: (nextRow as CustomerPoApprovalRow) ?? null,
+              actorUserId: user.userId, actorDisplayName: user.shortName,
+              cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
+            });
+            fireBulkToast({
+              changeType: prior ? "customer_po_update" : "customer_po_revoke",
+              docNumber: po, result: undoResult, isUndo: true,
+            });
             onSaved();
             return { ok: true };
           },
         });
         onSaved();
-        toast.success(`PO approval ${verb} · ${po}`);
         return true;
       }}
       onRevoke={async () => {
@@ -648,13 +756,24 @@ const PoSection = ({
         const prior = { ...approval };
         const { error } = await supabase.from("customer_po_approvals").delete().eq("customer_po_number", po);
         if (error) { toast.error(`Couldn't revoke: ${error.message}`); return; }
+        const cascadeTs = new Date().toISOString();
         const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         await supabase.from("project_log_entries").insert({
-          id: logId, project_id: project.id, ts: new Date().toISOString(),
+          id: logId, project_id: project.id, ts: cascadeTs,
           actor_user_id: user.userId, actor_display_name: user.shortName,
           action_type: "customer_po_approval_revoke",
           description: `${user.shortName} revoked PO approval · PO #${po}`,
           metadata: { customer_po_number: po } as Json,
+        });
+        const result = await cascadeApprovalChange({
+          changeType: "customer_po_revoke", docNumber: po, triggeringProjectId: project.id,
+          approvalRow: null, priorApprovalRow: prior,
+          actorUserId: user.userId, actorDisplayName: user.shortName,
+          cascadeTs, triggeringLogId: logId,
+        });
+        fireBulkToast({
+          changeType: "customer_po_revoke", docNumber: po, result,
+          onViewAffected: result.affectedProjectIds.length > 1 ? () => onShowAffected(result) : undefined,
         });
         pushUndo({
           id: makeUndoId(), timestamp: Date.now(),
@@ -663,16 +782,26 @@ const PoSection = ({
           applyInverse: async () => {
             const { error: e2 } = await supabase.from("customer_po_approvals").insert(prior);
             if (e2) return { ok: false, reason: "Couldn't restore PO approval" };
+            const undoTs = new Date().toISOString();
+            const undoResult = await cascadeApprovalChange({
+              changeType: "customer_po_create", docNumber: po, triggeringProjectId: project.id,
+              approvalRow: prior, priorApprovalRow: null,
+              actorUserId: user.userId, actorDisplayName: user.shortName,
+              cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
+            });
+            fireBulkToast({
+              changeType: "customer_po_create", docNumber: po, result: undoResult, isUndo: true,
+            });
             onSaved();
             return { ok: true };
           },
         });
         onSaved();
-        toast(`PO approval revoked · ${po}`, { duration: 3000 });
       }}
     />
   );
 };
+
 
 // ─── Deposit (read-only) ─────────────────────────────────────────────────────
 const DepositSection = ({ project, onCloseSheet }: { project: Project; onCloseSheet: () => void }) => {
