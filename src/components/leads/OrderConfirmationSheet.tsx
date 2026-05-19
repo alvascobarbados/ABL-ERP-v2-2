@@ -452,7 +452,6 @@ const QuotationSection = ({
       title="Signed Quotation"
       docLabel="Q#" docValue={`Q-${q}`}
       siblings={siblings.map((s) => ({ id: s.id, name: s.projectName }))}
-      onCloseSheet={onCloseSheet}
       existing={approval ? {
         approvedByBuyerId: approval.approved_by_buyer_id ?? null,
         approvedByOtherName: approval.approved_by_other_name ?? null,
