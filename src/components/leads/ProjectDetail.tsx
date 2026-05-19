@@ -820,7 +820,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
           </section>
 
           {/* ── FINANCE ── */}
-          <section>
+          <section data-section="finance">
             <SectionHeader>Finance</SectionHeader>
             <SectionCard>
               <div
