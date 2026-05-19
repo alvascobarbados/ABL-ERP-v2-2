@@ -176,8 +176,8 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
     if (digitsOnly) onSave(capLen(sanitizeDigitsLike(v)));
     else onSave(capLen(v.trim()));
   };
-  // Allow empty save when digitsOnly (clearing the field is meaningful)
-  const saveDisabled = digitsOnly ? false : !v.trim();
+  // Allow empty save when digitsOnly (clearing the field is meaningful) or when allowEmpty is opted in.
+  const saveDisabled = (digitsOnly || allowEmpty) ? false : !v.trim();
 
   return (
     <BottomSheet
