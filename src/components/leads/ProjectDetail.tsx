@@ -699,7 +699,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
               <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
               <DuplicateNotice field="quoteNumber" value={live.quoteNumber} currentId={live.id} onOpenProject={onOpenProject} />
               <DetailRow
-                label="Amount"
+                label="Quote Amount"
                 value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
