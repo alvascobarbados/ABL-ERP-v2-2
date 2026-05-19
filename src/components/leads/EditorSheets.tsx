@@ -89,12 +89,14 @@ interface TextEditorProps {
   allowDecimal?: boolean;
   /** Optional max input length (characters). No cap when omitted. */
   maxLength?: number;
+  /** Inline validation error rendered in muted red below the input. When set, also disables Save. */
+  errorText?: string | null;
   onSave: (v: string) => void;
   /** Optional clear handler. When provided, renders a "Clear" button that wipes the field. */
   onClear?: () => void;
   clearLabel?: string;
 }
-export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, onSave, onClear, clearLabel }: TextEditorProps) => {
+export const TextEditor = ({ open, onClose, title, value, placeholder, multiline, warning, prefix, digitsOnly, allowDecimal, maxLength, errorText, onSave, onClear, clearLabel }: TextEditorProps) => {
   const capLen = (s: string) => (maxLength != null ? s.slice(0, maxLength) : s);
   const sanitizeDigitsLike = (raw: string): string => {
     if (!digitsOnly) return raw;
@@ -242,7 +244,10 @@ export const TextEditor = ({ open, onClose, title, value, placeholder, multiline
           style={{ minHeight: 48 }}
         />
       )}
-      {warning && (
+      {errorText && (
+        <p className="mt-3 text-xs leading-snug" style={{ color: "hsl(var(--urgent))" }}>{errorText}</p>
+      )}
+      {warning && !errorText && (
         <p className="mt-3 text-xs leading-snug" style={{ color: "hsl(var(--brand-orange))" }}>{warning}</p>
       )}
     </BottomSheet>
