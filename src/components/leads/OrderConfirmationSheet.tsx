@@ -33,6 +33,7 @@ import {
   type GateKey,
   type OrderConfirmationOverrides,
   type QuotationApprovalRow,
+  type QuotationEmailVerbalApprovalRow,
   type CustomerPoApprovalRow,
   type ApprovalRowsLookup,
 } from "@/lib/orderConfirmation";
@@ -78,13 +79,14 @@ interface Props {
   project: Project;
   customer: Customer | undefined;
   quotationApproval: QuotationApprovalRow | null;
+  emailVerbalApproval: QuotationEmailVerbalApprovalRow | null;
   customerPoApproval: CustomerPoApprovalRow | null;
   onSaved: () => void; // parent refetches approval rows
 }
 
 export const OrderConfirmationSheet = ({
   open, onClose, project, customer,
-  quotationApproval, customerPoApproval, onSaved,
+  quotationApproval, emailVerbalApproval, customerPoApproval, onSaved,
 }: Props) => {
   const user = useCurrentUser();
   const md = useMasterData();
@@ -96,8 +98,8 @@ export const OrderConfirmationSheet = ({
   const lookup: ApprovalRowsLookup = useMemo(() => ({
     quotation: liveProject.quoteNumber && quotationApproval ? { [liveProject.quoteNumber]: quotationApproval } : {},
     po: liveProject.customerPoNumber && customerPoApproval ? { [liveProject.customerPoNumber]: customerPoApproval } : {},
-    email: {},
-  }), [liveProject.quoteNumber, liveProject.customerPoNumber, quotationApproval, customerPoApproval]);
+    email: liveProject.quoteNumber && emailVerbalApproval ? { [liveProject.quoteNumber]: emailVerbalApproval } : {},
+  }), [liveProject.quoteNumber, liveProject.customerPoNumber, quotationApproval, emailVerbalApproval, customerPoApproval]);
 
   const orderState = useMemo(
     () => computeOrderConfirmationState(
@@ -145,7 +147,11 @@ export const OrderConfirmationSheet = ({
 
       <div className="space-y-4 mt-5">
         {requiredGates.includes("email") && (
-          <EmailVerbalSection project={liveProject} customer={customer} onSaved={onSaved} />
+          <EmailVerbalSection
+            project={liveProject} customer={customer}
+            approval={emailVerbalApproval} onSaved={onSaved} onCloseSheet={onClose}
+            onShowAffected={showAffected}
+          />
         )}
         {requiredGates.includes("quotation") && (
           <QuotationSection
@@ -230,193 +236,178 @@ const SectionCard = ({
 );
 
 const EmailVerbalSection = ({
-  project, customer, onSaved,
-}: { project: Project; customer: Customer | undefined; onSaved: () => void }) => {
+  project, customer, approval, onSaved, onCloseSheet, onShowAffected,
+}: {
+  project: Project; customer: Customer | undefined;
+  approval: QuotationEmailVerbalApprovalRow | null;
+  onSaved: () => void; onCloseSheet: () => void;
+  onShowAffected: (result: CascadeResult) => void;
+}) => {
   const user = useCurrentUser();
   const md = useMasterData();
-  const isSat = project.emailVerbalApproved === true;
-  const [editing, setEditing] = useState(false);
-  const [confirmUnset, setConfirmUnset] = useState(false);
+  const store = usePipelineStore();
 
-  const initial = (): ApprovalFormValue => ({
-    approvedByBuyerId: project.emailVerbalApprovedByBuyerId ?? null,
-    approvedByOtherName: project.emailVerbalApprovedOtherName ?? null,
-    approvedOn: project.emailVerbalApprovedAt ?? new Date().toISOString(),
-    viaChannel: (project.emailVerbalApprovedViaChannel as ViaChannel) ?? "email",
-    notes: project.emailVerbalApprovedNotes ?? "",
-  });
-  const [form, setForm] = useState<ApprovalFormValue>(initial);
-  const [errors, setErrors] = useState<Partial<Record<keyof ApprovalFormValue, string>>>({});
-  const [busy, setBusy] = useState(false);
+  const q = project.quoteNumber ?? null;
 
-  useEffect(() => {
-    if (!editing) setForm(initial());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id, project.emailVerbalApproved]);
-
-  const buyerName = (v: ApprovalFormValue) =>
-    v.approvedByBuyerId ? md.buyers.find((b) => b.id === v.approvedByBuyerId)?.name ?? "—" : v.approvedByOtherName ?? "—";
-
-  const submit = async () => {
-    const errs = validateForm(form);
-    setErrors(errs);
-    if (Object.keys(errs).length) return;
-    setBusy(true);
-
-    const prior = {
-      email_verbal_approved: !!project.emailVerbalApproved,
-      email_verbal_approved_at: project.emailVerbalApprovedAt,
-      email_verbal_approved_by_buyer_id: project.emailVerbalApprovedByBuyerId,
-      email_verbal_approved_other_name: project.emailVerbalApprovedOtherName,
-      email_verbal_approved_via_channel: project.emailVerbalApprovedViaChannel,
-      email_verbal_approved_notes: project.emailVerbalApprovedNotes,
-      email_verbal_approved_recorded_by_user_id: project.emailVerbalApprovedRecordedByUserId,
-    };
-    const next = {
-      email_verbal_approved: true,
-      email_verbal_approved_at: form.approvedOn,
-      email_verbal_approved_by_buyer_id: form.approvedByBuyerId,
-      email_verbal_approved_other_name: form.approvedByOtherName,
-      email_verbal_approved_via_channel: form.viaChannel,
-      email_verbal_approved_notes: form.notes.trim() || null,
-      email_verbal_approved_recorded_by_user_id: user.userId,
-    };
-    const { error } = await supabase.from("projects").update(next).eq("id", project.id);
-    if (error) { toast.error(`Couldn't save: ${error.message}`); setBusy(false); return; }
-
-    const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-    const desc = `${user.shortName} recorded email/verbal approval from ${buyerName(form)} via ${channelLabel(form.viaChannel)}`;
-    await supabase.from("project_log_entries").insert({
-      id: logId, project_id: project.id, ts: new Date().toISOString(),
-      actor_user_id: user.userId, actor_display_name: user.shortName,
-      action_type: "email_verbal_approval_set", description: desc,
-      metadata: {
-        approved_by_buyer_id: form.approvedByBuyerId,
-        approved_by_other_name: form.approvedByOtherName,
-        approved_on: form.approvedOn,
-        via_channel: form.viaChannel,
-        notes_present: !!form.notes.trim(),
-      } as Json,
-    });
-
-    pushUndo({
-      id: makeUndoId(), timestamp: Date.now(),
-      description: `Email/verbal approval on ${project.projectName}`,
-      originalLogId: logId, originalDescription: desc,
-      applyInverse: async () => {
-        const { error: e2 } = await supabase.from("projects").update(prior).eq("id", project.id);
-        if (e2) return { ok: false, reason: "Couldn't undo email/verbal approval" };
-        await supabase.from("project_log_entries").insert({
-          id: `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-          project_id: project.id, ts: new Date().toISOString(),
-          actor_user_id: user.userId, actor_display_name: user.shortName,
-          action_type: "email_verbal_approval_unset",
-          description: `${user.shortName} undid: email/verbal approval`,
-          metadata: { undo_of: logId } as Json,
-        });
-        onSaved();
-        return { ok: true };
-      },
-    });
-
-    setBusy(false);
-    setEditing(false);
-    onSaved();
-    toast.success("Email/verbal approval recorded");
-  };
-
-  const unset = async () => {
-    setBusy(true);
-    const prior = {
-      email_verbal_approved: !!project.emailVerbalApproved,
-      email_verbal_approved_at: project.emailVerbalApprovedAt,
-      email_verbal_approved_by_buyer_id: project.emailVerbalApprovedByBuyerId,
-      email_verbal_approved_other_name: project.emailVerbalApprovedOtherName,
-      email_verbal_approved_via_channel: project.emailVerbalApprovedViaChannel,
-      email_verbal_approved_notes: project.emailVerbalApprovedNotes,
-      email_verbal_approved_recorded_by_user_id: project.emailVerbalApprovedRecordedByUserId,
-    };
-    const { error } = await supabase.from("projects").update({
-      email_verbal_approved: false,
-      email_verbal_approved_at: null,
-      email_verbal_approved_by_buyer_id: null,
-      email_verbal_approved_other_name: null,
-      email_verbal_approved_via_channel: null,
-      email_verbal_approved_notes: null,
-      email_verbal_approved_recorded_by_user_id: null,
-    }).eq("id", project.id);
-    if (error) { toast.error(`Couldn't unset: ${error.message}`); setBusy(false); return; }
-    const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-    await supabase.from("project_log_entries").insert({
-      id: logId, project_id: project.id, ts: new Date().toISOString(),
-      actor_user_id: user.userId, actor_display_name: user.shortName,
-      action_type: "email_verbal_approval_unset",
-      description: `${user.shortName} cleared email/verbal approval`,
-      metadata: {} as Json,
-    });
-    pushUndo({
-      id: makeUndoId(), timestamp: Date.now(),
-      description: `Email/verbal approval cleared on ${project.projectName}`,
-      originalLogId: logId,
-      applyInverse: async () => {
-        const { error: e2 } = await supabase.from("projects").update(prior).eq("id", project.id);
-        if (e2) return { ok: false, reason: "Couldn't restore email/verbal approval" };
-        onSaved();
-        return { ok: true };
-      },
-    });
-    setBusy(false);
-    onSaved();
-    toast("Email/verbal approval cleared", { duration: 3000 });
-  };
-
-  if (isSat && !editing) {
+  if (!q) {
     return (
-      <SectionCard title="Email/Verbal Approval" statusLabel="Satisfied" statusColor={GREEN}>
-        <div className="text-[12px] space-y-0.5" style={{ color: "#555" }}>
-          <div>From <b>{buyerName(initial())}</b> via {channelLabel(initial().viaChannel)}</div>
-          <div className="text-[11px]" style={{ color: GRAY }}>
-            {project.emailVerbalApprovedAt ? new Date(project.emailVerbalApprovedAt).toLocaleString() : "—"}
-          </div>
-          {project.emailVerbalApprovedNotes && (
-            <div className="mt-1 text-[11.5px]" style={{ color: "#555" }}>"{project.emailVerbalApprovedNotes}"</div>
-          )}
+      <SectionCard title="Email/Verbal Approval" statusLabel="Awaiting input" statusColor={GRAY}>
+        <div className="text-[12px]" style={{ color: "#555" }}>
+          This project needs a Q# before email/verbal approval can be recorded.
         </div>
-        <div className="mt-2.5 flex gap-2">
-          <button onClick={() => setEditing(true)} className="text-[11.5px] underline" style={{ color: ORANGE }}>Edit</button>
-          <button onClick={() => setConfirmUnset(true)} className="text-[11.5px] px-2 py-1 rounded border" style={{ borderColor: "#C84A4A", color: "#C84A4A" }}>
-            Mark not received
-          </button>
-        </div>
-        <ConfirmDialog
-          open={confirmUnset}
-          title="Mark email/verbal approval as not received?"
-          description="This clears the recorded approval. You can record it again later."
-          confirmLabel="Clear" destructive
-          onCancel={() => setConfirmUnset(false)}
-          onConfirm={() => { setConfirmUnset(false); void unset(); }}
-        />
+        <button onClick={onCloseSheet} className="mt-2.5 text-[12px] underline" style={{ color: ORANGE }}>
+          Set Q# in Overview →
+        </button>
       </SectionCard>
     );
   }
 
+  const siblings = store.projects.filter((p) => p.id !== project.id && !p.deletedAt && p.quoteNumber === q);
+  const isSat = !!approval;
   return (
-    <SectionCard title="Email/Verbal Approval" statusLabel={isSat ? "Satisfied" : "Pending"} statusColor={isSat ? GREEN : GRAY}>
-      <ApprovalFormFields value={form} onChange={setForm} customer={customer} errors={errors} />
-      <div className="mt-3 flex gap-2">
-        {editing && <button onClick={() => { setEditing(false); setForm(initial()); }} className="text-[12px]" style={{ color: GRAY }}>Cancel</button>}
-        <button
-          onClick={submit}
-          disabled={busy}
-          className="px-3 py-2 rounded-md text-[12.5px] font-semibold text-white"
-          style={{ background: navy }}
-        >
-          {editing ? "Update" : "Mark email/verbal received"}
-        </button>
-      </div>
-    </SectionCard>
+    <ApprovalSubForm
+      title="Email/Verbal Approval"
+      docLabel="Q#" docValue={`Q-${q}`}
+      siblings={siblings.map((s) => ({ id: s.id, name: s.projectName }))}
+      existing={approval ? {
+        approvedByBuyerId: approval.approved_by_buyer_id ?? null,
+        approvedByOtherName: approval.approved_by_other_name ?? null,
+        approvedOn: approval.approved_on,
+        viaChannel: approval.via_channel as ViaChannel,
+        notes: approval.notes ?? "",
+      } : null}
+      isSat={isSat}
+      customer={customer}
+      buyerLookup={md.buyers}
+      onUpsert={async (form, isEdit) => {
+        const prior = approval ? { ...approval } : null;
+        const payload = {
+          q_number: q,
+          approved_by_buyer_id: form.approvedByBuyerId,
+          approved_by_other_name: form.approvedByOtherName,
+          approved_on: form.approvedOn,
+          via_channel: form.viaChannel,
+          notes: form.notes.trim() || null,
+          recorded_by_user_id: user.userId,
+        };
+        const { data: nextRow, error } = await supabase
+          .from("quotation_email_verbal_approvals")
+          .upsert(payload, { onConflict: "q_number" })
+          .select().maybeSingle();
+        if (error) { toast.error(`Couldn't save: ${error.message}`); return false; }
+        const cascadeTs = new Date().toISOString();
+        const buyerName = form.approvedByBuyerId
+          ? md.buyers.find((b) => b.id === form.approvedByBuyerId)?.name ?? "—"
+          : form.approvedByOtherName ?? "—";
+        const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        const verb = isEdit ? "updated" : "recorded";
+        const desc = `${user.shortName} ${verb} email/verbal approval · Q-${q} from ${buyerName} via ${channelLabel(form.viaChannel)}`;
+        await supabase.from("project_log_entries").insert({
+          id: logId, project_id: project.id, ts: cascadeTs,
+          actor_user_id: user.userId, actor_display_name: user.shortName,
+          action_type: "email_verbal_approval_set",
+          description: desc,
+          metadata: { q_number: q, via_channel: form.viaChannel, approved_on: form.approvedOn } as Json,
+        });
+        const changeType = isEdit ? "email_verbal_update" as const : "email_verbal_create" as const;
+        const result = await cascadeApprovalChange({
+          changeType, docNumber: q, triggeringProjectId: project.id,
+          approvalRow: (nextRow as QuotationEmailVerbalApprovalRow) ?? null, priorApprovalRow: prior,
+          actorUserId: user.userId, actorDisplayName: user.shortName,
+          cascadeTs, triggeringLogId: logId,
+        });
+        fireBulkToast({
+          changeType, docNumber: q, approverName: buyerName, result,
+          onViewAffected: result.affectedProjectIds.length > 1 ? () => onShowAffected(result) : undefined,
+        });
+        pushUndo({
+          id: makeUndoId(), timestamp: Date.now(),
+          description: `${verb === "recorded" ? "Recorded" : "Updated"} email/verbal approval · Q-${q}`,
+          originalLogId: logId, originalDescription: desc,
+          applyInverse: async () => {
+            if (prior) {
+              const { error: e2 } = await supabase.from("quotation_email_verbal_approvals").upsert(prior, { onConflict: "q_number" });
+              if (e2) return { ok: false, reason: "Couldn't restore email/verbal approval" };
+            } else {
+              const { error: e2 } = await supabase.from("quotation_email_verbal_approvals").delete().eq("q_number", q);
+              if (e2) return { ok: false, reason: "Couldn't undo email/verbal approval" };
+            }
+            const undoTs = new Date().toISOString();
+            const undoResult = await cascadeApprovalChange({
+              changeType: prior ? "email_verbal_update" : "email_verbal_revoke",
+              docNumber: q, triggeringProjectId: project.id,
+              approvalRow: prior, priorApprovalRow: (nextRow as QuotationEmailVerbalApprovalRow) ?? null,
+              actorUserId: user.userId, actorDisplayName: user.shortName,
+              cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
+            });
+            fireBulkToast({
+              changeType: prior ? "email_verbal_update" : "email_verbal_revoke",
+              docNumber: q, result: undoResult, isUndo: true,
+            });
+            onSaved();
+            return { ok: true };
+          },
+        });
+        onSaved();
+        return true;
+      }}
+      onRevoke={async () => {
+        if (!approval) return;
+        const prior = { ...approval };
+        const { error } = await supabase.from("quotation_email_verbal_approvals").delete().eq("q_number", q);
+        if (error) { toast.error(`Couldn't revoke: ${error.message}`); return; }
+        const cascadeTs = new Date().toISOString();
+        const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        await supabase.from("project_log_entries").insert({
+          id: logId, project_id: project.id, ts: cascadeTs,
+          actor_user_id: user.userId, actor_display_name: user.shortName,
+          action_type: "email_verbal_approval_unset",
+          description: `${user.shortName} revoked email/verbal approval · Q-${q}`,
+          metadata: { q_number: q } as Json,
+        });
+        const result = await cascadeApprovalChange({
+          changeType: "email_verbal_revoke", docNumber: q, triggeringProjectId: project.id,
+          approvalRow: null, priorApprovalRow: prior,
+          actorUserId: user.userId, actorDisplayName: user.shortName,
+          cascadeTs, triggeringLogId: logId,
+        });
+        fireBulkToast({
+          changeType: "email_verbal_revoke", docNumber: q, result,
+          onViewAffected: result.affectedProjectIds.length > 1 ? () => onShowAffected(result) : undefined,
+        });
+        pushUndo({
+          id: makeUndoId(), timestamp: Date.now(),
+          description: `Revoked email/verbal approval · Q-${q}`,
+          originalLogId: logId,
+          applyInverse: async () => {
+            const { error: e2 } = await supabase.from("quotation_email_verbal_approvals").insert(prior);
+            if (e2) {
+              if ((e2 as { code?: string }).code === "23505") {
+                return { ok: false, reason: "Can't undo — a different approval now exists for this quotation" };
+              }
+              return { ok: false, reason: "Couldn't restore email/verbal approval" };
+            }
+            const undoTs = new Date().toISOString();
+            const undoResult = await cascadeApprovalChange({
+              changeType: "email_verbal_create", docNumber: q, triggeringProjectId: project.id,
+              approvalRow: prior, priorApprovalRow: null,
+              actorUserId: user.userId, actorDisplayName: user.shortName,
+              cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
+            });
+            fireBulkToast({
+              changeType: "email_verbal_create", docNumber: q, result: undoResult, isUndo: true,
+            });
+            onSaved();
+            return { ok: true };
+          },
+        });
+        onSaved();
+      }}
+    />
   );
 };
+
+
 
 // ─── Quotation section ───────────────────────────────────────────────────────
 const QuotationSection = ({

@@ -265,7 +265,7 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
         ...(input.undoOfLogId ? { undo_of: input.undoOfLogId } : {}),
         state_transition: t.artworkState ?? t.orderState,
         ...(kind === "artwork" ? { proof_number: input.docNumber } : {}),
-        ...(kind === "quotation" ? { q_number: input.docNumber } : {}),
+        ...(kind === "quotation" || kind === "email_verbal" ? { q_number: input.docNumber } : {}),
         ...(kind === "customer_po" ? { customer_po_number: input.docNumber } : {}),
       } as Json,
     }));
@@ -289,6 +289,10 @@ function cascadeDescription(input: CascadeInput, t: CascadeStateTransition, verb
   if (kind === "quotation") {
     const o = t.orderState!;
     return `${undoPrefix}Quotation approval ${verb} cascaded · Q-${input.docNumber} (${o.from} → ${o.to})`;
+  }
+  if (kind === "email_verbal") {
+    const o = t.orderState!;
+    return `${undoPrefix}Email/verbal approval ${verb} cascaded · Q-${input.docNumber} (${o.from} → ${o.to})`;
   }
   const o = t.orderState!;
   return `${undoPrefix}Customer PO approval ${verb} cascaded · PO #${input.docNumber} (${o.from} → ${o.to})`;
@@ -339,7 +343,9 @@ export function fireBulkToast(opts: BulkToastOpts) {
       ? `Artwork approval recorded · ${docNumber}${approverName ? ` from ${approverName}` : ""}`
       : kind === "quotation"
         ? `Quotation Q-${docNumber} approved`
-        : `Customer PO ${docNumber} approved`;
+        : kind === "email_verbal"
+          ? `Email/verbal approval recorded · Q-${docNumber}${approverName ? ` from ${approverName}` : ""}`
+          : `Customer PO ${docNumber} approved`;
     title = n > 1 ? `${prefix}${docMsg} · Applied to ${n} projects` : `${prefix}${docMsg}`;
   } else {
     // update
@@ -369,6 +375,7 @@ export function fireBulkToast(opts: BulkToastOpts) {
 function docLabel(kind: DomainKind, doc: string): string {
   if (kind === "artwork") return `Proof #${doc}`;
   if (kind === "quotation") return `Q-${doc}`;
+  if (kind === "email_verbal") return `Q-${doc}`;
   return `PO #${doc}`;
 }
 

@@ -136,6 +136,18 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
           .subscribe(),
       );
     }
+    if (quoteNumber) {
+      channels.push(
+        supabase
+          .channel(`approvals:emailverbal:${project.id}:${quoteNumber}`)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "quotation_email_verbal_approvals", filter: `q_number=eq.${quoteNumber}` },
+            trigger,
+          )
+          .subscribe(),
+      );
+    }
     if (customerPoNumber) {
       channels.push(
         supabase
@@ -161,13 +173,13 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
     const lookup = {
       quotation: quoteNumber && quotationApproval ? { [quoteNumber]: quotationApproval } : {},
       po: customerPoNumber && customerPoApproval ? { [customerPoNumber]: customerPoApproval } : {},
-      email: {},
+      email: quoteNumber && emailVerbalApproval ? { [quoteNumber]: emailVerbalApproval } : {},
     };
     const cust = customer
       ? { order_confirmation_config: customer.order_confirmation_config }
       : { order_confirmation_config: { email: { mode: "not_required" as const, conditional_modes: [], conditional_amount_above: null }, quotation: { mode: "not_required" as const, conditional_modes: [], conditional_amount_above: null }, po: { mode: "not_required" as const, conditional_modes: [], conditional_amount_above: null }, deposit: { mode: "not_required" as const, conditional_modes: [], conditional_amount_above: null } } };
     return computeOrderConfirmationState(project, cust, lookup);
-  }, [project, customer, quoteNumber, quotationApproval, customerPoNumber, customerPoApproval]);
+  }, [project, customer, quoteNumber, quotationApproval, customerPoNumber, customerPoApproval, emailVerbalApproval]);
 
   // ── Click handlers ─────────────────────────────────────────────────────────
   const [artworkSheetOpen, setArtworkSheetOpen] = useState(false);
@@ -340,6 +352,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
         project={project}
         customer={customer}
         quotationApproval={quotationApproval}
+        emailVerbalApproval={emailVerbalApproval}
         customerPoApproval={customerPoApproval}
         onSaved={() => void refetch()}
       />
