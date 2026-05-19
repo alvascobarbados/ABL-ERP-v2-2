@@ -350,7 +350,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "designBrief", label: "Design Brief", defaultPx: 200 },
   { key: "supplier", label: "Supplier", defaultPx: 130 },
   { key: "quote", label: "Q#", defaultPx: 84 },
-  { key: "amount", label: "Quote Amount", defaultPx: 104, align: "right" },
+  { key: "amount", label: "Q Amount", defaultPx: 104, align: "right" },
   { key: "proof", label: "Proof", defaultPx: 80 },
   { key: "po", label: "PO#", defaultPx: 92 },
   { key: "invoice", label: "INV#", defaultPx: 96 },

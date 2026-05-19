@@ -699,7 +699,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
               <DetailRow label="Q#" value={live.quoteNumber ? `Q-${live.quoteNumber}` : undefined} placeholder="Q-" onClick={() => setEditor({ kind: "quote" })} />
               <DuplicateNotice field="quoteNumber" value={live.quoteNumber} currentId={live.id} onOpenProject={onOpenProject} />
               <DetailRow
-                label="Quote Amount"
+                label="Q Amount"
                 value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
@@ -999,7 +999,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
       <TextEditor
         open={editor?.kind === "amount"}
         onClose={() => setEditor(null)}
-        title="Edit quote amount (BBD)"
+        title="Edit Q amount (BBD)"
         value={live.value ? String(live.value) : ""}
         placeholder="24500"
         onSave={saveAmount}
