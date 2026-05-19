@@ -496,14 +496,14 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                     disabled={!sortable}
                     className={cn(
                       "h-10 inline-flex items-center gap-1 transition-colors truncate w-full text-[11px] font-semibold uppercase",
-                      c.key === "currentStage" || c.key === "flagged" ? "px-1" : "px-4",
+                      c.key === "currentStage" || c.key === "flagged" || c.key === "approvals" ? "px-1" : "px-4",
                       sortable ? "hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
-                      c.key === "flagged" || c.key === "currentStage"
+                      c.key === "flagged" || c.key === "currentStage" || c.key === "approvals"
                         ? "justify-center"
                         : c.align === "right" ? "justify-end text-left" : "justify-start text-left",
                     )}
                     style={{ color: "hsl(var(--brand-navy) / 0.55)", letterSpacing: "0.06em" }}
-                    title={c.key === "flagged" ? "Flag" : c.key === "currentStage" ? "Time in current stage" : c.label}
+                    title={c.key === "flagged" ? "Flag" : c.key === "currentStage" ? "Time in current stage" : c.key === "approvals" ? "Approvals: Artwork · Order Confirmation" : c.label}
                   >
                     {c.key === "flagged" ? (
                       <Flag className="h-3.5 w-3.5 shrink-0" aria-label="Flag" />
