@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { ChevronRight, Palette, Handshake, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { ArtworkApprovalSheet } from "./ArtworkApprovalSheet";
+import { OrderConfirmationSheet } from "./OrderConfirmationSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useMasterData, type Customer } from "@/hooks/useMasterData";
 import type { Project } from "@/data/pipelines";
@@ -114,13 +116,16 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
   }, [project, customer, quoteNumber, quotationApproval, customerPoNumber, customerPoApproval]);
 
   // ── Click handlers ─────────────────────────────────────────────────────────
+  const [artworkSheetOpen, setArtworkSheetOpen] = useState(false);
+  const [orderSheetOpen, setOrderSheetOpen] = useState(false);
+
   const handleOpenArtworkSheet = () => {
     console.log({ project_id: project.id, action: "open_artwork_sheet" });
-    toast.info("Approval editor opens in next phase");
+    setArtworkSheetOpen(true);
   };
   const handleOpenOrderSheet = () => {
     console.log({ project_id: project.id, action: "open_order_sheet" });
-    toast.info("Approval editor opens in next phase");
+    setOrderSheetOpen(true);
   };
   const handleConfigureCustomer = () => {
     if (!customer) return;
@@ -131,6 +136,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
   };
+
 
   // ── Artwork row content ────────────────────────────────────────────────────
   const artworkRow = (() => {
@@ -266,9 +272,27 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
 
       <ApprovalRow icon={Palette} content={artworkRow} divider />
       <ApprovalRow icon={Handshake} content={orderRow} extraPadding />
+
+      <ArtworkApprovalSheet
+        open={artworkSheetOpen}
+        onClose={() => { setArtworkSheetOpen(false); void refetch(); }}
+        project={project}
+        existing={artworkApproval}
+        onSaved={() => void refetch()}
+      />
+      <OrderConfirmationSheet
+        open={orderSheetOpen}
+        onClose={() => { setOrderSheetOpen(false); void refetch(); }}
+        project={project}
+        customer={customer}
+        quotationApproval={quotationApproval}
+        customerPoApproval={customerPoApproval}
+        onSaved={() => void refetch()}
+      />
     </>
   );
 };
+
 
 const ApprovalRow = ({
   icon: Icon,

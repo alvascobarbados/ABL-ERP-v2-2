@@ -447,6 +447,7 @@ export interface Project {
   emailVerbalApprovedAt?: string | null;
   emailVerbalApprovedByBuyerId?: string | null;
   emailVerbalApprovedViaChannel?: "email" | "whatsapp" | "phone" | "in_person" | "other" | null;
+  emailVerbalApprovedOtherName?: string | null;
   emailVerbalApprovedNotes?: string | null;
   emailVerbalApprovedRecordedByUserId?: string | null;
   orderConfirmationOverrides?: import("@/lib/orderConfirmation").OrderConfirmationOverrides;
