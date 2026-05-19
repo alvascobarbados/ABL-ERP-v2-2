@@ -178,6 +178,7 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
     });
 
     // Undo (with cascade inverse)
+    const originalAffectedCount = result.affectedProjectIds.length;
     pushUndo({
       id: makeUndoId(),
       timestamp: Date.now(),
@@ -215,11 +216,14 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
           triggeringLogId: logId,
           undoOfLogId: logId,
         });
+        const undoCount = undoResult.affectedProjectIds.length;
+        const lost = originalAffectedCount - undoCount;
         fireBulkToast({
           changeType: prior ? "artwork_update" : "artwork_revoke",
           docNumber: proofNumber,
           result: undoResult,
           isUndo: true,
+          survivorsNote: lost > 0 ? `${undoCount} of ${originalAffectedCount} reverted, ${lost} deleted since` : undefined,
         });
         onSaved();
         return { ok: true };
