@@ -518,6 +518,37 @@ const Ctx = createContext<PipelineStoreCtx | null>(null);
 
 const FAILURE_TOAST = "Couldn't save change — please try again";
 
+// Map known Postgres CHECK constraint names to friendly user-facing messages.
+// Extend this when new constraints are added.
+const CHECK_CONSTRAINT_MESSAGES: Record<string, string> = {
+  projects_deposit_amount_chk: "Deposit amount can't exceed the project value",
+  projects_deposit_paid_method_chk: "Invalid payment method",
+};
+
+/**
+ * Turn a Postgres error from a Supabase mutation into a user-friendly toast
+ * message. We always preserve the raw message in the fallback so we never
+ * regress to the opaque "please try again" string.
+ */
+export const friendlyPgErrorMessage = (err: { code?: string; message?: string } | null | undefined): string => {
+  if (!err) return FAILURE_TOAST;
+  const code = err.code ?? "";
+  const message = err.message ?? "";
+  if (code === "23514") {
+    const name = message.match(/constraint "([^"]+)"/)?.[1];
+    if (name && CHECK_CONSTRAINT_MESSAGES[name]) return CHECK_CONSTRAINT_MESSAGES[name];
+    return `Validation failed: ${message}`;
+  }
+  if (code === "23502") {
+    const col = message.match(/null value in column "([^"]+)"/)?.[1]
+      ?? message.match(/column "([^"]+)"/)?.[1];
+    return col ? `Missing required field: ${col}` : "Missing required field";
+  }
+  if (code === "23503") return "Referenced record doesn't exist";
+  if (code === "42501") return "You don't have permission to make this change";
+  return message ? `Couldn't save: ${message}` : FAILURE_TOAST;
+};
+
 export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => {
   // Phase 3b: Supabase is the source of truth. No in-memory seed fallback.
   // Mutations apply optimistically and roll back on failure with a toast.
