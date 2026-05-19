@@ -294,7 +294,7 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
 
   // ── Result preview (live) ────────────────────────────────────────────────
   const preview = useMemo(() => {
-    const fakeLookup: ApprovalRowsLookup = { quotation: {}, po: {} };
+    const fakeLookup: ApprovalRowsLookup = { email: {}, quotation: {}, po: {} };
     const synthetic = (mode: ShipMode) => ({ shippingMode: mode, value: 999_999_999 });
     return (["Air", "Ocean", "Local"] as ShipMode[]).map((mode) => {
       const st = computeOrderConfirmationState(synthetic(mode), { order_confirmation_config: config }, fakeLookup);
