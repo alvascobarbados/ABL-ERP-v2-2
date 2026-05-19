@@ -20,8 +20,10 @@ import { Project, PIPELINES, PipelineId, StageId } from "@/data/pipelines";
 
 // Allowed initial pipelines (skip Purchasing — workflow-only intake — and the legacy 'operations' alias).
 const INITIAL_PIPELINES: PipelineId[] = ["sales", "design", "production", "shipping", "finance", "completed"];
-// Skip parking sub-stages from the picker (stalled, internal, archive).
-const PICKER_SKIP: Set<StageId> = new Set(["stalled", "internal", "archive"] as StageId[]);
+// Skip sub-stages that are not valid initial states: Stalled (regression-only)
+// and Archive (terminal). Internal IS a valid starting point — design work
+// that's internal-only from day one — so it stays in the picker.
+const PICKER_SKIP: Set<StageId> = new Set(["stalled", "archive"] as StageId[]);
 import { DEFAULT_USER_INITIALS } from "./UserMenu";
 
 interface Props {
