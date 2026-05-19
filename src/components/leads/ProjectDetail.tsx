@@ -1197,6 +1197,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         title={`Deposit ${refLabelFor(live.depositPaidMethod) ?? "Reference"}`}
         value={live.depositPaymentReference ?? ""}
         placeholder=""
+        allowEmpty
         onSave={saveDepositPaymentRef}
       />
       {/* Finance — final */}
