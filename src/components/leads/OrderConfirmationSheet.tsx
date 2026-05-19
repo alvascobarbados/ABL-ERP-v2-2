@@ -33,6 +33,7 @@ import {
   type GateKey,
   type OrderConfirmationOverrides,
   type QuotationApprovalRow,
+  type QuotationEmailVerbalApprovalRow,
   type CustomerPoApprovalRow,
   type ApprovalRowsLookup,
 } from "@/lib/orderConfirmation";
