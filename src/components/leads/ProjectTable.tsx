@@ -1175,7 +1175,6 @@ const TableRow = ({
       />
       )}
 
-      )}
 
       {has("balance") && (
       <EditableCell
