@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { SectionHeader, SectionCard } from "@/components/leads/ProjectDetail";
-import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
+import { AffectedProjectsModal, type AffectedProjectEntry } from "@/components/leads/AffectedProjectsModal";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import type { Customer } from "@/hooks/useMasterData";
