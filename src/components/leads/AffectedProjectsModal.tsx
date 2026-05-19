@@ -21,14 +21,21 @@ export interface AffectedProjectEntry {
 interface Props {
   open: boolean;
   title?: string;
+  /** Optional intro text rendered above the list (e.g. transitions summary). */
+  intro?: string;
   entries: AffectedProjectEntry[];
   onClose: () => void;
   onLinkClick?: () => void;
+  /** When provided, renders a primary action button alongside Close (acts as a confirm dialog). */
+  confirmLabel?: string;
+  onConfirm?: () => void;
+  cancelLabel?: string;
 }
 
 export const AffectedProjectsModal = ({
   open, title = "Projects affected by this approval change",
-  entries, onClose, onLinkClick,
+  intro, entries, onClose, onLinkClick,
+  confirmLabel, onConfirm, cancelLabel = "Close",
 }: Props) => {
   useEffect(() => {
     if (!open) return;
@@ -58,6 +65,11 @@ export const AffectedProjectsModal = ({
             <X className="h-4 w-4" />
           </button>
         </div>
+        {intro && (
+          <div className="text-[12.5px] mb-3 whitespace-pre-line" style={{ color: "#555" }}>
+            {intro}
+          </div>
+        )}
         <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1">
           {entries.length === 0 ? (
             <div className="text-sm text-muted-foreground py-2">No projects affected.</div>
@@ -86,14 +98,23 @@ export const AffectedProjectsModal = ({
             </ul>
           )}
         </div>
-        <div className="mt-5 flex justify-end">
+        <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl border text-sm font-medium hover:bg-muted/40 transition-colors"
             style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: navy }}
           >
-            Close
+            {cancelLabel}
           </button>
+          {confirmLabel && onConfirm && (
+            <button
+              onClick={onConfirm}
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-colors hover:opacity-90"
+              style={{ background: navy }}
+            >
+              {confirmLabel}
+            </button>
+          )}
         </div>
       </div>
     </div>

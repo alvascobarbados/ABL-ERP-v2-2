@@ -98,6 +98,53 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
     return () => window.removeEventListener("focus", onFocus);
   }, [refetch]);
 
+  // Realtime: per-row filtered subscriptions on the three approval tables.
+  // Channel-level filters narrow the stream to rows matching this project's
+  // current proof/quote/customer-PO numbers; teardown+re-establish happens
+  // automatically when any of those doc numbers change (deps below).
+  useEffect(() => {
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+    const trigger = () => { void refetch(); };
+
+    if (proofNumber) {
+      channels.push(
+        supabase
+          .channel(`approvals:artwork:${project.id}:${proofNumber}`)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "artwork_approvals", filter: `proof_number=eq.${proofNumber}` },
+            trigger,
+          )
+          .subscribe(),
+      );
+    }
+    if (quoteNumber) {
+      channels.push(
+        supabase
+          .channel(`approvals:quotation:${project.id}:${quoteNumber}`)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "quotation_approvals", filter: `q_number=eq.${quoteNumber}` },
+            trigger,
+          )
+          .subscribe(),
+      );
+    }
+    if (customerPoNumber) {
+      channels.push(
+        supabase
+          .channel(`approvals:po:${project.id}:${customerPoNumber}`)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "customer_po_approvals", filter: `customer_po_number=eq.${customerPoNumber}` },
+            trigger,
+          )
+          .subscribe(),
+      );
+    }
+    return () => { channels.forEach((ch) => { void supabase.removeChannel(ch); }); };
+  }, [project.id, proofNumber, quoteNumber, customerPoNumber, refetch]);
+
   // ── Compute state ──────────────────────────────────────────────────────────
   const artworkState = useMemo(() => {
     const lookup = proofNumber && artworkApproval ? { [proofNumber]: artworkApproval } : {};
