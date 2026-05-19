@@ -899,9 +899,13 @@ const ApprovalSubForm = ({
       <div className="text-[11.5px] mb-2.5" style={{ color: "#555" }}>
         {docLabel} <b style={{ color: navy }}>{docValue}</b>
         {siblings.length > 0 && (
-          <span style={{ color: GRAY }}>
-            {" "}· Approving applies to {siblings.length} other project(s): {siblings.slice(0, 3).map((s) => s.name).join(", ")}{siblings.length > 3 ? ` +${siblings.length - 3} more` : ""}
-          </span>
+          <>
+            <span style={{ color: GRAY }}>{" "}· </span>
+            <SiblingProjectsInline
+              siblings={siblings}
+              prefix={`Approving applies to ${siblings.length} other project(s): `}
+            />
+          </>
         )}
       </div>
       <ApprovalFormFields value={form} onChange={setForm} customer={customer} errors={errors} />
