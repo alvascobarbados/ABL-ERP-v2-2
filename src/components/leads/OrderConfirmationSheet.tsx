@@ -176,11 +176,8 @@ const StatusStrip = ({
 );
 
 // ─── Email/Verbal section ────────────────────────────────────────────────────
-function useRef<T>(initial: T) {
-  // Tiny local ref to avoid extra react import line; we use React.useRef.
-  return { current: initial };
-}
-import { useRef as useRealRef } from "react";
+
+
 
 const SectionCard = ({
   title, statusLabel, statusColor, children,
