@@ -280,7 +280,12 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
       originalDescription: `Revoked artwork approval · Proof #${proofNumber}`,
       applyInverse: async () => {
         const { error: e2 } = await supabase.from("artwork_approvals").insert(prior);
-        if (e2) return { ok: false, reason: "Couldn't restore approval" };
+        if (e2) {
+          if ((e2 as { code?: string }).code === "23505") {
+            return { ok: false, reason: "Can't undo — a different approval now exists for this proof" };
+          }
+          return { ok: false, reason: "Couldn't restore approval" };
+        }
         const undoTs = new Date().toISOString();
         const undoResult = await cascadeApprovalChange({
           changeType: "artwork_create",
