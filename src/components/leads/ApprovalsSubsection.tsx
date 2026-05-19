@@ -136,6 +136,18 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
           .subscribe(),
       );
     }
+    if (quoteNumber) {
+      channels.push(
+        supabase
+          .channel(`approvals:emailverbal:${project.id}:${quoteNumber}`)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "quotation_email_verbal_approvals", filter: `q_number=eq.${quoteNumber}` },
+            trigger,
+          )
+          .subscribe(),
+      );
+    }
     if (customerPoNumber) {
       channels.push(
         supabase
