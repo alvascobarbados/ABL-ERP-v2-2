@@ -327,8 +327,7 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
             {siblingProjects.length > 0 && (
               <div className="mt-1.5 text-[11px]" style={{ color: "#888" }}>
                 Recording approval here applies to {siblingProjects.length} other project(s) sharing this proof number:{" "}
-                {siblingProjects.slice(0, 3).map((p) => p.name).join(", ")}
-                {siblingProjects.length > 3 ? ` +${siblingProjects.length - 3} more` : ""}
+                <SiblingProjectsInline siblings={siblingProjects} prefix="" onLinkClick={onClose} />
               </div>
             )}
           </div>
