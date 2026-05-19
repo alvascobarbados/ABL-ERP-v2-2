@@ -79,13 +79,14 @@ interface Props {
   project: Project;
   customer: Customer | undefined;
   quotationApproval: QuotationApprovalRow | null;
+  emailVerbalApproval: QuotationEmailVerbalApprovalRow | null;
   customerPoApproval: CustomerPoApprovalRow | null;
   onSaved: () => void; // parent refetches approval rows
 }
 
 export const OrderConfirmationSheet = ({
   open, onClose, project, customer,
-  quotationApproval, customerPoApproval, onSaved,
+  quotationApproval, emailVerbalApproval, customerPoApproval, onSaved,
 }: Props) => {
   const user = useCurrentUser();
   const md = useMasterData();
@@ -97,8 +98,8 @@ export const OrderConfirmationSheet = ({
   const lookup: ApprovalRowsLookup = useMemo(() => ({
     quotation: liveProject.quoteNumber && quotationApproval ? { [liveProject.quoteNumber]: quotationApproval } : {},
     po: liveProject.customerPoNumber && customerPoApproval ? { [liveProject.customerPoNumber]: customerPoApproval } : {},
-    email: {},
-  }), [liveProject.quoteNumber, liveProject.customerPoNumber, quotationApproval, customerPoApproval]);
+    email: liveProject.quoteNumber && emailVerbalApproval ? { [liveProject.quoteNumber]: emailVerbalApproval } : {},
+  }), [liveProject.quoteNumber, liveProject.customerPoNumber, quotationApproval, emailVerbalApproval, customerPoApproval]);
 
   const orderState = useMemo(
     () => computeOrderConfirmationState(
