@@ -170,7 +170,7 @@ export function isGateSatisfied(
 ): boolean {
   switch (gate) {
     case "email":
-      return project.emailVerbalApproved === true;
+      return !!project.quoteNumber && !!lookup.email[project.quoteNumber];
     case "quotation":
       return !!project.quoteNumber && !!lookup.quotation[project.quoteNumber];
     case "po":
