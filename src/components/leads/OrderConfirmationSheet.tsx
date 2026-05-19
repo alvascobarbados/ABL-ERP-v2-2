@@ -564,7 +564,12 @@ const QuotationSection = ({
           originalLogId: logId,
           applyInverse: async () => {
             const { error: e2 } = await supabase.from("quotation_approvals").insert(prior);
-            if (e2) return { ok: false, reason: "Couldn't restore quotation approval" };
+            if (e2) {
+              if ((e2 as { code?: string }).code === "23505") {
+                return { ok: false, reason: "Can't undo — a different approval now exists for this quotation" };
+              }
+              return { ok: false, reason: "Couldn't restore quotation approval" };
+            }
             const undoTs = new Date().toISOString();
             const undoResult = await cascadeApprovalChange({
               changeType: "quotation_create", docNumber: q, triggeringProjectId: project.id,
@@ -781,7 +786,12 @@ const PoSection = ({
           originalLogId: logId,
           applyInverse: async () => {
             const { error: e2 } = await supabase.from("customer_po_approvals").insert(prior);
-            if (e2) return { ok: false, reason: "Couldn't restore PO approval" };
+            if (e2) {
+              if ((e2 as { code?: string }).code === "23505") {
+                return { ok: false, reason: "Can't undo — a different approval now exists for this PO" };
+              }
+              return { ok: false, reason: "Couldn't restore PO approval" };
+            }
             const undoTs = new Date().toISOString();
             const undoResult = await cascadeApprovalChange({
               changeType: "customer_po_create", docNumber: po, triggeringProjectId: project.id,

@@ -178,6 +178,7 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
     });
 
     // Undo (with cascade inverse)
+    const originalAffectedCount = result.affectedProjectIds.length;
     pushUndo({
       id: makeUndoId(),
       timestamp: Date.now(),
@@ -215,11 +216,14 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
           triggeringLogId: logId,
           undoOfLogId: logId,
         });
+        const undoCount = undoResult.affectedProjectIds.length;
+        const lost = originalAffectedCount - undoCount;
         fireBulkToast({
           changeType: prior ? "artwork_update" : "artwork_revoke",
           docNumber: proofNumber,
           result: undoResult,
           isUndo: true,
+          survivorsNote: lost > 0 ? `${undoCount} of ${originalAffectedCount} reverted, ${lost} deleted since` : undefined,
         });
         onSaved();
         return { ok: true };
@@ -280,7 +284,12 @@ export const ArtworkApprovalSheet = ({ open, onClose, project, existing, onSaved
       originalDescription: `Revoked artwork approval · Proof #${proofNumber}`,
       applyInverse: async () => {
         const { error: e2 } = await supabase.from("artwork_approvals").insert(prior);
-        if (e2) return { ok: false, reason: "Couldn't restore approval" };
+        if (e2) {
+          if ((e2 as { code?: string }).code === "23505") {
+            return { ok: false, reason: "Can't undo — a different approval now exists for this proof" };
+          }
+          return { ok: false, reason: "Couldn't restore approval" };
+        }
         const undoTs = new Date().toISOString();
         const undoResult = await cascadeApprovalChange({
           changeType: "artwork_create",

@@ -168,7 +168,11 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
       });
     }
 
-    // Register undo
+    // Register undo. Captures: (a) the prior config to restore, (b) the
+    // `next` config we just wrote — so undo can detect drift (someone edited
+    // again afterwards) and refuse rather than silently overwriting newer
+    // intentional changes.
+    const writtenConfig = next;
     pushUndo({
       id: makeUndoId(),
       timestamp: Date.now(),
@@ -176,13 +180,26 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
       originalLogId: logId,
       originalDescription: `Changed ${GATE_LABELS[gate]} requirement`,
       applyInverse: async () => {
+        // Verify the customer still exists and the config still matches what
+        // this action wrote. If either changed, refuse — don't time-travel
+        // through subsequent edits.
+        const { data: current, error: fetchErr } = await supabase
+          .from("customers")
+          .select("id, order_confirmation_config")
+          .eq("id", customer.id)
+          .maybeSingle();
+        if (fetchErr) return { ok: false, reason: "Couldn't verify customer state" };
+        if (!current) return { ok: false, reason: "Customer no longer exists" };
+        const currentCfg = (current.order_confirmation_config ?? null) as unknown as OrderConfirmationConfig | null;
+        if (JSON.stringify(currentCfg) !== JSON.stringify(writtenConfig)) {
+          return { ok: false, reason: "Can't undo — customer config has been modified since" };
+        }
         const { error: e2 } = await supabase
           .from("customers")
           .update({ order_confirmation_config: prev as unknown as Json })
           .eq("id", customer.id);
         if (e2) return { ok: false, reason: "Couldn't restore previous configuration" };
         setConfig(prev); setSavedConfig(prev);
-        // Cascade audit (single entry on __system__)
         await supabase.from("project_log_entries").insert({
           id: `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
           project_id: "__system__",
