@@ -36,7 +36,7 @@ export const ALWAYS_ON: ReadonlySet<ColumnId> = new Set([
 // ALL_COLS in src/components/leads/ProjectTable.tsx.
 const ALL_COLUMNS: ColumnId[] = [
   "flagged", "stage", "currentStage", "approvals", "customer", "buyer", "project", "detail", "designBrief",
-  "supplier", "quote", "proof", "po", "invoice", "amount", "balance",
+  "supplier", "quote", "amount", "proof", "po", "invoice", "balance",
   "weight", "cbm", "pkgs", "mode", "shipmentNumber", "tracking",
   "rep", "createdAt", "completionDate", "deadline",
 ];
