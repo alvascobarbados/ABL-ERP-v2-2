@@ -17,6 +17,7 @@ import type {
   ArtworkApprovalsLookup,
   ArtworkApprovalRow,
   QuotationApprovalRow,
+  QuotationEmailVerbalApprovalRow,
   CustomerPoApprovalRow,
 } from "@/lib/orderConfirmation";
 
@@ -25,7 +26,7 @@ export interface ApprovalsBundle {
   order: ApprovalRowsLookup;
 }
 
-const EMPTY: ApprovalsBundle = { artwork: {}, order: { quotation: {}, po: {} } };
+const EMPTY: ApprovalsBundle = { artwork: {}, order: { email: {}, quotation: {}, po: {} } };
 
 interface ProjectDocs {
   proofNumber?: string | null;
