@@ -1,0 +1,10 @@
+ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.project_log_entries;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.project_notes;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.line_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.shipments;
+ALTER TABLE public.projects REPLICA IDENTITY FULL;
+ALTER TABLE public.project_log_entries REPLICA IDENTITY FULL;
+ALTER TABLE public.project_notes REPLICA IDENTITY FULL;
+ALTER TABLE public.line_items REPLICA IDENTITY FULL;
+ALTER TABLE public.shipments REPLICA IDENTITY FULL;
