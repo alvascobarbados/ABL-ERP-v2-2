@@ -272,9 +272,27 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
 
       <ApprovalRow icon={Palette} content={artworkRow} divider />
       <ApprovalRow icon={Handshake} content={orderRow} extraPadding />
+
+      <ArtworkApprovalSheet
+        open={artworkSheetOpen}
+        onClose={() => { setArtworkSheetOpen(false); void refetch(); }}
+        project={project}
+        existing={artworkApproval}
+        onSaved={() => void refetch()}
+      />
+      <OrderConfirmationSheet
+        open={orderSheetOpen}
+        onClose={() => { setOrderSheetOpen(false); void refetch(); }}
+        project={project}
+        customer={customer}
+        quotationApproval={quotationApproval}
+        customerPoApproval={customerPoApproval}
+        onSaved={() => void refetch()}
+      />
     </>
   );
 };
+
 
 const ApprovalRow = ({
   icon: Icon,
