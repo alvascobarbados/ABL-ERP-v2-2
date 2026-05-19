@@ -82,11 +82,12 @@ export interface CascadeInput {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-type DomainKind = "artwork" | "quotation" | "customer_po";
+type DomainKind = "artwork" | "quotation" | "customer_po" | "email_verbal";
 
 function kindOf(changeType: CascadeChangeType): DomainKind {
   if (changeType.startsWith("artwork")) return "artwork";
   if (changeType.startsWith("quotation")) return "quotation";
+  if (changeType.startsWith("email_verbal")) return "email_verbal";
   return "customer_po";
 }
 
@@ -107,6 +108,10 @@ function actionTypeFor(changeType: CascadeChangeType): string {
     case "customer_po_create": return "customer_po_approval_create";
     case "customer_po_update": return "customer_po_approval_update";
     case "customer_po_revoke": return "customer_po_approval_revoke";
+    // Email/Verbal reuses legacy _set/_unset action_type names for audit-log continuity.
+    case "email_verbal_create": return "email_verbal_approval_set";
+    case "email_verbal_update": return "email_verbal_approval_set";
+    case "email_verbal_revoke": return "email_verbal_approval_unset";
   }
 }
 
@@ -130,7 +135,6 @@ function rowToProjectForGates(r: Record<string, unknown>): ProjectForGates & {
     quoteNumber: r.quote_number as string | null,
     proofNumber: r.proof_number as string | null,
     customerPoNumber: r.customer_po_number as string | null,
-    emailVerbalApproved: r.email_verbal_approved as boolean | null,
     depositPaidDate: r.deposit_paid_date as string | null,
     orderConfirmationOverrides: (r.order_confirmation_overrides as ProjectForGates["orderConfirmationOverrides"]) ?? null,
   };
