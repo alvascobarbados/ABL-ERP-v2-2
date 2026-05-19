@@ -7,16 +7,21 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { AffectedProjectsModal, SiblingProjectsInline, type AffectedProjectEntry } from "./AffectedProjectsModal";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useMasterData } from "@/hooks/useMasterData";
 import { pushUndo, makeUndoId } from "@/hooks/useUndoStack";
 import type { Project } from "@/data/pipelines";
 import type { ArtworkApprovalRow } from "@/lib/orderConfirmation";
+import {
+  cascadeApprovalChange,
+  fireBulkToast,
+  type CascadeResult,
+} from "@/lib/approvalCascade";
 import {
   ApprovalFormFields,
   validateForm,
@@ -30,18 +35,6 @@ const navy = "hsl(var(--brand-navy))";
 
 const channelLabel = (v: string) =>
   CHANNEL_OPTIONS.find((o) => o.v === v)?.label ?? v;
-
-function showGreenCelebration(message: string) {
-  toast.success(message, {
-    duration: 4000,
-    icon: <PartyPopper className="h-4 w-4" />,
-    style: {
-      background: "#2E7D32",
-      color: "#fff",
-      border: "none",
-    },
-  });
-}
 
 interface Props {
   open: boolean;
