@@ -8,7 +8,7 @@
  * and only mounts the Table at the lg breakpoint.
  */
 import { useMemo, useState, useRef, useEffect, MouseEvent as ReactMouseEvent } from "react";
-import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin, Clock } from "lucide-react";
+import { Flag, MoreHorizontal, ArrowUp, ArrowDown, Plane, Waves, MapPin, Clock, Palette, Handshake } from "lucide-react";
 import { toast } from "sonner";
 import {
   PIPELINES, PipelineCard, PipelineId, StageId, SUPPLIERS, ShippingMode,
@@ -57,9 +57,11 @@ import type { TabId } from "./PipelineTabs";
 import { useColumnVisibility, type ColumnId } from "@/hooks/useColumnVisibility";
 import { useMinuteTick } from "@/hooks/useMinuteTick";
 import { fmtTimeInStage } from "@/lib/timeInStage";
+import { useApprovalLookups } from "@/hooks/useApprovalLookups";
+import { computeArtworkState, computeOrderConfirmationState, type GateKey } from "@/lib/orderConfirmation";
 
 type SortKey =
-  | "flagged" | "stage" | "currentStage" | "customer" | "buyer" | "project" | "detail" | "supplier"
+  | "flagged" | "stage" | "currentStage" | "approvals" | "customer" | "buyer" | "project" | "detail" | "supplier"
   | "quote" | "proof" | "po" | "invoice" | "amount" | "balance"
   | "designBrief" | "completionDate" | "createdAt"
   | "weight" | "cbm" | "pkgs" | "mode" | "shipmentNumber" | "tracking" | "rep" | "deadline";
@@ -164,12 +166,19 @@ function compareCards(
   a: PipelineCard, b: PipelineCard, key: SortKey, dir: 1 | -1,
   lookup?: (id?: string | null) => { name: string } | undefined,
   buyerLookup?: (id?: string | null) => { name: string } | undefined,
+  approvalRank?: (cardId: string) => { artwork: number; order: number },
 ): number {
   const dl = (c: PipelineCard) => c.deadlineDate?.getTime?.() ?? Number.POSITIVE_INFINITY;
   switch (key) {
     case "flagged":
       // flagged first when asc
       return dir * (Number(!!b.project.flagged) - Number(!!a.project.flagged));
+    case "approvals": {
+      const ar = approvalRank?.(a.id) ?? { artwork: 0, order: 0 };
+      const br = approvalRank?.(b.id) ?? { artwork: 0, order: 0 };
+      if (ar.artwork !== br.artwork) return dir * (ar.artwork - br.artwork);
+      return dir * (ar.order - br.order);
+    }
     case "stage": {
       // Sort by pipeline order (Sales→Production→Shipping→Finance), then by
       // stage progression rank within pipeline (NOT alphabetical). Within
@@ -333,6 +342,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "flagged", label: "", defaultPx: 32, resizable: false },
   { key: "stage", label: "Stage · State", defaultPx: 150 },
   { key: "currentStage", label: "Current Stage", defaultPx: 52 },
+  { key: "approvals", label: "APPROV.", defaultPx: 70, resizable: false },
   { key: "customer", label: "Customer", defaultPx: 160 },
   { key: "buyer", label: "Buyer", defaultPx: 150 },
   { key: "project", label: "Project", defaultPx: 280 },
@@ -377,14 +387,47 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<PipelineCard | null>(null);
 
+  // Batched approval fetch for all visible projects' doc numbers.
+  const approvalDocs = useMemo(
+    () => visible.map((c) => ({
+      proofNumber: c.project.proofNumber,
+      quoteNumber: c.project.quoteNumber,
+      customerPoNumber: c.project.customerPoNumber,
+    })),
+    [visible],
+  );
+  const approvals = useApprovalLookups(approvalDocs);
+
+  // Precomputed per-card approval state (gray=0, orange=1, green=2 ranks)
+  // for both icons. Used for the cell + sort.
+  const approvalState = useMemo(() => {
+    const map = new Map<string, { artwork: "gray" | "green"; order: "gray" | "orange" | "green"; orderState: ReturnType<typeof computeOrderConfirmationState> }>();
+    for (const c of visible) {
+      const customer = md.findCustomerByName(c.project.customer) ?? null;
+      const art = computeArtworkState(c.project, approvals.artwork);
+      const ord = computeOrderConfirmationState(c.project, customer, approvals.order);
+      map.set(c.id, { artwork: art, order: ord.state, orderState: ord });
+    }
+    return map;
+  }, [visible, approvals, md]);
+
+  const approvalRank = useMemo(() => {
+    const rank = { gray: 0, orange: 1, green: 2 } as const;
+    return (cardId: string) => {
+      const s = approvalState.get(cardId);
+      if (!s) return { artwork: 0, order: 0 };
+      return { artwork: rank[s.artwork], order: rank[s.order] };
+    };
+  }, [approvalState]);
+
   const sorted = useMemo(() => {
     if (!sortKey) return visible;
     const buyerById = new Map(md.buyers.map((b) => [b.id, b]));
     const list = [...visible].sort((a, b) =>
-      compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId, (id) => (id ? buyerById.get(id) : undefined)),
+      compareCards(a, b, sortKey, sortDir, md.getSupplierByAnyId, (id) => (id ? buyerById.get(id) : undefined), approvalRank),
     );
     return list;
-  }, [visible, sortKey, sortDir, md.getSupplierByAnyId, md.buyers]);
+  }, [visible, sortKey, sortDir, md.getSupplierByAnyId, md.buyers, approvalRank]);
 
   const totalAmount = useMemo(
     () => sorted.reduce((sum, c) => sum + (c.project.value ?? 0), 0),
@@ -453,14 +496,14 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                     disabled={!sortable}
                     className={cn(
                       "h-10 inline-flex items-center gap-1 transition-colors truncate w-full text-[11px] font-semibold uppercase",
-                      c.key === "currentStage" || c.key === "flagged" ? "px-1" : "px-4",
+                      c.key === "currentStage" || c.key === "flagged" || c.key === "approvals" ? "px-1" : "px-4",
                       sortable ? "hover:text-[hsl(var(--brand-navy))] cursor-pointer" : "cursor-default",
-                      c.key === "flagged" || c.key === "currentStage"
+                      c.key === "flagged" || c.key === "currentStage" || c.key === "approvals"
                         ? "justify-center"
                         : c.align === "right" ? "justify-end text-left" : "justify-start text-left",
                     )}
                     style={{ color: "hsl(var(--brand-navy) / 0.55)", letterSpacing: "0.06em" }}
-                    title={c.key === "flagged" ? "Flag" : c.key === "currentStage" ? "Time in current stage" : c.label}
+                    title={c.key === "flagged" ? "Flag" : c.key === "currentStage" ? "Time in current stage" : c.key === "approvals" ? "Approvals: Artwork · Order Confirmation" : c.label}
                   >
                     {c.key === "flagged" ? (
                       <Flag className="h-3.5 w-3.5 shrink-0" aria-label="Flag" />
@@ -527,6 +570,7 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
                 onDuplicate={() => store.duplicateProject(card.project.id)}
                 onArchive={() => store.moveCard(card.id, { pipeline: "sales", stage: "archive" as StageId })}
                 onDelete={() => store.deleteProject(card.project.id)}
+                approvalState={approvalState.get(card.id)}
               />
 
             ))
@@ -575,6 +619,11 @@ interface RowProps {
   onDuplicate: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  approvalState?: {
+    artwork: "gray" | "green";
+    order: "gray" | "orange" | "green";
+    orderState: ReturnType<typeof computeOrderConfirmationState>;
+  };
 }
 
 type EntityKindKey = "customer" | "supplier" | "rep";
@@ -582,6 +631,7 @@ type EntityKindKey = "customer" | "supplier" | "rep";
 const TableRow = ({
   index, card, activeTab, gridCols, visibleKeys, isMenuOpen, onMenuOpenChange,
   onOpen, onToggleFlag, onEdit, onMoveStage, onPickStage, onDuplicate, onArchive, onDelete,
+  approvalState,
 }: RowProps) => {
   const has = (k: SortKey) => visibleKeys.has(k);
   const proj = card.project;
@@ -914,6 +964,17 @@ const TableRow = ({
         <span className="tabular">{fmtTimeInStage(proj.stageEnteredAt)}</span>
       </ReadOnlyCell>
       )}
+
+      {has("approvals") && (
+        <ApprovalsCell
+          proofNumber={proj.proofNumber}
+          artworkState={approvalState?.artwork ?? "gray"}
+          orderState={approvalState?.order ?? "gray"}
+          orderInfo={approvalState?.orderState}
+        />
+      )}
+
+
 
 
       {has("customer") && (
@@ -1467,6 +1528,82 @@ const TrackingCellTrigger = ({ cellKey, value, modeSet, flash, onClick, onRowDou
     </Tooltip>
   );
 };
+
+// ── Approvals cell (Artwork + Order Confirmation) ─────────────────────
+// Display-only: single-click selects the row like any other cell,
+// no second-click editor (entry point lives on the Project Detail page).
+const GATE_LABEL: Record<GateKey, string> = {
+  email: "Email/Verbal",
+  quotation: "Quotation",
+  po: "PO",
+  deposit: "Deposit",
+};
+interface ApprovalsCellProps {
+  proofNumber?: string | null;
+  artworkState: "gray" | "green";
+  orderState: "gray" | "orange" | "green";
+  orderInfo?: ReturnType<typeof computeOrderConfirmationState>;
+}
+const ApprovalsCell = ({ proofNumber, artworkState, orderState, orderInfo }: ApprovalsCellProps) => {
+  const sel = useCellSelection();
+  const rowId = useRowId() ?? "__no_row__";
+  const cellKey = `${rowId}:approvals`;
+  const ringStyle = useSelectionRing(cellKey);
+
+  const GREEN = "#2E7D32";
+  const ORANGE = "#E97B2C";
+  const GRAY = "#C8C5BC";
+
+  const artworkColor = artworkState === "green" ? GREEN : GRAY;
+  const orderColor =
+    orderState === "green" ? GREEN : orderState === "orange" ? ORANGE : GRAY;
+
+  const artworkTip =
+    artworkState === "green"
+      ? "Artwork approved"
+      : proofNumber
+      ? "Artwork pending"
+      : "Artwork: no proof set";
+
+  let orderTip = "Order: no requirements configured";
+  if (orderInfo) {
+    const { satisfied, required, missingGates } = orderInfo;
+    if (required === 0) orderTip = "Order: no requirements configured";
+    else if (orderState === "green") orderTip = `Order confirmed · ${required} of ${required}`;
+    else if (orderState === "orange") {
+      const missing = missingGates.map((g) => GATE_LABEL[g]).join(", ");
+      orderTip = `Order in progress · ${satisfied} of ${required} · awaiting ${missing}`;
+    } else orderTip = `Order pending · 0 of ${required}`;
+  }
+
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); sel?.selectCell(rowId, cellKey, { noEdit: true }); }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      className="px-1 min-h-full flex items-center justify-center cursor-pointer hover:bg-[hsl(var(--brand-navy)/0.04)]"
+      style={{ ...ringStyle, gap: 6 }}
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex" aria-label={artworkTip}>
+            <Palette size={18} style={{ color: artworkColor }} strokeWidth={2} />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top">{artworkTip}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex" aria-label={orderTip}>
+            <Handshake size={18} style={{ color: orderColor }} strokeWidth={2} />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top">{orderTip}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+};
+
 
 // Parse "AV, RC" → ["AV","RC"] for TeamMultiPicker.
 function parseInitialsList(raw: string | undefined): string[] {
