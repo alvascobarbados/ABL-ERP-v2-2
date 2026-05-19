@@ -346,6 +346,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
   const saveNumericField = (field: "weightKg" | "volumeValue" | "numPackages" | "depositAmount", integer: boolean) => (raw: string) => {
     const cleaned = (raw ?? "").replace(integer ? /[^\d]/g : /[^\d.]/g, "");
     if (cleaned === "") {
+      if (field === "depositAmount") setDepositAmountError(null);
       updateProject(live.id, { [field]: null } as any);
       setEditor(null);
       return;
@@ -353,9 +354,17 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
     const n = Number(cleaned);
     if (!Number.isFinite(n) || n < 0) { setEditor(null); return; }
     const value = integer ? Math.floor(n) : n;
-    if (field === "depositAmount" && live.value && value > live.value) {
-      toast.error("Deposit can't exceed project amount");
-      return;
+    if (field === "depositAmount") {
+      if (live.value == null || live.value === 0) {
+        setDepositAmountError("Set the order value first before recording a deposit. Deposit amount must be less than or equal to the project value.");
+        return;
+      }
+      if (value > live.value) {
+        const fmt = (x: number) => `$${x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        setDepositAmountError(`Deposit amount (${fmt(value)}) can't exceed the order value (${fmt(live.value)}). Adjust the order value first if needed.`);
+        return;
+      }
+      setDepositAmountError(null);
     }
     updateProject(live.id, { [field]: value } as any);
     setEditor(null);
