@@ -999,7 +999,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
       <TextEditor
         open={editor?.kind === "amount"}
         onClose={() => setEditor(null)}
-        title="Edit amount (BBD)"
+        title="Edit quote amount (BBD)"
         value={live.value ? String(live.value) : ""}
         placeholder="24500"
         onSave={saveAmount}
