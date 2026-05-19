@@ -353,7 +353,7 @@ const ALL_COLS: { key: SortKey; label: string; defaultPx: number; align?: "right
   { key: "proof", label: "Proof", defaultPx: 80 },
   { key: "po", label: "PO#", defaultPx: 92 },
   { key: "invoice", label: "INV#", defaultPx: 96 },
-  { key: "amount", label: "Amount", defaultPx: 104, align: "right" },
+  { key: "amount", label: "Quote Amount", defaultPx: 104, align: "right" },
   { key: "balance", label: "Inv Balance", defaultPx: 120, align: "right" },
   { key: "weight", label: "Weight", defaultPx: 80, align: "right" },
   { key: "cbm", label: "CBM", defaultPx: 70, align: "right" },
