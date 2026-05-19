@@ -114,13 +114,16 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
   }, [project, customer, quoteNumber, quotationApproval, customerPoNumber, customerPoApproval]);
 
   // ── Click handlers ─────────────────────────────────────────────────────────
+  const [artworkSheetOpen, setArtworkSheetOpen] = useState(false);
+  const [orderSheetOpen, setOrderSheetOpen] = useState(false);
+
   const handleOpenArtworkSheet = () => {
     console.log({ project_id: project.id, action: "open_artwork_sheet" });
-    toast.info("Approval editor opens in next phase");
+    setArtworkSheetOpen(true);
   };
   const handleOpenOrderSheet = () => {
     console.log({ project_id: project.id, action: "open_order_sheet" });
-    toast.info("Approval editor opens in next phase");
+    setOrderSheetOpen(true);
   };
   const handleConfigureCustomer = () => {
     if (!customer) return;
@@ -131,6 +134,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
   };
+
 
   // ── Artwork row content ────────────────────────────────────────────────────
   const artworkRow = (() => {
