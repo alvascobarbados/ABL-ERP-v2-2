@@ -24,6 +24,7 @@ import {
   computeOrderConfirmationState,
   type ArtworkApprovalRow,
   type QuotationApprovalRow,
+  type QuotationEmailVerbalApprovalRow,
   type CustomerPoApprovalRow,
   type ApprovalRowsLookup,
   type ArtworkApprovalsLookup,
@@ -35,7 +36,8 @@ import {
 export type CascadeChangeType =
   | "artwork_create" | "artwork_update" | "artwork_revoke"
   | "quotation_create" | "quotation_update" | "quotation_revoke"
-  | "customer_po_create" | "customer_po_update" | "customer_po_revoke";
+  | "customer_po_create" | "customer_po_update" | "customer_po_revoke"
+  | "email_verbal_create" | "email_verbal_update" | "email_verbal_revoke";
 
 export interface CascadeStateTransition {
   projectId: string;
