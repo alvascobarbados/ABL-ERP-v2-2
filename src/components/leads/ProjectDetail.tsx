@@ -1224,6 +1224,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         title={refLabelFor(live.paymentMethod) ?? "Reference"}
         value={live.paymentReference ?? ""}
         placeholder=""
+        allowEmpty
         onSave={savePaymentRef}
       />
       <TextEditor
