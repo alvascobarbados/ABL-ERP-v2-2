@@ -17,6 +17,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
+import {
+  AffectedProjectsModal,
+  SiblingProjectsInline,
+  type AffectedProjectEntry,
+} from "./AffectedProjectsModal";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useMasterData, type Customer } from "@/hooks/useMasterData";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
@@ -31,6 +36,11 @@ import {
   type CustomerPoApprovalRow,
   type ApprovalRowsLookup,
 } from "@/lib/orderConfirmation";
+import {
+  cascadeApprovalChange,
+  fireBulkToast,
+  type CascadeResult,
+} from "@/lib/approvalCascade";
 import {
   ApprovalFormFields,
   validateForm,
