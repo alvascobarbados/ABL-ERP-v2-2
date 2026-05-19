@@ -247,18 +247,22 @@ function runSanity() {
     computeOrderConfirmationState({}, { order_confirmation_config: allReq }, emptyLookup).state, "gray");
 
   // 3. 4 required, 2 satisfied → orange
-  const p3: ProjectForGates = { emailVerbalApproved: true, depositPaidDate: new Date() };
+  const p3: ProjectForGates = { quoteNumber: "Q-1", depositPaidDate: new Date() };
+  const lookup3: ApprovalRowsLookup = {
+    email: { "Q-1": { id: "e", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
+    quotation: {}, po: {},
+  };
   expect("4 req / 2 sat → orange",
-    computeOrderConfirmationState(p3, { order_confirmation_config: allReq }, emptyLookup).state, "orange");
+    computeOrderConfirmationState(p3, { order_confirmation_config: allReq }, lookup3).state, "orange");
 
   // 4. 4 required, 4 satisfied → green
   const p4: ProjectForGates = {
-    emailVerbalApproved: true,
     depositPaidDate: new Date(),
     quoteNumber: "Q-1",
     customerPoNumber: "PO-1",
   };
   const lookup4: ApprovalRowsLookup = {
+    email: { "Q-1": { id: "e", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
     quotation: { "Q-1": { id: "a", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
     po: { "PO-1": { id: "b", customer_po_number: "PO-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
   };
