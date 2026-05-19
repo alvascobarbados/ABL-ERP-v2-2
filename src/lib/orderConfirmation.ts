@@ -91,6 +91,7 @@ export interface CustomerPoApprovalRow {
 }
 
 export interface ApprovalRowsLookup {
+  email: Record<string, QuotationEmailVerbalApprovalRow>; // keyed by q_number (Q#-keyed email/verbal)
   quotation: Record<string, QuotationApprovalRow>; // keyed by q_number
   po: Record<string, CustomerPoApprovalRow>;       // keyed by customer_po_number
 }
