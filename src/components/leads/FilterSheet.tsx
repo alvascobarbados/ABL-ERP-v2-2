@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   X, Filter as FilterIcon, Users, Briefcase, Factory,
-  Plane, Ship, MapPin, UserCircle2, Layers, Clock, AlertTriangle, Check, Search, Flag,
+  Plane, UserCircle2, Layers, AlertTriangle, Check, Search, Flag, CircleCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PIPELINES, ShippingMode } from "@/data/pipelines";
-import type { FilterState, DeadlineUrgency } from "./FilterBar";
+import type { FilterState, OrderApprovalChip } from "./FilterBar";
 import { EMPTY_FILTER, filterCount } from "./FilterBar";
 
 interface Props {
