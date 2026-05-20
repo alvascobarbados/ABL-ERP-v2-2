@@ -82,6 +82,8 @@ export interface QuotationEmailVerbalApprovalRow {
 export interface CustomerPoApprovalRow {
   id: string;
   customer_po_number: string;
+  /** Quote number this PO approval is scoped to (NOT NULL since the cascade-scoping migration). */
+  quote_number: string;
   approved_on: string;
   via_channel: string;
   approved_by_buyer_id?: string | null;
@@ -90,10 +92,16 @@ export interface CustomerPoApprovalRow {
   recorded_by_user_id: string;
 }
 
+/** Composite lookup key for customer PO approvals: scoped per (quote_number, customer_po_number). */
+export function poApprovalKey(quoteNumber: string | null | undefined, poNumber: string | null | undefined): string | null {
+  if (!quoteNumber || !poNumber) return null;
+  return `${quoteNumber}|${poNumber}`;
+}
+
 export interface ApprovalRowsLookup {
   email: Record<string, QuotationEmailVerbalApprovalRow>; // keyed by q_number (Q#-keyed email/verbal)
   quotation: Record<string, QuotationApprovalRow>; // keyed by q_number
-  po: Record<string, CustomerPoApprovalRow>;       // keyed by customer_po_number
+  po: Record<string, CustomerPoApprovalRow>;       // keyed by `${quote_number}|${customer_po_number}` — see poApprovalKey()
 }
 
 export type ArtworkApprovalsLookup = Record<string, ArtworkApprovalRow>; // keyed by proof_number
