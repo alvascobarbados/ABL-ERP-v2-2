@@ -109,7 +109,7 @@ export function useApprovalLookups(projects: ProjectDocs[]): ApprovalsBundle {
   // all approval-lookup queries. Subscription is intentionally global.
   useEffect(() => {
     const channel = supabase
-      .channel("pipeline-table-approvals")
+      .channel(`pipeline-table-approvals-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "artwork_approvals" }, () => {
         queryClient.invalidateQueries({ queryKey: ["approval-lookups"] });
       })
