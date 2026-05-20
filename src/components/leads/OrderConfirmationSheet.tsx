@@ -30,6 +30,7 @@ import type { Project } from "@/data/pipelines";
 import {
   computeOrderConfirmationState,
   isGateRequired,
+  poApprovalKey,
   type GateKey,
   type OrderConfirmationOverrides,
   type QuotationApprovalRow,
