@@ -13,7 +13,7 @@
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search, MoreVertical, Trash2, UserPlus, Eye, Columns3, Check } from "lucide-react";
+import { ArrowLeft, Plus, Search, MoreVertical, Trash2, UserPlus, Eye, IdCard, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
@@ -27,17 +27,14 @@ import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomerGateCell } from "@/components/leads/CustomerGateCell";
 
-// ─── Optional contact columns (default-hidden to make room for the 4 gate columns) ──
-const CONTACT_COLS_KEY = "customers-list:contact-cols-v1";
-type ContactColsState = { email: boolean; contact: boolean };
-const DEFAULT_CONTACT_COLS: ContactColsState = { email: false, contact: false };
-function loadContactCols(): ContactColsState {
+// ─── View mode: Contact (orig columns) vs Requirements (gate pills) ───
+const MODE_KEY = "customers_list_mode";
+type ListMode = "contact" | "requirements";
+function loadMode(): ListMode {
   try {
-    const raw = localStorage.getItem(CONTACT_COLS_KEY);
-    if (!raw) return DEFAULT_CONTACT_COLS;
-    const v = JSON.parse(raw);
-    return { email: !!v?.email, contact: !!v?.contact };
-  } catch { return DEFAULT_CONTACT_COLS; }
+    const raw = localStorage.getItem(MODE_KEY);
+    return raw === "requirements" ? "requirements" : "contact";
+  } catch { return "contact"; }
 }
 
 
