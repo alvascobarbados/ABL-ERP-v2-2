@@ -336,11 +336,12 @@ const Th = ({ children, className }: { children?: React.ReactNode; className?: s
 
 // ─── Customer row group ────────────────────────────────────────────────
 const CustomerGroup = ({
-  customer, buyers, onView, onAddBuyer, onDelete,
+  customer, buyers, contactCols, onView, onAddBuyer, onDelete,
   onRequestCustomerMerge, onRequestBuyerMerge,
 }: {
   customer: Customer;
   buyers: Buyer[];
+  contactCols: ContactColsState;
   onView: () => void;
   onAddBuyer: () => void;
   onDelete: () => void;
@@ -381,6 +382,16 @@ const CustomerGroup = ({
     catch (err: any) { toast.error(err?.message ?? "Save failed"); }
   };
 
+  // The four gate cells — identical regardless of buyer-row layout.
+  const gateCells = (
+    <>
+      <Td className="align-top"><CustomerGateCell customer={customer} gate="email" /></Td>
+      <Td className="align-top"><CustomerGateCell customer={customer} gate="quotation" /></Td>
+      <Td className="align-top"><CustomerGateCell customer={customer} gate="po" /></Td>
+      <Td className="align-top"><CustomerGateCell customer={customer} gate="deposit" /></Td>
+    </>
+  );
+
   // 0 buyers → single empty buyer row
   if (buyers.length === 0) {
     return (
@@ -388,9 +399,10 @@ const CustomerGroup = ({
         <Td><EditableText key={`name-${nameRevert}`} value={customer.name} onSave={updateName} bold /></Td>
         <Td><EditableSelect value={customer.country} options={COUNTRIES} onSave={updateCountry} /></Td>
         <Td><EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" /></Td>
+        {gateCells}
         <Td className="text-muted-foreground italic">—</Td>
-        <Td className="text-muted-foreground italic">—</Td>
-        <Td className="text-muted-foreground italic">—</Td>
+        {contactCols.email && <Td className="text-muted-foreground italic">—</Td>}
+        {contactCols.contact && <Td className="text-muted-foreground italic">—</Td>}
         <Td>
           <RowMenu onView={onView} onAddBuyer={onAddBuyer} onDelete={onDelete} />
         </Td>
@@ -421,11 +433,16 @@ const CustomerGroup = ({
               <Td rowSpan={rowCount} className="align-top">
                 <EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" />
               </Td>
+              {/* Gate cells span all buyer rows — they're customer-level config */}
+              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="email" /></Td>
+              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="quotation" /></Td>
+              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="po" /></Td>
+              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="deposit" /></Td>
             </>
           )}
           <Td><BuyerNameCell buyer={buyer} customerName={customer.name} onRequestMerge={onRequestBuyerMerge} /></Td>
-          <Td><BuyerEmailCell buyer={buyer} /></Td>
-          <Td><BuyerContactCell buyer={buyer} /></Td>
+          {contactCols.email && <Td><BuyerEmailCell buyer={buyer} /></Td>}
+          {contactCols.contact && <Td><BuyerContactCell buyer={buyer} /></Td>}
           {idx === 0 && (
             <Td rowSpan={rowCount} className="align-top">
               <RowMenu onView={onView} onAddBuyer={onAddBuyer} onDelete={onDelete} />
@@ -436,6 +453,50 @@ const CustomerGroup = ({
     </>
   );
 };
+
+// ─── Columns toolbar button (toggle optional Email / Contact columns) ──
+const ColumnsButton = ({
+  state, onChange,
+}: { state: ContactColsState; onChange: (next: ContactColsState) => void }) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <button
+        type="button"
+        aria-label="Toggle optional columns"
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border transition-colors hover:bg-muted/50"
+        style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: 40 }}
+      >
+        <Columns3 className="h-4 w-4" /> Columns
+      </button>
+    </PopoverTrigger>
+    <PopoverContent align="end" className="w-56 p-1">
+      <div
+        className="px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] font-semibold"
+        style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
+      >
+        Optional columns
+      </div>
+      {([
+        { key: "email" as const, label: "Email" },
+        { key: "contact" as const, label: "Contact" },
+      ]).map((c) => {
+        const checked = state[c.key];
+        return (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => onChange({ ...state, [c.key]: !checked })}
+            className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-left text-sm hover:bg-muted/50"
+          >
+            <span>{c.label}</span>
+            {checked && <Check className="h-4 w-4" style={{ color: "hsl(var(--brand-navy))" }} />}
+          </button>
+        );
+      })}
+    </PopoverContent>
+  </Popover>
+);
+
 
 const Td = ({ children, className, rowSpan }: { children?: React.ReactNode; className?: string; rowSpan?: number }) => (
   <td className={cn("px-3 py-2 text-[13px]", className)} rowSpan={rowSpan} style={{ color: "hsl(var(--brand-navy))" }}>
