@@ -31,6 +31,7 @@ import {
   type ApprovalRowsLookup,
 } from "@/lib/orderConfirmation";
 import { pushUndo, makeUndoId } from "@/hooks/useUndoStack";
+import { writeCustomerGateConfigAudit } from "@/lib/customerGateAudit";
 
 type ShipMode = "Air" | "Ocean" | "Local";
 
@@ -124,49 +125,33 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
     }
     setSavedConfig(next);
 
-    // Audit: customer-level entry on __system__ project
-    const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-    await supabase.from("project_log_entries").insert({
-      id: logId,
-      project_id: "__system__",
-      ts: new Date().toISOString(),
-      actor_user_id: user.userId,
-      actor_display_name: user.shortName,
-      action_type: "customer_gate_config_change",
-      description: `${user.shortName} changed ${customer.name}'s ${GATE_LABELS[gate]} requirement: ${summary}`,
-      metadata: {
+    // Audit: customer-level + per-project change mirror + transition
+    // consequences in one batched insert. Done via the shared helper so
+    // CustomerGateCell (inline pill) and this section behave identically.
+    const openProjects = store.projects.filter(
+      (p) => p.customer === customer.name && !p.deletedAt && p.stage !== "completed",
+    );
+    let logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    try {
+      const result = await writeCustomerGateConfigAudit({
+        customer: { id: customer.id, name: customer.name },
         gate,
-        customer_id: customer.id,
-        customer_name: customer.name,
-        old_mode: prev[gate].mode,
-        new_mode: next[gate].mode,
-        old_modes: prev[gate].conditional_modes,
-        new_modes: next[gate].conditional_modes,
-        old_amount: prev[gate].conditional_amount_above,
-        new_amount: next[gate].conditional_amount_above,
-      } as Json,
-    });
-
-    // Per-project consequence audits
-    for (const ch of transitionChanges) {
-      await supabase.from("project_log_entries").insert({
-        id: `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-        project_id: ch.projectId,
-        ts: new Date().toISOString(),
-        actor_user_id: user.userId,
-        actor_display_name: user.shortName,
-        action_type: "customer_gate_config_consequence",
-        description: `Order confirmation state changed: ${ch.oldState} → ${ch.newState} due to ${customer.name} requirements update`,
-        metadata: {
-          trigger: "customer_gate_config_change",
-          customer_id: customer.id,
-          gate,
-          old_state: ch.oldState,
-          new_state: ch.newState,
-          parent_log_id: logId,
-        } as Json,
+        gateLabel: GATE_LABELS[gate],
+        prev,
+        next,
+        summary,
+        openProjects,
+        actor: { userId: user.userId, shortName: user.shortName },
       });
+      logId = result.systemLogId;
+    } catch {
+      toast.error("Saved, but couldn't write to the activity log.");
     }
+    // (transitionChanges is retained for the confirm-modal UX above; the
+    // helper recomputes transitions independently to keep both audit
+    // surfaces in lockstep.)
+    void transitionChanges;
+
 
     // Register undo. Captures: (a) the prior config to restore, (b) the
     // `next` config we just wrote — so undo can detect drift (someone edited
