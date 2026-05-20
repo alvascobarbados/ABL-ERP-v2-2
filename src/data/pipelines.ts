@@ -320,7 +320,14 @@ export type ProjectLogActionType =
   | "quotation_approval_create" | "quotation_approval_update" | "quotation_approval_revoke"
   | "customer_po_approval_create" | "customer_po_approval_update" | "customer_po_approval_revoke"
   | "email_verbal_approval_set" | "email_verbal_approval_unset"
-  | "gate_override_add" | "gate_override_remove";
+  // Legacy override action types (Phase 4, kept for historical readability of
+  // entries already in project_log_entries). New writes use the
+  // `requirement_override_*` family below, which carries richer descriptions
+  // and metadata (customer default, prior project state, reason).
+  | "gate_override_add" | "gate_override_remove"
+  | "requirement_override_added"
+  | "requirement_override_removed"
+  | "requirement_override_reset";
 
 export interface ProjectLogEntry {
   id: string;
