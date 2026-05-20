@@ -1244,9 +1244,30 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       ...orig,
       id: `prj-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       projectName: `${orig.projectName} (Copy)`,
-      quoteNumber: undefined, poNumber: undefined, invoiceNumber: undefined,
+      // Document numbers — duplicates start clean (each is scoped to its own quote/order context).
+      quoteNumber: undefined, poNumber: undefined, invoiceNumber: undefined, proofNumber: undefined,
+      customerPoNumber: undefined,
+      // Money/value — duplicate starts at no value.
+      value: 0,
+      // Deposit fields — scoped to original order.
+      depositRequired: false, depositInvoiceNumber: undefined, depositAmount: undefined,
+      depositPaidDate: undefined, depositPaidMethod: undefined, depositPaymentReference: undefined,
+      // Invoice + payment capture — scoped to original order.
+      paidOnDate: undefined, paymentMethod: undefined, paymentReference: undefined,
+      invoiceIssuedDate: undefined, invoiceIssuedDateAssumed: undefined,
+      // Payment terms re-inherit from customer default on next save.
+      paymentTerms: undefined, paymentTermsCustomDays: undefined, paymentTermsInherited: undefined,
+      // Supplier-side (PO/amount/currency/supplier) — scoped to a particular order; start clean.
+      poAmount: undefined, poAmountCurrency: undefined, supplierId: undefined, supplierLabel: undefined,
+      // Email/verbal approval (legacy fields still present on row) — clear.
+      emailVerbalApproved: false, emailVerbalApprovedAt: undefined, emailVerbalApprovedByBuyerId: undefined,
+      emailVerbalApprovedViaChannel: undefined, emailVerbalApprovedOtherName: undefined,
+      emailVerbalApprovedNotes: undefined, emailVerbalApprovedRecordedByUserId: undefined,
+      // Per-project gate overrides — start at defaults.
+      orderConfirmationOverrides: undefined,
+      // Notes / line items / log / shipment — not carried.
       shipmentId: undefined, notes: undefined, lineItems: undefined, log: undefined,
-      // Per spec: duplicate clears shipping mode, shipment #, and tracking ref.
+      // Per existing spec: duplicate clears shipping mode, shipment #, and tracking ref.
       shippingMode: undefined, shipmentNumber: undefined, trackingRef: undefined,
       pipeline: orig.pipeline, stage: orig.stage, flagged: false,
       deletedAt: undefined, deletedFromPipeline: undefined, deletedFromStage: undefined,
