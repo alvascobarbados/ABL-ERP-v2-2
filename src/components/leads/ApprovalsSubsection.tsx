@@ -19,6 +19,7 @@ import type { Project } from "@/data/pipelines";
 import {
   computeArtworkState,
   computeOrderConfirmationState,
+  poApprovalKey,
   type ArtworkApprovalRow,
   type QuotationApprovalRow,
   type QuotationEmailVerbalApprovalRow,
