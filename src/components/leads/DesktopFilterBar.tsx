@@ -297,6 +297,14 @@ export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesR
           />
         </Group>
 
+        <Divider />
+        <Group label="ORDER APPROVAL">
+          {ORDER_APPROVAL.map((o) => (
+            <Chip key={o.id} active={value.orderApproval.includes(o.id)} onClick={() => toggleApproval(o.id)}>{o.label}</Chip>
+          ))}
+        </Group>
+
+
         {count > 0 && (
           <button
             onClick={() => onChange(EMPTY_FILTER)}
