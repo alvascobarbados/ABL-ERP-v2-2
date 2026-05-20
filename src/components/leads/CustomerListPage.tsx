@@ -212,19 +212,23 @@ export const CustomerListPage = () => {
 
           {/* Table */}
           <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
-            <table className="w-full text-[13px] border-collapse">
+            <table className="w-full text-[13px] border-collapse" style={{ minWidth: mode === "requirements" ? 1100 : 760 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid hsl(var(--brand-navy) / 0.1)", background: "hsl(var(--brand-navy) / 0.03)" }}>
                   <Th>Name</Th>
                   <Th>Country</Th>
                   <Th>Incoterms</Th>
-                  <Th className="w-[96px]">Email/Verbal</Th>
-                  <Th className="w-[96px]">Signed Quote</Th>
-                  <Th className="w-[96px]">Customer PO</Th>
-                  <Th className="w-[96px]">Deposit</Th>
+                  {mode === "requirements" && (
+                    <>
+                      <Th className="w-[96px]">Email/Verbal</Th>
+                      <Th className="w-[96px]">Signed Quote</Th>
+                      <Th className="w-[96px]">Customer PO</Th>
+                      <Th className="w-[96px]">Deposit</Th>
+                    </>
+                  )}
                   <Th>Buyer</Th>
-                  {contactCols.email && <Th>Email</Th>}
-                  {contactCols.contact && <Th>Contact</Th>}
+                  {mode === "contact" && <Th>Email</Th>}
+                  {mode === "contact" && <Th>Contact</Th>}
                   <Th className="w-8" />
                 </tr>
               </thead>
@@ -234,7 +238,7 @@ export const CustomerListPage = () => {
                     key={customer.id}
                     customer={customer}
                     buyers={buyers}
-                    contactCols={contactCols}
+                    mode={mode}
                     onView={() => navigate(`/customers?customer=${customer.id}`)}
                     onAddBuyer={() => setAddBuyerOpen(true)}
                     onDelete={() => setConfirmDelete(customer)}
@@ -245,7 +249,7 @@ export const CustomerListPage = () => {
                 {groups.length === 0 && (
                   <tr>
                     <td
-                      colSpan={9 + (contactCols.email ? 1 : 0) + (contactCols.contact ? 1 : 0)}
+                      colSpan={mode === "requirements" ? 9 : 7}
                       className="text-sm text-muted-foreground italic px-4 py-12 text-center"
                     >
                       {q ? "No matches." : "No customers yet."}
