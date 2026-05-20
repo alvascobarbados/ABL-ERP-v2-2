@@ -78,6 +78,13 @@ export interface CascadeInput {
   triggeringLogId?: string;
   /** For undo cascades: id of the original (forward) cascade log to back-reference. */
   undoOfLogId?: string;
+  /**
+   * Required for customer_po_* cascades only: the triggering project's
+   * quote_number. Customer PO approvals are scoped per-(quote, PO) so the
+   * cascade only fans out to projects sharing both. If undefined/null on a
+   * customer_po cascade, the cascade is skipped entirely (returns empty).
+   */
+  triggeringQuoteNumber?: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
