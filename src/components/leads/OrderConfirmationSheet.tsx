@@ -679,7 +679,24 @@ const PoSection = ({
   }
 
   const po = project.customerPoNumber;
-  const siblings = store.projects.filter((p) => p.id !== project.id && !p.deletedAt && p.customerPoNumber === po);
+  // Customer PO approvals are scoped per-(quote_number, customer_po_number).
+  // If the project has no quote_number we can't record/cascade an approval.
+  const qn = project.quoteNumber ?? null;
+  if (!qn) {
+    return (
+      <SectionCard title="Purchase Order" statusLabel="Awaiting input" statusColor={GRAY}>
+        <div className="text-[12px]" style={{ color: "#555" }}>
+          This project doesn't have a Quote # yet. A Customer PO approval is
+          scoped to a specific quote — set the Q# first, then come back to
+          record this approval.
+        </div>
+      </SectionCard>
+    );
+  }
+  // Siblings = projects sharing BOTH the same quote_number AND the same PO #.
+  const siblings = store.projects.filter(
+    (p) => p.id !== project.id && !p.deletedAt && p.customerPoNumber === po && p.quoteNumber === qn,
+  );
   const isSat = !!approval;
 
   return (
@@ -701,6 +718,7 @@ const PoSection = ({
         const prior = approval ? { ...approval } : null;
         const payload = {
           customer_po_number: po,
+          quote_number: qn,
           approved_by_buyer_id: form.approvedByBuyerId,
           approved_by_other_name: form.approvedByOtherName,
           approved_on: form.approvedOn,
@@ -710,7 +728,7 @@ const PoSection = ({
         };
         const { data: nextRow, error } = await supabase
           .from("customer_po_approvals")
-          .upsert(payload, { onConflict: "customer_po_number" })
+          .upsert(payload, { onConflict: "quote_number,customer_po_number" })
           .select().maybeSingle();
         if (error) { toast.error(`Couldn't save: ${error.message}`); return false; }
         const cascadeTs = new Date().toISOString();
@@ -725,11 +743,12 @@ const PoSection = ({
           actor_user_id: user.userId, actor_display_name: user.shortName,
           action_type: isEdit ? "customer_po_approval_update" : "customer_po_approval_create",
           description: desc,
-          metadata: { customer_po_number: po, via_channel: form.viaChannel, approved_on: form.approvedOn } as Json,
+          metadata: { customer_po_number: po, quote_number: qn, via_channel: form.viaChannel, approved_on: form.approvedOn } as Json,
         });
         const changeType = isEdit ? "customer_po_update" as const : "customer_po_create" as const;
         const result = await cascadeApprovalChange({
           changeType, docNumber: po, triggeringProjectId: project.id,
+          triggeringQuoteNumber: qn,
           approvalRow: (nextRow as CustomerPoApprovalRow) ?? null, priorApprovalRow: prior,
           actorUserId: user.userId, actorDisplayName: user.shortName,
           cascadeTs, triggeringLogId: logId,
@@ -744,16 +763,18 @@ const PoSection = ({
           originalLogId: logId, originalDescription: desc,
           applyInverse: async () => {
             if (prior) {
-              const { error: e2 } = await supabase.from("customer_po_approvals").upsert(prior, { onConflict: "customer_po_number" });
+              const { error: e2 } = await supabase.from("customer_po_approvals").upsert(prior, { onConflict: "quote_number,customer_po_number" });
               if (e2) return { ok: false, reason: "Couldn't restore PO approval" };
             } else {
-              const { error: e2 } = await supabase.from("customer_po_approvals").delete().eq("customer_po_number", po);
+              const { error: e2 } = await supabase.from("customer_po_approvals").delete()
+                .eq("customer_po_number", po).eq("quote_number", qn);
               if (e2) return { ok: false, reason: "Couldn't undo PO approval" };
             }
             const undoTs = new Date().toISOString();
             const undoResult = await cascadeApprovalChange({
               changeType: prior ? "customer_po_update" : "customer_po_revoke",
               docNumber: po, triggeringProjectId: project.id,
+              triggeringQuoteNumber: qn,
               approvalRow: prior, priorApprovalRow: (nextRow as CustomerPoApprovalRow) ?? null,
               actorUserId: user.userId, actorDisplayName: user.shortName,
               cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
@@ -772,7 +793,8 @@ const PoSection = ({
       onRevoke={async () => {
         if (!approval) return;
         const prior = { ...approval };
-        const { error } = await supabase.from("customer_po_approvals").delete().eq("customer_po_number", po);
+        const { error } = await supabase.from("customer_po_approvals").delete()
+          .eq("customer_po_number", po).eq("quote_number", qn);
         if (error) { toast.error(`Couldn't revoke: ${error.message}`); return; }
         const cascadeTs = new Date().toISOString();
         const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -781,10 +803,11 @@ const PoSection = ({
           actor_user_id: user.userId, actor_display_name: user.shortName,
           action_type: "customer_po_approval_revoke",
           description: `${user.shortName} revoked PO approval · PO #${po}`,
-          metadata: { customer_po_number: po } as Json,
+          metadata: { customer_po_number: po, quote_number: qn } as Json,
         });
         const result = await cascadeApprovalChange({
           changeType: "customer_po_revoke", docNumber: po, triggeringProjectId: project.id,
+          triggeringQuoteNumber: qn,
           approvalRow: null, priorApprovalRow: prior,
           actorUserId: user.userId, actorDisplayName: user.shortName,
           cascadeTs, triggeringLogId: logId,
@@ -808,6 +831,7 @@ const PoSection = ({
             const undoTs = new Date().toISOString();
             const undoResult = await cascadeApprovalChange({
               changeType: "customer_po_create", docNumber: po, triggeringProjectId: project.id,
+              triggeringQuoteNumber: qn,
               approvalRow: prior, priorApprovalRow: null,
               actorUserId: user.userId, actorDisplayName: user.shortName,
               cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
