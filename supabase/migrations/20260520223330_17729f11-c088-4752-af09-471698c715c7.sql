@@ -1,0 +1,1 @@
+DELETE FROM public.project_notes WHERE auto = false AND text LIKE 'Stage moved from %';

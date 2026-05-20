@@ -270,7 +270,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
     const result = await moveCard(live.id, target);
     if (!result.ok) return;
     if (target.pipeline !== fromPipeline) triggerPulse(target.pipeline);
-    addNote(live.id, `Stage moved from ${getStageTitle(fromPipeline, fromStage)} → ${getStageTitle(target.pipeline, target.stage)}`, "Av");
+    // Stage change is recorded to the activity log by moveCard; do NOT
+    // also write it to project_notes — Notes is user-authored content only.
     toast.success(`Moved to ${getStageTitle(target.pipeline, target.stage)}`, {
       description: "Tap Undo to reverse.",
       duration: 5000,
