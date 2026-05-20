@@ -21,11 +21,10 @@ interface Props {
 
 const ALL_MODES: (ShippingMode | "Unassigned")[] = ["Air", "Ocean", "Local", "Unassigned"];
 const ALL_STAGES = PIPELINES.flatMap((p) => p.stages.map((s) => ({ id: s.id, label: s.title, pipeline: p.title })));
-const URGENCY_OPTIONS: { id: Exclude<DeadlineUrgency, null>; label: string }[] = [
-  { id: "overdue", label: "Overdue" },
-  { id: "this_week", label: "Due this week" },
-  { id: "this_month", label: "Due this month" },
-  { id: "no_deadline", label: "No deadline set" },
+const ORDER_APPROVAL_OPTIONS: { id: OrderApprovalChip; label: string }[] = [
+  { id: "approved", label: "Approved" },
+  { id: "partial", label: "Partially Approved" },
+  { id: "not_approved", label: "Not Approved" },
 ];
 
 // ─── Multi-select picker (bottom sheet) ───
