@@ -13,7 +13,7 @@
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search, MoreVertical, Trash2, UserPlus, Eye, Columns3, Check } from "lucide-react";
+import { ArrowLeft, Plus, Search, MoreVertical, Trash2, UserPlus, Eye, IdCard, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
@@ -27,17 +27,14 @@ import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomerGateCell } from "@/components/leads/CustomerGateCell";
 
-// ─── Optional contact columns (default-hidden to make room for the 4 gate columns) ──
-const CONTACT_COLS_KEY = "customers-list:contact-cols-v1";
-type ContactColsState = { email: boolean; contact: boolean };
-const DEFAULT_CONTACT_COLS: ContactColsState = { email: false, contact: false };
-function loadContactCols(): ContactColsState {
+// ─── View mode: Contact (orig columns) vs Requirements (gate pills) ───
+const MODE_KEY = "customers_list_mode";
+type ListMode = "contact" | "requirements";
+function loadMode(): ListMode {
   try {
-    const raw = localStorage.getItem(CONTACT_COLS_KEY);
-    if (!raw) return DEFAULT_CONTACT_COLS;
-    const v = JSON.parse(raw);
-    return { email: !!v?.email, contact: !!v?.contact };
-  } catch { return DEFAULT_CONTACT_COLS; }
+    const raw = localStorage.getItem(MODE_KEY);
+    return raw === "requirements" ? "requirements" : "contact";
+  } catch { return "contact"; }
 }
 
 
@@ -72,10 +69,10 @@ export const CustomerListPage = () => {
   const [buyerMerge, setBuyerMerge] = useState<BuyerMergePending | null>(null);
   const [merging, setMerging] = useState(false);
 
-  const [contactCols, setContactCols] = useState<ContactColsState>(() => loadContactCols());
+  const [mode, setMode] = useState<ListMode>(() => loadMode());
   useEffect(() => {
-    try { localStorage.setItem(CONTACT_COLS_KEY, JSON.stringify(contactCols)); } catch { /* ignore */ }
-  }, [contactCols]);
+    try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ }
+  }, [mode]);
 
   // Filter: customer matches if its own fields OR any of its buyers match
   const groups = useMemo(() => {
@@ -182,7 +179,7 @@ export const CustomerListPage = () => {
                 Customers <span className="text-muted-foreground font-light">· {md.customers.length}</span>
               </h1>
             </div>
-            <ColumnsButton state={contactCols} onChange={setContactCols} />
+            <ModeSwitcher mode={mode} onChange={setMode} />
             <button
               onClick={() => setAddBuyerOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border transition-colors hover:bg-muted/50"
@@ -215,19 +212,23 @@ export const CustomerListPage = () => {
 
           {/* Table */}
           <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
-            <table className="w-full text-[13px] border-collapse">
+            <table className="w-full text-[13px] border-collapse" style={{ minWidth: mode === "requirements" ? 1100 : 760 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid hsl(var(--brand-navy) / 0.1)", background: "hsl(var(--brand-navy) / 0.03)" }}>
                   <Th>Name</Th>
                   <Th>Country</Th>
                   <Th>Incoterms</Th>
-                  <Th className="w-[96px]">Email/Verbal</Th>
-                  <Th className="w-[96px]">Signed Quote</Th>
-                  <Th className="w-[96px]">Customer PO</Th>
-                  <Th className="w-[96px]">Deposit</Th>
+                  {mode === "requirements" && (
+                    <>
+                      <Th className="w-[96px]">Email/Verbal</Th>
+                      <Th className="w-[96px]">Signed Quote</Th>
+                      <Th className="w-[96px]">Customer PO</Th>
+                      <Th className="w-[96px]">Deposit</Th>
+                    </>
+                  )}
                   <Th>Buyer</Th>
-                  {contactCols.email && <Th>Email</Th>}
-                  {contactCols.contact && <Th>Contact</Th>}
+                  {mode === "contact" && <Th>Email</Th>}
+                  {mode === "contact" && <Th>Contact</Th>}
                   <Th className="w-8" />
                 </tr>
               </thead>
@@ -237,7 +238,7 @@ export const CustomerListPage = () => {
                     key={customer.id}
                     customer={customer}
                     buyers={buyers}
-                    contactCols={contactCols}
+                    mode={mode}
                     onView={() => navigate(`/customers?customer=${customer.id}`)}
                     onAddBuyer={() => setAddBuyerOpen(true)}
                     onDelete={() => setConfirmDelete(customer)}
@@ -248,7 +249,7 @@ export const CustomerListPage = () => {
                 {groups.length === 0 && (
                   <tr>
                     <td
-                      colSpan={9 + (contactCols.email ? 1 : 0) + (contactCols.contact ? 1 : 0)}
+                      colSpan={mode === "requirements" ? 9 : 7}
                       className="text-sm text-muted-foreground italic px-4 py-12 text-center"
                     >
                       {q ? "No matches." : "No customers yet."}
@@ -336,12 +337,12 @@ const Th = ({ children, className }: { children?: React.ReactNode; className?: s
 
 // ─── Customer row group ────────────────────────────────────────────────
 const CustomerGroup = ({
-  customer, buyers, contactCols, onView, onAddBuyer, onDelete,
+  customer, buyers, mode, onView, onAddBuyer, onDelete,
   onRequestCustomerMerge, onRequestBuyerMerge,
 }: {
   customer: Customer;
   buyers: Buyer[];
-  contactCols: ContactColsState;
+  mode: ListMode;
   onView: () => void;
   onAddBuyer: () => void;
   onDelete: () => void;
@@ -399,10 +400,10 @@ const CustomerGroup = ({
         <Td><EditableText key={`name-${nameRevert}`} value={customer.name} onSave={updateName} bold /></Td>
         <Td><EditableSelect value={customer.country} options={COUNTRIES} onSave={updateCountry} /></Td>
         <Td><EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" /></Td>
-        {gateCells}
+        {mode === "requirements" && gateCells}
         <Td className="text-muted-foreground italic">—</Td>
-        {contactCols.email && <Td className="text-muted-foreground italic">—</Td>}
-        {contactCols.contact && <Td className="text-muted-foreground italic">—</Td>}
+        {mode === "contact" && <Td className="text-muted-foreground italic">—</Td>}
+        {mode === "contact" && <Td className="text-muted-foreground italic">—</Td>}
         <Td>
           <RowMenu onView={onView} onAddBuyer={onAddBuyer} onDelete={onDelete} />
         </Td>
@@ -434,15 +435,19 @@ const CustomerGroup = ({
                 <EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" />
               </Td>
               {/* Gate cells span all buyer rows — they're customer-level config */}
-              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="email" /></Td>
-              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="quotation" /></Td>
-              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="po" /></Td>
-              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="deposit" /></Td>
+              {mode === "requirements" && (
+                <>
+                  <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="email" /></Td>
+                  <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="quotation" /></Td>
+                  <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="po" /></Td>
+                  <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="deposit" /></Td>
+                </>
+              )}
             </>
           )}
           <Td><BuyerNameCell buyer={buyer} customerName={customer.name} onRequestMerge={onRequestBuyerMerge} /></Td>
-          {contactCols.email && <Td><BuyerEmailCell buyer={buyer} /></Td>}
-          {contactCols.contact && <Td><BuyerContactCell buyer={buyer} /></Td>}
+          {mode === "contact" && <Td><BuyerEmailCell buyer={buyer} /></Td>}
+          {mode === "contact" && <Td><BuyerContactCell buyer={buyer} /></Td>}
           {idx === 0 && (
             <Td rowSpan={rowCount} className="align-top">
               <RowMenu onView={onView} onAddBuyer={onAddBuyer} onDelete={onDelete} />
@@ -454,48 +459,44 @@ const CustomerGroup = ({
   );
 };
 
-// ─── Columns toolbar button (toggle optional Email / Contact columns) ──
-const ColumnsButton = ({
-  state, onChange,
-}: { state: ContactColsState; onChange: (next: ContactColsState) => void }) => (
-  <Popover>
-    <PopoverTrigger asChild>
-      <button
-        type="button"
-        aria-label="Toggle optional columns"
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border transition-colors hover:bg-muted/50"
-        style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: 40 }}
-      >
-        <Columns3 className="h-4 w-4" /> Columns
-      </button>
-    </PopoverTrigger>
-    <PopoverContent align="end" className="w-56 p-1">
-      <div
-        className="px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] font-semibold"
-        style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
-      >
-        Optional columns
-      </div>
-      {([
-        { key: "email" as const, label: "Email" },
-        { key: "contact" as const, label: "Contact" },
-      ]).map((c) => {
-        const checked = state[c.key];
+// ─── Mode switcher (Contact vs Requirements) ───────────────────────────
+const ModeSwitcher = ({
+  mode, onChange,
+}: { mode: ListMode; onChange: (next: ListMode) => void }) => {
+  const opts: Array<{ value: ListMode; label: string; Icon: typeof IdCard }> = [
+    { value: "contact", label: "Contact", Icon: IdCard },
+    { value: "requirements", label: "Requirements", Icon: ShieldCheck },
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label="Customers view mode"
+      className="inline-flex items-center rounded-full border p-0.5"
+      style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", background: "hsl(var(--brand-navy) / 0.04)" }}
+    >
+      {opts.map(({ value, label, Icon }) => {
+        const active = mode === value;
         return (
           <button
-            key={c.key}
+            key={value}
             type="button"
-            onClick={() => onChange({ ...state, [c.key]: !checked })}
-            className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-left text-sm hover:bg-muted/50"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(value)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold transition-colors"
+            style={
+              active
+                ? { background: "hsl(var(--brand-navy))", color: "white" }
+                : { color: "hsl(var(--brand-navy) / 0.7)" }
+            }
           >
-            <span>{c.label}</span>
-            {checked && <Check className="h-4 w-4" style={{ color: "hsl(var(--brand-navy))" }} />}
+            <Icon className="h-3.5 w-3.5" /> {label}
           </button>
         );
       })}
-    </PopoverContent>
-  </Popover>
-);
+    </div>
+  );
+};
 
 
 const Td = ({ children, className, rowSpan }: { children?: React.ReactNode; className?: string; rowSpan?: number }) => (
