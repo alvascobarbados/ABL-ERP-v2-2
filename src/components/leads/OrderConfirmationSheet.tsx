@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { TextEditor } from "./EditorSheets";
 import {
   AffectedProjectsModal,
   SiblingProjectsInline,
@@ -147,7 +148,7 @@ export const OrderConfirmationSheet = ({
   return (
     <Sheet open={open} onClose={onClose} title="Order Confirmation" width="max-w-lg">
       {/* Status strip */}
-      <StatusStrip orderState={orderState} requiredGates={requiredGates} />
+      <StatusStrip orderState={orderState} requiredGates={requiredGates} poBlocked={!liveProject.quoteNumber} />
 
       <div className="space-y-4 mt-5">
         {requiredGates.includes("email") && (
@@ -190,26 +191,30 @@ export const OrderConfirmationSheet = ({
 
 
 // ─── Status strip ────────────────────────────────────────────────────────────
+const SLATE = "#4A5D8A";
 const StatusStrip = ({
-  orderState, requiredGates,
+  orderState, requiredGates, poBlocked,
 }: {
   orderState: { satisfiedGates: GateKey[] };
   requiredGates: GateKey[];
+  poBlocked: boolean;
 }) => (
   <div className="flex gap-1.5 flex-wrap">
     {(["email", "quotation", "po", "deposit"] as GateKey[]).map((g) => {
       const required = requiredGates.includes(g);
       const satisfied = orderState.satisfiedGates.includes(g);
-      const color = !required ? GRAY : satisfied ? GREEN : ORANGE;
-      const symbol = !required ? "—" : satisfied ? "✓" : "●";
+      const isBlocked = g === "po" && required && poBlocked;
+      const color = isBlocked ? SLATE : !required ? GRAY : satisfied ? GREEN : ORANGE;
+      const symbol = isBlocked ? "🔒" : !required ? "—" : satisfied ? "✓" : "●";
       return (
         <div
           key={g}
           className="flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-medium"
           style={{ background: `${color}1A`, color }}
+          title={isBlocked ? "Requires Q# first" : undefined}
         >
           <span>{symbol}</span>
-          <span>{GATE_LABELS[g]}</span>
+          <span>{GATE_LABELS[g]}{isBlocked ? " · Requires Q#" : ""}</span>
         </div>
       );
     })}
@@ -587,265 +592,128 @@ const QuotationSection = ({
 };
 
 // ─── PO section ──────────────────────────────────────────────────────────────
+// Customer PO is the only gate where DATA ENTRY IS APPROVAL. No explicit
+// "Record approval" step — the approval row is auto-reconciled in
+// usePipelineStore.commitProjectChange whenever customer_po_number is saved.
+// This section is purely a display + edit shell.
 const PoSection = ({
-  project, customer, approval, onSaved, onShowAffected,
+  project, approval, onSaved, onShowAffected,
 }: {
   project: Project; customer: Customer | undefined;
   approval: CustomerPoApprovalRow | null;
   onSaved: () => void;
   onShowAffected: (result: CascadeResult) => void;
 }) => {
-  const user = useCurrentUser();
-  const md = useMasterData();
+  void onShowAffected; // reserved for future cascade modal hooks
   const store = usePipelineStore();
-  const [poInput, setPoInput] = useState(project.customerPoNumber ?? "");
-  const [savingPo, setSavingPo] = useState(false);
+  const md = useMasterData();
+  const [editing, setEditing] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const qn = project.quoteNumber ?? null;
+  const po = project.customerPoNumber ?? null;
 
-  const savePoNumber = async () => {
-    const val = poInput.trim();
-    if (!val) { toast.error("Enter a PO number"); return; }
-    setSavingPo(true);
-    const prior = project.customerPoNumber ?? null;
-    const { error } = await supabase.from("projects").update({ customer_po_number: val }).eq("id", project.id);
-    if (error) { toast.error(`Couldn't save: ${error.message}`); setSavingPo(false); return; }
-    // Mirror to siblings sharing the same quote_number (customer PO # is quote-level).
-    if (project.quoteNumber) {
-      const dbQn = project.quoteNumber.replace(/^Q-/, "");
-      await supabase.from("projects")
-        .update({ customer_po_number: val })
-        .eq("quote_number", dbQn)
-        .neq("id", project.id)
-        .is("deleted_at", null);
-    }
-    const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-    await supabase.from("project_log_entries").insert({
-      id: logId, project_id: project.id, ts: new Date().toISOString(),
-      actor_user_id: user.userId, actor_display_name: user.shortName,
-      action_type: "field_edit",
-      description: `${user.shortName} set Customer PO # to ${val}`,
-      metadata: { field: "customerPoNumber", fromValue: prior, toValue: val } as Json,
-    });
-    pushUndo({
-      id: makeUndoId(), timestamp: Date.now(),
-      description: `Set Customer PO # on ${project.projectName}`,
-      originalLogId: logId,
-      applyInverse: async () => {
-        const { error: e2 } = await supabase.from("projects").update({ customer_po_number: prior }).eq("id", project.id);
-        if (e2) return { ok: false, reason: "Couldn't undo" };
-        if (project.quoteNumber) {
-          const dbQn = project.quoteNumber.replace(/^Q-/, "");
-          await supabase.from("projects")
-            .update({ customer_po_number: prior })
-            .eq("quote_number", dbQn)
-            .neq("id", project.id)
-            .is("deleted_at", null);
-        }
-        onSaved();
-        return { ok: true };
-      },
-    });
-    setSavingPo(false);
+  // Quote-less: gate is blocked entirely.
+  if (!qn) {
+    return (
+      <SectionCard title="Purchase Order" statusLabel="Requires Q#" statusColor={SLATE}>
+        <div className="text-[12px]" style={{ color: "#555" }}>
+          A quote number is required before recording a customer PO.
+        </div>
+      </SectionCard>
+    );
+  }
+
+  const saveCustomerPo = async (val: string) => {
+    const t = val.trim();
+    await store.updateProject(project.id, { customerPoNumber: t || (undefined as unknown as string | null) });
+    setEditing(false);
     onSaved();
-    toast.success("PO # saved");
   };
 
-  if (!project.customerPoNumber) {
+  const revokeCustomerPo = async () => {
+    await store.updateProject(project.id, { customerPoNumber: null as unknown as string });
+    setConfirmRevoke(false);
+    onSaved();
+  };
+
+  // No PO yet — offer inline editor entry.
+  if (!po) {
     return (
       <SectionCard title="Purchase Order" statusLabel="Awaiting input" statusColor={GRAY}>
         <div className="text-[12px] mb-2" style={{ color: "#555" }}>
-          Enter the customer's PO # to record approval.
+          Entering a Customer PO # automatically records the approval.
         </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={poInput}
-            onChange={(e) => setPoInput(e.target.value)}
-            placeholder="e.g. 4501234"
-            maxLength={64}
-            className="flex-1 rounded-md border px-2.5 py-2 text-[13px]"
-            style={{ borderColor: "rgba(27,42,78,0.2)", color: navy }}
-          />
-          <button
-            onClick={savePoNumber}
-            disabled={savingPo}
-            className="px-3 py-2 rounded-md text-[12.5px] font-semibold text-white"
-            style={{ background: navy }}
-          >
-            Save PO #
-          </button>
-        </div>
+        <button
+          onClick={() => setEditing(true)}
+          className="text-[12.5px] font-semibold underline"
+          style={{ color: ORANGE }}
+        >
+          Set Customer PO #
+        </button>
+        <TextEditor
+          open={editing}
+          onClose={() => setEditing(false)}
+          title="Customer PO #"
+          value=""
+          placeholder="e.g. 4501234"
+          onSave={saveCustomerPo}
+        />
       </SectionCard>
     );
   }
 
-  const po = project.customerPoNumber;
-  // Customer PO approvals are scoped per-(quote_number, customer_po_number).
-  // If the project has no quote_number we can't record/cascade an approval.
-  const qn = project.quoteNumber ?? null;
-  if (!qn) {
-    return (
-      <SectionCard title="Purchase Order" statusLabel="Awaiting input" statusColor={GRAY}>
-        <div className="text-[12px]" style={{ color: "#555" }}>
-          This project doesn't have a Quote # yet. A Customer PO approval is
-          scoped to a specific quote — set the Q# first, then come back to
-          record this approval.
-        </div>
-      </SectionCard>
-    );
-  }
-  // Siblings = projects sharing BOTH the same quote_number AND the same PO #.
-  const siblings = store.projects.filter(
-    (p) => p.id !== project.id && !p.deletedAt && p.customerPoNumber === po && p.quoteNumber === qn,
-  );
-  const isSat = !!approval;
+  // PO set → read-only display with Edit + Revoke.
+  const approvedOnLabel = approval?.approved_on
+    ? new Date(approval.approved_on).toLocaleString(undefined, {
+        day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+      })
+    : null;
+  const approverName = approval
+    ? (approval.approved_by_buyer_id
+        ? md.buyers.find((b) => b.id === approval.approved_by_buyer_id)?.name
+        : approval.approved_by_other_name) ?? null
+    : null;
 
   return (
-    <ApprovalSubForm
-      title="Purchase Order"
-      docLabel="PO #" docValue={po}
-      siblings={siblings.map((s) => ({ id: s.id, name: s.projectName }))}
-      existing={approval ? {
-        approvedByBuyerId: approval.approved_by_buyer_id ?? null,
-        approvedByOtherName: approval.approved_by_other_name ?? null,
-        approvedOn: approval.approved_on,
-        viaChannel: approval.via_channel as ViaChannel,
-        notes: approval.notes ?? "",
-      } : null}
-      isSat={isSat}
-      customer={customer}
-      buyerLookup={md.buyers}
-      onUpsert={async (form, isEdit) => {
-        const prior = approval ? { ...approval } : null;
-        const payload = {
-          customer_po_number: po,
-          quote_number: qn,
-          approved_by_buyer_id: form.approvedByBuyerId,
-          approved_by_other_name: form.approvedByOtherName,
-          approved_on: form.approvedOn,
-          via_channel: form.viaChannel,
-          notes: form.notes.trim() || null,
-          recorded_by_user_id: user.userId,
-        };
-        const { data: nextRow, error } = await supabase
-          .from("customer_po_approvals")
-          .upsert(payload, { onConflict: "quote_number,customer_po_number" })
-          .select().maybeSingle();
-        if (error) { toast.error(`Couldn't save: ${error.message}`); return false; }
-        const cascadeTs = new Date().toISOString();
-        const buyerName = form.approvedByBuyerId
-          ? md.buyers.find((b) => b.id === form.approvedByBuyerId)?.name ?? "—"
-          : form.approvedByOtherName ?? "—";
-        const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-        const verb = isEdit ? "updated" : "recorded";
-        const desc = `${user.shortName} ${verb} PO approval · PO #${po} from ${buyerName} via ${channelLabel(form.viaChannel)}`;
-        await supabase.from("project_log_entries").insert({
-          id: logId, project_id: project.id, ts: cascadeTs,
-          actor_user_id: user.userId, actor_display_name: user.shortName,
-          action_type: isEdit ? "customer_po_approval_update" : "customer_po_approval_create",
-          description: desc,
-          metadata: { customer_po_number: po, quote_number: qn, via_channel: form.viaChannel, approved_on: form.approvedOn } as Json,
-        });
-        const changeType = isEdit ? "customer_po_update" as const : "customer_po_create" as const;
-        const result = await cascadeApprovalChange({
-          changeType, docNumber: po, triggeringProjectId: project.id,
-          triggeringQuoteNumber: qn,
-          approvalRow: (nextRow as CustomerPoApprovalRow) ?? null, priorApprovalRow: prior,
-          actorUserId: user.userId, actorDisplayName: user.shortName,
-          cascadeTs, triggeringLogId: logId,
-        });
-        fireBulkToast({
-          changeType, docNumber: po, result,
-          onViewAffected: result.affectedProjectIds.length > 1 ? () => onShowAffected(result) : undefined,
-        });
-        pushUndo({
-          id: makeUndoId(), timestamp: Date.now(),
-          description: `${verb === "recorded" ? "Recorded" : "Updated"} PO approval · ${po}`,
-          originalLogId: logId, originalDescription: desc,
-          applyInverse: async () => {
-            if (prior) {
-              const { error: e2 } = await supabase.from("customer_po_approvals").upsert(prior, { onConflict: "quote_number,customer_po_number" });
-              if (e2) return { ok: false, reason: "Couldn't restore PO approval" };
-            } else {
-              const { error: e2 } = await supabase.from("customer_po_approvals").delete()
-                .eq("customer_po_number", po).eq("quote_number", qn);
-              if (e2) return { ok: false, reason: "Couldn't undo PO approval" };
-            }
-            const undoTs = new Date().toISOString();
-            const undoResult = await cascadeApprovalChange({
-              changeType: prior ? "customer_po_update" : "customer_po_revoke",
-              docNumber: po, triggeringProjectId: project.id,
-              triggeringQuoteNumber: qn,
-              approvalRow: prior, priorApprovalRow: (nextRow as CustomerPoApprovalRow) ?? null,
-              actorUserId: user.userId, actorDisplayName: user.shortName,
-              cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
-            });
-            fireBulkToast({
-              changeType: prior ? "customer_po_update" : "customer_po_revoke",
-              docNumber: po, result: undoResult, isUndo: true,
-            });
-            onSaved();
-            return { ok: true };
-          },
-        });
-        onSaved();
-        return true;
-      }}
-      onRevoke={async () => {
-        if (!approval) return;
-        const prior = { ...approval };
-        const { error } = await supabase.from("customer_po_approvals").delete()
-          .eq("customer_po_number", po).eq("quote_number", qn);
-        if (error) { toast.error(`Couldn't revoke: ${error.message}`); return; }
-        const cascadeTs = new Date().toISOString();
-        const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-        await supabase.from("project_log_entries").insert({
-          id: logId, project_id: project.id, ts: cascadeTs,
-          actor_user_id: user.userId, actor_display_name: user.shortName,
-          action_type: "customer_po_approval_revoke",
-          description: `${user.shortName} revoked PO approval · PO #${po}`,
-          metadata: { customer_po_number: po, quote_number: qn } as Json,
-        });
-        const result = await cascadeApprovalChange({
-          changeType: "customer_po_revoke", docNumber: po, triggeringProjectId: project.id,
-          triggeringQuoteNumber: qn,
-          approvalRow: null, priorApprovalRow: prior,
-          actorUserId: user.userId, actorDisplayName: user.shortName,
-          cascadeTs, triggeringLogId: logId,
-        });
-        fireBulkToast({
-          changeType: "customer_po_revoke", docNumber: po, result,
-          onViewAffected: result.affectedProjectIds.length > 1 ? () => onShowAffected(result) : undefined,
-        });
-        pushUndo({
-          id: makeUndoId(), timestamp: Date.now(),
-          description: `Revoked PO approval · ${po}`,
-          originalLogId: logId,
-          applyInverse: async () => {
-            const { error: e2 } = await supabase.from("customer_po_approvals").insert(prior);
-            if (e2) {
-              if ((e2 as { code?: string }).code === "23505") {
-                return { ok: false, reason: "Can't undo — a different approval now exists for this PO" };
-              }
-              return { ok: false, reason: "Couldn't restore PO approval" };
-            }
-            const undoTs = new Date().toISOString();
-            const undoResult = await cascadeApprovalChange({
-              changeType: "customer_po_create", docNumber: po, triggeringProjectId: project.id,
-              triggeringQuoteNumber: qn,
-              approvalRow: prior, priorApprovalRow: null,
-              actorUserId: user.userId, actorDisplayName: user.shortName,
-              cascadeTs: undoTs, triggeringLogId: logId, undoOfLogId: logId,
-            });
-            fireBulkToast({
-              changeType: "customer_po_create", docNumber: po, result: undoResult, isUndo: true,
-            });
-            onSaved();
-            return { ok: true };
-          },
-        });
-        onSaved();
-      }}
-    />
+    <SectionCard title="Purchase Order" statusLabel="Satisfied" statusColor={GREEN}>
+      <div className="text-[12px] space-y-0.5" style={{ color: "#555" }}>
+        <div>PO # <b style={{ color: navy }}>{po}</b></div>
+        {approvedOnLabel && (
+          <div className="text-[11px]" style={{ color: GRAY }}>
+            Received {approvedOnLabel}{approverName ? ` · by ${approverName}` : ""}
+          </div>
+        )}
+      </div>
+      <div className="mt-2.5 flex gap-2">
+        <button onClick={() => setEditing(true)} className="text-[11.5px] underline" style={{ color: ORANGE }}>Edit</button>
+        <button
+          onClick={() => setConfirmRevoke(true)}
+          className="text-[11.5px] px-2 py-1 rounded border"
+          style={{ borderColor: "#C84A4A", color: "#C84A4A" }}
+        >
+          Revoke approval
+        </button>
+      </div>
+      <TextEditor
+        open={editing}
+        onClose={() => setEditing(false)}
+        title="Customer PO #"
+        value={po}
+        placeholder="e.g. 4501234"
+        onSave={saveCustomerPo}
+        onClear={() => saveCustomerPo("")}
+        clearLabel="Clear Customer PO #"
+        allowEmpty
+      />
+      <ConfirmDialog
+        open={confirmRevoke}
+        title={`Revoke approval for PO #${po}?`}
+        description="Clears the Customer PO # and removes the approval. This affects every project on this quote."
+        confirmLabel="Revoke" destructive
+        onCancel={() => setConfirmRevoke(false)}
+        onConfirm={revokeCustomerPo}
+      />
+    </SectionCard>
   );
 };
 
