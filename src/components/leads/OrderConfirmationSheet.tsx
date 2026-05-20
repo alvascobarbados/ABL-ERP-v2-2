@@ -147,7 +147,7 @@ export const OrderConfirmationSheet = ({
   return (
     <Sheet open={open} onClose={onClose} title="Order Confirmation" width="max-w-lg">
       {/* Status strip */}
-      <StatusStrip orderState={orderState} requiredGates={requiredGates} />
+      <StatusStrip orderState={orderState} requiredGates={requiredGates} poBlocked={!liveProject.quoteNumber} />
 
       <div className="space-y-4 mt-5">
         {requiredGates.includes("email") && (
