@@ -337,12 +337,12 @@ const Th = ({ children, className }: { children?: React.ReactNode; className?: s
 
 // ─── Customer row group ────────────────────────────────────────────────
 const CustomerGroup = ({
-  customer, buyers, contactCols, onView, onAddBuyer, onDelete,
+  customer, buyers, mode, onView, onAddBuyer, onDelete,
   onRequestCustomerMerge, onRequestBuyerMerge,
 }: {
   customer: Customer;
   buyers: Buyer[];
-  contactCols: ContactColsState;
+  mode: ListMode;
   onView: () => void;
   onAddBuyer: () => void;
   onDelete: () => void;
