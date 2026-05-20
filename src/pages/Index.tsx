@@ -232,6 +232,7 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const store = usePipelineStore();
   const { projects, shipments, moveCard, pulsePipeline, triggerPulse, loading } = store;
+  const md = useMasterData();
   const [newProjectOpen, setNewProjectOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabId>("all");
