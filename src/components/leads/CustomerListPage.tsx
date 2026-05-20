@@ -435,15 +435,19 @@ const CustomerGroup = ({
                 <EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" />
               </Td>
               {/* Gate cells span all buyer rows — they're customer-level config */}
-              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="email" /></Td>
-              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="quotation" /></Td>
-              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="po" /></Td>
-              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="deposit" /></Td>
+              {mode === "requirements" && (
+                <>
+                  <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="email" /></Td>
+                  <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="quotation" /></Td>
+                  <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="po" /></Td>
+                  <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="deposit" /></Td>
+                </>
+              )}
             </>
           )}
           <Td><BuyerNameCell buyer={buyer} customerName={customer.name} onRequestMerge={onRequestBuyerMerge} /></Td>
-          {contactCols.email && <Td><BuyerEmailCell buyer={buyer} /></Td>}
-          {contactCols.contact && <Td><BuyerContactCell buyer={buyer} /></Td>}
+          {mode === "contact" && <Td><BuyerEmailCell buyer={buyer} /></Td>}
+          {mode === "contact" && <Td><BuyerContactCell buyer={buyer} /></Td>}
           {idx === 0 && (
             <Td rowSpan={rowCount} className="align-top">
               <RowMenu onView={onView} onAddBuyer={onAddBuyer} onDelete={onDelete} />
