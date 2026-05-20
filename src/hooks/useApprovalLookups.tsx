@@ -19,6 +19,7 @@ import type {
   QuotationApprovalRow,
   QuotationEmailVerbalApprovalRow,
   CustomerPoApprovalRow,
+  poApprovalKey,
 } from "@/lib/orderConfirmation";
 
 export interface ApprovalsBundle {
