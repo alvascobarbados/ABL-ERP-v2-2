@@ -198,8 +198,8 @@ export const FilterSheet = ({
     if (!value.stages.length) return "Any";
     return value.stages.map((id) => ALL_STAGES.find((s) => s.id === id)?.label ?? id).join(", ");
   }, [value.stages]);
-  const urgencyLabel = value.urgency
-    ? URGENCY_OPTIONS.find((o) => o.id === value.urgency)?.label ?? "Any"
+  const orderApprovalLabel = value.orderApproval.length
+    ? value.orderApproval.map((id) => ORDER_APPROVAL_OPTIONS.find((o) => o.id === id)?.label ?? id).join(", ")
     : "Any";
 
   if (!open) return null;
