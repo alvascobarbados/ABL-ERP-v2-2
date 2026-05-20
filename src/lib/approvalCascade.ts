@@ -156,6 +156,13 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
   const empty: CascadeResult = { affectedProjectIds: [], siblingProjectIds: [], stateTransitions: [] };
 
   // 1. Find all affected projects (matching doc number, not soft-deleted).
+  // Customer PO cascades additionally require quote_number scoping — a PO is
+  // implicitly issued against a specific quote, so the cascade only fans out
+  // to projects sharing BOTH (quote_number, customer_po_number).
+  if (kind === "customer_po" && !input.triggeringQuoteNumber) {
+    // No quote scope → cascade is meaningless. Skip entirely.
+    return empty;
+  }
   const projectsQuery = supabase
     .from("projects")
     .select("*")
@@ -164,7 +171,7 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
     ? projectsQuery.eq("proof_number", input.docNumber)
     : kind === "quotation" || kind === "email_verbal"
       ? projectsQuery.eq("quote_number", input.docNumber)
-      : projectsQuery.eq("customer_po_number", input.docNumber);
+      : projectsQuery.eq("customer_po_number", input.docNumber).eq("quote_number", input.triggeringQuoteNumber!);
   const { data: projectRows, error: pe } = await filtered;
   if (pe || !projectRows || projectRows.length === 0) return empty;
 
