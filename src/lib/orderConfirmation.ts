@@ -181,8 +181,10 @@ export function isGateSatisfied(
       return !!project.quoteNumber && !!lookup.email[project.quoteNumber];
     case "quotation":
       return !!project.quoteNumber && !!lookup.quotation[project.quoteNumber];
-    case "po":
-      return !!project.customerPoNumber && !!lookup.po[project.customerPoNumber];
+    case "po": {
+      const key = poApprovalKey(project.quoteNumber, project.customerPoNumber);
+      return !!key && !!lookup.po[key];
+    }
     case "deposit":
       return project.depositPaidDate != null;
   }
