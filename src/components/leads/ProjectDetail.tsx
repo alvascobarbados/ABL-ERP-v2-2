@@ -712,7 +712,10 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
               <DetailRow
                 label="Customer PO #"
                 value={live.customerPoNumber}
-                onClick={() => setEditor({ kind: "customerPo" })}
+                onClick={live.quoteNumber ? () => setEditor({ kind: "customerPo" }) : undefined}
+                locked={!live.quoteNumber}
+                lockedHint={!live.quoteNumber ? "Set Q# first" : undefined}
+                title={!live.quoteNumber ? "Enter a quote number first." : undefined}
               />
               <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
               <DetailRow
