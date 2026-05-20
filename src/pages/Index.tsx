@@ -337,6 +337,37 @@ const Index = () => {
     [projects],
   );
 
+  // Order Approval state for ORDER APPROVAL filter chips. Computed once per
+  // filter pass over all projects so cardMatchesFilter is O(1) per row.
+  // Maps "gray" with required===0 → "approved" (vacuously satisfied).
+  const allProjectsForApprovals = useMemo(
+    () => [...pipelineProjects, ...completedProjects],
+    [pipelineProjects, completedProjects],
+  );
+  const approvalDocsAll = useMemo(
+    () => allProjectsForApprovals.map((p) => ({
+      proofNumber: p.proofNumber,
+      quoteNumber: p.quoteNumber,
+      customerPoNumber: p.customerPoNumber,
+    })),
+    [allProjectsForApprovals],
+  );
+  const approvalsAll = useApprovalLookups(approvalDocsAll);
+  const orderApprovalById = useMemo(() => {
+    const m = new Map<string, "approved" | "partial" | "not_approved">();
+    for (const p of allProjectsForApprovals) {
+      const customer = md.findCustomerByName(p.customer) ?? null;
+      const s = computeOrderConfirmationState(p, customer, approvalsAll.order);
+      let key: "approved" | "partial" | "not_approved";
+      if (s.state === "green") key = "approved";
+      else if (s.state === "orange") key = "partial";
+      else key = s.required === 0 ? "approved" : "not_approved";
+      m.set(p.id, key);
+    }
+    return m;
+  }, [allProjectsForApprovals, approvalsAll, md]);
+
+
   // Build cards list (scope by tab)
   const baseCards = useMemo<PipelineCard[]>(() => {
     if (isCompleted) return completedProjects.map(buildCard);
