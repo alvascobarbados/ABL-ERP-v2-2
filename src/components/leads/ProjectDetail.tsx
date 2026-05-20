@@ -1049,6 +1049,17 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         clearLabel="Clear PO number"
       />
       <TextEditor
+        open={editor?.kind === "customerPo"}
+        onClose={() => setEditor(null)}
+        title="Customer PO #"
+        value={live.customerPoNumber ?? ""}
+        placeholder="e.g. 4501234"
+        onSave={saveCustomerPo}
+        onClear={() => saveCustomerPo("")}
+        clearLabel="Clear Customer PO #"
+        allowEmpty
+      />
+      <TextEditor
         open={editor?.kind === "invoice"}
         onClose={() => setEditor(null)}
         title="Invoice number"
