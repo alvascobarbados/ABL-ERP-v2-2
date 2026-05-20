@@ -1346,7 +1346,7 @@ export const SectionHeaderWithAction = ({
 
 // Single label/value row used by DETAILS and TIMELINE.
 export const DetailRow = ({
-  label, value, placeholder, onClick, locked, lockedHint, trailing, valueColor,
+  label, value, placeholder, onClick, locked, lockedHint, trailing, valueColor, title,
 }: {
   label: string;
   value?: string;
@@ -1356,6 +1356,8 @@ export const DetailRow = ({
   lockedHint?: string;
   trailing?: React.ReactNode;
   valueColor?: string;
+  /** Native browser tooltip — useful when locked to explain why. */
+  title?: string;
 }) => {
   const isEmpty = !value;
   const display = value ?? placeholder ?? "—";
@@ -1400,7 +1402,7 @@ export const DetailRow = ({
 
   if (!interactive) {
     return (
-      <div className={baseClass} style={{ ...borderStyle, minHeight: 40 }}>
+      <div className={baseClass} style={{ ...borderStyle, minHeight: 40 }} title={title}>
         {content}
       </div>
     );
@@ -1410,6 +1412,7 @@ export const DetailRow = ({
       onClick={onClick}
       className={cn(baseClass, "rounded-md hover:bg-muted/40 transition-colors")}
       style={{ ...borderStyle, minHeight: 40 }}
+      title={title}
     >
       {content}
     </button>
