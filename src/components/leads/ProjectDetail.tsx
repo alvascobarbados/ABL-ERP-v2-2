@@ -331,6 +331,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
     updateProject(live.id, { poNumber: t });
     setEditor(null);
   };
+  const saveCustomerPo = (v: string) => {
+    const t = v.trim() || undefined;
+    updateProject(live.id, { customerPoNumber: t });
+    setEditor(null);
+  };
   const saveInvoice = (v: string) => {
     const t = stripNumberPrefix(v, "INV") || undefined;
     updateProject(live.id, { invoiceNumber: t });
