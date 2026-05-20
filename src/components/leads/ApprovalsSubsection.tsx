@@ -85,8 +85,8 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
         quoteNumber
           ? supabase.from("quotation_email_verbal_approvals").select("*").eq("q_number", quoteNumber).maybeSingle()
           : Promise.resolve({ data: null }),
-        customerPoNumber
-          ? supabase.from("customer_po_approvals").select("*").eq("customer_po_number", customerPoNumber).maybeSingle()
+        customerPoNumber && quoteNumber
+          ? supabase.from("customer_po_approvals").select("*").eq("customer_po_number", customerPoNumber).eq("quote_number", quoteNumber).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
       setArtworkApproval((a.data as ArtworkApprovalRow | null) ?? null);
