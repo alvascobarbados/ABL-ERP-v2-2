@@ -822,7 +822,67 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     }
     // Best-effort mirror of quote-level fields to siblings sharing quote_number.
     await mirrorToSiblings(optimistic, prevRow);
+    // Customer PO auto-approval reconciliation: customer_po_number entry IS
+    // the approval action (no explicit Record-Approval step). One approval
+    // row per quote_number — changes to the PO# value update that row in
+    // place, preserving approved_on (a correction, not a re-approval).
+    await reconcileCustomerPoApproval(optimistic, prevRow);
     return true;
+  };
+
+  /**
+   * Reconcile customer_po_approvals after a project save.
+   * - PO set/changed (with quote): upsert one row per quote, preserving timestamp.
+   * - PO cleared: delete the row for that quote.
+   * - No quote_number: skip (defensive — UI blocks this path).
+   */
+  const reconcileCustomerPoApproval = async (optimistic: Project, prevRow: Project | undefined) => {
+    const prevPo = prevRow?.customerPoNumber ?? null;
+    const nextPo = optimistic.customerPoNumber ?? null;
+    if (prevPo === nextPo) return;
+    const qn = optimistic.quoteNumber ?? null;
+    if (!qn) return;
+    const u = userRef.current;
+
+    if (!nextPo) {
+      // Cleared → revoke approval for this quote.
+      const { error } = await supabase
+        .from("customer_po_approvals")
+        .delete()
+        .eq("quote_number", qn);
+      if (error) console.warn("[store] auto-revoke customer_po_approval failed", error.message);
+      return;
+    }
+
+    // Look up any existing approval row for this quote (one per quote).
+    const { data: existing } = await supabase
+      .from("customer_po_approvals")
+      .select("*")
+      .eq("quote_number", qn)
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.customer_po_number === nextPo) return; // no-op
+      // PO# correction — preserve approved_on, approved_by, notes.
+      const { error } = await supabase
+        .from("customer_po_approvals")
+        .update({ customer_po_number: nextPo })
+        .eq("id", existing.id);
+      if (error) console.warn("[store] auto-update customer_po_approval failed", error.message);
+      return;
+    }
+
+    // Auto-create: data entry IS the approval.
+    const { error } = await supabase.from("customer_po_approvals").insert({
+      quote_number: qn,
+      customer_po_number: nextPo,
+      approved_on: new Date().toISOString(),
+      via_channel: "auto",
+      approved_by_other_name: u.shortName,
+      notes: "Auto-approved on PO # entry",
+      recorded_by_user_id: u.userId,
+    });
+    if (error) console.warn("[store] auto-create customer_po_approval failed", error.message);
   };
 
   const moveCard = useCallback<PipelineStoreCtx["moveCard"]>(async (cardId, target) => {
