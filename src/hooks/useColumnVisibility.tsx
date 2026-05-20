@@ -87,7 +87,7 @@ export const DEFAULT_VISIBLE: Record<TabId, ColumnId[]> = {
   operations: DEFAULT_COLUMNS,
 };
 
-const STORAGE_PREFIX = "alvasco.colVis.v1";
+const STORAGE_PREFIX = "alvasco.colVis.v2";
 
 function storageKey(userId: string, tab: TabId) {
   return `${STORAGE_PREFIX}.${userId}.${tab}`;

@@ -10,7 +10,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { ChevronDown, Search, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { FilterState, DeadlineUrgency } from "./FilterBar";
+import type { FilterState, OrderApprovalChip } from "./FilterBar";
 import { EMPTY_FILTER, filterCount } from "./FilterBar";
 import type { ShippingMode } from "@/data/pipelines";
 
@@ -23,10 +23,10 @@ interface Props {
 }
 
 const MODES: ShippingMode[] = ["Air", "Ocean", "Local"];
-const URGENCY: { id: Exclude<DeadlineUrgency, null>; label: string }[] = [
-  { id: "overdue", label: "Overdue" },
-  { id: "this_week", label: "Due 7d" },
-  { id: "this_month", label: "Future" },
+const ORDER_APPROVAL: { id: OrderApprovalChip; label: string }[] = [
+  { id: "approved", label: "Approved" },
+  { id: "partial", label: "Partially Approved" },
+  { id: "not_approved", label: "Not Approved" },
 ];
 
 // ── Pill chip (paper rest / navy active) ──
@@ -236,8 +236,8 @@ export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesR
   const setMode = (m: ShippingMode) => onChange({ ...value, shippingModes: toggleArr(value.shippingModes as ShippingMode[], m) });
   const setRep = (r: string) => onChange({ ...value, salesReps: toggleArr(value.salesReps, r) });
   const toggleFlag = () => onChange({ ...value, flagged: value.flagged === true ? null : true });
-  const setUrgency = (u: Exclude<DeadlineUrgency, null>) =>
-    onChange({ ...value, urgency: value.urgency === u ? null : u });
+  const toggleApproval = (a: OrderApprovalChip) =>
+    onChange({ ...value, orderApproval: toggleArr(value.orderApproval, a) });
 
   const customer = value.customers[0] ?? null;
   const supplier = value.supplierIds[0] ?? null;
@@ -275,12 +275,7 @@ export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesR
           <Chip active={value.flagged === true} onClick={toggleFlag}>Flagged</Chip>
         </Group>
 
-        <Divider />
-        <Group label="URGENCY">
-          {URGENCY.map((u) => (
-            <Chip key={u.id} active={value.urgency === u.id} onClick={() => setUrgency(u.id)}>{u.label}</Chip>
-          ))}
-        </Group>
+        {/* URGENCY filter removed (deadline dots still render on rows). */}
 
         <Divider />
         <Group label="CUSTOMER">
@@ -301,6 +296,14 @@ export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesR
             onChange={(next) => onChange({ ...value, supplierIds: next })}
           />
         </Group>
+
+        <Divider />
+        <Group label="ORDER APPROVAL">
+          {ORDER_APPROVAL.map((o) => (
+            <Chip key={o.id} active={value.orderApproval.includes(o.id)} onClick={() => toggleApproval(o.id)}>{o.label}</Chip>
+          ))}
+        </Group>
+
 
         {count > 0 && (
           <button

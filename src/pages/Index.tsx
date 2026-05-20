@@ -15,6 +15,9 @@ import { PipelineStatCards, RowLabel } from "@/components/leads/PipelineStatCard
 import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
 import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
+import { useMasterData } from "@/hooks/useMasterData";
+import { useApprovalLookups } from "@/hooks/useApprovalLookups";
+import { computeOrderConfirmationState } from "@/lib/orderConfirmation";
 import { ShipmentView } from "@/components/leads/ShipmentView";
 import { SuppliersView } from "@/components/leads/SuppliersView";
 import { CustomersView } from "@/components/leads/CustomersView";
@@ -192,7 +195,11 @@ function projectHasMissingData(p: Project): boolean {
   return false;
 }
 
-function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
+function cardMatchesFilter(
+  c: PipelineCard,
+  f: FilterState,
+  orderApprovalState?: "approved" | "partial" | "not_approved",
+): boolean {
   const p = c.project;
   if (f.customers.length && !f.customers.includes(p.customer)) return false;
   if (f.projectNames.length && !f.projectNames.includes(p.projectName)) return false;
@@ -211,16 +218,8 @@ function cardMatchesFilter(c: PipelineCard, f: FilterState): boolean {
     if (!f.salesReps.some((r) => reps.includes(r))) return false;
   }
   if (f.stages.length && !f.stages.includes(p.stage)) return false;
-  if (f.urgency) {
-    if (f.urgency === "no_deadline") {
-      if (c.deadlineDate) return false;
-    } else {
-      if (!c.deadlineDate) return false;
-      const days = daysToDeadline(c.deadlineDate);
-      if (f.urgency === "overdue" && days >= 0) return false;
-      if (f.urgency === "this_week" && (days < 0 || days > 7)) return false;
-      if (f.urgency === "this_month" && (days < 0 || days > 30)) return false;
-    }
+  if (f.orderApproval.length) {
+    if (!orderApprovalState || !f.orderApproval.includes(orderApprovalState)) return false;
   }
   if (f.missingOnly && !projectHasMissingData(p)) return false;
   if (f.flagged === true && !p.flagged) return false;
@@ -233,6 +232,7 @@ const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const store = usePipelineStore();
   const { projects, shipments, moveCard, pulsePipeline, triggerPulse, loading } = store;
+  const md = useMasterData();
   const [newProjectOpen, setNewProjectOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabId>("all");
@@ -337,6 +337,37 @@ const Index = () => {
     [projects],
   );
 
+  // Order Approval state for ORDER APPROVAL filter chips. Computed once per
+  // filter pass over all projects so cardMatchesFilter is O(1) per row.
+  // Maps "gray" with required===0 → "approved" (vacuously satisfied).
+  const allProjectsForApprovals = useMemo(
+    () => [...pipelineProjects, ...completedProjects],
+    [pipelineProjects, completedProjects],
+  );
+  const approvalDocsAll = useMemo(
+    () => allProjectsForApprovals.map((p) => ({
+      proofNumber: p.proofNumber,
+      quoteNumber: p.quoteNumber,
+      customerPoNumber: p.customerPoNumber,
+    })),
+    [allProjectsForApprovals],
+  );
+  const approvalsAll = useApprovalLookups(approvalDocsAll);
+  const orderApprovalById = useMemo(() => {
+    const m = new Map<string, "approved" | "partial" | "not_approved">();
+    for (const p of allProjectsForApprovals) {
+      const customer = md.findCustomerByName(p.customer) ?? null;
+      const s = computeOrderConfirmationState(p, customer, approvalsAll.order);
+      let key: "approved" | "partial" | "not_approved";
+      if (s.state === "green") key = "approved";
+      else if (s.state === "orange") key = "partial";
+      else key = s.required === 0 ? "approved" : "not_approved";
+      m.set(p.id, key);
+    }
+    return m;
+  }, [allProjectsForApprovals, approvalsAll, md]);
+
+
   // Build cards list (scope by tab)
   const baseCards = useMemo<PipelineCard[]>(() => {
     if (isCompleted) return completedProjects.map(buildCard);
@@ -361,7 +392,7 @@ const Index = () => {
     const q = search.trim();
     const match = (p: Project) => {
       const c = buildCard(p);
-      if (!cardMatchesFilter(c, filters)) return false;
+      if (!cardMatchesFilter(c, filters, orderApprovalById.get(c.id))) return false;
       if (q && !projectMatchesSearch(p, q)) return false;
       return true;
     };
@@ -382,7 +413,7 @@ const Index = () => {
     const q = search.trim();
     return completedProjects.filter((p) => {
       const c = buildCard(p);
-      if (!cardMatchesFilter(c, filters)) return false;
+      if (!cardMatchesFilter(c, filters, orderApprovalById.get(c.id))) return false;
       if (q && !projectMatchesSearch(p, q)) return false;
       return true;
     }).length;
@@ -408,7 +439,7 @@ const Index = () => {
     }
     return pool
       .filter((c) => {
-        if (!cardMatchesFilter(c, filters)) return false;
+        if (!cardMatchesFilter(c, filters, orderApprovalById.get(c.id))) return false;
         if (searchActive && !projectMatchesSearch(c.project, search.trim())) return false;
         // Sub-chevron stage filter (only applies when not in "all" / "completed" tabs).
         if (subStage && c.stage !== subStage) return false;
@@ -426,7 +457,7 @@ const Index = () => {
       .filter((p) => p.pipeline === activePipeline)
       .forEach((p) => {
         const c = buildCard(p);
-        if (!cardMatchesFilter(c, filters)) return;
+        if (!cardMatchesFilter(c, filters, orderApprovalById.get(c.id))) return;
         if (q && !projectMatchesSearch(p, q)) return;
         counts[p.stage] = (counts[p.stage] ?? 0) + 1;
       });
@@ -719,7 +750,7 @@ const Index = () => {
         {(() => {
           const shippingProjectsFiltered = projects.filter((p) => {
             if (p.pipeline !== "shipping") return false;
-            if (!cardMatchesFilter(buildCard(p), filters)) return false;
+            if (!cardMatchesFilter(buildCard(p), filters, orderApprovalById.get(p.id))) return false;
             if (isSearching && !projectMatchesSearch(p, search.trim())) return false;
             return true;
           });
