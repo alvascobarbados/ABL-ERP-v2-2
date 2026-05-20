@@ -392,7 +392,7 @@ const Index = () => {
     const q = search.trim();
     const match = (p: Project) => {
       const c = buildCard(p);
-      if (!cardMatchesFilter(c, filters)) return false;
+      if (!cardMatchesFilter(c, filters, orderApprovalById.get(c.id))) return false;
       if (q && !projectMatchesSearch(p, q)) return false;
       return true;
     };
@@ -413,7 +413,7 @@ const Index = () => {
     const q = search.trim();
     return completedProjects.filter((p) => {
       const c = buildCard(p);
-      if (!cardMatchesFilter(c, filters)) return false;
+      if (!cardMatchesFilter(c, filters, orderApprovalById.get(c.id))) return false;
       if (q && !projectMatchesSearch(p, q)) return false;
       return true;
     }).length;
@@ -439,7 +439,7 @@ const Index = () => {
     }
     return pool
       .filter((c) => {
-        if (!cardMatchesFilter(c, filters)) return false;
+        if (!cardMatchesFilter(c, filters, orderApprovalById.get(c.id))) return false;
         if (searchActive && !projectMatchesSearch(c.project, search.trim())) return false;
         // Sub-chevron stage filter (only applies when not in "all" / "completed" tabs).
         if (subStage && c.stage !== subStage) return false;
@@ -457,7 +457,7 @@ const Index = () => {
       .filter((p) => p.pipeline === activePipeline)
       .forEach((p) => {
         const c = buildCard(p);
-        if (!cardMatchesFilter(c, filters)) return;
+        if (!cardMatchesFilter(c, filters, orderApprovalById.get(c.id))) return;
         if (q && !projectMatchesSearch(p, q)) return;
         counts[p.stage] = (counts[p.stage] ?? 0) + 1;
       });
@@ -750,7 +750,7 @@ const Index = () => {
         {(() => {
           const shippingProjectsFiltered = projects.filter((p) => {
             if (p.pipeline !== "shipping") return false;
-            if (!cardMatchesFilter(buildCard(p), filters)) return false;
+            if (!cardMatchesFilter(buildCard(p), filters, orderApprovalById.get(p.id))) return false;
             if (isSearching && !projectMatchesSearch(p, search.trim())) return false;
             return true;
           });
