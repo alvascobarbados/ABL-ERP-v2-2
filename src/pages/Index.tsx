@@ -15,6 +15,9 @@ import { PipelineStatCards, RowLabel } from "@/components/leads/PipelineStatCard
 import { DesktopFilterBar } from "@/components/leads/DesktopFilterBar";
 import { FilterState, EMPTY_FILTER, filterCount } from "@/components/leads/FilterBar";
 import { ProjectDetail } from "@/components/leads/ProjectDetail";
+import { useMasterData } from "@/hooks/useMasterData";
+import { useApprovalLookups } from "@/hooks/useApprovalLookups";
+import { computeOrderConfirmationState } from "@/lib/orderConfirmation";
 import { ShipmentView } from "@/components/leads/ShipmentView";
 import { SuppliersView } from "@/components/leads/SuppliersView";
 import { CustomersView } from "@/components/leads/CustomersView";
