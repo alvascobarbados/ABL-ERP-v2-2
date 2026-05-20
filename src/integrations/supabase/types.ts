@@ -108,6 +108,7 @@ export type Database = {
           customer_po_number: string
           id: string
           notes: string | null
+          quote_number: string
           recorded_by_user_id: string
           updated_at: string
           via_channel: string
@@ -120,6 +121,7 @@ export type Database = {
           customer_po_number: string
           id?: string
           notes?: string | null
+          quote_number: string
           recorded_by_user_id: string
           updated_at?: string
           via_channel: string
@@ -132,6 +134,7 @@ export type Database = {
           customer_po_number?: string
           id?: string
           notes?: string | null
+          quote_number?: string
           recorded_by_user_id?: string
           updated_at?: string
           via_channel?: string
