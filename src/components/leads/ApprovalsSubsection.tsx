@@ -173,7 +173,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
   const orderState = useMemo(() => {
     const lookup = {
       quotation: quoteNumber && quotationApproval ? { [quoteNumber]: quotationApproval } : {},
-      po: customerPoNumber && customerPoApproval ? { [customerPoNumber]: customerPoApproval } : {},
+      po: (() => { const k = poApprovalKey(quoteNumber, customerPoNumber); return k && customerPoApproval ? { [k]: customerPoApproval } : {}; })(),
       email: quoteNumber && emailVerbalApproval ? { [quoteNumber]: emailVerbalApproval } : {},
     };
     const cust = customer
