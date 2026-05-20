@@ -835,45 +835,112 @@ const ApprovalSubForm = ({
 };
 
 // ─── Adjust requirements expander ────────────────────────────────────────────
+// Per-project overrides are project-scoped — they intentionally do NOT cascade
+// to quote-siblings, and the audit row is written only to the triggering
+// project. The previous implementation wrote the legacy
+// `gate_override_add/remove` action types with a thin description and no
+// customer-default context. We now write the richer
+// `requirement_override_added/removed/reset` family so the Activity log can
+// answer "what was the customer default, and what did this project move to?"
+
+type OverrideAction = "add" | "remove" | "reset";
+
+const customerDefaultLabel = (
+  customer: Customer | undefined,
+  gate: GateKey,
+): "Required" | "Not Required" | "Conditional" => {
+  const cfg = (customer?.order_confirmation_config as
+    | { [k in GateKey]?: { mode?: "required" | "not_required" | "conditional" } }
+    | undefined)?.[gate];
+  if (cfg?.mode === "required") return "Required";
+  if (cfg?.mode === "conditional") return "Conditional";
+  return "Not Required";
+};
+
 const AdjustRequirementsExpander = ({
   project, customer, onSaved,
 }: { project: Project; customer: Customer | undefined; onSaved: () => void }) => {
   const user = useCurrentUser();
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState<{ gate: GateKey; action: "add" | "remove" } | null>(null);
+  const [pending, setPending] = useState<{ gate: GateKey; action: OverrideAction } | null>(null);
   const [reason, setReason] = useState("");
 
   const gates: GateKey[] = ["email", "quotation", "po", "deposit"];
   const cust = customer ? { order_confirmation_config: customer.order_confirmation_config } : { order_confirmation_config: undefined };
+  const customerNameForCopy = customer?.name ?? "Customer";
 
   const apply = async () => {
     if (!pending) return;
     const prior: OrderConfirmationOverrides = (project.orderConfirmationOverrides ?? {}) as OrderConfirmationOverrides;
     const nextOverrides: OrderConfirmationOverrides = { ...prior };
-    nextOverrides[pending.gate] = {
-      action: pending.action,
-      reason: reason.trim() || null,
-      set_at: new Date().toISOString(),
-      set_by_user_id: user.userId,
-    };
+    if (pending.action === "reset") {
+      delete nextOverrides[pending.gate];
+    } else {
+      nextOverrides[pending.gate] = {
+        action: pending.action,
+        reason: reason.trim() || null,
+        set_at: new Date().toISOString(),
+        set_by_user_id: user.userId,
+      };
+    }
+
     const { error } = await supabase.from("projects")
       .update({ order_confirmation_overrides: nextOverrides as unknown as Json })
       .eq("id", project.id);
     if (error) { toast.error(`Couldn't save: ${error.message}`); return; }
+
+    // Build description + action_type per spec.
+    const gateLabel = GATE_LABELS[pending.gate];
+    const customerDefault = customerDefaultLabel(customer, pending.gate);
+    const previousOverride = prior[pending.gate]?.action; // 'add' | 'remove' | undefined
+
+    let actionType: "requirement_override_added" | "requirement_override_removed" | "requirement_override_reset";
+    let newProjectState: "required" | "not_required" | "inherited";
+    let desc: string;
+
+    if (pending.action === "add") {
+      actionType = "requirement_override_added";
+      newProjectState = "required";
+      desc = `${user.shortName} set ${gateLabel} to Required for this project (was ${customerDefault} per ${customerNameForCopy} default)`;
+    } else if (pending.action === "remove") {
+      actionType = "requirement_override_removed";
+      newProjectState = "not_required";
+      desc = `${user.shortName} set ${gateLabel} to Not Required for this project (was ${customerDefault} per ${customerNameForCopy} default)`;
+    } else {
+      actionType = "requirement_override_reset";
+      newProjectState = "inherited";
+      desc = `${user.shortName} reset ${gateLabel} override (back to ${customerNameForCopy} default: ${customerDefault})`;
+    }
+    if (reason.trim()) desc += ` · Reason: ${reason.trim()}`;
+
     const logId = `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-    const verb = pending.action === "add" ? "added" : "removed";
-    const desc = `${user.shortName} ${verb} ${GATE_LABELS[pending.gate]} requirement on this project · Reason: ${reason.trim() || "—"}`;
-    await supabase.from("project_log_entries").insert({
+    const { error: logErr } = await supabase.from("project_log_entries").insert({
       id: logId, project_id: project.id, ts: new Date().toISOString(),
       actor_user_id: user.userId, actor_display_name: user.shortName,
-      action_type: pending.action === "add" ? "gate_override_add" : "gate_override_remove",
+      action_type: actionType,
       description: desc,
-      metadata: { gate: pending.gate, reason: reason.trim() || null } as Json,
+      metadata: {
+        gate: pending.gate,
+        override_type: pending.action === "add" ? "added" : pending.action === "remove" ? "removed" : "reset",
+        previous_customer_default: customerDefault.toLowerCase().replace(" ", "_"),
+        previous_project_override: previousOverride ?? null,
+        new_project_state: newProjectState,
+        reason: reason.trim() || null,
+      } as Json,
     });
+    if (logErr) {
+      // Don't roll back the override — but tell the user the audit row didn't land
+      // so they can re-record it, rather than silently dropping the audit trail.
+      toast.error("Saved, but couldn't write to the activity log.");
+    }
+
     const captured = pending;
     pushUndo({
       id: makeUndoId(), timestamp: Date.now(),
-      description: `${verb === "added" ? "Added" : "Removed"} ${GATE_LABELS[captured.gate]} requirement`,
+      description:
+        captured.action === "reset"
+          ? `Reset ${GATE_LABELS[captured.gate]} override`
+          : `${captured.action === "add" ? "Added" : "Removed"} ${GATE_LABELS[captured.gate]} requirement`,
       originalLogId: logId,
       applyInverse: async () => {
         const { error: e2 } = await supabase.from("projects")
@@ -884,9 +951,12 @@ const AdjustRequirementsExpander = ({
         return { ok: true };
       },
     });
+
     setPending(null);
     setReason("");
     onSaved();
+    const verb =
+      captured.action === "reset" ? "reset" : captured.action === "add" ? "added" : "removed";
     toast.success(`${GATE_LABELS[captured.gate]} requirement ${verb}`);
   };
 
@@ -904,16 +974,29 @@ const AdjustRequirementsExpander = ({
         <div className="mt-2 space-y-1.5">
           {gates.map((g) => {
             const required = isGateRequired(project, cust, g);
+            const overrides = (project.orderConfirmationOverrides ?? {}) as OrderConfirmationOverrides;
+            const hasOverride = !!overrides[g];
             return (
               <div key={g} className="flex items-center justify-between text-[12px]">
                 <span style={{ color: navy }}>{GATE_LABELS[g]}</span>
-                <button
-                  onClick={() => { setPending({ gate: g, action: required ? "remove" : "add" }); setReason(""); }}
-                  className="text-[11px] underline hover:no-underline"
-                  style={{ color: ORANGE }}
-                >
-                  {required ? "Remove this requirement" : "Add this requirement"}
-                </button>
+                <div className="flex items-center gap-3">
+                  {hasOverride && (
+                    <button
+                      onClick={() => { setPending({ gate: g, action: "reset" }); setReason(""); }}
+                      className="text-[11px] underline hover:no-underline"
+                      style={{ color: GRAY }}
+                    >
+                      Reset to default
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setPending({ gate: g, action: required ? "remove" : "add" }); setReason(""); }}
+                    className="text-[11px] underline hover:no-underline"
+                    style={{ color: ORANGE }}
+                  >
+                    {required ? "Remove this requirement" : "Add this requirement"}
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -925,10 +1008,14 @@ const AdjustRequirementsExpander = ({
           <div className="absolute inset-0 bg-black/40" onClick={() => setPending(null)} />
           <div className="relative w-full max-w-md rounded-2xl bg-card border p-5" style={{ borderColor: "hsl(var(--brand-navy) / 0.2)" }}>
             <h3 className="text-lg font-semibold tracking-tight" style={{ color: navy }}>
-              {pending.action === "remove" ? "Remove" : "Add"} {GATE_LABELS[pending.gate]} requirement?
+              {pending.action === "reset"
+                ? `Reset ${GATE_LABELS[pending.gate]} override?`
+                : `${pending.action === "remove" ? "Remove" : "Add"} ${GATE_LABELS[pending.gate]} requirement?`}
             </h3>
             <p className="mt-1 text-sm text-foreground/80">
-              This affects only this project, not {customer?.name ?? "the customer"}'s defaults.
+              {pending.action === "reset"
+                ? `This project will go back to ${customerNameForCopy}'s default (${customerDefaultLabel(customer, pending.gate)}).`
+                : `This affects only this project, not ${customerNameForCopy}'s defaults.`}
             </p>
             <textarea
               value={reason}
@@ -942,7 +1029,7 @@ const AdjustRequirementsExpander = ({
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setPending(null)} className="px-4 py-2 rounded-xl border text-sm font-medium" style={{ borderColor: "rgba(27,42,78,0.3)", color: navy }}>Cancel</button>
               <button onClick={apply} className="px-4 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: ORANGE }}>
-                {pending.action === "remove" ? "Remove" : "Add"}
+                {pending.action === "reset" ? "Reset" : pending.action === "remove" ? "Remove" : "Add"}
               </button>
             </div>
           </div>
@@ -951,3 +1038,4 @@ const AdjustRequirementsExpander = ({
     </div>
   );
 };
+
