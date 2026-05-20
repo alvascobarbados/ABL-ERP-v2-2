@@ -10,7 +10,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { ChevronDown, Search, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { FilterState, DeadlineUrgency } from "./FilterBar";
+import type { FilterState, OrderApprovalChip } from "./FilterBar";
 import { EMPTY_FILTER, filterCount } from "./FilterBar";
 import type { ShippingMode } from "@/data/pipelines";
 
@@ -23,10 +23,10 @@ interface Props {
 }
 
 const MODES: ShippingMode[] = ["Air", "Ocean", "Local"];
-const URGENCY: { id: Exclude<DeadlineUrgency, null>; label: string }[] = [
-  { id: "overdue", label: "Overdue" },
-  { id: "this_week", label: "Due 7d" },
-  { id: "this_month", label: "Future" },
+const ORDER_APPROVAL: { id: OrderApprovalChip; label: string }[] = [
+  { id: "approved", label: "Approved" },
+  { id: "partial", label: "Partially Approved" },
+  { id: "not_approved", label: "Not Approved" },
 ];
 
 // ── Pill chip (paper rest / navy active) ──
