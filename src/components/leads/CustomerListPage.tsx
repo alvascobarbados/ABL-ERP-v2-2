@@ -182,6 +182,7 @@ export const CustomerListPage = () => {
                 Customers <span className="text-muted-foreground font-light">· {md.customers.length}</span>
               </h1>
             </div>
+            <ColumnsButton state={contactCols} onChange={setContactCols} />
             <button
               onClick={() => setAddBuyerOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border transition-colors hover:bg-muted/50"
@@ -199,7 +200,7 @@ export const CustomerListPage = () => {
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-16">
+        <main className="max-w-[1600px] mx-auto px-4 sm:px-6 pb-16">
           {/* Search */}
           <div className="relative my-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -213,16 +214,20 @@ export const CustomerListPage = () => {
           </div>
 
           {/* Table */}
-          <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+          <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
             <table className="w-full text-[13px] border-collapse">
               <thead>
                 <tr style={{ borderBottom: "1px solid hsl(var(--brand-navy) / 0.1)", background: "hsl(var(--brand-navy) / 0.03)" }}>
                   <Th>Name</Th>
                   <Th>Country</Th>
                   <Th>Incoterms</Th>
+                  <Th className="w-[96px]">Email/Verbal</Th>
+                  <Th className="w-[96px]">Signed Quote</Th>
+                  <Th className="w-[96px]">Customer PO</Th>
+                  <Th className="w-[96px]">Deposit</Th>
                   <Th>Buyer</Th>
-                  <Th>Email</Th>
-                  <Th>Contact</Th>
+                  {contactCols.email && <Th>Email</Th>}
+                  {contactCols.contact && <Th>Contact</Th>}
                   <Th className="w-8" />
                 </tr>
               </thead>
@@ -232,6 +237,7 @@ export const CustomerListPage = () => {
                     key={customer.id}
                     customer={customer}
                     buyers={buyers}
+                    contactCols={contactCols}
                     onView={() => navigate(`/customers?customer=${customer.id}`)}
                     onAddBuyer={() => setAddBuyerOpen(true)}
                     onDelete={() => setConfirmDelete(customer)}
@@ -241,13 +247,17 @@ export const CustomerListPage = () => {
                 ))}
                 {groups.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-sm text-muted-foreground italic px-4 py-12 text-center">
+                    <td
+                      colSpan={9 + (contactCols.email ? 1 : 0) + (contactCols.contact ? 1 : 0)}
+                      className="text-sm text-muted-foreground italic px-4 py-12 text-center"
+                    >
                       {q ? "No matches." : "No customers yet."}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+
           </div>
         </main>
 
