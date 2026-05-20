@@ -69,10 +69,10 @@ export const CustomerListPage = () => {
   const [buyerMerge, setBuyerMerge] = useState<BuyerMergePending | null>(null);
   const [merging, setMerging] = useState(false);
 
-  const [contactCols, setContactCols] = useState<ContactColsState>(() => loadContactCols());
+  const [mode, setMode] = useState<ListMode>(() => loadMode());
   useEffect(() => {
-    try { localStorage.setItem(CONTACT_COLS_KEY, JSON.stringify(contactCols)); } catch { /* ignore */ }
-  }, [contactCols]);
+    try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ }
+  }, [mode]);
 
   // Filter: customer matches if its own fields OR any of its buyers match
   const groups = useMemo(() => {
