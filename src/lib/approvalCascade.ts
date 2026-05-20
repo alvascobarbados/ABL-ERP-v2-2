@@ -206,9 +206,15 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
       const { data: edata } = await supabase.from("quotation_email_verbal_approvals").select("*").in("q_number", qNums);
       for (const r of edata ?? []) lookupNext.email[r.q_number] = r as QuotationEmailVerbalApprovalRow;
     }
-    if (poNums.length) {
+    if (poNums.length && qNums.length) {
+      // PO approvals are scoped per (quote_number, customer_po_number). Pull
+      // candidate rows matching any of the affected PO #s, then re-key in JS
+      // by composite key so consumers can look them up via poApprovalKey().
       const { data } = await supabase.from("customer_po_approvals").select("*").in("customer_po_number", poNums);
-      for (const r of data ?? []) lookupNext.po[r.customer_po_number] = r as CustomerPoApprovalRow;
+      for (const r of (data ?? []) as CustomerPoApprovalRow[]) {
+        const k = poApprovalKey(r.quote_number, r.customer_po_number);
+        if (k) lookupNext.po[k] = r;
+      }
     }
     lookupPrior = {
       email: { ...lookupNext.email },
@@ -222,8 +228,10 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
       if (input.priorApprovalRow) lookupPrior.email[input.docNumber] = input.priorApprovalRow as QuotationEmailVerbalApprovalRow;
       else delete lookupPrior.email[input.docNumber];
     } else {
-      if (input.priorApprovalRow) lookupPrior.po[input.docNumber] = input.priorApprovalRow as CustomerPoApprovalRow;
-      else delete lookupPrior.po[input.docNumber];
+      // customer_po: composite key scoped to triggeringQuoteNumber (guaranteed non-null above).
+      const k = poApprovalKey(input.triggeringQuoteNumber, input.docNumber)!;
+      if (input.priorApprovalRow) lookupPrior.po[k] = input.priorApprovalRow as CustomerPoApprovalRow;
+      else delete lookupPrior.po[k];
     }
   } else {
     if (input.approvalRow) artworkLookupNext[input.docNumber] = input.approvalRow as ArtworkApprovalRow;
