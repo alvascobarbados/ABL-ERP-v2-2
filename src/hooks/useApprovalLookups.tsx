@@ -96,7 +96,8 @@ export function useApprovalLookups(projects: ProjectDocs[]): ApprovalsBundle {
       }
       const po: Record<string, CustomerPoApprovalRow> = {};
       for (const row of (poRes.data ?? []) as CustomerPoApprovalRow[]) {
-        po[row.customer_po_number] = row;
+        const k = poApprovalKey(row.quote_number, row.customer_po_number);
+        if (k) po[k] = row;
       }
       return { artwork, order: { email, quotation, po } };
     },
