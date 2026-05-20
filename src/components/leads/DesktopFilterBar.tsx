@@ -275,12 +275,7 @@ export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesR
           <Chip active={value.flagged === true} onClick={toggleFlag}>Flagged</Chip>
         </Group>
 
-        <Divider />
-        <Group label="URGENCY">
-          {URGENCY.map((u) => (
-            <Chip key={u.id} active={value.urgency === u.id} onClick={() => setUrgency(u.id)}>{u.label}</Chip>
-          ))}
-        </Group>
+        {/* URGENCY filter removed (deadline dots still render on rows). */}
 
         <Divider />
         <Group label="CUSTOMER">
