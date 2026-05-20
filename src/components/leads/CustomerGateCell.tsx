@@ -24,6 +24,8 @@ import type { Json } from "@/integrations/supabase/types";
 import type { Customer } from "@/hooks/useMasterData";
 import type { GateKey, GateConfig, OrderConfirmationConfig } from "@/lib/orderConfirmation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePipelineStore } from "@/hooks/usePipelineStore";
+import { writeCustomerGateConfigAudit } from "@/lib/customerGateAudit";
 
 type ShipMode = "Air" | "Ocean" | "Local";
 const SHIP_MODES: ShipMode[] = ["Air", "Ocean", "Local"];
