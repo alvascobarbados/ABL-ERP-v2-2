@@ -182,8 +182,11 @@ export function isGateSatisfied(
     case "quotation":
       return !!project.quoteNumber && !!lookup.quotation[project.quoteNumber];
     case "po": {
-      const key = poApprovalKey(project.quoteNumber, project.customerPoNumber);
-      return !!key && !!lookup.po[key];
+      // Customer PO is auto-approved on data entry. The presence of a
+      // customer_po_number on a project (with a quote) IS the approval —
+      // the customer_po_approvals row is an audit artifact, not the gate.
+      // (Reconciled asynchronously in usePipelineStore.commitProjectChange.)
+      return !!project.quoteNumber && !!project.customerPoNumber && project.customerPoNumber.trim() !== "";
     }
     case "deposit":
       return project.depositPaidDate != null;
