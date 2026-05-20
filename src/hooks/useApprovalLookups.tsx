@@ -19,8 +19,8 @@ import type {
   QuotationApprovalRow,
   QuotationEmailVerbalApprovalRow,
   CustomerPoApprovalRow,
-  poApprovalKey,
 } from "@/lib/orderConfirmation";
+import { poApprovalKey } from "@/lib/orderConfirmation";
 
 export interface ApprovalsBundle {
   artwork: ArtworkApprovalsLookup;
