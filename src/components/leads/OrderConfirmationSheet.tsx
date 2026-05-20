@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { Sheet } from "./Sheet";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { TextEditor } from "./EditorSheets";
 import {
   AffectedProjectsModal,
   SiblingProjectsInline,
