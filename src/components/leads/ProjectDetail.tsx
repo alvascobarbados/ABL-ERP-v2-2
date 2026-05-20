@@ -1483,6 +1483,9 @@ const LOG_DOT: Record<ProjectLogActionType, string> = {
   email_verbal_approval_unset: "hsl(var(--muted-foreground))",
   gate_override_add: "hsl(var(--muted-foreground))",
   gate_override_remove: "hsl(var(--muted-foreground))",
+  requirement_override_added: "hsl(var(--brand-orange))",
+  requirement_override_removed: "hsl(var(--brand-orange))",
+  requirement_override_reset: "hsl(var(--muted-foreground))",
 };
 const fmtLogTs = (d: Date) => {
   const dt = d instanceof Date ? d : new Date(d);
