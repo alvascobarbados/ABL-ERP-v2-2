@@ -98,7 +98,10 @@ export const OrderConfirmationSheet = ({
 
   const lookup: ApprovalRowsLookup = useMemo(() => ({
     quotation: liveProject.quoteNumber && quotationApproval ? { [liveProject.quoteNumber]: quotationApproval } : {},
-    po: liveProject.customerPoNumber && customerPoApproval ? { [liveProject.customerPoNumber]: customerPoApproval } : {},
+    po: (() => {
+      const k = poApprovalKey(liveProject.quoteNumber, liveProject.customerPoNumber);
+      return k && customerPoApproval ? { [k]: customerPoApproval } : {};
+    })(),
     email: liveProject.quoteNumber && emailVerbalApproval ? { [liveProject.quoteNumber]: emailVerbalApproval } : {},
   }), [liveProject.quoteNumber, liveProject.customerPoNumber, quotationApproval, emailVerbalApproval, customerPoApproval]);
 
