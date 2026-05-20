@@ -266,19 +266,24 @@ export const FilterSheet = ({
               onClick={() => setPicker("stages")}
               onClear={() => onChange({ ...value, stages: [] })} />
 
-            {/* Urgency — single-select inline */}
+            {/* Order Approval — multi-select chips */}
             <div className="rounded-xl border p-3" style={{ borderColor: "hsl(var(--brand-navy) / 0.18)" }}>
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-4 w-4" style={{ color: "hsl(var(--brand-navy))" }} />
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Deadline urgency</span>
-                <span className="ml-auto text-xs text-muted-foreground">{urgencyLabel}</span>
+                <CircleCheck className="h-4 w-4" style={{ color: "hsl(var(--brand-navy))" }} />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Order approval</span>
+                <span className="ml-auto text-xs text-muted-foreground">{orderApprovalLabel}</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {URGENCY_OPTIONS.map((o) => {
-                  const sel = value.urgency === o.id;
+                {ORDER_APPROVAL_OPTIONS.map((o) => {
+                  const sel = value.orderApproval.includes(o.id);
                   return (
                     <button key={o.id} type="button"
-                      onClick={() => onChange({ ...value, urgency: sel ? null : o.id })}
+                      onClick={() => onChange({
+                        ...value,
+                        orderApproval: sel
+                          ? value.orderApproval.filter((x) => x !== o.id)
+                          : [...value.orderApproval, o.id],
+                      })}
                       className={cn(
                         "text-xs rounded-full border px-3 py-1.5 transition-colors",
                         sel
@@ -295,6 +300,7 @@ export const FilterSheet = ({
                 })}
               </div>
             </div>
+
 
             {/* Flagged tri-state */}
             <div className="rounded-xl border p-3" style={{ borderColor: "hsl(var(--brand-navy) / 0.18)" }}>
