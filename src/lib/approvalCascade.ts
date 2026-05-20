@@ -22,6 +22,7 @@ import type { Json } from "@/integrations/supabase/types";
 import {
   computeArtworkState,
   computeOrderConfirmationState,
+  poApprovalKey,
   type ArtworkApprovalRow,
   type QuotationApprovalRow,
   type QuotationEmailVerbalApprovalRow,
