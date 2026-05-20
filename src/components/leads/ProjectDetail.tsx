@@ -709,6 +709,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
                 value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
+              <DetailRow
+                label="Customer PO #"
+                value={live.customerPoNumber}
+                onClick={() => setEditor({ kind: "customerPo" })}
+              />
               <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
               <DetailRow
                 label="Deadline"
