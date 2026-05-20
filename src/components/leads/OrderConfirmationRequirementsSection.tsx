@@ -31,6 +31,7 @@ import {
   type ApprovalRowsLookup,
 } from "@/lib/orderConfirmation";
 import { pushUndo, makeUndoId } from "@/hooks/useUndoStack";
+import { writeCustomerGateConfigAudit } from "@/lib/customerGateAudit";
 
 type ShipMode = "Air" | "Ocean" | "Local";
 
