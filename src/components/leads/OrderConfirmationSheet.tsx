@@ -190,26 +190,30 @@ export const OrderConfirmationSheet = ({
 
 
 // ─── Status strip ────────────────────────────────────────────────────────────
+const SLATE = "#4A5D8A";
 const StatusStrip = ({
-  orderState, requiredGates,
+  orderState, requiredGates, poBlocked,
 }: {
   orderState: { satisfiedGates: GateKey[] };
   requiredGates: GateKey[];
+  poBlocked: boolean;
 }) => (
   <div className="flex gap-1.5 flex-wrap">
     {(["email", "quotation", "po", "deposit"] as GateKey[]).map((g) => {
       const required = requiredGates.includes(g);
       const satisfied = orderState.satisfiedGates.includes(g);
-      const color = !required ? GRAY : satisfied ? GREEN : ORANGE;
-      const symbol = !required ? "—" : satisfied ? "✓" : "●";
+      const isBlocked = g === "po" && required && poBlocked;
+      const color = isBlocked ? SLATE : !required ? GRAY : satisfied ? GREEN : ORANGE;
+      const symbol = isBlocked ? "🔒" : !required ? "—" : satisfied ? "✓" : "●";
       return (
         <div
           key={g}
           className="flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-medium"
           style={{ background: `${color}1A`, color }}
+          title={isBlocked ? "Requires Q# first" : undefined}
         >
           <span>{symbol}</span>
-          <span>{GATE_LABELS[g]}</span>
+          <span>{GATE_LABELS[g]}{isBlocked ? " · Requires Q#" : ""}</span>
         </div>
       );
     })}
