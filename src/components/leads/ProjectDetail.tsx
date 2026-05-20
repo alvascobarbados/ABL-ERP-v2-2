@@ -82,6 +82,7 @@ type EditorKind =
   | { kind: "quote" }
   | { kind: "po" }
   | { kind: "poAmount" }
+  | { kind: "customerPo" }
   | { kind: "invoice" }
   | { kind: "tracking" }
   | { kind: "shipmentNumber" }
@@ -328,6 +329,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
   const savePO = (v: string) => {
     const t = stripNumberPrefix(v, "PO") || undefined;
     updateProject(live.id, { poNumber: t });
+    setEditor(null);
+  };
+  const saveCustomerPo = (v: string) => {
+    const t = v.trim() || undefined;
+    updateProject(live.id, { customerPoNumber: t });
     setEditor(null);
   };
   const saveInvoice = (v: string) => {
@@ -703,6 +709,11 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
                 value={live.value ? `${formatAmountFull(live.value)} BBD` : undefined}
                 onClick={() => setEditor({ kind: "amount" })}
               />
+              <DetailRow
+                label="Customer PO #"
+                value={live.customerPoNumber}
+                onClick={() => setEditor({ kind: "customerPo" })}
+              />
               <DetailRow label="Sales rep" value={repNames} onClick={() => setEditor({ kind: "salesRep" })} />
               <DetailRow
                 label="Deadline"
@@ -1036,6 +1047,17 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
         onSave={savePO}
         onClear={() => savePO("")}
         clearLabel="Clear PO number"
+      />
+      <TextEditor
+        open={editor?.kind === "customerPo"}
+        onClose={() => setEditor(null)}
+        title="Customer PO #"
+        value={live.customerPoNumber ?? ""}
+        placeholder="e.g. 4501234"
+        onSave={saveCustomerPo}
+        onClear={() => saveCustomerPo("")}
+        clearLabel="Clear Customer PO #"
+        allowEmpty
       />
       <TextEditor
         open={editor?.kind === "invoice"}

@@ -22,6 +22,7 @@ import type { Json } from "@/integrations/supabase/types";
 import {
   computeArtworkState,
   computeOrderConfirmationState,
+  poApprovalKey,
   type ArtworkApprovalRow,
   type QuotationApprovalRow,
   type QuotationEmailVerbalApprovalRow,
@@ -78,6 +79,13 @@ export interface CascadeInput {
   triggeringLogId?: string;
   /** For undo cascades: id of the original (forward) cascade log to back-reference. */
   undoOfLogId?: string;
+  /**
+   * Required for customer_po_* cascades only: the triggering project's
+   * quote_number. Customer PO approvals are scoped per-(quote, PO) so the
+   * cascade only fans out to projects sharing both. If undefined/null on a
+   * customer_po cascade, the cascade is skipped entirely (returns empty).
+   */
+  triggeringQuoteNumber?: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -149,6 +157,13 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
   const empty: CascadeResult = { affectedProjectIds: [], siblingProjectIds: [], stateTransitions: [] };
 
   // 1. Find all affected projects (matching doc number, not soft-deleted).
+  // Customer PO cascades additionally require quote_number scoping — a PO is
+  // implicitly issued against a specific quote, so the cascade only fans out
+  // to projects sharing BOTH (quote_number, customer_po_number).
+  if (kind === "customer_po" && !input.triggeringQuoteNumber) {
+    // No quote scope → cascade is meaningless. Skip entirely.
+    return empty;
+  }
   const projectsQuery = supabase
     .from("projects")
     .select("*")
@@ -157,7 +172,7 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
     ? projectsQuery.eq("proof_number", input.docNumber)
     : kind === "quotation" || kind === "email_verbal"
       ? projectsQuery.eq("quote_number", input.docNumber)
-      : projectsQuery.eq("customer_po_number", input.docNumber);
+      : projectsQuery.eq("customer_po_number", input.docNumber).eq("quote_number", input.triggeringQuoteNumber!);
   const { data: projectRows, error: pe } = await filtered;
   if (pe || !projectRows || projectRows.length === 0) return empty;
 
@@ -192,9 +207,15 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
       const { data: edata } = await supabase.from("quotation_email_verbal_approvals").select("*").in("q_number", qNums);
       for (const r of edata ?? []) lookupNext.email[r.q_number] = r as QuotationEmailVerbalApprovalRow;
     }
-    if (poNums.length) {
+    if (poNums.length && qNums.length) {
+      // PO approvals are scoped per (quote_number, customer_po_number). Pull
+      // candidate rows matching any of the affected PO #s, then re-key in JS
+      // by composite key so consumers can look them up via poApprovalKey().
       const { data } = await supabase.from("customer_po_approvals").select("*").in("customer_po_number", poNums);
-      for (const r of data ?? []) lookupNext.po[r.customer_po_number] = r as CustomerPoApprovalRow;
+      for (const r of (data ?? []) as CustomerPoApprovalRow[]) {
+        const k = poApprovalKey(r.quote_number, r.customer_po_number);
+        if (k) lookupNext.po[k] = r;
+      }
     }
     lookupPrior = {
       email: { ...lookupNext.email },
@@ -208,8 +229,10 @@ export async function cascadeApprovalChange(input: CascadeInput): Promise<Cascad
       if (input.priorApprovalRow) lookupPrior.email[input.docNumber] = input.priorApprovalRow as QuotationEmailVerbalApprovalRow;
       else delete lookupPrior.email[input.docNumber];
     } else {
-      if (input.priorApprovalRow) lookupPrior.po[input.docNumber] = input.priorApprovalRow as CustomerPoApprovalRow;
-      else delete lookupPrior.po[input.docNumber];
+      // customer_po: composite key scoped to triggeringQuoteNumber (guaranteed non-null above).
+      const k = poApprovalKey(input.triggeringQuoteNumber, input.docNumber)!;
+      if (input.priorApprovalRow) lookupPrior.po[k] = input.priorApprovalRow as CustomerPoApprovalRow;
+      else delete lookupPrior.po[k];
     }
   } else {
     if (input.approvalRow) artworkLookupNext[input.docNumber] = input.approvalRow as ArtworkApprovalRow;

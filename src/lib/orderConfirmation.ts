@@ -82,6 +82,8 @@ export interface QuotationEmailVerbalApprovalRow {
 export interface CustomerPoApprovalRow {
   id: string;
   customer_po_number: string;
+  /** Quote number this PO approval is scoped to (NOT NULL since the cascade-scoping migration). */
+  quote_number: string;
   approved_on: string;
   via_channel: string;
   approved_by_buyer_id?: string | null;
@@ -90,10 +92,16 @@ export interface CustomerPoApprovalRow {
   recorded_by_user_id: string;
 }
 
+/** Composite lookup key for customer PO approvals: scoped per (quote_number, customer_po_number). */
+export function poApprovalKey(quoteNumber: string | null | undefined, poNumber: string | null | undefined): string | null {
+  if (!quoteNumber || !poNumber) return null;
+  return `${quoteNumber}|${poNumber}`;
+}
+
 export interface ApprovalRowsLookup {
   email: Record<string, QuotationEmailVerbalApprovalRow>; // keyed by q_number (Q#-keyed email/verbal)
   quotation: Record<string, QuotationApprovalRow>; // keyed by q_number
-  po: Record<string, CustomerPoApprovalRow>;       // keyed by customer_po_number
+  po: Record<string, CustomerPoApprovalRow>;       // keyed by `${quote_number}|${customer_po_number}` — see poApprovalKey()
 }
 
 export type ArtworkApprovalsLookup = Record<string, ArtworkApprovalRow>; // keyed by proof_number
@@ -173,8 +181,10 @@ export function isGateSatisfied(
       return !!project.quoteNumber && !!lookup.email[project.quoteNumber];
     case "quotation":
       return !!project.quoteNumber && !!lookup.quotation[project.quoteNumber];
-    case "po":
-      return !!project.customerPoNumber && !!lookup.po[project.customerPoNumber];
+    case "po": {
+      const key = poApprovalKey(project.quoteNumber, project.customerPoNumber);
+      return !!key && !!lookup.po[key];
+    }
     case "deposit":
       return project.depositPaidDate != null;
   }
@@ -264,7 +274,7 @@ function runSanity() {
   const lookup4: ApprovalRowsLookup = {
     email: { "Q-1": { id: "e", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
     quotation: { "Q-1": { id: "a", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
-    po: { "PO-1": { id: "b", customer_po_number: "PO-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
+    po: { "Q-1|PO-1": { id: "b", customer_po_number: "PO-1", quote_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
   };
   expect("4 req / 4 sat → green",
     computeOrderConfirmationState(p4, { order_confirmation_config: allReq }, lookup4).state, "green");

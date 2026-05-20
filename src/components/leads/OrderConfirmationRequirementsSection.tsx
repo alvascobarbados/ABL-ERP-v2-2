@@ -280,7 +280,10 @@ export const OrderConfirmationRequirementsSection = ({ customer }: Props) => {
     }
     if (pos.length) {
       const { data } = await supabase.from("customer_po_approvals").select("*").in("customer_po_number", pos);
-      for (const r of data ?? []) lookup.po[r.customer_po_number] = r;
+      for (const r of data ?? []) {
+        // Composite key (quote_number|customer_po_number) — PO approvals are quote-scoped post-cascade-scoping migration.
+        lookup.po[`${r.quote_number}|${r.customer_po_number}`] = r;
+      }
     }
 
     const changes: TransitionChange[] = [];

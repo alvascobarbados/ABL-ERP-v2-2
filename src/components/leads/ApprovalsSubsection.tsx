@@ -19,6 +19,7 @@ import type { Project } from "@/data/pipelines";
 import {
   computeArtworkState,
   computeOrderConfirmationState,
+  poApprovalKey,
   type ArtworkApprovalRow,
   type QuotationApprovalRow,
   type QuotationEmailVerbalApprovalRow,
@@ -85,8 +86,8 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
         quoteNumber
           ? supabase.from("quotation_email_verbal_approvals").select("*").eq("q_number", quoteNumber).maybeSingle()
           : Promise.resolve({ data: null }),
-        customerPoNumber
-          ? supabase.from("customer_po_approvals").select("*").eq("customer_po_number", customerPoNumber).maybeSingle()
+        customerPoNumber && quoteNumber
+          ? supabase.from("customer_po_approvals").select("*").eq("customer_po_number", customerPoNumber).eq("quote_number", quoteNumber).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
       setArtworkApproval((a.data as ArtworkApprovalRow | null) ?? null);
@@ -172,7 +173,7 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
   const orderState = useMemo(() => {
     const lookup = {
       quotation: quoteNumber && quotationApproval ? { [quoteNumber]: quotationApproval } : {},
-      po: customerPoNumber && customerPoApproval ? { [customerPoNumber]: customerPoApproval } : {},
+      po: (() => { const k = poApprovalKey(quoteNumber, customerPoNumber); return k && customerPoApproval ? { [k]: customerPoApproval } : {}; })(),
       email: quoteNumber && emailVerbalApproval ? { [quoteNumber]: emailVerbalApproval } : {},
     };
     const cust = customer
