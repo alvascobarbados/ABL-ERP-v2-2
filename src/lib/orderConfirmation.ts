@@ -272,7 +272,7 @@ function runSanity() {
   const lookup4: ApprovalRowsLookup = {
     email: { "Q-1": { id: "e", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
     quotation: { "Q-1": { id: "a", q_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
-    po: { "PO-1": { id: "b", customer_po_number: "PO-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
+    po: { "Q-1|PO-1": { id: "b", customer_po_number: "PO-1", quote_number: "Q-1", approved_on: "", via_channel: "email", recorded_by_user_id: "u" } },
   };
   expect("4 req / 4 sat → green",
     computeOrderConfirmationState(p4, { order_confirmation_config: allReq }, lookup4).state, "green");
