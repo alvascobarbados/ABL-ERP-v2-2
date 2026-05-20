@@ -283,8 +283,9 @@ const Index = () => {
     try { localStorage.setItem(SORT_STORAGE, JSON.stringify(next)); } catch { /* noop */ }
   };
 
-  // Reset search when switching tabs
-  useEffect(() => { setSearch(""); setSearchScopeAll(false); }, [activeTab]);
+  // Search persists across tab switches (same lifecycle as the other filters).
+  // Only the per-pipeline "search all pipelines" scope toggle resets on tab change.
+  useEffect(() => { setSearchScopeAll(false); }, [activeTab]);
 
   // Open project detail when arriving with ?project=ID (from Activity Log,
   // notifications, deep links, etc.). Re-runs when the param changes.
