@@ -400,10 +400,10 @@ const CustomerGroup = ({
         <Td><EditableText key={`name-${nameRevert}`} value={customer.name} onSave={updateName} bold /></Td>
         <Td><EditableSelect value={customer.country} options={COUNTRIES} onSave={updateCountry} /></Td>
         <Td><EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" /></Td>
-        {gateCells}
+        {mode === "requirements" && gateCells}
         <Td className="text-muted-foreground italic">—</Td>
-        {contactCols.email && <Td className="text-muted-foreground italic">—</Td>}
-        {contactCols.contact && <Td className="text-muted-foreground italic">—</Td>}
+        {mode === "contact" && <Td className="text-muted-foreground italic">—</Td>}
+        {mode === "contact" && <Td className="text-muted-foreground italic">—</Td>}
         <Td>
           <RowMenu onView={onView} onAddBuyer={onAddBuyer} onDelete={onDelete} />
         </Td>
