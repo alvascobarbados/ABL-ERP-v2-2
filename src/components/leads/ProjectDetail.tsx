@@ -82,6 +82,7 @@ type EditorKind =
   | { kind: "quote" }
   | { kind: "po" }
   | { kind: "poAmount" }
+  | { kind: "customerPo" }
   | { kind: "invoice" }
   | { kind: "tracking" }
   | { kind: "shipmentNumber" }
