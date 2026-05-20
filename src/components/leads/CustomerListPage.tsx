@@ -13,7 +13,7 @@
  */
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search, MoreVertical, Trash2, UserPlus, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Search, MoreVertical, Trash2, UserPlus, Eye, Columns3, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DesktopAppShell } from "@/components/leads/DesktopAppShell";
@@ -25,6 +25,21 @@ import { useMasterData, type Customer, type Buyer, type CustomerCountry, type Cu
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePipelineStore } from "@/hooks/usePipelineStore";
 import { supabase } from "@/integrations/supabase/client";
+import { CustomerGateCell } from "@/components/leads/CustomerGateCell";
+
+// ─── Optional contact columns (default-hidden to make room for the 4 gate columns) ──
+const CONTACT_COLS_KEY = "customers-list:contact-cols-v1";
+type ContactColsState = { email: boolean; contact: boolean };
+const DEFAULT_CONTACT_COLS: ContactColsState = { email: false, contact: false };
+function loadContactCols(): ContactColsState {
+  try {
+    const raw = localStorage.getItem(CONTACT_COLS_KEY);
+    if (!raw) return DEFAULT_CONTACT_COLS;
+    const v = JSON.parse(raw);
+    return { email: !!v?.email, contact: !!v?.contact };
+  } catch { return DEFAULT_CONTACT_COLS; }
+}
+
 
 const COUNTRIES: CustomerCountry[] = ["Local", "Regional"];
 const INCOTERMS: (CustomerIncoterms | "")[] = ["", "FOB", "CIF", "LDP", "LDF"];
@@ -57,6 +72,11 @@ export const CustomerListPage = () => {
   const [buyerMerge, setBuyerMerge] = useState<BuyerMergePending | null>(null);
   const [merging, setMerging] = useState(false);
 
+  const [contactCols, setContactCols] = useState<ContactColsState>(() => loadContactCols());
+  useEffect(() => {
+    try { localStorage.setItem(CONTACT_COLS_KEY, JSON.stringify(contactCols)); } catch { /* ignore */ }
+  }, [contactCols]);
+
   // Filter: customer matches if its own fields OR any of its buyers match
   const groups = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -67,6 +87,7 @@ export const CustomerListPage = () => {
           || c.name.toLowerCase().includes(term)
           || (c.country ?? "").toLowerCase().includes(term)
           || (c.incoterms ?? "").toLowerCase().includes(term);
+
         const matchedBuyers = term
           ? buyers.filter((b) =>
               b.name.toLowerCase().includes(term)
@@ -148,7 +169,7 @@ export const CustomerListPage = () => {
           className="sticky top-0 z-20 backdrop-blur-md border-b"
           style={{ backgroundColor: "hsl(var(--background) / 0.92)", borderColor: "hsl(var(--brand-navy) / 0.12)" }}
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),12px)] pb-3 flex items-center gap-3">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),12px)] pb-3 flex items-center gap-3">
             <button onClick={() => navigate("/")} aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-muted/50">
               <ArrowLeft className="h-5 w-5" style={{ color: "hsl(var(--brand-navy))" }} />
             </button>
@@ -161,6 +182,7 @@ export const CustomerListPage = () => {
                 Customers <span className="text-muted-foreground font-light">· {md.customers.length}</span>
               </h1>
             </div>
+            <ColumnsButton state={contactCols} onChange={setContactCols} />
             <button
               onClick={() => setAddBuyerOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border transition-colors hover:bg-muted/50"
@@ -178,7 +200,7 @@ export const CustomerListPage = () => {
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-16">
+        <main className="max-w-[1600px] mx-auto px-4 sm:px-6 pb-16">
           {/* Search */}
           <div className="relative my-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -192,16 +214,20 @@ export const CustomerListPage = () => {
           </div>
 
           {/* Table */}
-          <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+          <div className="rounded-2xl border border-border/60 bg-card overflow-x-auto">
             <table className="w-full text-[13px] border-collapse">
               <thead>
                 <tr style={{ borderBottom: "1px solid hsl(var(--brand-navy) / 0.1)", background: "hsl(var(--brand-navy) / 0.03)" }}>
                   <Th>Name</Th>
                   <Th>Country</Th>
                   <Th>Incoterms</Th>
+                  <Th className="w-[96px]">Email/Verbal</Th>
+                  <Th className="w-[96px]">Signed Quote</Th>
+                  <Th className="w-[96px]">Customer PO</Th>
+                  <Th className="w-[96px]">Deposit</Th>
                   <Th>Buyer</Th>
-                  <Th>Email</Th>
-                  <Th>Contact</Th>
+                  {contactCols.email && <Th>Email</Th>}
+                  {contactCols.contact && <Th>Contact</Th>}
                   <Th className="w-8" />
                 </tr>
               </thead>
@@ -211,6 +237,7 @@ export const CustomerListPage = () => {
                     key={customer.id}
                     customer={customer}
                     buyers={buyers}
+                    contactCols={contactCols}
                     onView={() => navigate(`/customers?customer=${customer.id}`)}
                     onAddBuyer={() => setAddBuyerOpen(true)}
                     onDelete={() => setConfirmDelete(customer)}
@@ -220,13 +247,17 @@ export const CustomerListPage = () => {
                 ))}
                 {groups.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-sm text-muted-foreground italic px-4 py-12 text-center">
+                    <td
+                      colSpan={9 + (contactCols.email ? 1 : 0) + (contactCols.contact ? 1 : 0)}
+                      className="text-sm text-muted-foreground italic px-4 py-12 text-center"
+                    >
                       {q ? "No matches." : "No customers yet."}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+
           </div>
         </main>
 
@@ -305,11 +336,12 @@ const Th = ({ children, className }: { children?: React.ReactNode; className?: s
 
 // ─── Customer row group ────────────────────────────────────────────────
 const CustomerGroup = ({
-  customer, buyers, onView, onAddBuyer, onDelete,
+  customer, buyers, contactCols, onView, onAddBuyer, onDelete,
   onRequestCustomerMerge, onRequestBuyerMerge,
 }: {
   customer: Customer;
   buyers: Buyer[];
+  contactCols: ContactColsState;
   onView: () => void;
   onAddBuyer: () => void;
   onDelete: () => void;
@@ -350,6 +382,16 @@ const CustomerGroup = ({
     catch (err: any) { toast.error(err?.message ?? "Save failed"); }
   };
 
+  // The four gate cells — identical regardless of buyer-row layout.
+  const gateCells = (
+    <>
+      <Td className="align-top"><CustomerGateCell customer={customer} gate="email" /></Td>
+      <Td className="align-top"><CustomerGateCell customer={customer} gate="quotation" /></Td>
+      <Td className="align-top"><CustomerGateCell customer={customer} gate="po" /></Td>
+      <Td className="align-top"><CustomerGateCell customer={customer} gate="deposit" /></Td>
+    </>
+  );
+
   // 0 buyers → single empty buyer row
   if (buyers.length === 0) {
     return (
@@ -357,9 +399,10 @@ const CustomerGroup = ({
         <Td><EditableText key={`name-${nameRevert}`} value={customer.name} onSave={updateName} bold /></Td>
         <Td><EditableSelect value={customer.country} options={COUNTRIES} onSave={updateCountry} /></Td>
         <Td><EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" /></Td>
+        {gateCells}
         <Td className="text-muted-foreground italic">—</Td>
-        <Td className="text-muted-foreground italic">—</Td>
-        <Td className="text-muted-foreground italic">—</Td>
+        {contactCols.email && <Td className="text-muted-foreground italic">—</Td>}
+        {contactCols.contact && <Td className="text-muted-foreground italic">—</Td>}
         <Td>
           <RowMenu onView={onView} onAddBuyer={onAddBuyer} onDelete={onDelete} />
         </Td>
@@ -390,11 +433,16 @@ const CustomerGroup = ({
               <Td rowSpan={rowCount} className="align-top">
                 <EditableSelect value={customer.incoterms ?? ""} options={INCOTERMS} onSave={updateIncoterms} placeholder="—" />
               </Td>
+              {/* Gate cells span all buyer rows — they're customer-level config */}
+              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="email" /></Td>
+              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="quotation" /></Td>
+              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="po" /></Td>
+              <Td rowSpan={rowCount} className="align-top"><CustomerGateCell customer={customer} gate="deposit" /></Td>
             </>
           )}
           <Td><BuyerNameCell buyer={buyer} customerName={customer.name} onRequestMerge={onRequestBuyerMerge} /></Td>
-          <Td><BuyerEmailCell buyer={buyer} /></Td>
-          <Td><BuyerContactCell buyer={buyer} /></Td>
+          {contactCols.email && <Td><BuyerEmailCell buyer={buyer} /></Td>}
+          {contactCols.contact && <Td><BuyerContactCell buyer={buyer} /></Td>}
           {idx === 0 && (
             <Td rowSpan={rowCount} className="align-top">
               <RowMenu onView={onView} onAddBuyer={onAddBuyer} onDelete={onDelete} />
@@ -405,6 +453,50 @@ const CustomerGroup = ({
     </>
   );
 };
+
+// ─── Columns toolbar button (toggle optional Email / Contact columns) ──
+const ColumnsButton = ({
+  state, onChange,
+}: { state: ContactColsState; onChange: (next: ContactColsState) => void }) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <button
+        type="button"
+        aria-label="Toggle optional columns"
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border transition-colors hover:bg-muted/50"
+        style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: 40 }}
+      >
+        <Columns3 className="h-4 w-4" /> Columns
+      </button>
+    </PopoverTrigger>
+    <PopoverContent align="end" className="w-56 p-1">
+      <div
+        className="px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] font-semibold"
+        style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
+      >
+        Optional columns
+      </div>
+      {([
+        { key: "email" as const, label: "Email" },
+        { key: "contact" as const, label: "Contact" },
+      ]).map((c) => {
+        const checked = state[c.key];
+        return (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => onChange({ ...state, [c.key]: !checked })}
+            className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-left text-sm hover:bg-muted/50"
+          >
+            <span>{c.label}</span>
+            {checked && <Check className="h-4 w-4" style={{ color: "hsl(var(--brand-navy))" }} />}
+          </button>
+        );
+      })}
+    </PopoverContent>
+  </Popover>
+);
+
 
 const Td = ({ children, className, rowSpan }: { children?: React.ReactNode; className?: string; rowSpan?: number }) => (
   <td className={cn("px-3 py-2 text-[13px]", className)} rowSpan={rowSpan} style={{ color: "hsl(var(--brand-navy))" }}>
