@@ -62,6 +62,7 @@ interface Props { customer: Customer; gate: GateKey; }
 
 export const CustomerGateCell = ({ customer, gate }: Props) => {
   const user = useCurrentUser();
+  const store = usePipelineStore();
   const cfg = normalise(customer.order_confirmation_config);
   const g = cfg[gate];
   const [busy, setBusy] = useState(false);
@@ -81,30 +82,31 @@ export const CustomerGateCell = ({ customer, gate }: Props) => {
       toast.error("Failed to update — please retry.");
       return false;
     }
-    // Audit (fire-and-forget; mirrors the customer-detail audit shape with a source tag).
-    void supabase.from("project_log_entries").insert({
-      id: `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-      project_id: "__system__",
-      ts: new Date().toISOString(),
-      actor_user_id: user.userId,
-      actor_display_name: user.shortName,
-      action_type: "customer_gate_config_change",
-      description: `${user.shortName} changed ${customer.name}'s ${GATE_LABELS[gate]} requirement: ${summary}`,
-      metadata: {
+    // Audit: write a global Activity entry, plus a mirror entry on every
+    // open project of this customer (so the change appears in each project's
+    // Activity log), plus consequence entries where computed state shifted.
+    // Awaited (not fire-and-forget) so failures surface as a toast rather
+    // than being silently swallowed.
+    try {
+      const openProjects = store.projects.filter(
+        (p) => p.customer === customer.name && !p.deletedAt && p.stage !== "completed",
+      );
+      await writeCustomerGateConfigAudit({
+        customer: { id: customer.id, name: customer.name },
         gate,
-        customer_id: customer.id,
-        customer_name: customer.name,
-        old_mode: prev[gate].mode,
-        new_mode: nextGate.mode,
-        old_modes: prev[gate].conditional_modes,
-        new_modes: nextGate.conditional_modes,
-        old_amount: prev[gate].conditional_amount_above,
-        new_amount: nextGate.conditional_amount_above,
-        source: "customers_list_inline",
-      } as Json,
-    });
+        gateLabel: GATE_LABELS[gate],
+        prev,
+        next,
+        summary,
+        openProjects,
+        actor: { userId: user.userId, shortName: user.shortName },
+      });
+    } catch {
+      toast.error("Saved, but couldn't write to the activity log.");
+    }
     return true;
   };
+
 
   const cycle = async () => {
     if (busy) return;
