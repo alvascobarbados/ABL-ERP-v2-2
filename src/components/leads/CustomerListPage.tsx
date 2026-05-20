@@ -169,7 +169,7 @@ export const CustomerListPage = () => {
           className="sticky top-0 z-20 backdrop-blur-md border-b"
           style={{ backgroundColor: "hsl(var(--background) / 0.92)", borderColor: "hsl(var(--brand-navy) / 0.12)" }}
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),12px)] pb-3 flex items-center gap-3">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 pt-[max(env(safe-area-inset-top),12px)] pb-3 flex items-center gap-3">
             <button onClick={() => navigate("/")} aria-label="Back" className="p-2 -ml-2 rounded-full hover:bg-muted/50">
               <ArrowLeft className="h-5 w-5" style={{ color: "hsl(var(--brand-navy))" }} />
             </button>
