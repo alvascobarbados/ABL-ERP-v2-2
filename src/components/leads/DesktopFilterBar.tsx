@@ -236,8 +236,8 @@ export const DesktopFilterBar = ({ value, onChange, customers, suppliers, salesR
   const setMode = (m: ShippingMode) => onChange({ ...value, shippingModes: toggleArr(value.shippingModes as ShippingMode[], m) });
   const setRep = (r: string) => onChange({ ...value, salesReps: toggleArr(value.salesReps, r) });
   const toggleFlag = () => onChange({ ...value, flagged: value.flagged === true ? null : true });
-  const setUrgency = (u: Exclude<DeadlineUrgency, null>) =>
-    onChange({ ...value, urgency: value.urgency === u ? null : u });
+  const toggleApproval = (a: OrderApprovalChip) =>
+    onChange({ ...value, orderApproval: toggleArr(value.orderApproval, a) });
 
   const customer = value.customers[0] ?? null;
   const supplier = value.supplierIds[0] ?? null;
