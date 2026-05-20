@@ -459,48 +459,44 @@ const CustomerGroup = ({
   );
 };
 
-// ─── Columns toolbar button (toggle optional Email / Contact columns) ──
-const ColumnsButton = ({
-  state, onChange,
-}: { state: ContactColsState; onChange: (next: ContactColsState) => void }) => (
-  <Popover>
-    <PopoverTrigger asChild>
-      <button
-        type="button"
-        aria-label="Toggle optional columns"
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border transition-colors hover:bg-muted/50"
-        style={{ borderColor: "hsl(var(--brand-navy) / 0.3)", color: "hsl(var(--brand-navy))", minHeight: 40 }}
-      >
-        <Columns3 className="h-4 w-4" /> Columns
-      </button>
-    </PopoverTrigger>
-    <PopoverContent align="end" className="w-56 p-1">
-      <div
-        className="px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] font-semibold"
-        style={{ color: "hsl(var(--brand-navy) / 0.65)" }}
-      >
-        Optional columns
-      </div>
-      {([
-        { key: "email" as const, label: "Email" },
-        { key: "contact" as const, label: "Contact" },
-      ]).map((c) => {
-        const checked = state[c.key];
+// ─── Mode switcher (Contact vs Requirements) ───────────────────────────
+const ModeSwitcher = ({
+  mode, onChange,
+}: { mode: ListMode; onChange: (next: ListMode) => void }) => {
+  const opts: Array<{ value: ListMode; label: string; Icon: typeof IdCard }> = [
+    { value: "contact", label: "Contact", Icon: IdCard },
+    { value: "requirements", label: "Requirements", Icon: ShieldCheck },
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label="Customers view mode"
+      className="inline-flex items-center rounded-full border p-0.5"
+      style={{ borderColor: "hsl(var(--brand-navy) / 0.25)", background: "hsl(var(--brand-navy) / 0.04)" }}
+    >
+      {opts.map(({ value, label, Icon }) => {
+        const active = mode === value;
         return (
           <button
-            key={c.key}
+            key={value}
             type="button"
-            onClick={() => onChange({ ...state, [c.key]: !checked })}
-            className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-left text-sm hover:bg-muted/50"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(value)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold transition-colors"
+            style={
+              active
+                ? { background: "hsl(var(--brand-navy))", color: "white" }
+                : { color: "hsl(var(--brand-navy) / 0.7)" }
+            }
           >
-            <span>{c.label}</span>
-            {checked && <Check className="h-4 w-4" style={{ color: "hsl(var(--brand-navy))" }} />}
+            <Icon className="h-3.5 w-3.5" /> {label}
           </button>
         );
       })}
-    </PopoverContent>
-  </Popover>
-);
+    </div>
+  );
+};
 
 
 const Td = ({ children, className, rowSpan }: { children?: React.ReactNode; className?: string; rowSpan?: number }) => (
