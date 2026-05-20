@@ -179,7 +179,7 @@ export const CustomerListPage = () => {
                 Customers <span className="text-muted-foreground font-light">· {md.customers.length}</span>
               </h1>
             </div>
-            <ColumnsButton state={contactCols} onChange={setContactCols} />
+            <ModeSwitcher mode={mode} onChange={setMode} />
             <button
               onClick={() => setAddBuyerOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border transition-colors hover:bg-muted/50"
