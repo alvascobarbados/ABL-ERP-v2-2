@@ -21,7 +21,7 @@ import { usePipelineStore, getStageTitle } from "@/hooks/usePipelineStore";
 import { PIPELINES, PipelineId, StageId } from "@/data/pipelines";
 import { cn, shortNameFromFull } from "@/lib/utils";
 import { DateRangeFilter, ALL_TIME, DateRangeValue } from "@/components/leads/DateRangeFilter";
-import { exportActivityPdf, ActivityPdfGroup } from "@/lib/activityPdf";
+import type { ActivityPdfGroup } from "@/lib/activityPdf";
 import { ConfirmDialog } from "@/components/leads/ConfirmDialog";
 
 const PAGE_SIZE = 50;
@@ -419,6 +419,14 @@ export default function ActivityPage() {
             };
           }),
         }));
+      let exportActivityPdf: typeof import("@/lib/activityPdf").exportActivityPdf;
+      try {
+        ({ exportActivityPdf } = await import("@/lib/activityPdf"));
+      } catch {
+        toast.error("Couldn't load the PDF exporter — check your connection");
+        setExporting(false);
+        return;
+      }
       exportActivityPdf(groups, {
         member: memberFullName,
         search,
