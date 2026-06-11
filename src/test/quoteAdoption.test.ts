@@ -170,8 +170,8 @@ describe("buildQuoteAdoptionPayload — adoption payload", () => {
   it("EXCLUDES user-touched fields (user edit wins, flows OUT via mirror)", () => {
     // User joined Q-1 AND set customerPoNumber to "USER-PO" in the same commit.
     const r = buildQuoteAdoptionPayload({
-      optimistic: { id: "p1", quoteNumber: "Q-1", customerPoNumber: "USER-PO", ...emptyMirroredValues() },
-      prevRow:   { id: "p1", quoteNumber: null,   customerPoNumber: undefined,  ...emptyMirroredValues() },
+      optimistic: { ...emptyMirroredValues(), id: "p1", quoteNumber: "Q-1", customerPoNumber: "USER-PO" },
+      prevRow:   { ...emptyMirroredValues(), id: "p1", quoteNumber: null,   customerPoNumber: undefined },
       siblings: [fullSibling()],
       mirroredFields: MIRRORED,
       sameValue,
