@@ -238,6 +238,7 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
   }, [card, onClose]);
 
   const live = useMemo(() => card ? projects.find((p) => p.id === card.id) ?? null : null, [card, projects]);
+  const logQuery = useProjectLog(live?.id);
   const presentOthers = usePresence(live?.id);
 
   const confirmedAt = useMemo(() => {

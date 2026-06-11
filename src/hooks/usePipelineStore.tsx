@@ -104,7 +104,7 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
 };
 
 const SUPPRESSED_FIELDS = new Set<keyof Project>([
-  "updatedAt", "createdAt", "log", "notes", "lineItems",
+  "updatedAt", "createdAt", "notes", "lineItems",
   "pipeline", "stage", "flagged",
   "deletedAt", "deletedFromPipeline", "deletedFromStage",
   "invoiceRequiredEnteredAt", "invoiceIssuedDateAssumed",
@@ -1318,8 +1318,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       emailVerbalApprovedNotes: undefined, emailVerbalApprovedRecordedByUserId: undefined,
       // Per-project gate overrides — start at defaults.
       orderConfirmationOverrides: undefined,
-      // Notes / line items / log / shipment — not carried.
-      shipmentId: undefined, notes: undefined, lineItems: undefined, log: undefined,
+      // Notes / line items / shipment — not carried.
+      shipmentId: undefined, notes: undefined, lineItems: undefined,
       // Per existing spec: duplicate clears shipping mode, shipment #, and tracking ref.
       shippingMode: undefined, shipmentNumber: undefined, trackingRef: undefined,
       pipeline: orig.pipeline, stage: orig.stage, flagged: false,
