@@ -777,6 +777,105 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     }
   };
 
+  /**
+   * Quote-join adoption — see src/lib/quoteAdoption.ts for pure payload
+   * logic. Direction is strictly inbound: joining project ← source sibling.
+   * Never writes to siblings. Returns the patch applied, or null if no
+   * adoption happened.
+   */
+  const adoptQuoteFieldsOnJoin = async (
+    optimistic: Project,
+    prevRow: Project | undefined,
+  ): Promise<Partial<Project> | null> => {
+    const qn = optimistic.quoteNumber;
+    if (!qn) return null;
+    const prevQn = prevRow?.quoteNumber ?? null;
+    if (prevQn === qn) return null;
+
+    const snapshot = projectsRef.current;
+    const siblings = snapshot.filter(
+      (p) => p.id !== optimistic.id && p.quoteNumber === qn && !p.deletedAt,
+    );
+    if (siblings.length === 0) return null;
+
+    const result = buildQuoteAdoptionPayload<Project>({
+      optimistic,
+      prevRow,
+      siblings,
+      mirroredFields: MIRRORED_FIELDS as ReadonlyArray<{ projKey: string }>,
+      sameValue,
+    });
+    if (!result) return null;
+
+    // DB column payload via MIRRORED_FIELDS serializers.
+    const dbPatch: Record<string, any> = {};
+    for (const f of MIRRORED_FIELDS) {
+      if (f.projKey in result.patch) {
+        dbPatch[f.dbCol] = f.toDb((result.patch as any)[f.projKey]);
+      }
+    }
+
+    // Optimistic local update — joining project only.
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === optimistic.id ? ({ ...p, ...result.patch, updatedAt: new Date() } as Project) : p,
+      ),
+    );
+
+    const { error } = await supabase
+      .from("projects")
+      .update({ ...dbPatch, updated_at: new Date().toISOString() })
+      .eq("id", optimistic.id);
+
+    if (error) {
+      console.error("[store] adoptQuoteFieldsOnJoin failed", qn, error.message);
+      setProjects((prev) => prev.map((p) => (p.id === optimistic.id ? optimistic : p)));
+      toast.warning(`Joined Q-${qn} but couldn't inherit quote-level fields`);
+      return null;
+    }
+
+    // Best-effort audit log on joining project.
+    const u = userRef.current;
+    const friendlyParts = result.changedKeys.map((k) => {
+      const label = (FIELD_LABELS as any)[k] ?? k;
+      const v = (result.patch as any)[k];
+      const display =
+        v == null
+          ? "—"
+          : v instanceof Date
+            ? v.toISOString().slice(0, 10)
+            : typeof v === "boolean"
+              ? v ? "yes" : "no"
+              : String(v);
+      return `${label}: ${display}`;
+    });
+    const sourceName = (result.source as Project).projectName || result.source.id;
+    const entry: ProjectLogEntry = {
+      id: makeLogId(),
+      ts: new Date(),
+      actor: actorOf(u),
+      actionType: "field_edit" as ProjectLogActionType,
+      description: `${u.shortName} inherited quote-level fields from Q-${qn} (source: ${sourceName}): ${friendlyParts.join(", ")}`,
+      metadata: {
+        adoption: true,
+        quoteNumber: qn,
+        sourceProjectId: result.source.id,
+        adoptedFields: result.changedKeys,
+      } as any,
+    };
+    const { error: lErr } = await supabase
+      .from("project_log_entries")
+      .insert(logEntryToRow(optimistic.id, entry));
+    if (lErr) console.warn("[store] adoption audit log insert failed", lErr.message);
+
+    toast(
+      `Inherited ${result.changedKeys.length} quote-level ${result.changedKeys.length === 1 ? "field" : "fields"} from Q-${qn}`,
+      { duration: 2500 },
+    );
+
+    return result.patch;
+  };
+
   // ── Optimistic mutation core ─────────────────────────────────────────
   // Apply optimistic in-memory change; await Supabase project upsert + log
   // insert in one chain; rollback both the local state and (if log failed)
@@ -813,13 +912,23 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         return false;
       }
     }
-    // Best-effort mirror of quote-level fields to siblings sharing quote_number.
+    // Order matters — safety argument:
+    //   1. mirrorToSiblings runs FIRST. It diffs optimistic vs prevRow on
+    //      MIRRORED_FIELDS; only user-touched fields flow OUTWARD. Running
+    //      this before adoption guarantees adopted-in values can never be
+    //      mistaken for user edits and pushed back out to siblings.
+    //   2. adoptQuoteFieldsOnJoin runs SECOND. When quoteNumber itself
+    //      changed (a join), it copies every untouched MIRRORED field from
+    //      one source sibling INTO this project only. Single-source by
+    //      design so coupled units (payment_terms trio, invoice_issued_date
+    //      pair, deposit cluster) stay internally consistent.
+    //   3. reconcileCustomerPoApproval runs LAST, against the post-adoption
+    //      project so an adopted PO# correctly reuses the sibling's
+    //      existing approval row (update-in-place; never duplicates).
     await mirrorToSiblings(optimistic, prevRow);
-    // Customer PO auto-approval reconciliation: customer_po_number entry IS
-    // the approval action (no explicit Record-Approval step). One approval
-    // row per quote_number — changes to the PO# value update that row in
-    // place, preserving approved_on (a correction, not a re-approval).
-    await reconcileCustomerPoApproval(optimistic, prevRow);
+    const adopted = await adoptQuoteFieldsOnJoin(optimistic, prevRow);
+    const reconcileTarget: Project = adopted ? ({ ...optimistic, ...adopted } as Project) : optimistic;
+    await reconcileCustomerPoApproval(reconcileTarget, prevRow);
     return true;
   };
 
