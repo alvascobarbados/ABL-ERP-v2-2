@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { usePipelineStore, getStageTitle, getNextStage } from "@/hooks/usePipelineStore";
+import { useProjectLog } from "@/hooks/useProjectLog";
 import { useEditMode } from "@/hooks/useEditMode";
 import {
   TextEditor, DateEditor, ListPicker, ListOption, BottomSheet, TrackingEditor, ShipmentNumberEditor,
@@ -975,7 +976,8 @@ export const ProjectDetail = ({ card, onClose, onOpenShipment, onOpenProject }: 
 
           {/* ── ACTIVITY ── */}
           <ActivitySection
-            entries={live.log ?? []}
+            entries={logQuery.data ?? []}
+            loading={logQuery.isLoading}
             expanded={activityExpanded}
             onToggle={() => setActivityExpanded((v) => !v)}
           />
@@ -1493,13 +1495,17 @@ const fmtLogTs = (d: Date) => {
     .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 };
 const ActivitySection = ({
-  entries, expanded, onToggle,
-}: { entries: ProjectLogEntry[]; expanded: boolean; onToggle: () => void }) => {
+  entries, loading, expanded, onToggle,
+}: { entries: ProjectLogEntry[]; loading?: boolean; expanded: boolean; onToggle: () => void }) => {
   if (!entries.length) {
     return (
       <section>
         <SectionHeader>Activity</SectionHeader>
-        <SectionCard><div className="text-[13px] italic text-muted-foreground/70">No activity yet</div></SectionCard>
+        <SectionCard>
+          <div className="text-[13px] italic text-muted-foreground/70">
+            {loading ? "Loading activity…" : "No activity yet"}
+          </div>
+        </SectionCard>
       </section>
     );
   }

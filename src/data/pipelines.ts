@@ -391,9 +391,10 @@ export interface Project {
   invoiceNumber?: string;
   lineItems?: LineItem[];
   notes?: ProjectNote[];
-  /** Append-only audit trail. Written via the store middleware whenever
-   *  any canonical mutation happens. Never user-editable. */
-  log?: ProjectLogEntry[];
+  /** @deprecated The per-project audit log is no longer kept in the
+   *  global store. Use `useProjectLog(projectId)` in components that
+   *  need to render it. Field removed from the Project type to prevent
+   *  accidental re-introduction of the global fetch. */
   // Audit timestamps. createdAt is set when the project first enters the system.
   // updatedAt bumps on every mutation through the store (updateProject, addNote,
   // line-item changes, stage moves). Spreadsheet view sorts/filters by these.
