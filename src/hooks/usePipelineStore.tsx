@@ -44,7 +44,11 @@ function appendLog(p: Project, entry: Omit<ProjectLogEntry, "id" | "ts"> & { ts?
     description,
     metadata,
   };
-  return { project: { ...p, log: [...(p.log ?? []), full] }, entry: full };
+  // NOTE: `log` is no longer carried on the Project type. The audit trail
+  // lives in project_log_entries and is fetched per-project via useProjectLog.
+  // The returned `project` is byte-identical to the input; the `entry` is
+  // shipped to the DB by callers via logEntryToRow().
+  return { project: p, entry: full };
 }
 
 function actorOf(u: CurrentUser) {
@@ -100,7 +104,7 @@ const FIELD_LABELS: Partial<Record<keyof Project, string>> = {
 };
 
 const SUPPRESSED_FIELDS = new Set<keyof Project>([
-  "updatedAt", "createdAt", "log", "notes", "lineItems",
+  "updatedAt", "createdAt", "notes", "lineItems",
   "pipeline", "stage", "flagged",
   "deletedAt", "deletedFromPipeline", "deletedFromStage",
   "invoiceRequiredEnteredAt", "invoiceIssuedDateAssumed",
@@ -158,7 +162,7 @@ function buildFieldEditEntries(
 }
 
 // ─────────── Date serialization (Supabase ⇄ Project) ───────────
-function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByProj: Map<string, ProjectLogEntry[]>, itemsByProj: Map<string, LineItem[]>): Project {
+function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, itemsByProj: Map<string, LineItem[]>): Project {
   return {
     id: row.id,
     customer: row.customer,
@@ -230,7 +234,6 @@ function rowToProject(row: any, notesByProj: Map<string, ProjectNote[]>, logByPr
     emailVerbalApprovedRecordedByUserId: row.email_verbal_approved_recorded_by_user_id ?? null,
     orderConfirmationOverrides: (row.order_confirmation_overrides ?? {}) as any,
     notes: notesByProj.get(row.id),
-    log: logByProj.get(row.id),
     lineItems: itemsByProj.get(row.id),
   };
 }
@@ -597,14 +600,13 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
     let refetchTimer: number | null = null;
 
     const refetchNow = async () => {
-      const [pj, sh, nt, lg, li] = await Promise.all([
+      const [pj, sh, nt, li] = await Promise.all([
         // Exclude the `__system__` sentinel row that exists only as a FK
         // anchor for system-level audit entries (sign-in / sign-out). It
         // must never reach pipeline / spreadsheet / trash / archive views.
         supabase.from("projects").select("*").neq("id", "__system__"),
         supabase.from("shipments").select("*"),
         supabase.from("project_notes").select("*").order("ts"),
-        supabase.from("project_log_entries").select("*").order("ts"),
         supabase.from("line_items").select("*").order("position"),
       ]);
       if (!mounted) return;
@@ -618,18 +620,6 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         });
         notesByProj.set(r.project_id, arr);
       }
-      const logByProj = new Map<string, ProjectLogEntry[]>();
-      for (const r of (lg.data ?? [])) {
-        const arr = logByProj.get(r.project_id) ?? [];
-        arr.push({
-          id: r.id, ts: new Date(r.ts),
-          actor: { userId: r.actor_user_id, displayName: r.actor_display_name },
-          actionType: r.action_type as ProjectLogActionType,
-          description: r.description,
-          metadata: (r.metadata ?? undefined) as any,
-        });
-        logByProj.set(r.project_id, arr);
-      }
       const itemsByProj = new Map<string, LineItem[]>();
       for (const r of (li.data ?? [])) {
         const arr = itemsByProj.get(r.project_id) ?? [];
@@ -642,7 +632,7 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
         itemsByProj.set(r.project_id, arr);
       }
       if (pj.data) {
-        setProjects(pj.data.map((row) => rowToProject(row, notesByProj, logByProj, itemsByProj)));
+        setProjects(pj.data.map((row) => rowToProject(row, notesByProj, itemsByProj)));
       }
       if (sh.data) setShipments(sh.data.map(rowToShipment));
       setLoading(false);
@@ -655,12 +645,15 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
 
     refetchNow();
 
+    // NOTE: project_log_entries is intentionally NOT subscribed here.
+    // The audit log is fetched per-project by useProjectLog, which owns
+    // its own filtered postgres_changes subscription. Inserting log rows
+    // must not trigger a refetch of every project / shipment / line item.
     const channel = supabase
       .channel("pipeline-store")
       .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, refetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "shipments" }, refetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_notes" }, refetch)
-      .on("postgres_changes", { event: "*", schema: "public", table: "project_log_entries" }, refetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "line_items" }, refetch)
       .subscribe();
 
@@ -1325,8 +1318,8 @@ export const PipelineStoreProvider = ({ children }: { children: ReactNode }) => 
       emailVerbalApprovedNotes: undefined, emailVerbalApprovedRecordedByUserId: undefined,
       // Per-project gate overrides — start at defaults.
       orderConfirmationOverrides: undefined,
-      // Notes / line items / log / shipment — not carried.
-      shipmentId: undefined, notes: undefined, lineItems: undefined, log: undefined,
+      // Notes / line items / shipment — not carried.
+      shipmentId: undefined, notes: undefined, lineItems: undefined,
       // Per existing spec: duplicate clears shipping mode, shipment #, and tracking ref.
       shippingMode: undefined, shipmentNumber: undefined, trackingRef: undefined,
       pipeline: orig.pipeline, stage: orig.stage, flagged: false,
