@@ -187,11 +187,15 @@ export const ApprovalsSubsection = ({ project }: { project: Project }) => {
   const [orderSheetOpen, setOrderSheetOpen] = useState(false);
 
   const handleOpenArtworkSheet = () => {
-    console.log({ project_id: project.id, action: "open_artwork_sheet" });
+    if (import.meta.env.DEV) {
+      console.log({ project_id: project.id, action: "open_artwork_sheet" });
+    }
     setArtworkSheetOpen(true);
   };
   const handleOpenOrderSheet = () => {
-    console.log({ project_id: project.id, action: "open_order_sheet" });
+    if (import.meta.env.DEV) {
+      console.log({ project_id: project.id, action: "open_order_sheet" });
+    }
     setOrderSheetOpen(true);
   };
   const handleConfigureCustomer = () => {

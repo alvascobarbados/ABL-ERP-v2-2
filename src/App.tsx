@@ -8,6 +8,7 @@ import { CurrentUserProvider } from "@/hooks/useCurrentUser";
 import { FriendlyModeProvider } from "@/hooks/useFriendlyMode";
 import { ExpandedCardsProvider } from "@/hooks/useExpandedCards";
 import { MasterDataProvider } from "@/hooks/useMasterData";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { ColumnWidthsProvider } from "@/hooks/useColumnWidths";
 import { ColumnVisibilityProvider } from "@/hooks/useColumnVisibility";
 import { SidebarCollapsedProvider } from "@/hooks/useSidebarCollapsed";
@@ -23,6 +24,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <AppErrorBoundary>
       <CurrentUserProvider>
       <FriendlyModeProvider>
         <Toaster />
@@ -59,6 +61,7 @@ const App = () => (
         </PipelineStoreProvider>
       </FriendlyModeProvider>
       </CurrentUserProvider>
+      </AppErrorBoundary>
     </TooltipProvider>
   </QueryClientProvider>
 );
