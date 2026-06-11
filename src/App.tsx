@@ -61,6 +61,7 @@ const App = () => (
         </PipelineStoreProvider>
       </FriendlyModeProvider>
       </CurrentUserProvider>
+      </AppErrorBoundary>
     </TooltipProvider>
   </QueryClientProvider>
 );
