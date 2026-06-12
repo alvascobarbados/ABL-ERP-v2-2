@@ -430,7 +430,11 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
   }, [visible, sortKey, sortDir, md.getSupplierByAnyId, md.buyers, approvalRank]);
 
   const totalAmount = useMemo(
-    () => sorted.reduce((sum, c) => sum + (c.project.value ?? 0), 0),
+    () => dedupedQuoteTotal(sorted.map((c) => c.project)),
+    [sorted],
+  );
+  const quoteCount = useMemo(
+    () => distinctQuoteCount(sorted.map((c) => c.project)),
     [sorted],
   );
 
@@ -586,6 +590,9 @@ export const ProjectTable = ({ activeTab, visible, onOpenCard, onOpenPicker, onP
             }}
           >
             {sorted.length} project{sorted.length === 1 ? "" : "s"}
+            {quoteCount > 0 && quoteCount !== sorted.length && (
+              <> · {quoteCount} quote{quoteCount === 1 ? "" : "s"}</>
+            )}
             {totalAmount > 0 && <> · ${Math.round(totalAmount).toLocaleString()} BBD total</>}
           </div>
         </div>
