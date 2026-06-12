@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { formatAmountRounded } from "@/lib/money";
+import { dedupedQuoteTotal, distinctQuoteCount } from "@/lib/quoteTotals";
 
 // Pipeline order matches the chevron flow (Sales → Design → Purchasing → Production → Shipping → Finance → Completed).
 const PIPELINE_ORDER: Record<PipelineId, number> = {
